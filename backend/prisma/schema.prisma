@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Campaign {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  status      CampaignStatus @default(ACTIVE)
+  shippingCost Float    @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  products    Product[]
+  orders      Order[]
+
+  @@map("campaigns")
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  campaignId  String
+  name        String
+  price       Float
+  weight      Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  orderItems  OrderItem[]
+
+  @@map("products")
+  @@index([campaignId])
+}
+
+model Order {
+  id          String   @id @default(cuid())
+  campaignId  String
+  customerName String
+  isPaid      Boolean  @default(false)
+  isSeparated Boolean  @default(false)
+  subtotal    Float    @default(0)
+  shippingFee Float    @default(0)
+  total       Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  items       OrderItem[]
+
+  @@map("orders")
+  @@index([campaignId])
+  @@index([customerName])
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  productId   String
+  quantity    Int
+  unitPrice   Float
+  subtotal    Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("order_items")
+  @@index([orderId])
+  @@index([productId])
+}
+
+enum CampaignStatus {
+  ACTIVE
+  CLOSED
+  ARCHIVED
+}

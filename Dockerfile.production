@@ -1,0 +1,44 @@
+# Multi-stage build para produção
+
+# Stage 1: Build Backend
+FROM node:20-alpine AS backend-builder
+RUN apk add --no-cache openssl libc6-compat
+WORKDIR /app/backend
+COPY backend/package*.json ./
+RUN npm ci --only=production
+COPY backend/ ./
+RUN npx prisma generate
+RUN npm run build
+
+# Stage 2: Build Frontend
+FROM node:20-alpine AS frontend-builder
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
+# Stage 3: Production
+FROM node:20-alpine
+RUN apk add --no-cache openssl libc6-compat
+WORKDIR /app
+
+# Instala apenas dependências de produção do backend
+COPY backend/package*.json ./backend/
+WORKDIR /app/backend
+RUN npm ci --only=production
+
+# Copia arquivos necessários do backend
+COPY --from=backend-builder /app/backend/dist ./dist
+COPY --from=backend-builder /app/backend/prisma ./prisma
+COPY --from=backend-builder /app/backend/node_modules/.prisma ./node_modules/.prisma
+
+# Copia build do frontend
+COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
+
+# Serve frontend estático através do backend
+RUN npm install express-static-gzip
+
+EXPOSE 3000
+
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]

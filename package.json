@@ -1,0 +1,22 @@
+{
+  "name": "compra-coletiva",
+  "version": "1.0.0",
+  "description": "Sistema de gerenciamento de compras coletivas",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "docker-compose up",
+    "build": "npm run build --workspaces",
+    "clean": "npm run clean --workspaces"
+  },
+  "keywords": [
+    "compra-coletiva",
+    "gestao",
+    "pedidos"
+  ],
+  "author": "",
+  "license": "MIT"
+}
