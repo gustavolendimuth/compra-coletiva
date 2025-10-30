@@ -3,18 +3,28 @@
 # Stage 1: Build Backend
 FROM node:20-alpine AS backend-builder
 RUN apk add --no-cache openssl libc6-compat
+WORKDIR /app
+# Copia package.json raiz (workspaces) e package-lock.json
+COPY package*.json ./
+# Copia package.json dos workspaces
+COPY backend/package*.json ./backend/
+COPY frontend/package*.json ./frontend/
+RUN npm ci --workspace=backend --include-workspace-root
 WORKDIR /app/backend
-COPY backend/package*.json ./
-RUN npm ci --only=production
 COPY backend/ ./
 RUN npx prisma generate
 RUN npm run build
 
 # Stage 2: Build Frontend
 FROM node:20-alpine AS frontend-builder
+WORKDIR /app
+# Copia package.json raiz (workspaces) e package-lock.json
+COPY package*.json ./
+# Copia package.json dos workspaces
+COPY backend/package*.json ./backend/
+COPY frontend/package*.json ./frontend/
+RUN npm ci --workspace=frontend --include-workspace-root
 WORKDIR /app/frontend
-COPY frontend/package*.json ./
-RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
@@ -22,11 +32,13 @@ RUN npm run build
 FROM node:20-alpine
 RUN apk add --no-cache openssl libc6-compat
 WORKDIR /app
-
-# Instala apenas dependências de produção do backend
+# Copia package.json raiz (workspaces) e package-lock.json
+COPY package*.json ./
+# Copia package.json dos workspaces
 COPY backend/package*.json ./backend/
+COPY frontend/package*.json ./frontend/
+RUN npm ci --workspace=backend --include-workspace-root --omit=dev
 WORKDIR /app/backend
-RUN npm ci --only=production
 
 # Copia arquivos necessários do backend
 COPY --from=backend-builder /app/backend/dist ./dist
