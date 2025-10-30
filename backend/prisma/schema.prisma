@@ -79,5 +79,6 @@ model OrderItem {
 enum CampaignStatus {
   ACTIVE
   CLOSED
+  SENT
   ARCHIVED
 }

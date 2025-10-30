@@ -13,7 +13,11 @@ import {
   Check,
   DollarSign,
   Search,
-  Truck
+  Truck,
+  Lock,
+  Unlock,
+  Send,
+  AlertCircle
 } from 'lucide-react';
 import {
   campaignApi,
@@ -28,6 +32,7 @@ import Button from '@/components/Button';
 import IconButton from '@/components/IconButton';
 import Card from '@/components/Card';
 import Modal from '@/components/Modal';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 export default function CampaignDetail() {
   const { id } = useParams<{ id: string }>();
@@ -39,6 +44,9 @@ export default function CampaignDetail() {
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [isEditOrderModalOpen, setIsEditOrderModalOpen] = useState(false);
   const [isShippingModalOpen, setIsShippingModalOpen] = useState(false);
+  const [isCloseConfirmOpen, setIsCloseConfirmOpen] = useState(false);
+  const [isReopenConfirmOpen, setIsReopenConfirmOpen] = useState(false);
+  const [isSentConfirmOpen, setIsSentConfirmOpen] = useState(false);
   const [orderSearch, setOrderSearch] = useState('');
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -185,6 +193,18 @@ export default function CampaignDetail() {
     onError: () => toast.error('Erro ao atualizar frete')
   });
 
+  const updateStatusMutation = useMutation({
+    mutationFn: (status: 'ACTIVE' | 'CLOSED' | 'SENT' | 'ARCHIVED') =>
+      campaignApi.updateStatus(id!, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaign', id] });
+      toast.success('Status atualizado!');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Erro ao atualizar status');
+    }
+  });
+
   const handleCreateProduct = (e: React.FormEvent) => {
     e.preventDefault();
     createProductMutation.mutate({ ...productForm, campaignId: id! });
@@ -255,6 +275,10 @@ export default function CampaignDetail() {
     );
   }
 
+  const isActive = campaign.status === 'ACTIVE';
+  const isClosed = campaign.status === 'CLOSED';
+  const isSent = campaign.status === 'SENT';
+
   return (
     <div>
       <div className="mb-6">
@@ -263,12 +287,89 @@ export default function CampaignDetail() {
           Voltar
         </Link>
 
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">{campaign.name}</h1>
-          {campaign.description && (
-            <p className="text-gray-600">{campaign.description}</p>
-          )}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">{campaign.name}</h1>
+            {campaign.description && (
+              <p className="text-gray-600">{campaign.description}</p>
+            )}
+          </div>
+
+          {/* Botões de Status */}
+          <div className="flex flex-wrap gap-2">
+            {isActive && (
+              <IconButton
+                size="sm"
+                icon={<Lock className="w-4 h-4" />}
+                onClick={() => setIsCloseConfirmOpen(true)}
+                variant="warning"
+                className="text-xs sm:text-sm whitespace-nowrap"
+              >
+                Fechar Campanha
+              </IconButton>
+            )}
+
+            {isClosed && (
+              <>
+                <IconButton
+                  size="sm"
+                  icon={<Unlock className="w-4 h-4" />}
+                  onClick={() => setIsReopenConfirmOpen(true)}
+                  variant="warning"
+                  className="text-xs sm:text-sm whitespace-nowrap"
+                >
+                  Reabrir
+                </IconButton>
+                <IconButton
+                  size="sm"
+                  icon={<Send className="w-4 h-4" />}
+                  onClick={() => setIsSentConfirmOpen(true)}
+                  className="text-xs sm:text-sm whitespace-nowrap"
+                >
+                  Marcar como Enviado
+                </IconButton>
+              </>
+            )}
+
+            {isSent && (
+              <IconButton
+                size="sm"
+                icon={<Unlock className="w-4 h-4" />}
+                onClick={() => setIsReopenConfirmOpen(true)}
+                variant="warning"
+                className="text-xs sm:text-sm whitespace-nowrap"
+              >
+                Reabrir Campanha
+              </IconButton>
+            )}
+          </div>
         </div>
+
+        {/* Banner de Alerta */}
+        {!isActive && (
+          <div className={`rounded-lg p-4 mb-4 flex items-start gap-3 ${
+            isClosed ? 'bg-yellow-50 border border-yellow-200' : 'bg-blue-50 border border-blue-200'
+          }`}>
+            <AlertCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
+              isClosed ? 'text-yellow-600' : 'text-blue-600'
+            }`} />
+            <div>
+              <h3 className={`font-semibold mb-1 ${
+                isClosed ? 'text-yellow-900' : 'text-blue-900'
+              }`}>
+                {isClosed ? 'Campanha Fechada' : 'Campanha Enviada'}
+              </h3>
+              <p className={`text-sm ${
+                isClosed ? 'text-yellow-800' : 'text-blue-800'
+              }`}>
+                {isClosed
+                  ? 'Esta campanha está fechada. Não é possível adicionar ou alterar produtos e pedidos.'
+                  : 'Esta campanha foi marcada como enviada. Não é possível adicionar ou alterar produtos e pedidos.'
+                }
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex gap-1 mb-6 border-b">
@@ -279,7 +380,7 @@ export default function CampaignDetail() {
             : 'text-gray-600 hover:text-gray-900'
             }`}
         >
-          <TrendingUp className="w-4 h-4 flex-shrink-0" />
+          <TrendingUp className="w-6 h-6 md:w-4 md:h-4 flex-shrink-0" />
           <span className="hidden sm:inline">Visão Geral</span>
         </button>
         <button
@@ -289,7 +390,7 @@ export default function CampaignDetail() {
             : 'text-gray-600 hover:text-gray-900'
             }`}
         >
-          <ShoppingBag className="w-4 h-4 flex-shrink-0" />
+          <ShoppingBag className="w-6 h-6 md:w-4 md:h-4 flex-shrink-0" />
           <span className="hidden sm:inline">Pedidos</span>
         </button>
         <button
@@ -299,7 +400,7 @@ export default function CampaignDetail() {
             : 'text-gray-600 hover:text-gray-900'
             }`}
         >
-          <Package className="w-4 h-4 flex-shrink-0" />
+          <Package className="w-6 h-6 md:w-4 md:h-4 flex-shrink-0" />
           <span className="hidden sm:inline">Produtos</span>
         </button>
         <button
@@ -309,7 +410,7 @@ export default function CampaignDetail() {
             : 'text-gray-600 hover:text-gray-900'
             }`}
         >
-          <Truck className="w-4 h-4 flex-shrink-0" />
+          <Truck className="w-6 h-6 md:w-4 md:h-4 flex-shrink-0" />
           <span className="hidden sm:inline">Frete</span>
         </button>
       </div>
@@ -317,24 +418,26 @@ export default function CampaignDetail() {
       {activeTab === 'overview' && analytics && (
         <div className="space-y-6">
           {/* Botões de Ação Principais */}
-          <div className="flex gap-2 justify-center flex-wrap">
-            <IconButton
-              size="sm"
-              icon={<Package className="w-4 h-4" />}
-              onClick={() => setIsProductModalOpen(true)}
-              className="text-xs sm:text-sm"
-            >
-              Adicionar Produto
-            </IconButton>
-            <IconButton
-              size="sm"
-              icon={<ShoppingBag className="w-4 h-4" />}
-              onClick={() => setIsOrderModalOpen(true)}
-              className="text-xs sm:text-sm"
-            >
-              Adicionar Pedido
-            </IconButton>
-          </div>
+          {isActive && (
+            <div className="flex gap-2 justify-center flex-wrap">
+              <IconButton
+                size="sm"
+                icon={<Package className="w-4 h-4" />}
+                onClick={() => setIsProductModalOpen(true)}
+                className="text-xs sm:text-sm"
+              >
+                Adicionar Produto
+              </IconButton>
+              <IconButton
+                size="sm"
+                icon={<ShoppingBag className="w-4 h-4" />}
+                onClick={() => setIsOrderModalOpen(true)}
+                className="text-xs sm:text-sm"
+              >
+                Adicionar Pedido
+              </IconButton>
+            </div>
+          )}
 
           {/* Cards de Resumo */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -371,18 +474,6 @@ export default function CampaignDetail() {
           {/* Detalhes por Produto e Cliente */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
-              <h3 className="text-lg font-semibold mb-4">Por Produto</h3>
-              <div className="space-y-2">
-                {analytics.byProduct.map((item) => (
-                  <div key={item.productId} className="flex justify-between">
-                    <span className="text-gray-600">{item.productName}</span>
-                    <span className="font-medium text-gray-900">{item.quantity} unidades</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
-
-            <Card>
               <h3 className="text-lg font-semibold mb-4">Por Cliente</h3>
               <div className="space-y-2">
                 {analytics.byCustomer.map((item, index) => (
@@ -401,6 +492,18 @@ export default function CampaignDetail() {
                 ))}
               </div>
             </Card>
+
+            <Card>
+              <h3 className="text-lg font-semibold mb-4">Por Produto</h3>
+              <div className="space-y-2">
+                {analytics.byProduct.map((item) => (
+                  <div key={item.productId} className="flex justify-between">
+                    <span className="text-gray-600">{item.productName}</span>
+                    <span className="font-medium text-gray-900">{item.quantity} unidades</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
           </div>
         </div>
       )}
@@ -409,14 +512,16 @@ export default function CampaignDetail() {
         <div>
           <div className="flex justify-between items-center mb-4 gap-2">
             <h2 className="text-xl font-semibold">Produtos</h2>
-            <IconButton
-              size="sm"
-              icon={<Package className="w-4 h-4" />}
-              onClick={() => setIsProductModalOpen(true)}
-              className="text-xs sm:text-sm whitespace-nowrap"
-            >
-              Adicionar Produto
-            </IconButton>
+            {isActive && (
+              <IconButton
+                size="sm"
+                icon={<Package className="w-4 h-4" />}
+                onClick={() => setIsProductModalOpen(true)}
+                className="text-xs sm:text-sm whitespace-nowrap"
+              >
+                Adicionar Produto
+              </IconButton>
+            )}
           </div>
 
           {products && products.length === 0 ? (
@@ -434,34 +539,36 @@ export default function CampaignDetail() {
                     <div className="space-y-2">
                       <div className="flex items-start justify-between gap-2">
                         <h3 className="font-semibold text-gray-900">{product.name}</h3>
-                        <div className="flex gap-1 flex-shrink-0">
-                          <IconButton
-                            size="sm"
-                            variant="ghost"
-                            icon={<Edit className="w-4 h-4" />}
-                            onClick={() => {
-                              setEditingProduct(product);
-                              setEditProductForm({
-                                name: product.name,
-                                price: product.price,
-                                weight: product.weight
-                              });
-                              setIsEditProductModalOpen(true);
-                            }}
-                            title="Editar produto"
-                          />
-                          <IconButton
-                            size="sm"
-                            variant="danger"
-                            icon={<Trash2 className="w-4 h-4" />}
-                            onClick={() => {
-                              if (confirm('Tem certeza que deseja remover este produto?')) {
-                                deleteProductMutation.mutate(product.id);
-                              }
-                            }}
-                            title="Remover produto"
-                          />
-                        </div>
+                        {isActive && (
+                          <div className="flex gap-1 flex-shrink-0">
+                            <IconButton
+                              size="sm"
+                              variant="ghost"
+                              icon={<Edit className="w-4 h-4" />}
+                              onClick={() => {
+                                setEditingProduct(product);
+                                setEditProductForm({
+                                  name: product.name,
+                                  price: product.price,
+                                  weight: product.weight
+                                });
+                                setIsEditProductModalOpen(true);
+                              }}
+                              title="Editar produto"
+                            />
+                            <IconButton
+                              size="sm"
+                              variant="danger"
+                              icon={<Trash2 className="w-4 h-4" />}
+                              onClick={() => {
+                                if (confirm('Tem certeza que deseja remover este produto?')) {
+                                  deleteProductMutation.mutate(product.id);
+                                }
+                              }}
+                              title="Remover produto"
+                            />
+                          </div>
+                        )}
                       </div>
                       <div className="flex gap-4 text-sm">
                         <div>
@@ -487,7 +594,9 @@ export default function CampaignDetail() {
                         <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Produto</th>
                         <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Preço</th>
                         <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Peso</th>
-                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">Ações</th>
+                        {isActive && (
+                          <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">Ações</th>
+                        )}
                       </tr>
                     </thead>
                     <tbody className="divide-y">
@@ -496,36 +605,38 @@ export default function CampaignDetail() {
                           <td className="px-4 py-3 text-sm text-gray-900">{product.name}</td>
                           <td className="px-4 py-3 text-sm text-gray-900">{formatCurrency(product.price)}</td>
                           <td className="px-4 py-3 text-sm text-gray-900">{product.weight}g</td>
-                          <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
-                            <div className="flex gap-1 justify-end">
-                              <IconButton
-                                size="sm"
-                                variant="ghost"
-                                icon={<Edit className="w-4 h-4" />}
-                                onClick={() => {
-                                  setEditingProduct(product);
-                                  setEditProductForm({
-                                    name: product.name,
-                                    price: product.price,
-                                    weight: product.weight
-                                  });
-                                  setIsEditProductModalOpen(true);
-                                }}
-                                title="Editar produto"
-                              />
-                              <IconButton
-                                size="sm"
-                                variant="danger"
-                                icon={<Trash2 className="w-4 h-4" />}
-                                onClick={() => {
-                                  if (confirm('Tem certeza que deseja remover este produto?')) {
-                                    deleteProductMutation.mutate(product.id);
-                                  }
-                                }}
-                                title="Remover produto"
-                              />
-                            </div>
-                          </td>
+                          {isActive && (
+                            <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
+                              <div className="flex gap-1 justify-end">
+                                <IconButton
+                                  size="sm"
+                                  variant="ghost"
+                                  icon={<Edit className="w-4 h-4" />}
+                                  onClick={() => {
+                                    setEditingProduct(product);
+                                    setEditProductForm({
+                                      name: product.name,
+                                      price: product.price,
+                                      weight: product.weight
+                                    });
+                                    setIsEditProductModalOpen(true);
+                                  }}
+                                  title="Editar produto"
+                                />
+                                <IconButton
+                                  size="sm"
+                                  variant="danger"
+                                  icon={<Trash2 className="w-4 h-4" />}
+                                  onClick={() => {
+                                    if (confirm('Tem certeza que deseja remover este produto?')) {
+                                      deleteProductMutation.mutate(product.id);
+                                    }
+                                  }}
+                                  title="Remover produto"
+                                />
+                              </div>
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -542,14 +653,16 @@ export default function CampaignDetail() {
           <div className="mb-4 space-y-3">
             <div className="flex justify-between items-center gap-2">
               <h2 className="text-xl font-semibold">Pedidos</h2>
-              <IconButton
-                size="sm"
-                icon={<ShoppingBag className="w-4 h-4" />}
-                onClick={() => setIsOrderModalOpen(true)}
-                className="text-xs sm:text-sm whitespace-nowrap"
-              >
-                Adicionar Pedido
-              </IconButton>
+              {isActive && (
+                <IconButton
+                  size="sm"
+                  icon={<ShoppingBag className="w-4 h-4" />}
+                  onClick={() => setIsOrderModalOpen(true)}
+                  className="text-xs sm:text-sm whitespace-nowrap"
+                >
+                  Adicionar Pedido
+                </IconButton>
+              )}
             </div>
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -600,33 +713,37 @@ export default function CampaignDetail() {
                           }
                           title={order.isPaid ? 'Marcar como não pago' : 'Marcar como pago'}
                         />
-                        <IconButton
-                          size="sm"
-                          variant="ghost"
-                          icon={<Edit className="w-4 h-4" />}
-                          onClick={() => {
-                            setEditingOrder(order);
-                            setEditOrderForm({
-                              customerName: order.customerName,
-                              items: order.items.map(item => ({
-                                productId: item.product.id,
-                                quantity: item.quantity
-                              }))
-                            });
-                            setIsEditOrderModalOpen(true);
-                          }}
-                          title="Editar pedido"
-                        />
-                        <IconButton
-                          size="sm"
-                          variant="danger"
-                          icon={<Trash2 className="w-4 h-4" />}
-                          onClick={() => {
-                            if (confirm('Tem certeza que deseja remover este pedido?')) {
-                              deleteOrderMutation.mutate(order.id);
-                            }
-                          }}
-                        />
+                        {isActive && (
+                          <>
+                            <IconButton
+                              size="sm"
+                              variant="ghost"
+                              icon={<Edit className="w-4 h-4" />}
+                              onClick={() => {
+                                setEditingOrder(order);
+                                setEditOrderForm({
+                                  customerName: order.customerName,
+                                  items: order.items.map(item => ({
+                                    productId: item.product.id,
+                                    quantity: item.quantity
+                                  }))
+                                });
+                                setIsEditOrderModalOpen(true);
+                              }}
+                              title="Editar pedido"
+                            />
+                            <IconButton
+                              size="sm"
+                              variant="danger"
+                              icon={<Trash2 className="w-4 h-4" />}
+                              onClick={() => {
+                                if (confirm('Tem certeza que deseja remover este pedido?')) {
+                                  deleteOrderMutation.mutate(order.id);
+                                }
+                              }}
+                            />
+                          </>
+                        )}
                       </div>
                     </div>
 
@@ -675,15 +792,17 @@ export default function CampaignDetail() {
                 <div className="text-4xl font-bold text-gray-900 mb-4">
                   {formatCurrency(campaign.shippingCost)}
                 </div>
-                <IconButton
-                  icon={<Edit className="w-4 h-4" />}
-                  onClick={() => {
-                    setShippingCost(campaign.shippingCost);
-                    setIsShippingModalOpen(true);
-                  }}
-                >
-                  Editar Frete
-                </IconButton>
+                {isActive && (
+                  <IconButton
+                    icon={<Edit className="w-4 h-4" />}
+                    onClick={() => {
+                      setShippingCost(campaign.shippingCost);
+                      setIsShippingModalOpen(true);
+                    }}
+                  >
+                    Editar Frete
+                  </IconButton>
+                )}
               </div>
 
               <div className="space-y-4">
@@ -1099,6 +1218,42 @@ export default function CampaignDetail() {
           </div>
         </form>
       </Modal>
+
+      {/* Diálogo de Confirmação: Fechar Campanha */}
+      <ConfirmDialog
+        isOpen={isCloseConfirmOpen}
+        onClose={() => setIsCloseConfirmOpen(false)}
+        onConfirm={() => updateStatusMutation.mutate('CLOSED')}
+        title="Fechar Campanha"
+        message="Tem certeza que deseja fechar esta campanha? Ninguém poderá adicionar ou alterar pedidos/produtos enquanto a campanha estiver fechada."
+        confirmText="Fechar Campanha"
+        cancelText="Cancelar"
+        variant="warning"
+      />
+
+      {/* Diálogo de Confirmação: Reabrir Campanha */}
+      <ConfirmDialog
+        isOpen={isReopenConfirmOpen}
+        onClose={() => setIsReopenConfirmOpen(false)}
+        onConfirm={() => updateStatusMutation.mutate('ACTIVE')}
+        title="Reabrir Campanha"
+        message="Deseja reabrir esta campanha? Será possível adicionar e alterar pedidos e produtos novamente."
+        confirmText="Reabrir"
+        cancelText="Cancelar"
+        variant="info"
+      />
+
+      {/* Diálogo de Confirmação: Marcar como Enviado */}
+      <ConfirmDialog
+        isOpen={isSentConfirmOpen}
+        onClose={() => setIsSentConfirmOpen(false)}
+        onConfirm={() => updateStatusMutation.mutate('SENT')}
+        title="Marcar como Enviado"
+        message="Deseja marcar esta campanha como enviada? Esta ação indica que os produtos foram despachados."
+        confirmText="Marcar como Enviado"
+        cancelText="Cancelar"
+        variant="info"
+      />
     </div>
   );
 }

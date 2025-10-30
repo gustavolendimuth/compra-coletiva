@@ -83,6 +83,19 @@ router.get('/:id', asyncHandler(async (req, res) => {
 router.post('/', asyncHandler(async (req, res) => {
   const data = createOrderSchema.parse(req.body);
 
+  // Verifica se a campanha está ativa
+  const campaign = await prisma.campaign.findUnique({
+    where: { id: data.campaignId }
+  });
+
+  if (!campaign) {
+    throw new AppError(404, 'Campaign not found');
+  }
+
+  if (campaign.status !== 'ACTIVE') {
+    throw new AppError(400, 'Cannot create orders in a closed or sent campaign');
+  }
+
   // Busca produtos para calcular preços
   const productIds = data.items.map(item => item.productId);
   const products = await prisma.product.findMany({
@@ -166,11 +179,18 @@ router.put('/:id', asyncHandler(async (req, res) => {
   // Busca o pedido atual
   const currentOrder = await prisma.order.findUnique({
     where: { id },
-    include: { items: true }
+    include: {
+      items: true,
+      campaign: true
+    }
   });
 
   if (!currentOrder) {
     throw new AppError(404, 'Order not found');
+  }
+
+  if (currentOrder.campaign.status !== 'ACTIVE') {
+    throw new AppError(400, 'Cannot update orders in a closed or sent campaign');
   }
 
   // Se há itens para atualizar
@@ -246,6 +266,20 @@ router.post('/:id/items', asyncHandler(async (req, res) => {
   const { id } = req.params;
   const data = addItemSchema.parse(req.body);
 
+  // Verifica o status da campanha
+  const order = await prisma.order.findUnique({
+    where: { id },
+    include: { campaign: true }
+  });
+
+  if (!order) {
+    throw new AppError(404, 'Order not found');
+  }
+
+  if (order.campaign.status !== 'ACTIVE') {
+    throw new AppError(400, 'Cannot add items to orders in a closed or sent campaign');
+  }
+
   const product = await prisma.product.findUnique({
     where: { id: data.productId }
   });
@@ -266,7 +300,7 @@ router.post('/:id/items', asyncHandler(async (req, res) => {
 
   await ShippingCalculator.recalculateOrderSubtotal(id);
 
-  const order = await prisma.order.findUnique({
+  const updatedOrder = await prisma.order.findUnique({
     where: { id },
     include: {
       items: {
@@ -277,12 +311,26 @@ router.post('/:id/items', asyncHandler(async (req, res) => {
     }
   });
 
-  res.json(order);
+  res.json(updatedOrder);
 }));
 
 // DELETE /api/orders/:id/items/:itemId - Remove item do pedido
 router.delete('/:id/items/:itemId', asyncHandler(async (req, res) => {
   const { id, itemId } = req.params;
+
+  // Verifica o status da campanha
+  const order = await prisma.order.findUnique({
+    where: { id },
+    include: { campaign: true }
+  });
+
+  if (!order) {
+    throw new AppError(404, 'Order not found');
+  }
+
+  if (order.campaign.status !== 'ACTIVE') {
+    throw new AppError(400, 'Cannot remove items from orders in a closed or sent campaign');
+  }
 
   await prisma.orderItem.delete({
     where: { id: itemId }
@@ -298,11 +346,16 @@ router.delete('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   const order = await prisma.order.findUnique({
-    where: { id }
+    where: { id },
+    include: { campaign: true }
   });
 
   if (!order) {
     throw new AppError(404, 'Order not found');
+  }
+
+  if (order.campaign.status !== 'ACTIVE') {
+    throw new AppError(400, 'Cannot delete orders from a closed or sent campaign');
   }
 
   await prisma.order.delete({

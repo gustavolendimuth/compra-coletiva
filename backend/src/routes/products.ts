@@ -53,6 +53,19 @@ router.get('/:id', asyncHandler(async (req, res) => {
 router.post('/', asyncHandler(async (req, res) => {
   const data = createProductSchema.parse(req.body);
 
+  // Verifica se a campanha está ativa
+  const campaign = await prisma.campaign.findUnique({
+    where: { id: data.campaignId }
+  });
+
+  if (!campaign) {
+    throw new AppError(404, 'Campaign not found');
+  }
+
+  if (campaign.status !== 'ACTIVE') {
+    throw new AppError(400, 'Cannot add products to a closed or sent campaign');
+  }
+
   const product = await prisma.product.create({
     data: data as any
   });
@@ -65,17 +78,45 @@ router.patch('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
   const data = updateProductSchema.parse(req.body);
 
-  const product = await prisma.product.update({
+  // Busca o produto e verifica o status da campanha
+  const product = await prisma.product.findUnique({
+    where: { id },
+    include: { campaign: true }
+  });
+
+  if (!product) {
+    throw new AppError(404, 'Product not found');
+  }
+
+  if (product.campaign.status !== 'ACTIVE') {
+    throw new AppError(400, 'Cannot update products in a closed or sent campaign');
+  }
+
+  const updatedProduct = await prisma.product.update({
     where: { id },
     data
   });
 
-  res.json(product);
+  res.json(updatedProduct);
 }));
 
 // DELETE /api/products/:id - Remove um produto
 router.delete('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
+
+  // Busca o produto e verifica o status da campanha
+  const product = await prisma.product.findUnique({
+    where: { id },
+    include: { campaign: true }
+  });
+
+  if (!product) {
+    throw new AppError(404, 'Product not found');
+  }
+
+  if (product.campaign.status !== 'ACTIVE') {
+    throw new AppError(400, 'Cannot delete products from a closed or sent campaign');
+  }
 
   await prisma.product.delete({
     where: { id }

@@ -15,7 +15,11 @@ const updateCampaignSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
   shippingCost: z.number().min(0).optional(),
-  status: z.enum(['ACTIVE', 'CLOSED', 'ARCHIVED']).optional()
+  status: z.enum(['ACTIVE', 'CLOSED', 'SENT', 'ARCHIVED']).optional()
+});
+
+const updateStatusSchema = z.object({
+  status: z.enum(['ACTIVE', 'CLOSED', 'SENT', 'ARCHIVED'])
 });
 
 // GET /api/campaigns - Lista todas as campanhas
@@ -78,6 +82,19 @@ router.patch('/:id', asyncHandler(async (req, res) => {
   const campaign = await prisma.campaign.update({
     where: { id },
     data
+  });
+
+  res.json(campaign);
+}));
+
+// PATCH /api/campaigns/:id/status - Atualiza apenas o status da campanha
+router.patch('/:id/status', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { status } = updateStatusSchema.parse(req.body);
+
+  const campaign = await prisma.campaign.update({
+    where: { id },
+    data: { status }
   });
 
   res.json(campaign);

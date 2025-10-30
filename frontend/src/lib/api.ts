@@ -14,7 +14,7 @@ export interface Campaign {
   id: string;
   name: string;
   description?: string;
-  status: 'ACTIVE' | 'CLOSED' | 'ARCHIVED';
+  status: 'ACTIVE' | 'CLOSED' | 'SENT' | 'ARCHIVED';
   shippingCost: number;
   createdAt: string;
   updatedAt: string;
@@ -84,6 +84,8 @@ export const campaignApi = {
     api.post<Campaign>('/campaigns', data).then(res => res.data),
   update: (id: string, data: Partial<Campaign>) =>
     api.patch<Campaign>(`/campaigns/${id}`, data).then(res => res.data),
+  updateStatus: (id: string, status: 'ACTIVE' | 'CLOSED' | 'SENT' | 'ARCHIVED') =>
+    api.patch<Campaign>(`/campaigns/${id}/status`, { status }).then(res => res.data),
   delete: (id: string) => api.delete(`/campaigns/${id}`)
 };
 

@@ -2,7 +2,7 @@ import { ButtonHTMLAttributes, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'warning';
   size?: 'sm' | 'md' | 'lg';
   icon?: ReactNode;
   iconPosition?: 'left' | 'right';
@@ -25,7 +25,8 @@ export default function IconButton({
     primary: 'bg-primary-600 text-white hover:bg-primary-700 disabled:hover:bg-primary-600',
     secondary: 'bg-gray-200 text-gray-900 hover:bg-gray-300 disabled:hover:bg-gray-200',
     danger: 'bg-red-600 text-white hover:bg-red-700 disabled:hover:bg-red-600',
-    ghost: 'bg-transparent text-gray-700 hover:bg-gray-100 disabled:hover:bg-transparent'
+    ghost: 'bg-transparent text-gray-700 hover:bg-gray-100 disabled:hover:bg-transparent',
+    warning: 'bg-orange-500 text-white hover:bg-orange-600 disabled:hover:bg-orange-500'
   };
 
   const sizes = {
