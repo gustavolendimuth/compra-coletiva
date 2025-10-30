@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Copia package.json e package-lock.json
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 # Copia o código fonte
 COPY . .

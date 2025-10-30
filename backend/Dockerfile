@@ -8,7 +8,7 @@ WORKDIR /app
 
 # Copia package.json e package-lock.json
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 # Copia o código fonte e prisma schema
 COPY . .
@@ -29,7 +29,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Instala apenas dependências de produção
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 
 # Copia arquivos necessários do stage de build
 COPY --from=builder /app/dist ./dist
