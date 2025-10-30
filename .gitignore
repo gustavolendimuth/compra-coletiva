@@ -36,8 +36,5 @@ Thumbs.db
 *.swo
 *~
 
-# Prisma
-backend/prisma/migrations/
-
 #Ignore vscode AI rules
 .github/instructions/codacy.instructions.md
