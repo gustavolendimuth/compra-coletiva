@@ -64,7 +64,7 @@ router.post('/', asyncHandler(async (req, res) => {
   const data = createCampaignSchema.parse(req.body);
 
   const campaign = await prisma.campaign.create({
-    data
+    data: data as any
   });
 
   res.status(201).json(campaign);

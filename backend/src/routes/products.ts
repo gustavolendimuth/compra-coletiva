@@ -54,7 +54,7 @@ router.post('/', asyncHandler(async (req, res) => {
   const data = createProductSchema.parse(req.body);
 
   const product = await prisma.product.create({
-    data
+    data: data as any
   });
 
   res.status(201).json(product);
