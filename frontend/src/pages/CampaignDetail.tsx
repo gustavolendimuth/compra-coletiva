@@ -426,24 +426,15 @@ export default function CampaignDetail() {
               </div>
             </Card>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full bg-white rounded-lg shadow-sm">
-                <thead className="bg-gray-50 border-b">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-900">Produto</th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-900">Preço</th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-900">Peso (g)</th>
-                    <th className="px-6 py-3 text-right text-sm font-medium text-gray-900">Ações</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {products?.map((product) => (
-                    <tr key={product.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 text-sm text-gray-900">{product.name}</td>
-                      <td className="px-6 py-4 text-sm text-gray-900">{formatCurrency(product.price)}</td>
-                      <td className="px-6 py-4 text-sm text-gray-900">{product.weight}g</td>
-                      <td className="px-6 py-4 text-sm text-right whitespace-nowrap">
-                        <div className="flex gap-1 justify-end">
+            <>
+              {/* Mobile: Cards */}
+              <div className="space-y-2 md:hidden">
+                {products?.map((product) => (
+                  <Card key={product.id}>
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-semibold text-gray-900">{product.name}</h3>
+                        <div className="flex gap-1 flex-shrink-0">
                           <IconButton
                             size="sm"
                             variant="ghost"
@@ -471,12 +462,77 @@ export default function CampaignDetail() {
                             title="Remover produto"
                           />
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      </div>
+                      <div className="flex gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-500">Preço: </span>
+                          <span className="font-medium text-gray-900">{formatCurrency(product.price)}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Peso: </span>
+                          <span className="font-medium text-gray-900">{product.weight}g</span>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Desktop: Table */}
+              <Card className="hidden md:block">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="border-b">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Produto</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Preço</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Peso</th>
+                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {products?.map((product) => (
+                        <tr key={product.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-sm text-gray-900">{product.name}</td>
+                          <td className="px-4 py-3 text-sm text-gray-900">{formatCurrency(product.price)}</td>
+                          <td className="px-4 py-3 text-sm text-gray-900">{product.weight}g</td>
+                          <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
+                            <div className="flex gap-1 justify-end">
+                              <IconButton
+                                size="sm"
+                                variant="ghost"
+                                icon={<Edit className="w-4 h-4" />}
+                                onClick={() => {
+                                  setEditingProduct(product);
+                                  setEditProductForm({
+                                    name: product.name,
+                                    price: product.price,
+                                    weight: product.weight
+                                  });
+                                  setIsEditProductModalOpen(true);
+                                }}
+                                title="Editar produto"
+                              />
+                              <IconButton
+                                size="sm"
+                                variant="danger"
+                                icon={<Trash2 className="w-4 h-4" />}
+                                onClick={() => {
+                                  if (confirm('Tem certeza que deseja remover este produto?')) {
+                                    deleteProductMutation.mutate(product.id);
+                                  }
+                                }}
+                                title="Remover produto"
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </>
           )}
         </div>
       )}
