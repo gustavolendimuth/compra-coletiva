@@ -134,18 +134,23 @@ Acesse `https://seu-frontend.up.railway.app`
 ```
 compra-coletiva/
 ├── railway.json (configuração Railway - compartilhada)
-├── Dockerfile.production (monolítico - não usado mais)
+├── Dockerfile (monolítico - serve backend + frontend em um único serviço)
 ├── backend/
-│   ├── Dockerfile (produção - com migrations via start.sh)
+│   ├── Dockerfile (produção - serviço separado com migrations via start.sh)
 │   ├── Dockerfile.dev (desenvolvimento)
 │   ├── start.sh (script que roda migrations + inicia servidor)
 │   └── .env.example
 └── frontend/
-    ├── Dockerfile (produção - nginx apenas)
+    ├── Dockerfile (produção - serviço separado com nginx)
     ├── Dockerfile.dev (desenvolvimento)
     ├── nginx.conf (configuração nginx)
     └── .env.example
 ```
+
+## Importante sobre Dockerfiles
+
+- **backend/Dockerfile** e **frontend/Dockerfile**: Usam `npm install` (não requerem package-lock.json)
+- **Dockerfile na raiz**: Para deploy monolítico (backend serve o frontend), usa `npm install`
 
 ## Comandos Úteis
 
