@@ -4,12 +4,12 @@
 FROM node:20-alpine AS backend-builder
 RUN apk add --no-cache openssl libc6-compat
 WORKDIR /app
-# Copia package.json raiz (workspaces) e package-lock.json
+# Copia package.json raiz (workspaces)
 COPY package*.json ./
 # Copia package.json dos workspaces
 COPY backend/package*.json ./backend/
 COPY frontend/package*.json ./frontend/
-RUN npm ci --workspace=backend --include-workspace-root
+RUN npm install --workspace=backend --include-workspace-root
 WORKDIR /app/backend
 COPY backend/ ./
 RUN npx prisma generate
@@ -18,12 +18,12 @@ RUN npm run build
 # Stage 2: Build Frontend
 FROM node:20-alpine AS frontend-builder
 WORKDIR /app
-# Copia package.json raiz (workspaces) e package-lock.json
+# Copia package.json raiz (workspaces)
 COPY package*.json ./
 # Copia package.json dos workspaces
 COPY backend/package*.json ./backend/
 COPY frontend/package*.json ./frontend/
-RUN npm ci --workspace=frontend --include-workspace-root
+RUN npm install --workspace=frontend --include-workspace-root
 WORKDIR /app/frontend
 COPY frontend/ ./
 RUN npm run build
@@ -32,12 +32,12 @@ RUN npm run build
 FROM node:20-alpine
 RUN apk add --no-cache openssl libc6-compat
 WORKDIR /app
-# Copia package.json raiz (workspaces) e package-lock.json
+# Copia package.json raiz (workspaces)
 COPY package*.json ./
 # Copia package.json dos workspaces
 COPY backend/package*.json ./backend/
 COPY frontend/package*.json ./frontend/
-RUN npm ci --workspace=backend --include-workspace-root --omit=dev
+RUN npm install --workspace=backend --include-workspace-root --omit=dev
 WORKDIR /app/backend
 
 # Copia arquivos necessários do backend
@@ -48,9 +48,11 @@ COPY --from=backend-builder /app/node_modules/.prisma /app/node_modules/.prisma
 # Copia build do frontend
 COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
 
-# Serve frontend estático através do backend
-RUN npm install express-static-gzip
+# Copia script de inicialização
+COPY backend/start.sh ./start.sh
+RUN chmod +x start.sh
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]
+# Executa migrations e inicia o servidor
+CMD ["sh", "start.sh"]
