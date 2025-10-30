@@ -48,7 +48,7 @@ CORS_ORIGIN=https://seu-frontend.up.railway.app
 #### Deployment
 O backend usa:
 - [railway.json](railway.json) na raiz (compartilhado com frontend)
-- [backend/Dockerfile.production](backend/Dockerfile.production) que:
+- [backend/Dockerfile](backend/Dockerfile) que:
   - Faz build da aplicação TypeScript
   - Executa [backend/start.sh](backend/start.sh) que roda `npx prisma migrate deploy` automaticamente
   - Inicia o servidor com `node dist/index.js`
@@ -72,7 +72,7 @@ VITE_API_URL=https://seu-backend.up.railway.app
 #### Deployment
 O frontend usa:
 - [railway.json](railway.json) na raiz (compartilhado com backend)
-- [frontend/Dockerfile.production](frontend/Dockerfile.production) que:
+- [frontend/Dockerfile](frontend/Dockerfile) que:
   - Faz build da aplicação React
   - Serve os arquivos estáticos com nginx
   - Usa [frontend/nginx.conf](frontend/nginx.conf) para suporte a React Router
@@ -134,15 +134,15 @@ Acesse `https://seu-frontend.up.railway.app`
 ```
 compra-coletiva/
 ├── railway.json (configuração Railway - compartilhada)
-├── Dockerfile.production (não usado - cada serviço tem o seu)
+├── Dockerfile.production (monolítico - não usado mais)
 ├── backend/
-│   ├── Dockerfile (desenvolvimento)
-│   ├── Dockerfile.production (produção - com migrations)
+│   ├── Dockerfile (produção - com migrations via start.sh)
+│   ├── Dockerfile.dev (desenvolvimento)
 │   ├── start.sh (script que roda migrations + inicia servidor)
 │   └── .env.example
 └── frontend/
-    ├── Dockerfile (desenvolvimento)
-    ├── Dockerfile.production (produção - nginx apenas)
+    ├── Dockerfile (produção - nginx apenas)
+    ├── Dockerfile.dev (desenvolvimento)
     ├── nginx.conf (configuração nginx)
     └── .env.example
 ```
