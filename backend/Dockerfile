@@ -36,8 +36,11 @@ RUN npm install prisma --save-dev
 
 # Copia arquivos necessários do stage de build
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+
+# Copia schema e migrations do Prisma
+COPY --from=builder /app/prisma/schema.prisma ./prisma/
+COPY --from=builder /app/prisma/migrations ./prisma/migrations
 
 # Copia script de inicialização
 COPY start.sh ./start.sh
