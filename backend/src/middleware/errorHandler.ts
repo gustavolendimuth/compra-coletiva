@@ -30,14 +30,43 @@ export const errorHandler = (
   if (err.name === 'PrismaClientKnownRequestError') {
     return res.status(400).json({
       status: 'error',
-      message: 'Database operation failed'
+      message: 'Database operation failed',
+      ...(process.env.NODE_ENV === 'development' && { details: err.message })
+    });
+  }
+
+  // Prisma initialization errors
+  if (err.name === 'PrismaClientInitializationError') {
+    return res.status(503).json({
+      status: 'error',
+      message: 'Database connection failed',
+      ...(process.env.NODE_ENV === 'development' && { details: err.message })
+    });
+  }
+
+  // Prisma validation errors
+  if (err.name === 'PrismaClientValidationError') {
+    return res.status(400).json({
+      status: 'error',
+      message: 'Invalid database query',
+      ...(process.env.NODE_ENV === 'development' && { details: err.message })
+    });
+  }
+
+  // Zod validation errors
+  if (err.name === 'ZodError') {
+    return res.status(400).json({
+      status: 'error',
+      message: 'Validation error',
+      ...(process.env.NODE_ENV === 'development' && { details: err.message })
     });
   }
 
   // Default error
   return res.status(500).json({
     status: 'error',
-    message: 'Internal server error'
+    message: 'Internal server error',
+    ...(process.env.NODE_ENV === 'development' && { details: err.message })
   });
 };
 

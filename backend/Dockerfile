@@ -31,6 +31,9 @@ COPY package*.json ./
 # Instala apenas dependências de produção
 RUN npm install --omit=dev
 
+# Instala Prisma CLI temporariamente para rodar migrations
+RUN npm install prisma --save-dev
+
 # Copia arquivos necessários do stage de build
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
