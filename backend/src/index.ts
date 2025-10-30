@@ -10,11 +10,24 @@ import { errorHandler } from './middleware/errorHandler';
 const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
-const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
+
+// Parse CORS origins - accepts comma-separated list or single origin
+// Automatically adds both HTTP and HTTPS versions if protocol is not specified
+const corsOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').flatMap(origin => {
+      const trimmed = origin.trim();
+      // If protocol is already specified, use as-is
+      if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+        return [trimmed];
+      }
+      // Otherwise, add both HTTP and HTTPS versions
+      return [`http://${trimmed}`, `https://${trimmed}`];
+    })
+  : ['http://localhost:5173'];
 
 // Middleware
 app.use(cors({
-  origin: CORS_ORIGIN,
+  origin: corsOrigins,
   credentials: true
 }));
 app.use(express.json());
@@ -42,7 +55,7 @@ process.on('beforeExit', async () => {
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV}`);
-  console.log(`🌐 CORS enabled for: ${CORS_ORIGIN}`);
+  console.log(`🌐 CORS enabled for: ${corsOrigins.join(', ')}`);
 });
 
 export { prisma };
