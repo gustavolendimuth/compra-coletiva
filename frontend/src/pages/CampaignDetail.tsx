@@ -18,7 +18,6 @@ import {
   productApi,
   orderApi,
   analyticsApi,
-  Product,
   Order
 } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
