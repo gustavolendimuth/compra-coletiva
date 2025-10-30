@@ -10,11 +10,19 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
-# Copia o código fonte e prisma schema
-COPY . .
+# Copia o código fonte primeiro (exceto prisma)
+COPY src ./src
+COPY tsconfig.json ./
+COPY start.sh ./
 
-# Debug - verifica se migrations existem
-RUN ls -la prisma/ && ls -la prisma/migrations/ || echo "Migrations not found!"
+# Copia prisma separadamente para garantir que migrations venham junto
+COPY prisma ./prisma
+
+# Debug - verifica se migrations existem no builder
+RUN echo "=== Debug: Checking prisma in builder stage ===" && \
+    ls -la prisma/ && \
+    ls -la prisma/migrations/ && \
+    echo "=== Migrations found in builder ===" || echo "=== ERROR: Migrations not found in builder ==="
 
 # Gera o Prisma Client
 RUN npx prisma generate
@@ -37,19 +45,23 @@ RUN npm install --omit=dev
 # Instala Prisma CLI temporariamente para rodar migrations
 RUN npm install prisma --save-dev
 
-# Copia arquivos necessários do stage de build
+# Copia arquivos compilados do builder
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
-# Copia schema e migrations do Prisma diretamente da fonte
-COPY prisma ./prisma
+# Copia prisma do builder (com migrations)
+COPY --from=builder /app/prisma ./prisma
 
 # Copia script de inicialização
 COPY start.sh ./start.sh
 RUN chmod +x start.sh
 
-# Debug - verifica se migrations foram copiadas
-RUN ls -la prisma/ && ls -la prisma/migrations/ || echo "Migrations not found in production stage!"
+# Debug - verifica se migrations foram copiadas para produção
+RUN echo "=== Debug: Checking prisma in production stage ===" && \
+    ls -la prisma/ && \
+    echo "Checking migrations directory:" && \
+    ls -la prisma/migrations/ && \
+    echo "=== Migrations found in production ===" || echo "=== ERROR: Migrations not found in production ==="
 
 EXPOSE 3000
 

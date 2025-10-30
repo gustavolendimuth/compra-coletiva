@@ -24,6 +24,8 @@ npx prisma migrate deploy
 # Verifica se as migrations foram bem-sucedidas
 if [ $? -ne 0 ]; then
   echo "❌ ERROR: Migrations failed!"
+  echo "Trying to get more details..."
+  npx prisma migrate status || true
   exit 1
 fi
 
