@@ -13,6 +13,9 @@ RUN npm install
 # Copia o código fonte e prisma schema
 COPY . .
 
+# Debug - verifica se migrations existem
+RUN ls -la prisma/ && ls -la prisma/migrations/ || echo "Migrations not found!"
+
 # Gera o Prisma Client
 RUN npx prisma generate
 
@@ -38,13 +41,15 @@ RUN npm install prisma --save-dev
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
-# Copia schema e migrations do Prisma
-COPY --from=builder /app/prisma/schema.prisma ./prisma/
-COPY --from=builder /app/prisma/migrations ./prisma/migrations
+# Copia schema e migrations do Prisma diretamente da fonte
+COPY prisma ./prisma
 
 # Copia script de inicialização
 COPY start.sh ./start.sh
 RUN chmod +x start.sh
+
+# Debug - verifica se migrations foram copiadas
+RUN ls -la prisma/ && ls -la prisma/migrations/ || echo "Migrations not found in production stage!"
 
 EXPOSE 3000
 
