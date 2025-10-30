@@ -27,11 +27,9 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
+    env_file:
+      - ./backend/.env
     environment:
-      NODE_ENV: development
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/compra_coletiva
-      PORT: 3000
-      CORS_ORIGIN: http://localhost:5173
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
     volumes:
@@ -51,8 +49,9 @@ services:
     restart: unless-stopped
     ports:
       - "5173:5173"
+    env_file:
+      - ./frontend/.env
     environment:
-      VITE_API_URL: http://localhost:3000
       CHOKIDAR_USEPOLLING: "true"
     volumes:
       - ./frontend:/app
