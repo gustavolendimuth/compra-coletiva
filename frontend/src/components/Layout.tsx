@@ -5,7 +5,7 @@ export default function Layout() {
   const location = useLocation();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <nav className="bg-white shadow-sm border-b">
         <div className="container-custom py-4">
           <div className="flex items-center justify-between">
@@ -30,11 +30,13 @@ export default function Layout() {
         </div>
       </nav>
 
-      <main className="container-custom py-8">
-        <Outlet />
+      <main className="flex-1">
+        <div className="container-custom py-8">
+          <Outlet />
+        </div>
       </main>
 
-      <footer className="bg-white border-t mt-auto">
+      <footer className="bg-white border-t">
         <div className="container-custom py-6 text-center text-sm text-gray-500">
           <p>Sistema de Gerenciamento de Compras Coletivas</p>
         </div>

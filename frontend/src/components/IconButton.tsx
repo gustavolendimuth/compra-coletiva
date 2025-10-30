@@ -1,21 +1,25 @@
 import { ButtonHTMLAttributes, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
-  children: ReactNode;
+  icon?: ReactNode;
+  iconPosition?: 'left' | 'right';
+  children?: ReactNode;
 }
 
-export default function Button({
+export default function IconButton({
   variant = 'primary',
   size = 'md',
+  icon,
+  iconPosition = 'left',
   className,
   children,
   disabled,
   ...props
-}: ButtonProps) {
-  const baseClasses = 'inline-flex items-center justify-center font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap';
+}: IconButtonProps) {
+  const baseClasses = 'inline-flex items-center justify-center gap-2 font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap';
 
   const variants = {
     primary: 'bg-primary-600 text-white hover:bg-primary-700 disabled:hover:bg-primary-600',
@@ -36,7 +40,9 @@ export default function Button({
       disabled={disabled}
       {...props}
     >
-      {children}
+      {icon && iconPosition === 'left' && <span className="flex-shrink-0">{icon}</span>}
+      {children && <span>{children}</span>}
+      {icon && iconPosition === 'right' && <span className="flex-shrink-0">{icon}</span>}
     </button>
   );
 }

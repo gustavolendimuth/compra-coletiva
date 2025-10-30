@@ -21,6 +21,14 @@ const updateOrderSchema = z.object({
   isSeparated: z.boolean().optional()
 });
 
+const updateOrderWithItemsSchema = z.object({
+  customerName: z.string().min(1).optional(),
+  items: z.array(z.object({
+    productId: z.string(),
+    quantity: z.number().int().min(1)
+  })).min(1).optional()
+});
+
 const addItemSchema = z.object({
   productId: z.string(),
   quantity: z.number().int().min(1)
@@ -130,7 +138,7 @@ router.post('/', asyncHandler(async (req, res) => {
   res.status(201).json(updatedOrder);
 }));
 
-// PATCH /api/orders/:id - Atualiza um pedido
+// PATCH /api/orders/:id - Atualiza um pedido (apenas campos simples)
 router.patch('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
   const data = updateOrderSchema.parse(req.body);
@@ -148,6 +156,89 @@ router.patch('/:id', asyncHandler(async (req, res) => {
   });
 
   res.json(order);
+}));
+
+// PUT /api/orders/:id - Atualiza um pedido completo (com itens)
+router.put('/:id', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const data = updateOrderWithItemsSchema.parse(req.body);
+
+  // Busca o pedido atual
+  const currentOrder = await prisma.order.findUnique({
+    where: { id },
+    include: { items: true }
+  });
+
+  if (!currentOrder) {
+    throw new AppError(404, 'Order not found');
+  }
+
+  // Se há itens para atualizar
+  if (data.items) {
+    // Busca produtos para calcular preços
+    const productIds = data.items.map(item => item.productId);
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds } }
+    });
+
+    const productMap = new Map(products.map(p => [p.id, p]));
+
+    // Remove itens antigos e cria novos em uma transação
+    await prisma.$transaction(async (tx) => {
+      // Remove todos os itens antigos
+      await tx.orderItem.deleteMany({
+        where: { orderId: id }
+      });
+
+      // Cria novos itens
+      await tx.orderItem.createMany({
+        data: data.items!.map(item => {
+          const product = productMap.get(item.productId);
+          if (!product) {
+            throw new AppError(400, `Product ${item.productId} not found`);
+          }
+          return {
+            orderId: id,
+            productId: item.productId,
+            quantity: item.quantity,
+            unitPrice: product.price,
+            subtotal: product.price * item.quantity
+          };
+        })
+      });
+
+      // Atualiza nome do cliente se fornecido
+      if (data.customerName) {
+        await tx.order.update({
+          where: { id },
+          data: { customerName: data.customerName }
+        });
+      }
+    });
+
+    // Recalcula subtotal e frete
+    await ShippingCalculator.recalculateOrderSubtotal(id);
+  } else if (data.customerName) {
+    // Apenas atualiza o nome se não há itens
+    await prisma.order.update({
+      where: { id },
+      data: { customerName: data.customerName }
+    });
+  }
+
+  // Busca pedido atualizado
+  const updatedOrder = await prisma.order.findUnique({
+    where: { id },
+    include: {
+      items: {
+        include: {
+          product: true
+        }
+      }
+    }
+  });
+
+  res.json(updatedOrder);
 }));
 
 // POST /api/orders/:id/items - Adiciona item ao pedido

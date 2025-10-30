@@ -107,6 +107,10 @@ export const orderApi = {
   }) => api.post<Order>('/orders', data).then(res => res.data),
   update: (id: string, data: Partial<Order>) =>
     api.patch<Order>(`/orders/${id}`, data).then(res => res.data),
+  updateWithItems: (id: string, data: {
+    customerName?: string;
+    items?: Array<{ productId: string; quantity: number }>;
+  }) => api.put<Order>(`/orders/${id}`, data).then(res => res.data),
   delete: (id: string) => api.delete(`/orders/${id}`)
 };
 
