@@ -18,6 +18,11 @@ RUN npm run build
 # Stage 2: Build Frontend
 FROM node:20-alpine AS frontend-builder
 WORKDIR /app
+
+# Argumentos de build para variáveis de ambiente do Vite
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+
 # Copia package.json raiz (workspaces)
 COPY package*.json ./
 # Copia package.json dos workspaces
@@ -40,10 +45,16 @@ COPY frontend/package*.json ./frontend/
 RUN npm install --workspace=backend --include-workspace-root --omit=dev
 WORKDIR /app/backend
 
+# Instala Prisma CLI para rodar migrations
+RUN npm install prisma --save-dev
+
 # Copia arquivos necessários do backend
 COPY --from=backend-builder /app/backend/dist ./dist
-COPY --from=backend-builder /app/backend/prisma ./prisma
 COPY --from=backend-builder /app/node_modules/.prisma /app/node_modules/.prisma
+
+# Copia schema e migrations do Prisma
+COPY --from=backend-builder /app/backend/prisma/schema.prisma ./prisma/
+COPY --from=backend-builder /app/backend/prisma/migrations ./prisma/migrations
 
 # Copia build do frontend
 COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
