@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { ShoppingCart } from 'lucide-react';
+import { Users } from 'lucide-react';
 
 export default function Layout() {
   const location = useLocation();
@@ -10,7 +10,7 @@ export default function Layout() {
         <div className="container-custom py-4">
           <div className="flex items-center justify-between">
             <Link to="/" className="flex items-center gap-2 text-xl font-bold text-primary-600">
-              <ShoppingCart className="w-6 h-6" />
+              <Users className="w-6 h-6" />
               Compra Coletiva
             </Link>
 

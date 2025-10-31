@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <defs>
+    <style>
+      @media (prefers-color-scheme: dark) {
+        :root { color: #10b981; }
+      }
+      @media (prefers-color-scheme: light) {
+        :root { color: #059669; }
+      }
+    </style>
+  </defs>
+  <!-- Person 1 (left) -->
+  <circle cx="9" cy="7" r="3"/>
+  <path d="M3 21c0-3.3 2.7-6 6-6s6 2.7 6 6"/>
+
+  <!-- Person 2 (right) -->
+  <circle cx="17" cy="7" r="3"/>
+  <path d="M21 21c0-3.3-2.7-6-6-6"/>
+</svg>
