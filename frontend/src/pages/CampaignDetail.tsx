@@ -487,7 +487,10 @@ export default function CampaignDetail() {
                     hour12: false
                   })}
                 </span>
-                <button
+                <IconButton
+                  size="sm"
+                  variant="ghost"
+                  icon={<Edit className="w-3 h-3" />}
                   onClick={() => {
                     setIsEditDeadlineModalOpen(true);
                     if (campaign.deadline) {
@@ -504,24 +507,23 @@ export default function CampaignDetail() {
                       setDeadlineForm('');
                     }
                   }}
-                  className="ml-1 hover:opacity-70 transition-opacity"
                   title="Editar data limite"
-                >
-                  <Edit className="w-4 h-4" />
-                </button>
+                  className="!p-1"
+                />
               </div>
             )}
             {!campaign.deadline && isActive && (
-              <button
+              <IconButton
+                size="sm"
+                variant="secondary"
+                icon={<Calendar className="w-4 h-4" />}
                 onClick={() => {
                   setIsEditDeadlineModalOpen(true);
                   setDeadlineForm('');
                 }}
-                className="inline-flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
               >
-                <Calendar className="w-4 h-4" />
-                <span>Adicionar data limite</span>
-              </button>
+                Adicionar data limite
+              </IconButton>
             )}
           </div>
 
@@ -601,9 +603,9 @@ export default function CampaignDetail() {
       <div className="flex gap-1 mb-6 border-b">
         <button
           onClick={() => setActiveTab('overview')}
-          className={`flex items-center justify-center gap-2 px-3 py-2 font-medium transition-colors flex-1 md:flex-initial ${activeTab === 'overview'
-            ? 'text-primary-600 border-b-2 border-primary-600'
-            : 'text-gray-600 hover:text-gray-900'
+          className={`flex items-center justify-center gap-2 px-3 py-2 font-medium transition-colors flex-1 md:flex-initial rounded-t-lg ${activeTab === 'overview'
+            ? 'text-primary-600 border-b-2 border-primary-600 bg-primary-50'
+            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-b-2 border-transparent'
             }`}
         >
           <TrendingUp className="w-6 h-6 md:w-4 md:h-4 flex-shrink-0" />
@@ -611,9 +613,9 @@ export default function CampaignDetail() {
         </button>
         <button
           onClick={() => setActiveTab('orders')}
-          className={`flex items-center justify-center gap-2 px-3 py-2 font-medium transition-colors flex-1 md:flex-initial ${activeTab === 'orders'
-            ? 'text-primary-600 border-b-2 border-primary-600'
-            : 'text-gray-600 hover:text-gray-900'
+          className={`flex items-center justify-center gap-2 px-3 py-2 font-medium transition-colors flex-1 md:flex-initial rounded-t-lg ${activeTab === 'orders'
+            ? 'text-primary-600 border-b-2 border-primary-600 bg-primary-50'
+            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-b-2 border-transparent'
             }`}
         >
           <ShoppingBag className="w-6 h-6 md:w-4 md:h-4 flex-shrink-0" />
@@ -621,9 +623,9 @@ export default function CampaignDetail() {
         </button>
         <button
           onClick={() => setActiveTab('products')}
-          className={`flex items-center justify-center gap-2 px-3 py-2 font-medium transition-colors flex-1 md:flex-initial ${activeTab === 'products'
-            ? 'text-primary-600 border-b-2 border-primary-600'
-            : 'text-gray-600 hover:text-gray-900'
+          className={`flex items-center justify-center gap-2 px-3 py-2 font-medium transition-colors flex-1 md:flex-initial rounded-t-lg ${activeTab === 'products'
+            ? 'text-primary-600 border-b-2 border-primary-600 bg-primary-50'
+            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-b-2 border-transparent'
             }`}
         >
           <Package className="w-6 h-6 md:w-4 md:h-4 flex-shrink-0" />
@@ -631,9 +633,9 @@ export default function CampaignDetail() {
         </button>
         <button
           onClick={() => setActiveTab('shipping')}
-          className={`flex items-center justify-center gap-2 px-3 py-2 font-medium transition-colors flex-1 md:flex-initial ${activeTab === 'shipping'
-            ? 'text-primary-600 border-b-2 border-primary-600'
-            : 'text-gray-600 hover:text-gray-900'
+          className={`flex items-center justify-center gap-2 px-3 py-2 font-medium transition-colors flex-1 md:flex-initial rounded-t-lg ${activeTab === 'shipping'
+            ? 'text-primary-600 border-b-2 border-primary-600 bg-primary-50'
+            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-b-2 border-transparent'
             }`}
         >
           <Truck className="w-6 h-6 md:w-4 md:h-4 flex-shrink-0" />
@@ -1202,6 +1204,7 @@ export default function CampaignDetail() {
             <input
               type="text"
               required
+              autoFocus
               value={productForm.name}
               onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
@@ -1271,6 +1274,7 @@ export default function CampaignDetail() {
             <input
               type="text"
               required
+              autoFocus
               value={editProductForm.name}
               onChange={(e) => setEditProductForm({ ...editProductForm, name: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
@@ -1340,6 +1344,7 @@ export default function CampaignDetail() {
             <input
               type="text"
               required
+              autoFocus
               value={orderForm.customerName}
               onChange={(e) => setOrderForm({ ...orderForm, customerName: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
@@ -1444,6 +1449,7 @@ export default function CampaignDetail() {
               step="0.01"
               min="0"
               required
+              autoFocus
               value={shippingCost}
               onChange={(e) => setShippingCost(e.target.value === '' ? '' : parseFloat(e.target.value))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
@@ -1486,6 +1492,7 @@ export default function CampaignDetail() {
             <input
               type="text"
               required
+              autoFocus
               value={editOrderForm.customerName}
               onChange={(e) => setEditOrderForm({ ...editOrderForm, customerName: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
