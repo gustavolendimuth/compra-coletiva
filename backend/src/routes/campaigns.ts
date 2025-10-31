@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { prisma } from '../index';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
 import { z } from 'zod';
+import { InvoiceGenerator } from '../services/invoiceGenerator';
 
 const router = Router();
 
@@ -144,6 +145,25 @@ router.delete('/:id', asyncHandler(async (req, res) => {
   });
 
   res.status(204).send();
+}));
+
+// GET /api/campaigns/:id/supplier-invoice - Gera fatura para fornecedor em PDF
+router.get('/:id/supplier-invoice', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const pdfBuffer = await InvoiceGenerator.generateSupplierInvoice(id);
+
+  // Get campaign name for filename
+  const campaign = await prisma.campaign.findUnique({
+    where: { id },
+    select: { name: true }
+  });
+
+  const filename = `fatura-fornecedor-${campaign?.name.replace(/[^a-z0-9]/gi, '-').toLowerCase() || id}.pdf`;
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send(pdfBuffer);
 }));
 
 export default router;

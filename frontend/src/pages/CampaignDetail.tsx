@@ -18,7 +18,8 @@ import {
   Send,
   AlertCircle,
   Calendar,
-  Clock
+  Clock,
+  FileText
 } from 'lucide-react';
 import {
   campaignApi,
@@ -520,26 +521,46 @@ export default function CampaignDetail() {
       {activeTab === 'overview' && analytics && (
         <div className="space-y-6">
           {/* Botões de Ação Principais */}
-          {isActive && (
-            <div className="flex gap-2 justify-center flex-wrap">
+          <div className="flex gap-2 justify-center flex-wrap">
+            {isActive && (
+              <>
+                <IconButton
+                  size="sm"
+                  icon={<Package className="w-4 h-4" />}
+                  onClick={() => setIsProductModalOpen(true)}
+                  className="text-xs sm:text-sm"
+                >
+                  Adicionar Produto
+                </IconButton>
+                <IconButton
+                  size="sm"
+                  icon={<ShoppingBag className="w-4 h-4" />}
+                  onClick={() => setIsOrderModalOpen(true)}
+                  className="text-xs sm:text-sm"
+                >
+                  Adicionar Pedido
+                </IconButton>
+              </>
+            )}
+            {orders && orders.length > 0 && (
               <IconButton
                 size="sm"
-                icon={<Package className="w-4 h-4" />}
-                onClick={() => setIsProductModalOpen(true)}
+                variant="secondary"
+                icon={<FileText className="w-4 h-4" />}
+                onClick={async () => {
+                  try {
+                    await campaignApi.downloadSupplierInvoice(id!);
+                    toast.success('Fatura gerada com sucesso!');
+                  } catch (error) {
+                    toast.error('Erro ao gerar fatura');
+                  }
+                }}
                 className="text-xs sm:text-sm"
               >
-                Adicionar Produto
+                Gerar Fatura do Fornecedor
               </IconButton>
-              <IconButton
-                size="sm"
-                icon={<ShoppingBag className="w-4 h-4" />}
-                onClick={() => setIsOrderModalOpen(true)}
-                className="text-xs sm:text-sm"
-              >
-                Adicionar Pedido
-              </IconButton>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Cards de Resumo */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
