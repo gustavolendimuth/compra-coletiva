@@ -6,6 +6,7 @@ import productRoutes from './routes/products';
 import orderRoutes from './routes/orders';
 import analyticsRoutes from './routes/analytics';
 import { errorHandler } from './middleware/errorHandler';
+import { startCampaignScheduler } from './services/campaignScheduler';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -56,6 +57,9 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV}`);
   console.log(`🌐 CORS enabled for: ${corsOrigins.join(', ')}`);
+
+  // Start campaign scheduler to auto-close expired campaigns
+  startCampaignScheduler();
 });
 
 export { prisma };

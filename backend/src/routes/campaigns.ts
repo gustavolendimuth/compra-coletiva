@@ -8,12 +8,34 @@ const router = Router();
 const createCampaignSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
+  deadline: z.preprocess(
+    (val) => {
+      if (val === '' || val === null || val === undefined) return undefined;
+      // Accept datetime formats with or without timezone
+      if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(val)) {
+        return val;
+      }
+      return val;
+    },
+    z.string().optional()
+  ),
   shippingCost: z.number().min(0).default(0)
 });
 
 const updateCampaignSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
+  deadline: z.preprocess(
+    (val) => {
+      if (val === '' || val === null || val === undefined) return null;
+      // Accept datetime formats with or without timezone
+      if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(val)) {
+        return val;
+      }
+      return val;
+    },
+    z.string().nullable().optional()
+  ),
   shippingCost: z.number().min(0).optional(),
   status: z.enum(['ACTIVE', 'CLOSED', 'SENT', 'ARCHIVED']).optional()
 });
@@ -67,8 +89,14 @@ router.get('/:id', asyncHandler(async (req, res) => {
 router.post('/', asyncHandler(async (req, res) => {
   const data = createCampaignSchema.parse(req.body);
 
+  // Convert deadline string to Date object for Prisma
+  const prismaData: any = { ...data };
+  if (data.deadline) {
+    prismaData.deadline = new Date(data.deadline);
+  }
+
   const campaign = await prisma.campaign.create({
-    data: data as any
+    data: prismaData
   });
 
   res.status(201).json(campaign);
@@ -77,11 +105,18 @@ router.post('/', asyncHandler(async (req, res) => {
 // PATCH /api/campaigns/:id - Atualiza uma campanha
 router.patch('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
+
   const data = updateCampaignSchema.parse(req.body);
+
+  // Convert deadline string to Date object for Prisma
+  const prismaData: any = { ...data };
+  if (data.deadline !== undefined) {
+    prismaData.deadline = data.deadline ? new Date(data.deadline) : null;
+  }
 
   const campaign = await prisma.campaign.update({
     where: { id },
-    data
+    data: prismaData
   });
 
   res.json(campaign);

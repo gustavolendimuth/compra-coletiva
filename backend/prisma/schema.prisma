@@ -12,6 +12,7 @@ model Campaign {
   name        String
   description String?
   status      CampaignStatus @default(ACTIVE)
+  deadline    DateTime?
   shippingCost Float    @default(0)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

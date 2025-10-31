@@ -15,6 +15,7 @@ export interface Campaign {
   name: string;
   description?: string;
   status: 'ACTIVE' | 'CLOSED' | 'SENT' | 'ARCHIVED';
+  deadline?: string;
   shippingCost: number;
   createdAt: string;
   updatedAt: string;
@@ -80,7 +81,7 @@ export interface Analytics {
 export const campaignApi = {
   getAll: () => api.get<Campaign[]>('/campaigns').then(res => res.data),
   getById: (id: string) => api.get<Campaign>(`/campaigns/${id}`).then(res => res.data),
-  create: (data: { name: string; description?: string; shippingCost?: number }) =>
+  create: (data: { name: string; description?: string; deadline?: string; shippingCost?: number }) =>
     api.post<Campaign>('/campaigns', data).then(res => res.data),
   update: (id: string, data: Partial<Campaign>) =>
     api.patch<Campaign>(`/campaigns/${id}`, data).then(res => res.data),

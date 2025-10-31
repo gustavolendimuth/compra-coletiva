@@ -8,12 +8,14 @@ import { formatDate, formatCurrency } from '@/lib/utils';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
 import Modal from '@/components/Modal';
+import DateTimeInput from '@/components/DateTimeInput';
 
 export default function CampaignList() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    deadline: '',
     shippingCost: 0
   });
 
@@ -30,7 +32,7 @@ export default function CampaignList() {
       queryClient.invalidateQueries({ queryKey: ['campaigns'] });
       toast.success('Campanha criada com sucesso!');
       setIsModalOpen(false);
-      setFormData({ name: '', description: '', shippingCost: 0 });
+      setFormData({ name: '', description: '', deadline: '', shippingCost: 0 });
     },
     onError: () => {
       toast.error('Erro ao criar campanha');
@@ -158,6 +160,20 @@ export default function CampaignList() {
               rows={3}
               placeholder="Descrição opcional da campanha"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Data Limite (opcional)
+            </label>
+            <DateTimeInput
+              value={formData.deadline}
+              onChange={(value) => setFormData({ ...formData, deadline: value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
+            <p className="text-sm text-gray-500 mt-2">
+              A campanha será fechada automaticamente quando atingir esta data. Formato: dd/mm/aaaa HH:mm (24h)
+            </p>
           </div>
 
           <div>

@@ -17,7 +17,9 @@ import {
   Lock,
   Unlock,
   Send,
-  AlertCircle
+  AlertCircle,
+  Calendar,
+  Clock
 } from 'lucide-react';
 import {
   campaignApi,
@@ -33,6 +35,7 @@ import IconButton from '@/components/IconButton';
 import Card from '@/components/Card';
 import Modal from '@/components/Modal';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import DateTimeInput from '@/components/DateTimeInput';
 
 export default function CampaignDetail() {
   const { id } = useParams<{ id: string }>();
@@ -44,12 +47,14 @@ export default function CampaignDetail() {
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [isEditOrderModalOpen, setIsEditOrderModalOpen] = useState(false);
   const [isShippingModalOpen, setIsShippingModalOpen] = useState(false);
+  const [isEditDeadlineModalOpen, setIsEditDeadlineModalOpen] = useState(false);
   const [isCloseConfirmOpen, setIsCloseConfirmOpen] = useState(false);
   const [isReopenConfirmOpen, setIsReopenConfirmOpen] = useState(false);
   const [isSentConfirmOpen, setIsSentConfirmOpen] = useState(false);
   const [orderSearch, setOrderSearch] = useState('');
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [deadlineForm, setDeadlineForm] = useState('');
 
   const [productForm, setProductForm] = useState({
     name: '',
@@ -193,6 +198,16 @@ export default function CampaignDetail() {
     onError: () => toast.error('Erro ao atualizar frete')
   });
 
+  const updateDeadlineMutation = useMutation({
+    mutationFn: (deadline: string | null) => campaignApi.update(id!, { deadline: deadline || undefined }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaign', id] });
+      toast.success('Data limite atualizada!');
+      setIsEditDeadlineModalOpen(false);
+    },
+    onError: () => toast.error('Erro ao atualizar data limite')
+  });
+
   const updateStatusMutation = useMutation({
     mutationFn: (status: 'ACTIVE' | 'CLOSED' | 'SENT' | 'ARCHIVED') =>
       campaignApi.updateStatus(id!, status),
@@ -243,6 +258,11 @@ export default function CampaignDetail() {
     updateShippingMutation.mutate(shippingCost);
   };
 
+  const handleUpdateDeadline = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateDeadlineMutation.mutate(deadlineForm || null);
+  };
+
   const handleEditOrder = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingOrder) return;
@@ -288,10 +308,65 @@ export default function CampaignDetail() {
         </Link>
 
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-          <div>
+          <div className="flex-1">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">{campaign.name}</h1>
             {campaign.description && (
-              <p className="text-gray-600">{campaign.description}</p>
+              <p className="text-gray-600 mb-2">{campaign.description}</p>
+            )}
+            {campaign.deadline && (
+              <div className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium ${new Date(campaign.deadline) < new Date()
+                  ? 'bg-red-100 text-red-800 border border-red-300'
+                  : new Date(campaign.deadline).getTime() - new Date().getTime() < 24 * 60 * 60 * 1000
+                    ? 'bg-yellow-100 text-yellow-800 border border-yellow-300'
+                    : 'bg-blue-100 text-blue-800 border border-blue-300'
+                }`}>
+                <Clock className="w-4 h-4" />
+                <span className="text-sm">
+                  Data limite: {new Date(campaign.deadline).toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                  })} às {new Date(campaign.deadline).toLocaleTimeString('pt-BR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                  })}
+                </span>
+                <button
+                  onClick={() => {
+                    setIsEditDeadlineModalOpen(true);
+                    if (campaign.deadline) {
+                      const dt = new Date(campaign.deadline);
+                      // Create ISO string in local timezone
+                      const year = dt.getFullYear();
+                      const month = (dt.getMonth() + 1).toString().padStart(2, '0');
+                      const day = dt.getDate().toString().padStart(2, '0');
+                      const hours = dt.getHours().toString().padStart(2, '0');
+                      const minutes = dt.getMinutes().toString().padStart(2, '0');
+                      const seconds = dt.getSeconds().toString().padStart(2, '0');
+                      setDeadlineForm(`${year}-${month}-${day}T${hours}:${minutes}:${seconds}`);
+                    } else {
+                      setDeadlineForm('');
+                    }
+                  }}
+                  className="ml-1 hover:opacity-70 transition-opacity"
+                  title="Editar data limite"
+                >
+                  <Edit className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+            {!campaign.deadline && isActive && (
+              <button
+                onClick={() => {
+                  setIsEditDeadlineModalOpen(true);
+                  setDeadlineForm('');
+                }}
+                className="inline-flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <Calendar className="w-4 h-4" />
+                <span>Adicionar data limite</span>
+              </button>
             )}
           </div>
 
@@ -347,21 +422,17 @@ export default function CampaignDetail() {
 
         {/* Banner de Alerta */}
         {!isActive && (
-          <div className={`rounded-lg p-4 mb-4 flex items-start gap-3 ${
-            isClosed ? 'bg-yellow-50 border border-yellow-200' : 'bg-blue-50 border border-blue-200'
-          }`}>
-            <AlertCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
-              isClosed ? 'text-yellow-600' : 'text-blue-600'
-            }`} />
+          <div className={`rounded-lg p-4 mb-4 flex items-start gap-3 ${isClosed ? 'bg-yellow-50 border border-yellow-200' : 'bg-blue-50 border border-blue-200'
+            }`}>
+            <AlertCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${isClosed ? 'text-yellow-600' : 'text-blue-600'
+              }`} />
             <div>
-              <h3 className={`font-semibold mb-1 ${
-                isClosed ? 'text-yellow-900' : 'text-blue-900'
-              }`}>
+              <h3 className={`font-semibold mb-1 ${isClosed ? 'text-yellow-900' : 'text-blue-900'
+                }`}>
                 {isClosed ? 'Campanha Fechada' : 'Campanha Enviada'}
               </h3>
-              <p className={`text-sm ${
-                isClosed ? 'text-yellow-800' : 'text-blue-800'
-              }`}>
+              <p className={`text-sm ${isClosed ? 'text-yellow-800' : 'text-blue-800'
+                }`}>
                 {isClosed
                   ? 'Esta campanha está fechada. Não é possível adicionar ou alterar produtos e pedidos.'
                   : 'Esta campanha foi marcada como enviada. Não é possível adicionar ou alterar produtos e pedidos.'
@@ -1211,6 +1282,59 @@ export default function CampaignDetail() {
                 setIsEditOrderModalOpen(false);
                 setEditingOrder(null);
               }}
+              className="whitespace-nowrap"
+            >
+              Cancelar
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal: Editar Data Limite */}
+      <Modal
+        isOpen={isEditDeadlineModalOpen}
+        onClose={() => setIsEditDeadlineModalOpen(false)}
+        title="Configurar Data Limite"
+      >
+        <form onSubmit={handleUpdateDeadline} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Data e Hora Limite
+            </label>
+            <DateTimeInput
+              value={deadlineForm}
+              onChange={(value) => setDeadlineForm(value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              autoFocus
+            />
+            <p className="text-sm text-gray-500 mt-2">
+              A campanha será fechada automaticamente quando atingir esta data. Formato: dd/mm/aaaa HH:mm (24h)
+              {campaign?.deadline && ' Deixe em branco para remover a data limite.'}
+            </p>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <Button type="submit" disabled={updateDeadlineMutation.isPending} className="flex-1 whitespace-nowrap">
+              {updateDeadlineMutation.isPending ? 'Salvando...' : 'Salvar'}
+            </Button>
+            {campaign?.deadline && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setDeadlineForm('');
+                  updateDeadlineMutation.mutate(null);
+                }}
+                disabled={updateDeadlineMutation.isPending}
+                className="whitespace-nowrap"
+              >
+                Remover
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsEditDeadlineModalOpen(false)}
               className="whitespace-nowrap"
             >
               Cancelar
