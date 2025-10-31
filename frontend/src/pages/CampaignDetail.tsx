@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -10,7 +10,7 @@ import {
   TrendingUp,
   Edit,
   Trash2,
-  DollarSign,
+  CircleDollarSign,
   Search,
   Truck,
   Lock,
@@ -19,7 +19,10 @@ import {
   AlertCircle,
   Calendar,
   Clock,
-  FileText
+  FileText,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import {
   campaignApi,
@@ -52,6 +55,10 @@ export default function CampaignDetail() {
   const [isReopenConfirmOpen, setIsReopenConfirmOpen] = useState(false);
   const [isSentConfirmOpen, setIsSentConfirmOpen] = useState(false);
   const [orderSearch, setOrderSearch] = useState('');
+  const [orderSortField, setOrderSortField] = useState<'customerName' | 'subtotal' | 'shippingFee' | 'total' | 'isPaid'>('customerName');
+  const [orderSortDirection, setOrderSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [productSortField, setProductSortField] = useState<'name' | 'price' | 'weight'>('name');
+  const [productSortDirection, setProductSortDirection] = useState<'asc' | 'desc'>('asc');
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deadlineForm, setDeadlineForm] = useState('');
@@ -328,10 +335,100 @@ export default function CampaignDetail() {
     });
   };
 
-  // Filtra pedidos baseado na busca
-  const filteredOrders = orders?.filter(order =>
-    order.customerName.toLowerCase().includes(orderSearch.toLowerCase())
-  );
+  // Handler para alternar ordenação de pedidos
+  const handleSort = (field: typeof orderSortField) => {
+    if (orderSortField === field) {
+      // Se já está ordenando por este campo, inverte a direção
+      setOrderSortDirection(orderSortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Se é um novo campo, ordena ascendente
+      setOrderSortField(field);
+      setOrderSortDirection('asc');
+    }
+  };
+
+  // Renderiza ícone de ordenação de pedidos
+  const renderSortIcon = (field: typeof orderSortField) => {
+    if (orderSortField !== field) {
+      return <ArrowUpDown className="w-4 h-4 text-gray-400" />;
+    }
+    return orderSortDirection === 'asc'
+      ? <ArrowUp className="w-4 h-4 text-primary-600" />
+      : <ArrowDown className="w-4 h-4 text-primary-600" />;
+  };
+
+  // Handler para alternar ordenação de produtos
+  const handleProductSort = (field: typeof productSortField) => {
+    if (productSortField === field) {
+      // Se já está ordenando por este campo, inverte a direção
+      setProductSortDirection(productSortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Se é um novo campo, ordena ascendente
+      setProductSortField(field);
+      setProductSortDirection('asc');
+    }
+  };
+
+  // Renderiza ícone de ordenação de produtos
+  const renderProductSortIcon = (field: typeof productSortField) => {
+    if (productSortField !== field) {
+      return <ArrowUpDown className="w-4 h-4 text-gray-400" />;
+    }
+    return productSortDirection === 'asc'
+      ? <ArrowUp className="w-4 h-4 text-primary-600" />
+      : <ArrowDown className="w-4 h-4 text-primary-600" />;
+  };
+
+  // Filtra e ordena pedidos
+  const filteredOrders = orders
+    ?.filter(order =>
+      order.customerName.toLowerCase().includes(orderSearch.toLowerCase())
+    )
+    .sort((a, b) => {
+      let comparison = 0;
+
+      switch (orderSortField) {
+        case 'customerName':
+          comparison = a.customerName.localeCompare(b.customerName);
+          break;
+        case 'subtotal':
+          comparison = a.subtotal - b.subtotal;
+          break;
+        case 'shippingFee':
+          comparison = a.shippingFee - b.shippingFee;
+          break;
+        case 'total':
+          comparison = a.total - b.total;
+          break;
+        case 'isPaid':
+          comparison = (a.isPaid === b.isPaid) ? 0 : a.isPaid ? -1 : 1;
+          break;
+      }
+
+      return orderSortDirection === 'asc' ? comparison : -comparison;
+    });
+
+  // Ordena produtos para exibição na aba de produtos
+  const sortedProducts = products?.slice().sort((a, b) => {
+    let comparison = 0;
+
+    switch (productSortField) {
+      case 'name':
+        comparison = a.name.localeCompare(b.name);
+        break;
+      case 'price':
+        comparison = a.price - b.price;
+        break;
+      case 'weight':
+        comparison = a.weight - b.weight;
+        break;
+    }
+
+    return productSortDirection === 'asc' ? comparison : -comparison;
+  });
+
+  // Produtos ordenados alfabeticamente para dropdowns
+  const alphabeticalProducts = products?.slice().sort((a, b) => a.name.localeCompare(b.name));
 
   // Handlers para edição inline do nome
   const handleNameClick = () => {
@@ -387,6 +484,67 @@ export default function CampaignDetail() {
     }
   };
 
+  // Move campaign status checks before the early return
+  const isActive = campaign?.status === 'ACTIVE';
+  const isClosed = campaign?.status === 'CLOSED';
+  const isSent = campaign?.status === 'SENT';
+
+  // Atalhos de teclado - Must be called before early returns
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // ESC - Fechar modal aberto
+      if (e.key === 'Escape') {
+        if (isOrderModalOpen) {
+          setIsOrderModalOpen(false);
+        } else if (isEditOrderModalOpen) {
+          setIsEditOrderModalOpen(false);
+          setEditingOrder(null);
+        } else if (isProductModalOpen) {
+          setIsProductModalOpen(false);
+        } else if (isEditProductModalOpen) {
+          setIsEditProductModalOpen(false);
+          setEditingProduct(null);
+        } else if (isShippingModalOpen) {
+          setIsShippingModalOpen(false);
+        } else if (isEditDeadlineModalOpen) {
+          setIsEditDeadlineModalOpen(false);
+        } else if (isCloseConfirmOpen) {
+          setIsCloseConfirmOpen(false);
+        } else if (isReopenConfirmOpen) {
+          setIsReopenConfirmOpen(false);
+        } else if (isSentConfirmOpen) {
+          setIsSentConfirmOpen(false);
+        }
+        return;
+      }
+
+      // Alt+N - Abrir modal de adicionar pedido (somente se campanha estiver ativa)
+      if (e.altKey && e.key === 'n' && isActive && !isOrderModalOpen && !isEditOrderModalOpen) {
+        e.preventDefault();
+        setIsOrderModalOpen(true);
+      }
+
+      // Alt+P - Adicionar produto no formulário de pedido (quando modal está aberto)
+      if (e.altKey && e.key === 'p' && (isOrderModalOpen || isEditOrderModalOpen)) {
+        e.preventDefault();
+        if (isOrderModalOpen) {
+          setOrderForm({
+            ...orderForm,
+            items: [...orderForm.items, { productId: '', quantity: 1 }]
+          });
+        } else if (isEditOrderModalOpen) {
+          setEditOrderForm({
+            ...editOrderForm,
+            items: [...editOrderForm.items, { productId: '', quantity: 1 }]
+          });
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isActive, isOrderModalOpen, isEditOrderModalOpen, isProductModalOpen, isEditProductModalOpen, isShippingModalOpen, isEditDeadlineModalOpen, isCloseConfirmOpen, isReopenConfirmOpen, isSentConfirmOpen, orderForm, editOrderForm]);
+
   if (!campaign) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -394,10 +552,6 @@ export default function CampaignDetail() {
       </div>
     );
   }
-
-  const isActive = campaign.status === 'ACTIVE';
-  const isClosed = campaign.status === 'CLOSED';
-  const isSent = campaign.status === 'SENT';
 
   return (
     <div>
@@ -662,6 +816,7 @@ export default function CampaignDetail() {
                   icon={<ShoppingBag className="w-4 h-4" />}
                   onClick={() => setIsOrderModalOpen(true)}
                   className="text-xs sm:text-sm"
+                  title="Adicionar Pedido (Alt+N)"
                 >
                   Adicionar Pedido
                 </IconButton>
@@ -728,39 +883,41 @@ export default function CampaignDetail() {
             <Card className="h-fit">
               <h3 className="text-lg font-semibold mb-4">Por Pessoa</h3>
               <div className="space-y-2">
-                {analytics.byCustomer.map((item, index) => {
-                  // Encontrar o pedido correspondente à pessoa
-                  const order = orders?.find(o => o.customerName === item.customerName);
+                {[...analytics.byCustomer]
+                  .sort((a, b) => a.customerName.localeCompare(b.customerName))
+                  .map((item, index) => {
+                    // Encontrar o pedido correspondente à pessoa
+                    const order = orders?.find(o => o.customerName === item.customerName);
 
-                  return (
-                    <div key={index} className="flex justify-between items-center">
-                      <span className="text-gray-600">{item.customerName}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-900">
-                          {formatCurrency(item.total)}
-                        </span>
-                        <span className={`px-2 py-0.5 text-xs rounded-full ${item.isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                          }`}>
-                          {item.isPaid ? 'Pago' : 'Pendente'}
-                        </span>
-                        {order && (
-                          <IconButton
-                            size="sm"
-                            variant={item.isPaid ? 'success' : 'ghost'}
-                            icon={<DollarSign className="w-4 h-4" />}
-                            onClick={() =>
-                              updateOrderMutation.mutate({
-                                orderId: order.id,
-                                data: { isPaid: !item.isPaid }
-                              })
-                            }
-                            title={item.isPaid ? 'Marcar como não pago' : 'Marcar como pago'}
-                          />
-                        )}
+                    return (
+                      <div key={index} className="flex justify-between items-center">
+                        <span className="text-gray-600">{item.customerName}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-gray-900">
+                            {formatCurrency(item.total)}
+                          </span>
+                          <span className={`px-2 py-0.5 text-xs rounded-full ${item.isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            }`}>
+                            {item.isPaid ? 'Pago' : 'Pendente'}
+                          </span>
+                          {order && (
+                            <IconButton
+                              size="sm"
+                              variant={item.isPaid ? 'success' : 'secondary'}
+                              icon={<CircleDollarSign className="w-5 h-5" />}
+                              onClick={() =>
+                                updateOrderMutation.mutate({
+                                  orderId: order.id,
+                                  data: { isPaid: !item.isPaid }
+                                })
+                              }
+                              title={item.isPaid ? 'Marcar como não pago' : 'Marcar como pago'}
+                            />
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
               </div>
             </Card>
 
@@ -803,9 +960,48 @@ export default function CampaignDetail() {
             </Card>
           ) : (
             <>
+              {/* Mobile: Sorting Controls */}
+              <div className="md:hidden mb-3">
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  <button
+                    onClick={() => handleProductSort('name')}
+                    className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                      productSortField === 'name'
+                        ? 'bg-primary-100 text-primary-700'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    <span>Nome</span>
+                    {renderProductSortIcon('name')}
+                  </button>
+                  <button
+                    onClick={() => handleProductSort('price')}
+                    className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                      productSortField === 'price'
+                        ? 'bg-primary-100 text-primary-700'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    <span>Preço</span>
+                    {renderProductSortIcon('price')}
+                  </button>
+                  <button
+                    onClick={() => handleProductSort('weight')}
+                    className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                      productSortField === 'weight'
+                        ? 'bg-primary-100 text-primary-700'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    <span>Peso</span>
+                    {renderProductSortIcon('weight')}
+                  </button>
+                </div>
+              </div>
+
               {/* Mobile: Cards */}
               <div className="space-y-2 md:hidden">
-                {products?.map((product) => (
+                {sortedProducts?.map((product) => (
                   <Card key={product.id}>
                     <div className="space-y-2">
                       <div className="flex items-start justify-between gap-2">
@@ -814,7 +1010,7 @@ export default function CampaignDetail() {
                           <div className="flex gap-1 flex-shrink-0">
                             <IconButton
                               size="sm"
-                              variant="ghost"
+                              variant="secondary"
                               icon={<Edit className="w-4 h-4" />}
                               onClick={() => {
                                 setEditingProduct(product);
@@ -862,16 +1058,40 @@ export default function CampaignDetail() {
                   <table className="w-full">
                     <thead className="border-b">
                       <tr>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Produto</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Preço</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Peso</th>
+                        <th
+                          className="px-4 py-3 text-left text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-50 transition-colors"
+                          onClick={() => handleProductSort('name')}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span>Produto</span>
+                            {renderProductSortIcon('name')}
+                          </div>
+                        </th>
+                        <th
+                          className="px-4 py-3 text-left text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-50 transition-colors"
+                          onClick={() => handleProductSort('price')}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span>Preço</span>
+                            {renderProductSortIcon('price')}
+                          </div>
+                        </th>
+                        <th
+                          className="px-4 py-3 text-left text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-50 transition-colors"
+                          onClick={() => handleProductSort('weight')}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span>Peso</span>
+                            {renderProductSortIcon('weight')}
+                          </div>
+                        </th>
                         {isActive && (
                           <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">Ações</th>
                         )}
                       </tr>
                     </thead>
                     <tbody className="divide-y">
-                      {products?.map((product) => (
+                      {sortedProducts?.map((product) => (
                         <tr key={product.id} className="hover:bg-gray-50">
                           <td className="px-4 py-3 text-sm text-gray-900">{product.name}</td>
                           <td className="px-4 py-3 text-sm text-gray-900">{formatCurrency(product.price)}</td>
@@ -881,7 +1101,7 @@ export default function CampaignDetail() {
                               <div className="flex gap-1 justify-end">
                                 <IconButton
                                   size="sm"
-                                  variant="ghost"
+                                  variant="secondary"
                                   icon={<Edit className="w-4 h-4" />}
                                   onClick={() => {
                                     setEditingProduct(product);
@@ -930,6 +1150,7 @@ export default function CampaignDetail() {
                   icon={<ShoppingBag className="w-4 h-4" />}
                   onClick={() => setIsOrderModalOpen(true)}
                   className="text-xs sm:text-sm whitespace-nowrap"
+                  title="Adicionar Pedido (Alt+N)"
                 >
                   Adicionar Pedido
                 </IconButton>
@@ -957,6 +1178,45 @@ export default function CampaignDetail() {
             </Card>
           ) : (
             <>
+              {/* Mobile: Sorting Controls */}
+              <div className="md:hidden mb-3">
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  <button
+                    onClick={() => handleSort('customerName')}
+                    className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                      orderSortField === 'customerName'
+                        ? 'bg-primary-100 text-primary-700'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    <span>Pessoa</span>
+                    {renderSortIcon('customerName')}
+                  </button>
+                  <button
+                    onClick={() => handleSort('total')}
+                    className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                      orderSortField === 'total'
+                        ? 'bg-primary-100 text-primary-700'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    <span>Total</span>
+                    {renderSortIcon('total')}
+                  </button>
+                  <button
+                    onClick={() => handleSort('isPaid')}
+                    className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                      orderSortField === 'isPaid'
+                        ? 'bg-primary-100 text-primary-700'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    <span>Status</span>
+                    {renderSortIcon('isPaid')}
+                  </button>
+                </div>
+              </div>
+
               {/* Mobile: Cards */}
               <div className="space-y-2 md:hidden">
                 {filteredOrders?.map((order) => (
@@ -976,8 +1236,8 @@ export default function CampaignDetail() {
                         <div className="flex gap-1 flex-shrink-0">
                           <IconButton
                             size="sm"
-                            variant={order.isPaid ? 'success' : 'ghost'}
-                            icon={<DollarSign className="w-4 h-4" />}
+                            variant={order.isPaid ? 'success' : 'secondary'}
+                            icon={<CircleDollarSign className="w-5 h-5" />}
                             onClick={() =>
                               updateOrderMutation.mutate({
                                 orderId: order.id,
@@ -990,7 +1250,7 @@ export default function CampaignDetail() {
                             <>
                               <IconButton
                                 size="sm"
-                                variant="ghost"
+                                variant="secondary"
                                 icon={<Edit className="w-4 h-4" />}
                                 onClick={() => {
                                   setEditingOrder(order);
@@ -1051,12 +1311,52 @@ export default function CampaignDetail() {
                   <table className="w-full">
                     <thead className="border-b">
                       <tr>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Status</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Pessoa</th>
+                        <th
+                          className="px-4 py-3 text-left text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-50 transition-colors"
+                          onClick={() => handleSort('isPaid')}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span>Status</span>
+                            {renderSortIcon('isPaid')}
+                          </div>
+                        </th>
+                        <th
+                          className="px-4 py-3 text-left text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-50 transition-colors"
+                          onClick={() => handleSort('customerName')}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span>Pessoa</span>
+                            {renderSortIcon('customerName')}
+                          </div>
+                        </th>
                         <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Produtos</th>
-                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">Subtotal</th>
-                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">Frete</th>
-                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">Total</th>
+                        <th
+                          className="px-4 py-3 text-right text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-50 transition-colors"
+                          onClick={() => handleSort('subtotal')}
+                        >
+                          <div className="flex items-center justify-end gap-2">
+                            <span>Subtotal</span>
+                            {renderSortIcon('subtotal')}
+                          </div>
+                        </th>
+                        <th
+                          className="px-4 py-3 text-right text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-50 transition-colors"
+                          onClick={() => handleSort('shippingFee')}
+                        >
+                          <div className="flex items-center justify-end gap-2">
+                            <span>Frete</span>
+                            {renderSortIcon('shippingFee')}
+                          </div>
+                        </th>
+                        <th
+                          className="px-4 py-3 text-right text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-50 transition-colors"
+                          onClick={() => handleSort('total')}
+                        >
+                          <div className="flex items-center justify-end gap-2">
+                            <span>Total</span>
+                            {renderSortIcon('total')}
+                          </div>
+                        </th>
                         <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">Ações</th>
                       </tr>
                     </thead>
@@ -1080,8 +1380,8 @@ export default function CampaignDetail() {
                             <div className="flex gap-1 justify-end">
                               <IconButton
                                 size="sm"
-                                variant={order.isPaid ? 'success' : 'ghost'}
-                                icon={<DollarSign className="w-4 h-4" />}
+                                variant={order.isPaid ? 'success' : 'secondary'}
+                                icon={<CircleDollarSign className="w-5 h-5" />}
                                 onClick={() =>
                                   updateOrderMutation.mutate({
                                     orderId: order.id,
@@ -1094,7 +1394,7 @@ export default function CampaignDetail() {
                                 <>
                                   <IconButton
                                     size="sm"
-                                    variant="ghost"
+                                    variant="secondary"
                                     icon={<Edit className="w-4 h-4" />}
                                     onClick={() => {
                                       setEditingOrder(order);
@@ -1337,6 +1637,11 @@ export default function CampaignDetail() {
         title="Novo Pedido"
       >
         <form onSubmit={handleCreateOrder} className="space-y-4">
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-800">
+              <strong>Atalho:</strong> Alt+P para adicionar produto
+            </p>
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Nome da Pessoa *
@@ -1368,7 +1673,7 @@ export default function CampaignDetail() {
                   className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 >
                   <option value="">Selecione um produto</option>
-                  {products?.map((product) => (
+                  {alphabeticalProducts?.map((product) => (
                     <option key={product.id} value={product.id}>
                       {product.name} - {formatCurrency(product.price)}
                     </option>
@@ -1485,6 +1790,11 @@ export default function CampaignDetail() {
         title="Editar Pedido"
       >
         <form onSubmit={handleEditOrder} className="space-y-4">
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-800">
+              <strong>Atalho:</strong> Alt+P para adicionar produto
+            </p>
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Nome da Pessoa *
@@ -1516,7 +1826,7 @@ export default function CampaignDetail() {
                   className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 >
                   <option value="">Selecione um produto</option>
-                  {products?.map((product) => (
+                  {alphabeticalProducts?.map((product) => (
                     <option key={product.id} value={product.id}>
                       {product.name} - {formatCurrency(product.price)}
                     </option>
