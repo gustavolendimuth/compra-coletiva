@@ -4,11 +4,10 @@ interface DateTimeInputProps {
   value: string; // ISO datetime string
   onChange: (value: string) => void;
   className?: string;
-  placeholder?: string;
   autoFocus?: boolean;
 }
 
-export default function DateTimeInput({ value, onChange, className = '', placeholder, autoFocus = false }: DateTimeInputProps) {
+export default function DateTimeInput({ value, onChange, className = '', autoFocus = false }: DateTimeInputProps) {
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
 
@@ -33,16 +32,6 @@ export default function DateTimeInput({ value, onChange, className = '', placeho
       setTime('');
     }
   }, [value]);
-
-  const handleDateChange = (newDate: string) => {
-    setDate(newDate);
-    updateISOValue(newDate, time);
-  };
-
-  const handleTimeChange = (newTime: string) => {
-    setTime(newTime);
-    updateISOValue(date, newTime);
-  };
 
   const updateISOValue = (dateStr: string, timeStr: string) => {
     if (!dateStr || !timeStr) {

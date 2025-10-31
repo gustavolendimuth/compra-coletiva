@@ -10,7 +10,6 @@ import {
   TrendingUp,
   Edit,
   Trash2,
-  Check,
   DollarSign,
   Search,
   Truck,
@@ -56,29 +55,43 @@ export default function CampaignDetail() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deadlineForm, setDeadlineForm] = useState('');
 
-  const [productForm, setProductForm] = useState({
+  const [productForm, setProductForm] = useState<{
+    name: string;
+    price: number | '';
+    weight: number | '';
+  }>({
     name: '',
-    price: 0,
-    weight: 0
+    price: '',
+    weight: ''
   });
 
-  const [editProductForm, setEditProductForm] = useState({
+  const [editProductForm, setEditProductForm] = useState<{
+    name: string;
+    price: number | '';
+    weight: number | '';
+  }>({
     name: '',
-    price: 0,
-    weight: 0
+    price: '',
+    weight: ''
   });
 
-  const [orderForm, setOrderForm] = useState({
+  const [orderForm, setOrderForm] = useState<{
+    customerName: string;
+    items: Array<{ productId: string; quantity: number | '' }>;
+  }>({
     customerName: '',
     items: [{ productId: '', quantity: 1 }]
   });
 
-  const [editOrderForm, setEditOrderForm] = useState({
+  const [editOrderForm, setEditOrderForm] = useState<{
+    customerName: string;
+    items: Array<{ productId: string; quantity: number | '' }>;
+  }>({
     customerName: '',
     items: [{ productId: '', quantity: 1 }]
   });
 
-  const [shippingCost, setShippingCost] = useState(0);
+  const [shippingCost, setShippingCost] = useState<number | ''>(0);
 
   const { data: campaign } = useQuery({
     queryKey: ['campaign', id],
@@ -110,7 +123,7 @@ export default function CampaignDetail() {
       queryClient.invalidateQueries({ queryKey: ['products', id] });
       toast.success('Produto adicionado!');
       setIsProductModalOpen(false);
-      setProductForm({ name: '', price: 0, weight: 0 });
+      setProductForm({ name: '', price: '', weight: '' });
     },
     onError: () => toast.error('Erro ao adicionar produto')
   });
@@ -222,26 +235,40 @@ export default function CampaignDetail() {
 
   const handleCreateProduct = (e: React.FormEvent) => {
     e.preventDefault();
-    createProductMutation.mutate({ ...productForm, campaignId: id! });
+    const price = typeof productForm.price === 'number' ? productForm.price : 0;
+    const weight = typeof productForm.weight === 'number' ? productForm.weight : 0;
+
+    createProductMutation.mutate({
+      name: productForm.name,
+      price,
+      weight,
+      campaignId: id!
+    });
   };
 
   const handleEditProduct = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProduct) return;
 
+    const price = typeof editProductForm.price === 'number' ? editProductForm.price : 0;
+    const weight = typeof editProductForm.weight === 'number' ? editProductForm.weight : 0;
+
     updateProductMutation.mutate({
       productId: editingProduct.id,
       data: {
         name: editProductForm.name,
-        price: editProductForm.price,
-        weight: editProductForm.weight
+        price,
+        weight
       }
     });
   };
 
   const handleCreateOrder = (e: React.FormEvent) => {
     e.preventDefault();
-    const validItems = orderForm.items.filter(item => item.productId && item.quantity > 0);
+    const validItems = orderForm.items
+      .filter((item): item is { productId: string; quantity: number } =>
+        item.productId !== '' && typeof item.quantity === 'number' && item.quantity > 0
+      );
     if (validItems.length === 0) {
       toast.error('Adicione pelo menos um produto ao pedido');
       return;
@@ -255,7 +282,8 @@ export default function CampaignDetail() {
 
   const handleUpdateShipping = (e: React.FormEvent) => {
     e.preventDefault();
-    updateShippingMutation.mutate(shippingCost);
+    const cost = typeof shippingCost === 'number' ? shippingCost : 0;
+    updateShippingMutation.mutate(cost);
   };
 
   const handleUpdateDeadline = (e: React.FormEvent) => {
@@ -267,7 +295,10 @@ export default function CampaignDetail() {
     e.preventDefault();
     if (!editingOrder) return;
 
-    const validItems = editOrderForm.items.filter(item => item.productId && item.quantity > 0);
+    const validItems = editOrderForm.items
+      .filter((item): item is { productId: string; quantity: number } =>
+        item.productId !== '' && typeof item.quantity === 'number' && item.quantity > 0
+      );
     if (validItems.length === 0) {
       toast.error('Adicione pelo menos um produto ao pedido');
       return;
@@ -756,92 +787,181 @@ export default function CampaignDetail() {
               </div>
             </Card>
           ) : (
-            <div className="space-y-2">
-              {filteredOrders?.map((order) => (
-                <Card key={order.id} className="py-3">
-                  <div className="flex flex-col gap-3">
-                    {/* Linha 1: Nome, status e ações */}
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <span className={`px-2 py-1 text-xs rounded-full whitespace-nowrap flex-shrink-0 ${order.isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                          }`}>
-                          {order.isPaid ? 'Pago' : 'Pendente'}
-                        </span>
-                        <h3 className="font-semibold text-gray-900 truncate">{order.customerName}</h3>
+            <>
+              {/* Mobile: Cards */}
+              <div className="space-y-2 md:hidden">
+                {filteredOrders?.map((order) => (
+                  <Card key={order.id} className="py-3">
+                    <div className="flex flex-col gap-3">
+                      {/* Linha 1: Nome, status e ações */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <span className={`px-2 py-1 text-xs rounded-full whitespace-nowrap flex-shrink-0 ${order.isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            }`}>
+                            {order.isPaid ? 'Pago' : 'Pendente'}
+                          </span>
+                          <h3 className="font-semibold text-gray-900 truncate">{order.customerName}</h3>
+                        </div>
+
+                        {/* Ações */}
+                        <div className="flex gap-1 flex-shrink-0">
+                          <IconButton
+                            size="sm"
+                            variant={order.isPaid ? 'success' : 'ghost'}
+                            icon={<DollarSign className="w-4 h-4" />}
+                            onClick={() =>
+                              updateOrderMutation.mutate({
+                                orderId: order.id,
+                                data: { isPaid: !order.isPaid }
+                              })
+                            }
+                            title={order.isPaid ? 'Marcar como não pago' : 'Marcar como pago'}
+                          />
+                          {isActive && (
+                            <>
+                              <IconButton
+                                size="sm"
+                                variant="ghost"
+                                icon={<Edit className="w-4 h-4" />}
+                                onClick={() => {
+                                  setEditingOrder(order);
+                                  setEditOrderForm({
+                                    customerName: order.customerName,
+                                    items: order.items.map(item => ({
+                                      productId: item.product.id,
+                                      quantity: item.quantity
+                                    }))
+                                  });
+                                  setIsEditOrderModalOpen(true);
+                                }}
+                                title="Editar pedido"
+                              />
+                              <IconButton
+                                size="sm"
+                                variant="danger"
+                                icon={<Trash2 className="w-4 h-4" />}
+                                onClick={() => {
+                                  if (confirm('Tem certeza que deseja remover este pedido?')) {
+                                    deleteOrderMutation.mutate(order.id);
+                                  }
+                                }}
+                              />
+                            </>
+                          )}
+                        </div>
                       </div>
 
-                      {/* Ações */}
-                      <div className="flex gap-1 flex-shrink-0">
-                        <IconButton
-                          size="sm"
-                          variant={order.isPaid ? 'primary' : 'ghost'}
-                          icon={order.isPaid ? <Check className="w-4 h-4" /> : <DollarSign className="w-4 h-4" />}
-                          onClick={() =>
-                            updateOrderMutation.mutate({
-                              orderId: order.id,
-                              data: { isPaid: !order.isPaid }
-                            })
-                          }
-                          title={order.isPaid ? 'Marcar como não pago' : 'Marcar como pago'}
-                        />
-                        {isActive && (
-                          <>
-                            <IconButton
-                              size="sm"
-                              variant="ghost"
-                              icon={<Edit className="w-4 h-4" />}
-                              onClick={() => {
-                                setEditingOrder(order);
-                                setEditOrderForm({
-                                  customerName: order.customerName,
-                                  items: order.items.map(item => ({
-                                    productId: item.product.id,
-                                    quantity: item.quantity
-                                  }))
-                                });
-                                setIsEditOrderModalOpen(true);
-                              }}
-                              title="Editar pedido"
-                            />
-                            <IconButton
-                              size="sm"
-                              variant="danger"
-                              icon={<Trash2 className="w-4 h-4" />}
-                              onClick={() => {
-                                if (confirm('Tem certeza que deseja remover este pedido?')) {
-                                  deleteOrderMutation.mutate(order.id);
+                      {/* Linha 2: Produtos (sempre visível, sem truncar) */}
+                      <p className="text-xs text-gray-500">
+                        {order.items.map(item => `${item.quantity}x ${item.product.name}`).join(', ')}
+                      </p>
+
+                      {/* Linha 3: Valores */}
+                      <div className="flex items-center gap-3 text-sm justify-between sm:justify-start">
+                        <div className="text-center sm:text-left">
+                          <div className="text-gray-500 text-xs">Subtotal</div>
+                          <div className="font-medium text-gray-900">{formatCurrency(order.subtotal)}</div>
+                        </div>
+                        <div className="text-center sm:text-left">
+                          <div className="text-gray-500 text-xs">Frete</div>
+                          <div className="font-medium text-gray-900">{formatCurrency(order.shippingFee)}</div>
+                        </div>
+                        <div className="text-center sm:text-left">
+                          <div className="text-gray-500 text-xs">Total</div>
+                          <div className="font-semibold text-gray-900">{formatCurrency(order.total)}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Desktop: Table */}
+              <Card className="hidden md:block">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="border-b">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Status</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Cliente</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Produtos</th>
+                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">Subtotal</th>
+                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">Frete</th>
+                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">Total</th>
+                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {filteredOrders?.map((order) => (
+                        <tr key={order.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-sm">
+                            <span className={`px-2 py-1 text-xs rounded-full whitespace-nowrap ${order.isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                              }`}>
+                              {order.isPaid ? 'Pago' : 'Pendente'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-900">{order.customerName}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">
+                            {order.items.map(item => `${item.quantity}x ${item.product.name}`).join(', ')}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-900 text-right">{formatCurrency(order.subtotal)}</td>
+                          <td className="px-4 py-3 text-sm text-gray-900 text-right">{formatCurrency(order.shippingFee)}</td>
+                          <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">{formatCurrency(order.total)}</td>
+                          <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
+                            <div className="flex gap-1 justify-end">
+                              <IconButton
+                                size="sm"
+                                variant={order.isPaid ? 'success' : 'ghost'}
+                                icon={<DollarSign className="w-4 h-4" />}
+                                onClick={() =>
+                                  updateOrderMutation.mutate({
+                                    orderId: order.id,
+                                    data: { isPaid: !order.isPaid }
+                                  })
                                 }
-                              }}
-                            />
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Linha 2: Produtos (sempre visível, sem truncar) */}
-                    <p className="text-xs text-gray-500">
-                      {order.items.map(item => `${item.quantity}x ${item.product.name}`).join(', ')}
-                    </p>
-
-                    {/* Linha 3: Valores */}
-                    <div className="flex items-center gap-3 text-sm justify-between sm:justify-start">
-                      <div className="text-center sm:text-left">
-                        <div className="text-gray-500 text-xs">Subtotal</div>
-                        <div className="font-medium text-gray-900">{formatCurrency(order.subtotal)}</div>
-                      </div>
-                      <div className="text-center sm:text-left">
-                        <div className="text-gray-500 text-xs">Frete</div>
-                        <div className="font-medium text-gray-900">{formatCurrency(order.shippingFee)}</div>
-                      </div>
-                      <div className="text-center sm:text-left">
-                        <div className="text-gray-500 text-xs">Total</div>
-                        <div className="font-semibold text-gray-900">{formatCurrency(order.total)}</div>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
+                                title={order.isPaid ? 'Marcar como não pago' : 'Marcar como pago'}
+                              />
+                              {isActive && (
+                                <>
+                                  <IconButton
+                                    size="sm"
+                                    variant="ghost"
+                                    icon={<Edit className="w-4 h-4" />}
+                                    onClick={() => {
+                                      setEditingOrder(order);
+                                      setEditOrderForm({
+                                        customerName: order.customerName,
+                                        items: order.items.map(item => ({
+                                          productId: item.product.id,
+                                          quantity: item.quantity
+                                        }))
+                                      });
+                                      setIsEditOrderModalOpen(true);
+                                    }}
+                                    title="Editar pedido"
+                                  />
+                                  <IconButton
+                                    size="sm"
+                                    variant="danger"
+                                    icon={<Trash2 className="w-4 h-4" />}
+                                    onClick={() => {
+                                      if (confirm('Tem certeza que deseja remover este pedido?')) {
+                                        deleteOrderMutation.mutate(order.id);
+                                      }
+                                    }}
+                                    title="Remover pedido"
+                                  />
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </>
           )}
         </div>
       )}
@@ -931,7 +1051,7 @@ export default function CampaignDetail() {
               min="0"
               required
               value={productForm.price}
-              onChange={(e) => setProductForm({ ...productForm, price: parseFloat(e.target.value) || 0 })}
+              onChange={(e) => setProductForm({ ...productForm, price: e.target.value === '' ? '' : parseFloat(e.target.value) })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
           </div>
@@ -946,7 +1066,7 @@ export default function CampaignDetail() {
               min="0"
               required
               value={productForm.weight}
-              onChange={(e) => setProductForm({ ...productForm, weight: parseFloat(e.target.value) || 0 })}
+              onChange={(e) => setProductForm({ ...productForm, weight: e.target.value === '' ? '' : parseFloat(e.target.value) })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
           </div>
@@ -1000,7 +1120,7 @@ export default function CampaignDetail() {
               min="0"
               required
               value={editProductForm.price}
-              onChange={(e) => setEditProductForm({ ...editProductForm, price: parseFloat(e.target.value) || 0 })}
+              onChange={(e) => setEditProductForm({ ...editProductForm, price: e.target.value === '' ? '' : parseFloat(e.target.value) })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
           </div>
@@ -1015,7 +1135,7 @@ export default function CampaignDetail() {
               min="0"
               required
               value={editProductForm.weight}
-              onChange={(e) => setEditProductForm({ ...editProductForm, weight: parseFloat(e.target.value) || 0 })}
+              onChange={(e) => setEditProductForm({ ...editProductForm, weight: e.target.value === '' ? '' : parseFloat(e.target.value) })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
           </div>
@@ -1073,7 +1193,7 @@ export default function CampaignDetail() {
                     newItems[index].productId = e.target.value;
                     setOrderForm({ ...orderForm, items: newItems });
                   }}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 >
                   <option value="">Selecione um produto</option>
                   {products?.map((product) => (
@@ -1089,7 +1209,7 @@ export default function CampaignDetail() {
                   value={item.quantity}
                   onChange={(e) => {
                     const newItems = [...orderForm.items];
-                    newItems[index].quantity = parseInt(e.target.value) || 1;
+                    newItems[index].quantity = e.target.value === '' ? '' : parseInt(e.target.value);
                     setOrderForm({ ...orderForm, items: newItems });
                   }}
                   className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
@@ -1158,7 +1278,7 @@ export default function CampaignDetail() {
               min="0"
               required
               value={shippingCost}
-              onChange={(e) => setShippingCost(parseFloat(e.target.value) || 0)}
+              onChange={(e) => setShippingCost(e.target.value === '' ? '' : parseFloat(e.target.value))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
             <p className="text-sm text-gray-500 mt-2">
@@ -1219,7 +1339,7 @@ export default function CampaignDetail() {
                     newItems[index].productId = e.target.value;
                     setEditOrderForm({ ...editOrderForm, items: newItems });
                   }}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 >
                   <option value="">Selecione um produto</option>
                   {products?.map((product) => (
@@ -1235,7 +1355,7 @@ export default function CampaignDetail() {
                   value={item.quantity}
                   onChange={(e) => {
                     const newItems = [...editOrderForm.items];
-                    newItems[index].quantity = parseInt(e.target.value) || 1;
+                    newItems[index].quantity = e.target.value === '' ? '' : parseInt(e.target.value);
                     setEditOrderForm({ ...editOrderForm, items: newItems });
                   }}
                   className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"

@@ -12,11 +12,16 @@ import DateTimeInput from '@/components/DateTimeInput';
 
 export default function CampaignList() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    description: string;
+    deadline: string;
+    shippingCost: number | '';
+  }>({
     name: '',
     description: '',
     deadline: '',
-    shippingCost: 0
+    shippingCost: ''
   });
 
   const queryClient = useQueryClient();
@@ -32,7 +37,7 @@ export default function CampaignList() {
       queryClient.invalidateQueries({ queryKey: ['campaigns'] });
       toast.success('Campanha criada com sucesso!');
       setIsModalOpen(false);
-      setFormData({ name: '', description: '', deadline: '', shippingCost: 0 });
+      setFormData({ name: '', description: '', deadline: '', shippingCost: '' });
     },
     onError: () => {
       toast.error('Erro ao criar campanha');
@@ -41,7 +46,14 @@ export default function CampaignList() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createMutation.mutate(formData);
+    const shippingCost = typeof formData.shippingCost === 'number' ? formData.shippingCost : 0;
+
+    createMutation.mutate({
+      name: formData.name,
+      description: formData.description,
+      deadline: formData.deadline,
+      shippingCost
+    });
   };
 
   if (isLoading) {
@@ -185,7 +197,7 @@ export default function CampaignList() {
               step="0.01"
               min="0"
               value={formData.shippingCost}
-              onChange={(e) => setFormData({ ...formData, shippingCost: parseFloat(e.target.value) || 0 })}
+              onChange={(e) => setFormData({ ...formData, shippingCost: e.target.value === '' ? '' : parseFloat(e.target.value) })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               placeholder="0.00"
             />
