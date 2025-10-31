@@ -55,6 +55,10 @@ export default function CampaignDetail() {
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deadlineForm, setDeadlineForm] = useState('');
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [editedName, setEditedName] = useState('');
+  const [editedDescription, setEditedDescription] = useState('');
 
   const [productForm, setProductForm] = useState<{
     name: string;
@@ -234,6 +238,16 @@ export default function CampaignDetail() {
     }
   });
 
+  const updateCampaignMutation = useMutation({
+    mutationFn: (data: { name?: string; description?: string }) =>
+      campaignApi.update(id!, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaign', id] });
+      toast.success('Campanha atualizada!');
+    },
+    onError: () => toast.error('Erro ao atualizar campanha')
+  });
+
   const handleCreateProduct = (e: React.FormEvent) => {
     e.preventDefault();
     const price = typeof productForm.price === 'number' ? productForm.price : 0;
@@ -319,6 +333,60 @@ export default function CampaignDetail() {
     order.customerName.toLowerCase().includes(orderSearch.toLowerCase())
   );
 
+  // Handlers para edição inline do nome
+  const handleNameClick = () => {
+    setEditedName(campaign?.name || '');
+    setIsEditingName(true);
+  };
+
+  const handleNameSave = () => {
+    if (editedName.trim() && editedName !== campaign?.name) {
+      updateCampaignMutation.mutate({ name: editedName.trim() });
+    }
+    setIsEditingName(false);
+  };
+
+  const handleNameCancel = () => {
+    setIsEditingName(false);
+    setEditedName('');
+  };
+
+  const handleNameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleNameSave();
+    } else if (e.key === 'Escape') {
+      handleNameCancel();
+    }
+  };
+
+  // Handlers para edição inline da descrição
+  const handleDescriptionClick = () => {
+    setEditedDescription(campaign?.description || '');
+    setIsEditingDescription(true);
+  };
+
+  const handleDescriptionSave = () => {
+    if (editedDescription.trim() !== campaign?.description) {
+      updateCampaignMutation.mutate({ description: editedDescription.trim() || undefined });
+    }
+    setIsEditingDescription(false);
+  };
+
+  const handleDescriptionCancel = () => {
+    setIsEditingDescription(false);
+    setEditedDescription('');
+  };
+
+  const handleDescriptionKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleDescriptionSave();
+    } else if (e.key === 'Escape') {
+      handleDescriptionCancel();
+    }
+  };
+
   if (!campaign) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -341,9 +409,64 @@ export default function CampaignDetail() {
 
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
           <div className="flex-1">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{campaign.name}</h1>
-            {campaign.description && (
-              <p className="text-gray-600 mb-2">{campaign.description}</p>
+            {/* Edição inline do nome */}
+            {isEditingName ? (
+              <div className="mb-2">
+                <input
+                  type="text"
+                  value={editedName}
+                  onChange={(e) => setEditedName(e.target.value)}
+                  onBlur={handleNameSave}
+                  onKeyDown={handleNameKeyDown}
+                  autoFocus
+                  className="text-3xl font-bold text-gray-900 w-full px-2 py-1 border-2 border-primary-500 rounded focus:outline-none"
+                />
+                <p className="text-xs text-gray-500 mt-1">Pressione Enter para salvar, Esc para cancelar</p>
+              </div>
+            ) : (
+              <h1
+                className="text-3xl font-bold text-gray-900 mb-2 cursor-pointer hover:text-primary-600 transition-colors inline-block"
+                onClick={handleNameClick}
+                title="Clique para editar"
+              >
+                {campaign.name}
+              </h1>
+            )}
+
+            {/* Edição inline da descrição */}
+            {isEditingDescription ? (
+              <div className="mb-2">
+                <textarea
+                  value={editedDescription}
+                  onChange={(e) => setEditedDescription(e.target.value)}
+                  onBlur={handleDescriptionSave}
+                  onKeyDown={handleDescriptionKeyDown}
+                  autoFocus
+                  rows={3}
+                  className="text-gray-600 w-full px-2 py-1 border-2 border-primary-500 rounded focus:outline-none resize-none"
+                />
+                <p className="text-xs text-gray-500 mt-1">Pressione Enter para salvar, Shift+Enter para nova linha, Esc para cancelar</p>
+              </div>
+            ) : (
+              <>
+                {campaign.description ? (
+                  <p
+                    className="text-gray-600 mb-2 cursor-pointer hover:text-primary-600 transition-colors"
+                    onClick={handleDescriptionClick}
+                    title="Clique para editar"
+                  >
+                    {campaign.description}
+                  </p>
+                ) : (
+                  <p
+                    className="text-gray-400 mb-2 cursor-pointer hover:text-primary-400 transition-colors italic"
+                    onClick={handleDescriptionClick}
+                    title="Clique para adicionar descrição"
+                  >
+                    Clique para adicionar descrição
+                  </p>
+                )}
+              </>
             )}
             {campaign.deadline && (
               <div className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium ${new Date(campaign.deadline) < new Date()
@@ -565,6 +688,10 @@ export default function CampaignDetail() {
           {/* Cards de Resumo */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
+              <div className="text-sm text-gray-500 mb-1">Total de Pessoas</div>
+              <div className="text-3xl font-bold text-gray-900">{analytics.byCustomer.length}</div>
+            </Card>
+            <Card>
               <div className="text-sm text-gray-500 mb-1">Total de Itens</div>
               <div className="text-3xl font-bold text-gray-900">{analytics.totalQuantity}</div>
             </Card>
@@ -595,28 +722,47 @@ export default function CampaignDetail() {
           </div>
 
           {/* Detalhes por Produto e Cliente */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <h3 className="text-lg font-semibold mb-4">Por Cliente</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
+            <Card className="h-fit">
+              <h3 className="text-lg font-semibold mb-4">Por Pessoa</h3>
               <div className="space-y-2">
-                {analytics.byCustomer.map((item, index) => (
-                  <div key={index} className="flex justify-between items-center">
-                    <span className="text-gray-600">{item.customerName}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-900">
-                        {formatCurrency(item.total)}
-                      </span>
-                      <span className={`px-2 py-0.5 text-xs rounded-full ${item.isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                        }`}>
-                        {item.isPaid ? 'Pago' : 'Pendente'}
-                      </span>
+                {analytics.byCustomer.map((item, index) => {
+                  // Encontrar o pedido correspondente à pessoa
+                  const order = orders?.find(o => o.customerName === item.customerName);
+
+                  return (
+                    <div key={index} className="flex justify-between items-center">
+                      <span className="text-gray-600">{item.customerName}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-gray-900">
+                          {formatCurrency(item.total)}
+                        </span>
+                        <span className={`px-2 py-0.5 text-xs rounded-full ${item.isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                          }`}>
+                          {item.isPaid ? 'Pago' : 'Pendente'}
+                        </span>
+                        {order && (
+                          <IconButton
+                            size="sm"
+                            variant={item.isPaid ? 'success' : 'ghost'}
+                            icon={<DollarSign className="w-4 h-4" />}
+                            onClick={() =>
+                              updateOrderMutation.mutate({
+                                orderId: order.id,
+                                data: { isPaid: !item.isPaid }
+                              })
+                            }
+                            title={item.isPaid ? 'Marcar como não pago' : 'Marcar como pago'}
+                          />
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </Card>
 
-            <Card>
+            <Card className="h-fit">
               <h3 className="text-lg font-semibold mb-4">Por Produto</h3>
               <div className="space-y-2">
                 {analytics.byProduct.map((item) => (
@@ -791,7 +937,7 @@ export default function CampaignDetail() {
               <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Buscar por cliente..."
+                placeholder="Buscar por pessoa..."
                 value={orderSearch}
                 onChange={(e) => setOrderSearch(e.target.value)}
                 className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
@@ -904,7 +1050,7 @@ export default function CampaignDetail() {
                     <thead className="border-b">
                       <tr>
                         <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Status</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Cliente</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Pessoa</th>
                         <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Produtos</th>
                         <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">Subtotal</th>
                         <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">Frete</th>
@@ -1189,7 +1335,7 @@ export default function CampaignDetail() {
         <form onSubmit={handleCreateOrder} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nome do Cliente *
+              Nome da Pessoa *
             </label>
             <input
               type="text"
@@ -1335,7 +1481,7 @@ export default function CampaignDetail() {
         <form onSubmit={handleEditOrder} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nome do Cliente *
+              Nome da Pessoa *
             </label>
             <input
               type="text"
