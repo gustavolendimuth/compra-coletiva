@@ -687,8 +687,27 @@ export default function CampaignDetail() {
             )}
           </div>
 
-          {/* Botões de Status */}
+          {/* Botões de Ação do Grupo */}
           <div className="flex flex-wrap gap-2">
+            {orders && orders.length > 0 && (
+              <IconButton
+                size="sm"
+                variant="secondary"
+                icon={<FileText className="w-4 h-4" />}
+                onClick={async () => {
+                  try {
+                    await campaignApi.downloadSupplierInvoice(id!);
+                    toast.success('Fatura gerada com sucesso!');
+                  } catch (error) {
+                    toast.error('Erro ao gerar fatura');
+                  }
+                }}
+                className="text-xs sm:text-sm whitespace-nowrap"
+              >
+                Gerar Fatura
+              </IconButton>
+            )}
+
             {isActive && (
               <IconButton
                 size="sm"
@@ -760,7 +779,8 @@ export default function CampaignDetail() {
         )}
       </div>
 
-      <div className="flex gap-1 mb-6 border-b">
+      {/* Desktop: Tab navigation at top */}
+      <div className="hidden md:flex gap-1 mb-6 border-b">
         <button
           onClick={() => setActiveTab('overview')}
           className={`flex items-center justify-center gap-2 px-3 py-2 font-medium transition-colors flex-1 md:flex-initial rounded-t-lg ${activeTab === 'overview'
@@ -768,8 +788,8 @@ export default function CampaignDetail() {
             : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-b-2 border-transparent'
             }`}
         >
-          <TrendingUp className="w-6 h-6 md:w-4 md:h-4 flex-shrink-0" />
-          <span className="hidden sm:inline">Visão Geral</span>
+          <TrendingUp className="w-4 h-4 flex-shrink-0" />
+          <span>Visão Geral</span>
         </button>
         <button
           onClick={() => setActiveTab('orders')}
@@ -778,8 +798,8 @@ export default function CampaignDetail() {
             : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-b-2 border-transparent'
             }`}
         >
-          <ShoppingBag className="w-6 h-6 md:w-4 md:h-4 flex-shrink-0" />
-          <span className="hidden sm:inline">Pedidos</span>
+          <ShoppingBag className="w-4 h-4 flex-shrink-0" />
+          <span>Pedidos</span>
         </button>
         <button
           onClick={() => setActiveTab('products')}
@@ -788,8 +808,8 @@ export default function CampaignDetail() {
             : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-b-2 border-transparent'
             }`}
         >
-          <Package className="w-6 h-6 md:w-4 md:h-4 flex-shrink-0" />
-          <span className="hidden sm:inline">Produtos</span>
+          <Package className="w-4 h-4 flex-shrink-0" />
+          <span>Produtos</span>
         </button>
         <button
           onClick={() => setActiveTab('shipping')}
@@ -798,55 +818,85 @@ export default function CampaignDetail() {
             : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-b-2 border-transparent'
             }`}
         >
-          <Truck className="w-6 h-6 md:w-4 md:h-4 flex-shrink-0" />
-          <span className="hidden sm:inline">Frete</span>
+          <Truck className="w-4 h-4 flex-shrink-0" />
+          <span>Frete</span>
         </button>
       </div>
 
+      {/* Mobile: Fixed bottom navigation bar */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50">
+        <div className="flex">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`flex flex-col items-center justify-center flex-1 py-2 px-1 transition-colors ${activeTab === 'overview'
+              ? 'text-primary-600 bg-primary-50'
+              : 'text-gray-600'
+              }`}
+          >
+            <TrendingUp className="w-6 h-6 flex-shrink-0 mb-1" />
+            <span className="text-xs font-medium">Geral</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('orders')}
+            className={`flex flex-col items-center justify-center flex-1 py-2 px-1 transition-colors ${activeTab === 'orders'
+              ? 'text-primary-600 bg-primary-50'
+              : 'text-gray-600'
+              }`}
+          >
+            <ShoppingBag className="w-6 h-6 flex-shrink-0 mb-1" />
+            <span className="text-xs font-medium">Pedidos</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('products')}
+            className={`flex flex-col items-center justify-center flex-1 py-2 px-1 transition-colors ${activeTab === 'products'
+              ? 'text-primary-600 bg-primary-50'
+              : 'text-gray-600'
+              }`}
+          >
+            <Package className="w-6 h-6 flex-shrink-0 mb-1" />
+            <span className="text-xs font-medium">Produtos</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('shipping')}
+            className={`flex flex-col items-center justify-center flex-1 py-2 px-1 transition-colors ${activeTab === 'shipping'
+              ? 'text-primary-600 bg-primary-50'
+              : 'text-gray-600'
+              }`}
+          >
+            <Truck className="w-6 h-6 flex-shrink-0 mb-1" />
+            <span className="text-xs font-medium">Frete</span>
+          </button>
+        </div>
+      </div>
+
       {activeTab === 'overview' && analytics && (
-        <div className="space-y-6">
+        <div className="space-y-6 pb-20 md:pb-0">
+          <div className="flex justify-between items-center mb-4 gap-2">
+            <h2 className="text-xl font-semibold">Visão Geral</h2>
+          </div>
+
           {/* Botões de Ação Principais */}
-          <div className="flex gap-2 justify-center flex-wrap">
-            {isActive && (
-              <>
-                <IconButton
-                  size="sm"
-                  icon={<Package className="w-4 h-4" />}
-                  onClick={() => setIsProductModalOpen(true)}
-                  className="text-xs sm:text-sm"
-                >
-                  Adicionar Produto
-                </IconButton>
-                <IconButton
-                  size="sm"
-                  icon={<ShoppingBag className="w-4 h-4" />}
-                  onClick={() => setIsOrderModalOpen(true)}
-                  className="text-xs sm:text-sm"
-                  title="Adicionar Pedido (Alt+N)"
-                >
-                  Adicionar Pedido
-                </IconButton>
-              </>
-            )}
-            {orders && orders.length > 0 && (
+          {isActive && (
+            <div className="flex gap-2 justify-center flex-wrap">
               <IconButton
                 size="sm"
-                variant="secondary"
-                icon={<FileText className="w-4 h-4" />}
-                onClick={async () => {
-                  try {
-                    await campaignApi.downloadSupplierInvoice(id!);
-                    toast.success('Fatura gerada com sucesso!');
-                  } catch (error) {
-                    toast.error('Erro ao gerar fatura');
-                  }
-                }}
+                icon={<Package className="w-4 h-4" />}
+                onClick={() => setIsProductModalOpen(true)}
                 className="text-xs sm:text-sm"
               >
-                Gerar Fatura do Fornecedor
+                Adicionar Produto
               </IconButton>
-            )}
-          </div>
+              <IconButton
+                size="sm"
+                icon={<ShoppingBag className="w-4 h-4" />}
+                onClick={() => setIsOrderModalOpen(true)}
+                className="text-xs sm:text-sm"
+                title="Adicionar Pedido (Alt+N)"
+              >
+                Adicionar Pedido
+              </IconButton>
+            </div>
+          )}
 
           {/* Cards de Resumo */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -952,9 +1002,11 @@ export default function CampaignDetail() {
               <h3 className="text-lg font-semibold mb-4">Por Produto</h3>
               <div className="space-y-2">
                 {analytics.byProduct.map((item) => (
-                  <div key={item.productId} className="flex justify-between">
-                    <span className="text-gray-600">{item.productName}</span>
-                    <span className="font-medium text-gray-900">{item.quantity} unidades</span>
+                  <div key={item.productId} className="flex justify-between items-center gap-3">
+                    <span className="text-gray-600 truncate flex-1 min-w-0">{item.productName}</span>
+                    <span className="font-medium text-gray-900 whitespace-nowrap flex-shrink-0">
+                      {item.quantity} <span className="hidden sm:inline">unidades</span><span className="sm:hidden">un.</span>
+                    </span>
                   </div>
                 ))}
               </div>
@@ -964,7 +1016,7 @@ export default function CampaignDetail() {
       )}
 
       {activeTab === 'products' && (
-        <div>
+        <div className="pb-20 md:pb-0">
           <div className="flex justify-between items-center mb-4 gap-2">
             <h2 className="text-xl font-semibold">Produtos</h2>
             {isActive && (
@@ -1164,7 +1216,7 @@ export default function CampaignDetail() {
       )}
 
       {activeTab === 'orders' && (
-        <div>
+        <div className="pb-20 md:pb-0">
           <div className="mb-4 space-y-3">
             <div className="flex justify-between items-center gap-2">
               <h2 className="text-xl font-semibold">Pedidos</h2>
@@ -1457,7 +1509,7 @@ export default function CampaignDetail() {
       )}
 
       {activeTab === 'shipping' && (
-        <div>
+        <div className="pb-20 md:pb-0">
           <div className="max-w-2xl mx-auto">
             <Card>
               <div className="text-center mb-6">

@@ -36,7 +36,7 @@ export default function Layout() {
         </div>
       </main>
 
-      <footer className="bg-white border-t">
+      <footer className="bg-white border-t hidden md:block">
         <div className="container-custom py-6 text-center text-sm text-gray-500">
           <p>Sistema de Gerenciamento de Compras Coletivas</p>
         </div>
