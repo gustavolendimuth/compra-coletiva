@@ -44,6 +44,15 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import DateTimeInput from '@/components/DateTimeInput';
 import { SkeletonDetailHeader, SkeletonProductCard } from '@/components/Skeleton';
 
+// Helper function para normalizar strings (remover acentos)
+const normalizeString = (str: string): string => {
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+};
+
 export default function CampaignDetail() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
@@ -113,6 +122,12 @@ export default function CampaignDetail() {
   });
 
   const [shippingCost, setShippingCost] = useState<number | ''>(0);
+
+  // Estados para autocomplete de nomes
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
+  const [showEditSuggestions, setShowEditSuggestions] = useState(false);
+  const [selectedEditSuggestionIndex, setSelectedEditSuggestionIndex] = useState(-1);
 
   const { data: campaign } = useQuery({
     queryKey: ['campaign', id],
@@ -294,8 +309,27 @@ export default function CampaignDetail() {
     });
   };
 
+  const handleCloseOrderModal = () => {
+    setIsOrderModalOpen(false);
+    // Não reseta nada para permitir acumulação de produtos e persistência do nome
+  };
+
   const handleCreateOrder = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validar se já existe um pedido com o mesmo nome
+    const existingOrder = orders?.find(
+      order => order.customerName.toLowerCase().trim() === orderForm.customerName.toLowerCase().trim()
+    );
+
+    if (existingOrder) {
+      toast.error(
+        'Já existe um pedido para esta pessoa. Por favor, edite o pedido existente ao invés de criar um novo.',
+        { duration: 5000 }
+      );
+      return;
+    }
+
     const validItems = orderForm.items
       .filter((item): item is { productId: string; quantity: number } =>
         item.productId !== '' && typeof item.quantity === 'number' && item.quantity > 0
@@ -325,6 +359,21 @@ export default function CampaignDetail() {
   const handleEditOrder = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingOrder) return;
+
+    // Validar se já existe outro pedido com o mesmo nome
+    const existingOrder = orders?.find(
+      order =>
+        order.id !== editingOrder.id &&
+        order.customerName.toLowerCase().trim() === editOrderForm.customerName.toLowerCase().trim()
+    );
+
+    if (existingOrder) {
+      toast.error(
+        'Já existe outro pedido para esta pessoa. Por favor, escolha um nome diferente ou edite o pedido existente.',
+        { duration: 5000 }
+      );
+      return;
+    }
 
     const validItems = editOrderForm.items
       .filter((item): item is { productId: string; quantity: number } =>
@@ -391,7 +440,7 @@ export default function CampaignDetail() {
   // Filtra e ordena pedidos
   const filteredOrders = orders
     ?.filter(order =>
-      order.customerName.toLowerCase().includes(orderSearch.toLowerCase())
+      normalizeString(order.customerName).includes(normalizeString(orderSearch))
     )
     .sort((a, b) => {
       let comparison = 0;
@@ -504,7 +553,7 @@ export default function CampaignDetail() {
       // ESC - Fechar modal/diálogo aberto
       if (e.key === 'Escape') {
         if (isOrderModalOpen) {
-          setIsOrderModalOpen(false);
+          handleCloseOrderModal();
         } else if (isEditOrderModalOpen) {
           setIsEditOrderModalOpen(false);
           setEditingOrder(null);
@@ -980,7 +1029,20 @@ export default function CampaignDetail() {
                       {/* Botão de Ação */}
                       {isActive && (
                         <button
-                          onClick={() => setIsOrderModalOpen(true)}
+                          onClick={() => {
+                            // Verifica se o produto já está na lista
+                            const productExists = orderForm.items.some(item => item.productId === product.id);
+
+                            if (!productExists) {
+                              // Adiciona o produto à lista existente, removendo campos vazios
+                              setOrderForm({
+                                ...orderForm,
+                                items: [...orderForm.items.filter(item => item.productId !== ''), { productId: product.id, quantity: 1 }]
+                              });
+                            }
+
+                            setIsOrderModalOpen(true);
+                          }}
                           className="w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-1.5 px-3 rounded-lg transition-colors duration-200 text-sm"
                         >
                           Pedir
@@ -1817,7 +1879,7 @@ export default function CampaignDetail() {
       {/* Modal: Novo Pedido */}
       <Modal
         isOpen={isOrderModalOpen}
-        onClose={() => setIsOrderModalOpen(false)}
+        onClose={handleCloseOrderModal}
         title="Novo Pedido"
       >
         <form onSubmit={handleCreateOrder} className="space-y-4">
@@ -1826,18 +1888,98 @@ export default function CampaignDetail() {
               <strong>Atalho:</strong> Alt+P para adicionar produto
             </p>
           </div>
-          <div>
+          <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nome da Pessoa *
+              Nome e Sobrenome *
             </label>
             <input
               type="text"
               required
               autoFocus
               value={orderForm.customerName}
-              onChange={(e) => setOrderForm({ ...orderForm, customerName: e.target.value })}
+              onChange={(e) => {
+                setOrderForm({ ...orderForm, customerName: e.target.value });
+                setShowSuggestions(true);
+                setSelectedSuggestionIndex(-1);
+              }}
+              onKeyDown={(e) => {
+                const normalizedInput = normalizeString(orderForm.customerName);
+                const suggestions = orders
+                  ?.map((order) => order.customerName)
+                  .filter((name, index, self) => self.indexOf(name) === index)
+                  .filter((name) => normalizeString(name).includes(normalizedInput))
+                  .sort() || [];
+
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  setSelectedSuggestionIndex((prev) =>
+                    prev < suggestions.length - 1 ? prev + 1 : prev
+                  );
+                } else if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  setSelectedSuggestionIndex((prev) => (prev > 0 ? prev - 1 : -1));
+                } else if (e.key === 'Enter' && selectedSuggestionIndex >= 0) {
+                  e.preventDefault();
+                  setOrderForm({ ...orderForm, customerName: suggestions[selectedSuggestionIndex] });
+                  setShowSuggestions(false);
+                  setSelectedSuggestionIndex(-1);
+                } else if (e.key === 'Escape') {
+                  setShowSuggestions(false);
+                  setSelectedSuggestionIndex(-1);
+                }
+              }}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => {
+                // Delay para permitir clique nas sugestões
+                setTimeout(() => {
+                  setShowSuggestions(false);
+                  setSelectedSuggestionIndex(-1);
+                }, 200);
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              autoComplete="off"
             />
+            {showSuggestions && orderForm.customerName.trim() && (() => {
+              const normalizedInput = normalizeString(orderForm.customerName);
+              const suggestions = orders
+                ?.map((order) => order.customerName)
+                .filter((name, index, self) => self.indexOf(name) === index)
+                .filter((name) => normalizeString(name).includes(normalizedInput))
+                .sort() || [];
+
+              return suggestions.length > 0 ? (
+                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  {suggestions.map((name, index) => (
+                    <div
+                      key={name}
+                      onClick={() => {
+                        setOrderForm({ ...orderForm, customerName: name });
+                        setShowSuggestions(false);
+                        setSelectedSuggestionIndex(-1);
+                      }}
+                      className={`px-3 py-2 cursor-pointer transition-colors ${
+                        index === selectedSuggestionIndex
+                          ? 'bg-primary-50 text-primary-700'
+                          : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      {name}
+                    </div>
+                  ))}
+                </div>
+              ) : null;
+            })()}
+            {orderForm.customerName.trim() && orders?.some(
+              order => order.customerName.toLowerCase().trim() === orderForm.customerName.toLowerCase().trim()
+            ) && (
+              <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-yellow-800">
+                  <p className="font-medium">Pedido já existe para esta pessoa</p>
+                  <p className="mt-1">Por favor, edite o pedido existente ao invés de criar um novo.</p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
@@ -1913,7 +2055,7 @@ export default function CampaignDetail() {
             <Button
               type="button"
               variant="secondary"
-              onClick={() => setIsOrderModalOpen(false)}
+              onClick={handleCloseOrderModal}
               className="whitespace-nowrap"
             >
               Cancelar
@@ -1979,18 +2121,102 @@ export default function CampaignDetail() {
               <strong>Atalho:</strong> Alt+P para adicionar produto
             </p>
           </div>
-          <div>
+          <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nome da Pessoa *
+              Nome e Sobrenome *
             </label>
             <input
               type="text"
               required
               autoFocus
               value={editOrderForm.customerName}
-              onChange={(e) => setEditOrderForm({ ...editOrderForm, customerName: e.target.value })}
+              onChange={(e) => {
+                setEditOrderForm({ ...editOrderForm, customerName: e.target.value });
+                setShowEditSuggestions(true);
+                setSelectedEditSuggestionIndex(-1);
+              }}
+              onKeyDown={(e) => {
+                const normalizedInput = normalizeString(editOrderForm.customerName);
+                const suggestions = orders
+                  ?.filter((order) => order.id !== editingOrder?.id)
+                  .map((order) => order.customerName)
+                  .filter((name, index, self) => self.indexOf(name) === index)
+                  .filter((name) => normalizeString(name).includes(normalizedInput))
+                  .sort() || [];
+
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  setSelectedEditSuggestionIndex((prev) =>
+                    prev < suggestions.length - 1 ? prev + 1 : prev
+                  );
+                } else if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  setSelectedEditSuggestionIndex((prev) => (prev > 0 ? prev - 1 : -1));
+                } else if (e.key === 'Enter' && selectedEditSuggestionIndex >= 0) {
+                  e.preventDefault();
+                  setEditOrderForm({ ...editOrderForm, customerName: suggestions[selectedEditSuggestionIndex] });
+                  setShowEditSuggestions(false);
+                  setSelectedEditSuggestionIndex(-1);
+                } else if (e.key === 'Escape') {
+                  setShowEditSuggestions(false);
+                  setSelectedEditSuggestionIndex(-1);
+                }
+              }}
+              onFocus={() => setShowEditSuggestions(true)}
+              onBlur={() => {
+                // Delay para permitir clique nas sugestões
+                setTimeout(() => {
+                  setShowEditSuggestions(false);
+                  setSelectedEditSuggestionIndex(-1);
+                }, 200);
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              autoComplete="off"
             />
+            {showEditSuggestions && editOrderForm.customerName.trim() && (() => {
+              const normalizedInput = normalizeString(editOrderForm.customerName);
+              const suggestions = orders
+                ?.filter((order) => order.id !== editingOrder?.id)
+                .map((order) => order.customerName)
+                .filter((name, index, self) => self.indexOf(name) === index)
+                .filter((name) => normalizeString(name).includes(normalizedInput))
+                .sort() || [];
+
+              return suggestions.length > 0 ? (
+                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  {suggestions.map((name, index) => (
+                    <div
+                      key={name}
+                      onClick={() => {
+                        setEditOrderForm({ ...editOrderForm, customerName: name });
+                        setShowEditSuggestions(false);
+                        setSelectedEditSuggestionIndex(-1);
+                      }}
+                      className={`px-3 py-2 cursor-pointer transition-colors ${
+                        index === selectedEditSuggestionIndex
+                          ? 'bg-primary-50 text-primary-700'
+                          : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      {name}
+                    </div>
+                  ))}
+                </div>
+              ) : null;
+            })()}
+            {editOrderForm.customerName.trim() && editingOrder && orders?.some(
+              order =>
+                order.id !== editingOrder.id &&
+                order.customerName.toLowerCase().trim() === editOrderForm.customerName.toLowerCase().trim()
+            ) && (
+              <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-yellow-800">
+                  <p className="font-medium">Pedido já existe para esta pessoa</p>
+                  <p className="mt-1">Já existe outro pedido com este nome. Por favor, escolha um nome diferente.</p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
