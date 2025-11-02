@@ -866,13 +866,13 @@ export default function CampaignDetail() {
       </div>
 
       {/* Mobile: Fixed bottom navigation bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-primary-600 border-t-2 border-primary-700 shadow-lg z-50">
         <div className="flex">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`flex flex-col items-center justify-center flex-1 py-2 px-1 transition-colors ${activeTab === 'overview'
-              ? 'text-primary-600 bg-primary-50'
-              : 'text-gray-600'
+            className={`flex flex-col items-center justify-center flex-1 py-3 px-1 transition-colors ${activeTab === 'overview'
+              ? 'text-yellow-300 font-bold border-b-4 border-yellow-300'
+              : 'text-white hover:text-yellow-200'
               }`}
           >
             <TrendingUp className="w-6 h-6 flex-shrink-0 mb-1" />
@@ -880,9 +880,9 @@ export default function CampaignDetail() {
           </button>
           <button
             onClick={() => setActiveTab('orders')}
-            className={`flex flex-col items-center justify-center flex-1 py-2 px-1 transition-colors ${activeTab === 'orders'
-              ? 'text-primary-600 bg-primary-50'
-              : 'text-gray-600'
+            className={`flex flex-col items-center justify-center flex-1 py-3 px-1 transition-colors ${activeTab === 'orders'
+              ? 'text-yellow-300 font-bold border-b-4 border-yellow-300'
+              : 'text-white hover:text-yellow-200'
               }`}
           >
             <ShoppingBag className="w-6 h-6 flex-shrink-0 mb-1" />
@@ -890,9 +890,9 @@ export default function CampaignDetail() {
           </button>
           <button
             onClick={() => setActiveTab('products')}
-            className={`flex flex-col items-center justify-center flex-1 py-2 px-1 transition-colors ${activeTab === 'products'
-              ? 'text-primary-600 bg-primary-50'
-              : 'text-gray-600'
+            className={`flex flex-col items-center justify-center flex-1 py-3 px-1 transition-colors ${activeTab === 'products'
+              ? 'text-yellow-300 font-bold border-b-4 border-yellow-300'
+              : 'text-white hover:text-yellow-200'
               }`}
           >
             <Package className="w-6 h-6 flex-shrink-0 mb-1" />
@@ -900,9 +900,9 @@ export default function CampaignDetail() {
           </button>
           <button
             onClick={() => setActiveTab('shipping')}
-            className={`flex flex-col items-center justify-center flex-1 py-2 px-1 transition-colors ${activeTab === 'shipping'
-              ? 'text-primary-600 bg-primary-50'
-              : 'text-gray-600'
+            className={`flex flex-col items-center justify-center flex-1 py-3 px-1 transition-colors ${activeTab === 'shipping'
+              ? 'text-yellow-300 font-bold border-b-4 border-yellow-300'
+              : 'text-white hover:text-yellow-200'
               }`}
           >
             <Truck className="w-6 h-6 flex-shrink-0 mb-1" />
