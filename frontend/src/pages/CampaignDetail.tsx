@@ -22,7 +22,8 @@ import {
   FileText,
   ArrowUpDown,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Eye
 } from 'lucide-react';
 import {
   campaignApi,
@@ -882,7 +883,7 @@ export default function CampaignDetail() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
             <Card className="h-fit">
               <h3 className="text-lg font-semibold mb-4">Por Pessoa</h3>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {[...analytics.byCustomer]
                   .sort((a, b) => a.customerName.localeCompare(b.customerName))
                   .map((item, index) => {
@@ -890,30 +891,50 @@ export default function CampaignDetail() {
                     const order = orders?.find(o => o.customerName === item.customerName);
 
                     return (
-                      <div key={index} className="flex justify-between items-center">
-                        <span className="text-gray-600">{item.customerName}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-900">
+                      <div key={index} className="flex flex-col gap-2 md:flex-row md:justify-between md:items-center pb-3 border-b last:border-b-0 last:pb-0">
+                        {/* Linha 1: Nome e Total */}
+                        <div className="flex justify-between items-center gap-3 md:flex-1">
+                          <span className="text-gray-900 font-medium flex-1 min-w-0">{item.customerName}</span>
+                          <span className="font-semibold text-gray-900 whitespace-nowrap">
                             {formatCurrency(item.total)}
                           </span>
-                          <span className={`px-2 py-0.5 text-xs rounded-full ${item.isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        </div>
+
+                        {/* Linha 2: Status e Ações */}
+                        <div className="flex items-center justify-between gap-3 md:justify-end">
+                          <span className={`px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap ${item.isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                             }`}>
                             {item.isPaid ? 'Pago' : 'Pendente'}
                           </span>
-                          {order && (
-                            <IconButton
-                              size="sm"
-                              variant={item.isPaid ? 'success' : 'secondary'}
-                              icon={<CircleDollarSign className="w-5 h-5" />}
-                              onClick={() =>
-                                updateOrderMutation.mutate({
-                                  orderId: order.id,
-                                  data: { isPaid: !item.isPaid }
-                                })
-                              }
-                              title={item.isPaid ? 'Marcar como não pago' : 'Marcar como pago'}
-                            />
-                          )}
+
+                          <div className="flex items-center gap-2">
+                            {order && (
+                              <>
+                                <IconButton
+                                  size="sm"
+                                  variant="secondary"
+                                  icon={<Eye className="w-4 h-4" />}
+                                  onClick={() => {
+                                    setActiveTab('orders');
+                                    setOrderSearch(item.customerName);
+                                  }}
+                                  title="Ver pedido"
+                                />
+                                <IconButton
+                                  size="sm"
+                                  variant={item.isPaid ? 'success' : 'secondary'}
+                                  icon={<CircleDollarSign className="w-4 h-4" />}
+                                  onClick={() =>
+                                    updateOrderMutation.mutate({
+                                      orderId: order.id,
+                                      data: { isPaid: !item.isPaid }
+                                    })
+                                  }
+                                  title={item.isPaid ? 'Marcar como não pago' : 'Marcar como pago'}
+                                />
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
