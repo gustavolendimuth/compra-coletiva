@@ -9,6 +9,7 @@ import Button from '@/components/Button';
 import Card from '@/components/Card';
 import Modal from '@/components/Modal';
 import DateTimeInput from '@/components/DateTimeInput';
+import { SkeletonCard } from '@/components/Skeleton';
 
 export default function CampaignList() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -58,8 +59,16 @@ export default function CampaignList() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Carregando...</div>
+      <div>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">Grupos</h1>
+          <Button disabled>Novo Grupo</Button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
       </div>
     );
   }
