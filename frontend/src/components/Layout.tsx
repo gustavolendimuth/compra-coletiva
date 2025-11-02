@@ -6,10 +6,10 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <nav className="bg-white shadow-sm border-b">
+      <nav className="bg-primary-600 shadow-md">
         <div className="container-custom py-4">
           <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-2 text-xl font-bold text-primary-600">
+            <Link to="/" className="flex items-center gap-2 text-xl font-bold text-white">
               <Users className="w-6 h-6" />
               Compra Coletiva
             </Link>
@@ -17,10 +17,10 @@ export default function Layout() {
             <div className="flex gap-4">
               <Link
                 to="/campaigns"
-                className={`px-4 py-2 rounded-lg transition-colors ${
+                className={`px-4 py-2 rounded-lg transition-colors font-semibold ${
                   location.pathname.includes('/campaigns')
-                    ? 'bg-primary-100 text-primary-700'
-                    : 'text-gray-600 hover:bg-gray-100'
+                    ? 'bg-white text-primary-600 shadow-sm'
+                    : 'text-white hover:bg-primary-700'
                 }`}
               >
                 Grupos
