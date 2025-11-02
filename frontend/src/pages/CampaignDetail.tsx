@@ -23,7 +23,8 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  Eye
+  Eye,
+  X
 } from 'lucide-react';
 import {
   campaignApi,
@@ -872,7 +873,7 @@ export default function CampaignDetail() {
       {activeTab === 'overview' && analytics && (
         <div className="space-y-6 pb-20 md:pb-0">
           <div className="flex justify-between items-center mb-4 gap-2">
-            <h2 className="text-xl font-semibold">Visão Geral</h2>
+            <h2 className="text-2xl font-bold">Visão Geral</h2>
           </div>
 
           {/* Botões de Ação Principais */}
@@ -898,46 +899,104 @@ export default function CampaignDetail() {
             </div>
           )}
 
-          {/* Cards de Resumo */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <div className="text-sm text-gray-500 mb-1">Total de Pessoas</div>
-              <div className="text-3xl font-bold text-gray-900">{analytics.byCustomer.length}</div>
-            </Card>
-            <Card>
-              <div className="text-sm text-gray-500 mb-1">Total de Itens</div>
-              <div className="text-3xl font-bold text-gray-900">{analytics.totalQuantity}</div>
-            </Card>
-            <Card>
-              <div className="text-sm text-gray-500 mb-1">Total sem Frete</div>
-              <div className="text-3xl font-bold text-gray-900">
-                {formatCurrency(analytics.totalWithoutShipping)}
+          {/* Produtos em Destaque */}
+          {products && products.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold text-gray-900">Produtos Disponíveis</h3>
+                <button
+                  onClick={() => setActiveTab('products')}
+                  className="text-sm text-primary-600 hover:text-primary-700 font-medium transition-colors"
+                >
+                  Ver todos
+                </button>
               </div>
-            </Card>
-            <Card>
-              <div className="text-sm text-gray-500 mb-1">Total com Frete</div>
-              <div className="text-3xl font-bold text-gray-900">
-                {formatCurrency(analytics.totalWithShipping)}
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                {products.slice().sort((a, b) => a.name.localeCompare(b.name)).map((product) => {
+                  return (
+                    <div
+                      key={product.id}
+                      className="bg-white border border-gray-200 rounded-lg p-3 hover:border-primary-400 hover:shadow-md transition-all duration-200 flex flex-col"
+                    >
+                      {/* Ícone */}
+                      <div className="bg-primary-100 p-2 rounded-lg mb-2 w-fit">
+                        <Package className="w-5 h-5 text-primary-600" />
+                      </div>
+
+                      {/* Nome do Produto */}
+                      <h4 className="font-semibold text-gray-900 mb-1 line-clamp-2 text-sm md:text-base leading-tight min-h-[2.25rem] md:min-h-[3rem]">
+                        {product.name}
+                      </h4>
+
+                      {/* Preço */}
+                      <div className="mt-auto mb-2">
+                        <span className="text-lg font-bold text-primary-600">
+                          {formatCurrency(product.price)}
+                        </span>
+                      </div>
+
+                      {/* Botão de Ação */}
+                      {isActive && (
+                        <button
+                          onClick={() => setIsOrderModalOpen(true)}
+                          className="w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-1.5 px-3 rounded-lg transition-colors duration-200 text-sm"
+                        >
+                          Pedir
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            </Card>
-            <Card>
-              <div className="text-sm text-gray-500 mb-1">Total Pago</div>
-              <div className="text-3xl font-bold text-green-600">
-                {formatCurrency(analytics.totalPaid)}
-              </div>
-            </Card>
-            <Card>
-              <div className="text-sm text-gray-500 mb-1">Total Não Pago</div>
-              <div className="text-3xl font-bold text-red-600">
-                {formatCurrency(analytics.totalUnpaid)}
-              </div>
-            </Card>
+            </div>
+          )}
+
+          {/* Resumo Financeiro */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumo Financeiro</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card>
+                <div className="text-sm text-gray-500 mb-1">Total de Pessoas</div>
+                <div className="text-3xl font-bold text-gray-900">{analytics.byCustomer.length}</div>
+              </Card>
+              <Card>
+                <div className="text-sm text-gray-500 mb-1">Total de Itens</div>
+                <div className="text-3xl font-bold text-gray-900">{analytics.totalQuantity}</div>
+              </Card>
+              <Card>
+                <div className="text-sm text-gray-500 mb-1">Total sem Frete</div>
+                <div className="text-3xl font-bold text-gray-900">
+                  {formatCurrency(analytics.totalWithoutShipping)}
+                </div>
+              </Card>
+              <Card>
+                <div className="text-sm text-gray-500 mb-1">Total com Frete</div>
+                <div className="text-3xl font-bold text-gray-900">
+                  {formatCurrency(analytics.totalWithShipping)}
+                </div>
+              </Card>
+              <Card>
+                <div className="text-sm text-gray-500 mb-1">Total Pago</div>
+                <div className="text-3xl font-bold text-green-600">
+                  {formatCurrency(analytics.totalPaid)}
+                </div>
+              </Card>
+              <Card>
+                <div className="text-sm text-gray-500 mb-1">Total Não Pago</div>
+                <div className="text-3xl font-bold text-red-600">
+                  {formatCurrency(analytics.totalUnpaid)}
+                </div>
+              </Card>
+            </div>
           </div>
 
           {/* Detalhes por Produto e Cliente */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
-            <Card className="h-fit">
-              <h3 className="text-lg font-semibold mb-4">Por Pessoa</h3>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Detalhamento</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
+              <Card className="h-fit">
+                <h4 className="font-semibold mb-4 text-gray-800">Por Pessoa</h4>
               <div className="space-y-3">
                 {[...analytics.byCustomer]
                   .sort((a, b) => a.customerName.localeCompare(b.customerName))
@@ -999,7 +1058,7 @@ export default function CampaignDetail() {
             </Card>
 
             <Card className="h-fit">
-              <h3 className="text-lg font-semibold mb-4">Por Produto</h3>
+              <h4 className="font-semibold mb-4 text-gray-800">Por Produto</h4>
               <div className="space-y-2">
                 {analytics.byProduct.map((item) => (
                   <div key={item.productId} className="flex justify-between items-center gap-3">
@@ -1012,13 +1071,14 @@ export default function CampaignDetail() {
               </div>
             </Card>
           </div>
+          </div>
         </div>
       )}
 
       {activeTab === 'products' && (
         <div className="pb-20 md:pb-0">
           <div className="flex justify-between items-center mb-4 gap-2">
-            <h2 className="text-xl font-semibold">Produtos</h2>
+            <h2 className="text-2xl font-bold">Produtos</h2>
             {isActive && (
               <IconButton
                 size="sm"
@@ -1219,7 +1279,7 @@ export default function CampaignDetail() {
         <div className="pb-20 md:pb-0">
           <div className="mb-4 space-y-3">
             <div className="flex justify-between items-center gap-2">
-              <h2 className="text-xl font-semibold">Pedidos</h2>
+              <h2 className="text-2xl font-bold">Pedidos</h2>
               {isActive && (
                 <IconButton
                   size="sm"
@@ -1239,8 +1299,18 @@ export default function CampaignDetail() {
                 placeholder="Buscar por pessoa..."
                 value={orderSearch}
                 onChange={(e) => setOrderSearch(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
               />
+              {orderSearch && (
+                <button
+                  type="button"
+                  onClick={() => setOrderSearch('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  title="Limpar busca"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
 
