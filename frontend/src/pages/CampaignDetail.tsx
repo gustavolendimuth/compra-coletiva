@@ -41,7 +41,7 @@ import Card from '@/components/Card';
 import Modal from '@/components/Modal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import DateTimeInput from '@/components/DateTimeInput';
-import { SkeletonDetailHeader, SkeletonProductCard, SkeletonTable } from '@/components/Skeleton';
+import { SkeletonDetailHeader, SkeletonProductCard } from '@/components/Skeleton';
 
 export default function CampaignDetail() {
   const { id } = useParams<{ id: string }>();
