@@ -25,36 +25,41 @@ export const useRealtimeUpdates = ({
     // Listener para quando um pedido é criado
     const handleOrderCreated = (data: any) => {
       console.log('📦 Order created:', data);
-      queryClient.invalidateQueries({ queryKey: ['orders', campaignId] });
-      queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] });
+      queryClient.refetchQueries({ queryKey: ['orders', campaignId] });
+      queryClient.refetchQueries({ queryKey: ['campaign', campaignId] });
+      queryClient.refetchQueries({ queryKey: ['analytics', campaignId] });
     };
 
     // Listener para quando um pedido é atualizado
     const handleOrderUpdated = (data: any) => {
       console.log('🔄 Order updated:', data);
-      queryClient.invalidateQueries({ queryKey: ['orders', campaignId] });
-      queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] });
+      queryClient.refetchQueries({ queryKey: ['orders', campaignId] });
+      queryClient.refetchQueries({ queryKey: ['campaign', campaignId] });
+      queryClient.refetchQueries({ queryKey: ['analytics', campaignId] });
     };
 
     // Listener para quando um pedido é deletado
     const handleOrderDeleted = (data: any) => {
       console.log('🗑️ Order deleted:', data);
-      queryClient.invalidateQueries({ queryKey: ['orders', campaignId] });
-      queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] });
+      queryClient.refetchQueries({ queryKey: ['orders', campaignId] });
+      queryClient.refetchQueries({ queryKey: ['campaign', campaignId] });
+      queryClient.refetchQueries({ queryKey: ['analytics', campaignId] });
     };
 
     // Listener específico para mudanças de status (pago/separado)
     const handleOrderStatusChanged = (data: any) => {
       console.log('✅ Order status changed:', data);
-      queryClient.invalidateQueries({ queryKey: ['orders', campaignId] });
-      queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] });
+      queryClient.refetchQueries({ queryKey: ['orders', campaignId] });
+      queryClient.refetchQueries({ queryKey: ['campaign', campaignId] });
+      queryClient.refetchQueries({ queryKey: ['analytics', campaignId] });
     };
 
     // Listener para quando a campanha é atualizada
     const handleCampaignUpdated = (data: any) => {
       console.log('📋 Campaign updated:', data);
-      queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] });
-      queryClient.invalidateQueries({ queryKey: ['orders', campaignId] });
+      queryClient.refetchQueries({ queryKey: ['campaign', campaignId] });
+      queryClient.refetchQueries({ queryKey: ['orders', campaignId] });
+      queryClient.refetchQueries({ queryKey: ['analytics', campaignId] });
     };
 
     // Registrar listeners
