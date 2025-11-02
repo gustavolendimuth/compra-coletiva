@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Plus, Package, Users, Calendar } from 'lucide-react';
+import { Plus, Package, Users, Calendar, Clock } from 'lucide-react';
 import { campaignApi } from '@/lib/api';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import Button from '@/components/Button';
@@ -137,12 +137,28 @@ export default function CampaignList() {
                     <Calendar className="w-4 h-4" />
                     <span>Criada em {formatDate(campaign.createdAt)}</span>
                   </div>
-                </div>
-
-                <div className="mt-4 pt-4 border-t">
-                  <div className="text-sm font-medium text-gray-900">
-                    Frete: {formatCurrency(campaign.shippingCost)}
-                  </div>
+                  {campaign.deadline && (
+                    <div className={`flex items-center gap-2 font-medium ${
+                      new Date(campaign.deadline) < new Date()
+                        ? 'text-red-600'
+                        : new Date(campaign.deadline).getTime() - new Date().getTime() < 24 * 60 * 60 * 1000
+                          ? 'text-yellow-600'
+                          : 'text-blue-600'
+                    }`}>
+                      <Clock className="w-4 h-4" />
+                      <span>
+                        Limite: {new Date(campaign.deadline).toLocaleDateString('pt-BR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric'
+                        })} às {new Date(campaign.deadline).toLocaleTimeString('pt-BR', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: false
+                        })}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </Card>
             </Link>

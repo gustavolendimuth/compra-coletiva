@@ -720,7 +720,7 @@ export default function CampaignDetail() {
               </>
             )}
             {campaign.deadline && (
-              <div className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium ${new Date(campaign.deadline) < new Date()
+              <div className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium mt-4 ${new Date(campaign.deadline) < new Date()
                 ? 'bg-red-100 text-red-800 border border-red-300'
                 : new Date(campaign.deadline).getTime() - new Date().getTime() < 24 * 60 * 60 * 1000
                   ? 'bg-yellow-100 text-yellow-800 border border-yellow-300'
@@ -772,6 +772,7 @@ export default function CampaignDetail() {
                   setIsEditDeadlineModalOpen(true);
                   setDeadlineForm('');
                 }}
+                className="mt-4"
               >
                 Adicionar data limite
               </IconButton>
@@ -962,32 +963,32 @@ export default function CampaignDetail() {
 
       {activeTab === 'overview' && analytics && (
         <div className="space-y-6 pb-20 md:pb-0">
-          <div className="flex justify-between items-center mb-4 gap-2">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-4 md:mt-6">
             <h2 className="text-2xl font-bold">Visão Geral</h2>
-          </div>
 
-          {/* Botões de Ação Principais */}
-          {isActive && (
-            <div className="flex gap-2 justify-center flex-wrap">
-              <IconButton
-                size="sm"
-                icon={<Package className="w-4 h-4" />}
-                onClick={() => setIsProductModalOpen(true)}
-                className="text-xs sm:text-sm"
-              >
-                Adicionar Produto
-              </IconButton>
-              <IconButton
-                size="sm"
-                icon={<ShoppingBag className="w-4 h-4" />}
-                onClick={() => setIsOrderModalOpen(true)}
-                className="text-xs sm:text-sm"
-                title="Adicionar Pedido (Alt+N)"
-              >
-                Adicionar Pedido
-              </IconButton>
-            </div>
-          )}
+            {/* Botões de Ação Principais */}
+            {isActive && (
+              <div className="flex gap-2 justify-center md:justify-end flex-wrap">
+                <IconButton
+                  size="sm"
+                  icon={<Package className="w-4 h-4" />}
+                  onClick={() => setIsProductModalOpen(true)}
+                  className="text-xs sm:text-sm"
+                >
+                  Adicionar Produto
+                </IconButton>
+                <IconButton
+                  size="sm"
+                  icon={<ShoppingBag className="w-4 h-4" />}
+                  onClick={() => setIsOrderModalOpen(true)}
+                  className="text-xs sm:text-sm"
+                  title="Adicionar Pedido (Alt+N)"
+                >
+                  Adicionar Pedido
+                </IconButton>
+              </div>
+            )}
+          </div>
 
           {/* Produtos em Destaque */}
           {products && products.length > 0 && (
@@ -1969,17 +1970,42 @@ export default function CampaignDetail() {
                 </div>
               ) : null;
             })()}
-            {orderForm.customerName.trim() && orders?.some(
-              order => order.customerName.toLowerCase().trim() === orderForm.customerName.toLowerCase().trim()
-            ) && (
-              <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2">
-                <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-yellow-800">
-                  <p className="font-medium">Pedido já existe para esta pessoa</p>
-                  <p className="mt-1">Por favor, edite o pedido existente ao invés de criar um novo.</p>
+            {orderForm.customerName.trim() && (() => {
+              const existingOrder = orders?.find(
+                order => order.customerName.toLowerCase().trim() === orderForm.customerName.toLowerCase().trim()
+              );
+
+              return existingOrder ? (
+                <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2">
+                  <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-yellow-800">
+                    <p className="font-medium">Pedido já existe para esta pessoa</p>
+                    <p className="mt-1">
+                      Por favor,{' '}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsOrderModalOpen(false);
+                          setEditingOrder(existingOrder);
+                          setEditOrderForm({
+                            customerName: existingOrder.customerName,
+                            items: existingOrder.items.map(item => ({
+                              productId: item.productId,
+                              quantity: item.quantity
+                            }))
+                          });
+                          setIsEditOrderModalOpen(true);
+                        }}
+                        className="font-semibold underline hover:text-yellow-900 transition-colors"
+                      >
+                        edite o pedido existente
+                      </button>
+                      {' '}ao invés de criar um novo.
+                    </p>
+                  </div>
                 </div>
-              </div>
-            )}
+              ) : null;
+            })()}
           </div>
 
           <div>
@@ -2474,9 +2500,21 @@ export default function CampaignDetail() {
       <ConfirmDialog
         isOpen={isReopenConfirmOpen}
         onClose={() => setIsReopenConfirmOpen(false)}
-        onConfirm={() => updateStatusMutation.mutate('ACTIVE')}
+        onConfirm={async () => {
+          try {
+            // Primeiro reseta a data limite
+            await campaignApi.update(id!, { deadline: undefined });
+            // Depois reabre o grupo
+            await campaignApi.updateStatus(id!, 'ACTIVE');
+            queryClient.invalidateQueries({ queryKey: ['campaign', id] });
+            toast.success('Grupo reaberto e data limite resetada!');
+            setIsReopenConfirmOpen(false);
+          } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Erro ao reabrir grupo');
+          }
+        }}
         title="Reabrir Grupo"
-        message="Deseja reabrir este grupo? Será possível adicionar e alterar pedidos e produtos novamente."
+        message="Deseja reabrir este grupo? Será possível adicionar e alterar pedidos e produtos novamente. A data limite será resetada."
         confirmText="Reabrir"
         cancelText="Cancelar"
         variant="info"
