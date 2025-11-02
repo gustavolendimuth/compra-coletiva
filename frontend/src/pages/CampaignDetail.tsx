@@ -50,11 +50,13 @@ export default function CampaignDetail() {
   const [isEditProductModalOpen, setIsEditProductModalOpen] = useState(false);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [isEditOrderModalOpen, setIsEditOrderModalOpen] = useState(false);
+  const [isViewOrderModalOpen, setIsViewOrderModalOpen] = useState(false);
   const [isShippingModalOpen, setIsShippingModalOpen] = useState(false);
   const [isEditDeadlineModalOpen, setIsEditDeadlineModalOpen] = useState(false);
   const [isCloseConfirmOpen, setIsCloseConfirmOpen] = useState(false);
   const [isReopenConfirmOpen, setIsReopenConfirmOpen] = useState(false);
   const [isSentConfirmOpen, setIsSentConfirmOpen] = useState(false);
+  const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
   const [orderSearch, setOrderSearch] = useState('');
   const [orderSortField, setOrderSortField] = useState<'customerName' | 'subtotal' | 'shippingFee' | 'total' | 'isPaid'>('customerName');
   const [orderSortDirection, setOrderSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -500,6 +502,9 @@ export default function CampaignDetail() {
         } else if (isEditOrderModalOpen) {
           setIsEditOrderModalOpen(false);
           setEditingOrder(null);
+        } else if (isViewOrderModalOpen) {
+          setIsViewOrderModalOpen(false);
+          setViewingOrder(null);
         } else if (isProductModalOpen) {
           setIsProductModalOpen(false);
         } else if (isEditProductModalOpen) {
@@ -544,7 +549,7 @@ export default function CampaignDetail() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isActive, isOrderModalOpen, isEditOrderModalOpen, isProductModalOpen, isEditProductModalOpen, isShippingModalOpen, isEditDeadlineModalOpen, isCloseConfirmOpen, isReopenConfirmOpen, isSentConfirmOpen, orderForm, editOrderForm]);
+  }, [isActive, isOrderModalOpen, isEditOrderModalOpen, isViewOrderModalOpen, isProductModalOpen, isEditProductModalOpen, isShippingModalOpen, isEditDeadlineModalOpen, isCloseConfirmOpen, isReopenConfirmOpen, isSentConfirmOpen, orderForm, editOrderForm]);
 
   if (!campaign) {
     return (
@@ -625,10 +630,10 @@ export default function CampaignDetail() {
             )}
             {campaign.deadline && (
               <div className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium ${new Date(campaign.deadline) < new Date()
-                  ? 'bg-red-100 text-red-800 border border-red-300'
-                  : new Date(campaign.deadline).getTime() - new Date().getTime() < 24 * 60 * 60 * 1000
-                    ? 'bg-yellow-100 text-yellow-800 border border-yellow-300'
-                    : 'bg-blue-100 text-blue-800 border border-blue-300'
+                ? 'bg-red-100 text-red-800 border border-red-300'
+                : new Date(campaign.deadline).getTime() - new Date().getTime() < 24 * 60 * 60 * 1000
+                  ? 'bg-yellow-100 text-yellow-800 border border-yellow-300'
+                  : 'bg-blue-100 text-blue-800 border border-blue-300'
                 }`}>
                 <Clock className="w-4 h-4" />
                 <span className="text-sm">
@@ -908,22 +913,23 @@ export default function CampaignDetail() {
                           </span>
 
                           <div className="flex items-center gap-2">
+
                             {order && (
                               <>
                                 <IconButton
                                   size="sm"
                                   variant="secondary"
-                                  icon={<Eye className="w-4 h-4" />}
+                                  icon={<Eye className="w-5 h-5" />}
                                   onClick={() => {
-                                    setActiveTab('orders');
-                                    setOrderSearch(item.customerName);
+                                    setViewingOrder(order);
+                                    setIsViewOrderModalOpen(true);
                                   }}
-                                  title="Ver pedido"
+                                  title="Visualizar pedido"
                                 />
                                 <IconButton
                                   size="sm"
                                   variant={item.isPaid ? 'success' : 'secondary'}
-                                  icon={<CircleDollarSign className="w-4 h-4" />}
+                                  icon={<CircleDollarSign className="w-5 h-5" />}
                                   onClick={() =>
                                     updateOrderMutation.mutate({
                                       orderId: order.id,
@@ -986,33 +992,30 @@ export default function CampaignDetail() {
                 <div className="flex gap-2 overflow-x-auto pb-2">
                   <button
                     onClick={() => handleProductSort('name')}
-                    className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                      productSortField === 'name'
-                        ? 'bg-primary-100 text-primary-700'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
+                    className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${productSortField === 'name'
+                      ? 'bg-primary-100 text-primary-700'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
                   >
                     <span>Nome</span>
                     {renderProductSortIcon('name')}
                   </button>
                   <button
                     onClick={() => handleProductSort('price')}
-                    className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                      productSortField === 'price'
-                        ? 'bg-primary-100 text-primary-700'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
+                    className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${productSortField === 'price'
+                      ? 'bg-primary-100 text-primary-700'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
                   >
                     <span>Preço</span>
                     {renderProductSortIcon('price')}
                   </button>
                   <button
                     onClick={() => handleProductSort('weight')}
-                    className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                      productSortField === 'weight'
-                        ? 'bg-primary-100 text-primary-700'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
+                    className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${productSortField === 'weight'
+                      ? 'bg-primary-100 text-primary-700'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
                   >
                     <span>Peso</span>
                     {renderProductSortIcon('weight')}
@@ -1204,33 +1207,30 @@ export default function CampaignDetail() {
                 <div className="flex gap-2 overflow-x-auto pb-2">
                   <button
                     onClick={() => handleSort('customerName')}
-                    className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                      orderSortField === 'customerName'
-                        ? 'bg-primary-100 text-primary-700'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
+                    className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${orderSortField === 'customerName'
+                      ? 'bg-primary-100 text-primary-700'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
                   >
                     <span>Pessoa</span>
                     {renderSortIcon('customerName')}
                   </button>
                   <button
                     onClick={() => handleSort('total')}
-                    className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                      orderSortField === 'total'
-                        ? 'bg-primary-100 text-primary-700'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
+                    className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${orderSortField === 'total'
+                      ? 'bg-primary-100 text-primary-700'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
                   >
                     <span>Total</span>
                     {renderSortIcon('total')}
                   </button>
                   <button
                     onClick={() => handleSort('isPaid')}
-                    className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                      orderSortField === 'isPaid'
-                        ? 'bg-primary-100 text-primary-700'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
+                    className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${orderSortField === 'isPaid'
+                      ? 'bg-primary-100 text-primary-700'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
                   >
                     <span>Status</span>
                     {renderSortIcon('isPaid')}
@@ -1966,6 +1966,107 @@ export default function CampaignDetail() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Modal: Visualizar/Editar Pedido */}
+      <Modal
+        isOpen={isViewOrderModalOpen}
+        onClose={() => {
+          setIsViewOrderModalOpen(false);
+          setViewingOrder(null);
+        }}
+        title="Detalhes do Pedido"
+      >
+        {viewingOrder && (
+          <div className="space-y-4">
+            {/* Informações do Pedido */}
+            <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+              <div>
+                <span className="text-sm text-gray-500">Cliente</span>
+                <p className="font-semibold text-gray-900">{viewingOrder.customerName}</p>
+              </div>
+
+              <div>
+                <span className="text-sm text-gray-500">Status de Pagamento</span>
+                <p className={`font-medium ${viewingOrder.isPaid ? 'text-green-600' : 'text-red-600'}`}>
+                  {viewingOrder.isPaid ? 'Pago' : 'Pendente'}
+                </p>
+              </div>
+            </div>
+
+            {/* Produtos do Pedido */}
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-2">Produtos</h4>
+              <div className="border rounded-lg divide-y">
+                {viewingOrder.items.map((item, index) => (
+                  <div key={index} className="p-3 flex justify-between items-center">
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">{item.product.name}</p>
+                      <p className="text-sm text-gray-500">
+                        {item.quantity}x {formatCurrency(item.unitPrice)}
+                      </p>
+                    </div>
+                    <p className="font-semibold text-gray-900">
+                      {formatCurrency(item.subtotal)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Resumo Financeiro */}
+            <div className="bg-primary-50 rounded-lg p-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Subtotal</span>
+                <span className="font-medium text-gray-900">{formatCurrency(viewingOrder.subtotal)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Frete</span>
+                <span className="font-medium text-gray-900">{formatCurrency(viewingOrder.shippingFee)}</span>
+              </div>
+              <div className="flex justify-between text-lg font-bold pt-2 border-t border-primary-200">
+                <span className="text-gray-900">Total</span>
+                <span className="text-primary-600">{formatCurrency(viewingOrder.total)}</span>
+              </div>
+            </div>
+
+            {/* Botões de Ação */}
+            <div className="flex gap-3 pt-4">
+              {isActive && (
+                <Button
+                  onClick={() => {
+                    setEditingOrder(viewingOrder);
+                    setEditOrderForm({
+                      customerName: viewingOrder.customerName,
+                      items: viewingOrder.items.map(item => ({
+                        productId: item.product.id,
+                        quantity: item.quantity
+                      }))
+                    });
+                    setIsViewOrderModalOpen(false);
+                    setViewingOrder(null);
+                    setIsEditOrderModalOpen(true);
+                  }}
+                  className="flex-1 gap-2"
+                >
+                  <Edit className="w-4 h-4" />
+                  Editar Pedido
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setIsViewOrderModalOpen(false);
+                  setViewingOrder(null);
+                }}
+                className="flex-1"
+              >
+                Fechar
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {/* Diálogo de Confirmação: Fechar Campanha */}
