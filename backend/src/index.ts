@@ -1,4 +1,5 @@
 import express from 'express';
+import { createServer } from 'http';
 import cors from 'cors';
 import { PrismaClient } from '@prisma/client';
 import campaignRoutes from './routes/campaigns';
@@ -7,8 +8,10 @@ import orderRoutes from './routes/orders';
 import analyticsRoutes from './routes/analytics';
 import { errorHandler } from './middleware/errorHandler';
 import { startCampaignScheduler } from './services/campaignScheduler';
+import { initializeSocket } from './services/socketService';
 
 const app = express();
+const httpServer = createServer(app);
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
 
@@ -52,11 +55,15 @@ process.on('beforeExit', async () => {
   await prisma.$disconnect();
 });
 
+// Initialize Socket.IO
+initializeSocket(httpServer);
+
 // Start server
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV}`);
   console.log(`🌐 CORS enabled for: ${corsOrigins.join(', ')}`);
+  console.log(`🔌 WebSocket ready for real-time updates`);
 
   // Start campaign scheduler to auto-close expired campaigns
   startCampaignScheduler();

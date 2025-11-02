@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates';
 import {
   ArrowLeft,
   Plus,
@@ -46,6 +47,9 @@ import { SkeletonDetailHeader, SkeletonProductCard } from '@/components/Skeleton
 export default function CampaignDetail() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
+
+  // Ativa atualizações em tempo real para esta campanha
+  useRealtimeUpdates({ campaignId: id || '', enabled: !!id });
 
   const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders' | 'shipping'>('overview');
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);

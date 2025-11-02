@@ -3,6 +3,7 @@ import { prisma } from '../index';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
 import { z } from 'zod';
 import { ShippingCalculator } from '../services/shippingCalculator';
+import { emitOrderCreated, emitOrderUpdated, emitOrderDeleted, emitOrderStatusChanged } from '../services/socketService';
 
 const router = Router();
 
@@ -102,7 +103,8 @@ router.post('/', asyncHandler(async (req, res) => {
     where: { id: { in: productIds } }
   });
 
-  const productMap = new Map(products.map(p => [p.id, p]));
+  type ProductType = typeof products[number];
+  const productMap = new Map<string, ProductType>(products.map(p => [p.id, p]));
 
   // Cria o pedido com itens
   const order = await prisma.order.create({
@@ -148,6 +150,9 @@ router.post('/', asyncHandler(async (req, res) => {
     }
   });
 
+  // Emite evento de criação
+  emitOrderCreated(data.campaignId, updatedOrder);
+
   res.status(201).json(updatedOrder);
 }));
 
@@ -164,9 +169,23 @@ router.patch('/:id', asyncHandler(async (req, res) => {
         include: {
           product: true
         }
-      }
+      },
+      campaign: true
     }
   });
+
+  // Se mudou status de pagamento ou separação, emite evento específico
+  if (data.isPaid !== undefined || data.isSeparated !== undefined) {
+    emitOrderStatusChanged(order.campaignId, {
+      orderId: order.id,
+      isPaid: order.isPaid,
+      isSeparated: order.isSeparated,
+      customerName: order.customerName
+    });
+  } else {
+    // Caso contrário, emite atualização geral
+    emitOrderUpdated(order.campaignId, order);
+  }
 
   res.json(order);
 }));
@@ -201,7 +220,8 @@ router.put('/:id', asyncHandler(async (req, res) => {
       where: { id: { in: productIds } }
     });
 
-    const productMap = new Map(products.map(p => [p.id, p]));
+    type ProductType = typeof products[number];
+    const productMap = new Map<string, ProductType>(products.map(p => [p.id, p]));
 
     // Remove itens antigos e cria novos em uma transação
     await prisma.$transaction(async (tx) => {
@@ -254,9 +274,15 @@ router.put('/:id', asyncHandler(async (req, res) => {
         include: {
           product: true
         }
-      }
+      },
+      campaign: true
     }
   });
+
+  // Emite evento de atualização
+  if (updatedOrder) {
+    emitOrderUpdated(updatedOrder.campaignId, updatedOrder);
+  }
 
   res.json(updatedOrder);
 }));
@@ -307,9 +333,15 @@ router.post('/:id/items', asyncHandler(async (req, res) => {
         include: {
           product: true
         }
-      }
+      },
+      campaign: true
     }
   });
+
+  // Emite evento de atualização
+  if (updatedOrder) {
+    emitOrderUpdated(updatedOrder.campaignId, updatedOrder);
+  }
 
   res.json(updatedOrder);
 }));
@@ -338,6 +370,9 @@ router.delete('/:id/items/:itemId', asyncHandler(async (req, res) => {
 
   await ShippingCalculator.recalculateOrderSubtotal(id);
 
+  // Emite evento de atualização
+  emitOrderUpdated(order.campaignId, { orderId: id });
+
   res.status(204).send();
 }));
 
@@ -364,6 +399,9 @@ router.delete('/:id', asyncHandler(async (req, res) => {
 
   // Redistribui frete após remoção
   await ShippingCalculator.distributeShipping(order.campaignId);
+
+  // Emite evento de exclusão
+  emitOrderDeleted(order.campaignId, { orderId: id });
 
   res.status(204).send();
 }));

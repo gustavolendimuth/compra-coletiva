@@ -1,0 +1,78 @@
+import { useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { getSocket } from '../lib/socket';
+
+interface UseRealtimeUpdatesOptions {
+  campaignId: string;
+  enabled?: boolean;
+}
+
+export const useRealtimeUpdates = ({
+  campaignId,
+  enabled = true
+}: UseRealtimeUpdatesOptions) => {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!enabled || !campaignId) return;
+
+    const socket = getSocket();
+
+    // Entrar na sala da campanha
+    socket.emit('join-campaign', campaignId);
+    console.log(`📌 Joined campaign room: ${campaignId}`);
+
+    // Listener para quando um pedido é criado
+    const handleOrderCreated = (data: any) => {
+      console.log('📦 Order created:', data);
+      queryClient.invalidateQueries({ queryKey: ['orders', campaignId] });
+      queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] });
+    };
+
+    // Listener para quando um pedido é atualizado
+    const handleOrderUpdated = (data: any) => {
+      console.log('🔄 Order updated:', data);
+      queryClient.invalidateQueries({ queryKey: ['orders', campaignId] });
+      queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] });
+    };
+
+    // Listener para quando um pedido é deletado
+    const handleOrderDeleted = (data: any) => {
+      console.log('🗑️ Order deleted:', data);
+      queryClient.invalidateQueries({ queryKey: ['orders', campaignId] });
+      queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] });
+    };
+
+    // Listener específico para mudanças de status (pago/separado)
+    const handleOrderStatusChanged = (data: any) => {
+      console.log('✅ Order status changed:', data);
+      queryClient.invalidateQueries({ queryKey: ['orders', campaignId] });
+      queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] });
+    };
+
+    // Listener para quando a campanha é atualizada
+    const handleCampaignUpdated = (data: any) => {
+      console.log('📋 Campaign updated:', data);
+      queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] });
+      queryClient.invalidateQueries({ queryKey: ['orders', campaignId] });
+    };
+
+    // Registrar listeners
+    socket.on('order-created', handleOrderCreated);
+    socket.on('order-updated', handleOrderUpdated);
+    socket.on('order-deleted', handleOrderDeleted);
+    socket.on('order-status-changed', handleOrderStatusChanged);
+    socket.on('campaign-updated', handleCampaignUpdated);
+
+    // Cleanup ao desmontar
+    return () => {
+      console.log(`📍 Leaving campaign room: ${campaignId}`);
+      socket.emit('leave-campaign', campaignId);
+      socket.off('order-created', handleOrderCreated);
+      socket.off('order-updated', handleOrderUpdated);
+      socket.off('order-deleted', handleOrderDeleted);
+      socket.off('order-status-changed', handleOrderStatusChanged);
+      socket.off('campaign-updated', handleCampaignUpdated);
+    };
+  }, [campaignId, enabled, queryClient]);
+};
