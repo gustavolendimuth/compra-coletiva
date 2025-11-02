@@ -18,7 +18,7 @@ const updateProductSchema = z.object({
   weight: z.number().min(0).optional()
 });
 
-// GET /api/products?campaignId=xxx - Lista produtos de uma campanha
+// GET /api/products?campaignId=xxx - Lista produtos de um grupo
 router.get('/', asyncHandler(async (req, res) => {
   const { campaignId } = req.query;
 
@@ -53,7 +53,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
 router.post('/', asyncHandler(async (req, res) => {
   const data = createProductSchema.parse(req.body);
 
-  // Verifica se a campanha está ativa
+  // Verifica se o grupo está ativo
   const campaign = await prisma.campaign.findUnique({
     where: { id: data.campaignId }
   });
@@ -63,7 +63,7 @@ router.post('/', asyncHandler(async (req, res) => {
   }
 
   if (campaign.status !== 'ACTIVE') {
-    throw new AppError(400, 'Cannot add products to a closed or sent campaign');
+    throw new AppError(400, 'Cannot add products to a closed or sent group');
   }
 
   const product = await prisma.product.create({
@@ -78,7 +78,7 @@ router.patch('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
   const data = updateProductSchema.parse(req.body);
 
-  // Busca o produto e verifica o status da campanha
+  // Busca o produto e verifica o status do grupo
   const product = await prisma.product.findUnique({
     where: { id },
     include: { campaign: true }
@@ -89,7 +89,7 @@ router.patch('/:id', asyncHandler(async (req, res) => {
   }
 
   if (product.campaign.status !== 'ACTIVE') {
-    throw new AppError(400, 'Cannot update products in a closed or sent campaign');
+    throw new AppError(400, 'Cannot update products in a closed or sent group');
   }
 
   const updatedProduct = await prisma.product.update({
@@ -104,7 +104,7 @@ router.patch('/:id', asyncHandler(async (req, res) => {
 router.delete('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  // Busca o produto e verifica o status da campanha
+  // Busca o produto e verifica o status do grupo
   const product = await prisma.product.findUnique({
     where: { id },
     include: { campaign: true }
@@ -115,7 +115,7 @@ router.delete('/:id', asyncHandler(async (req, res) => {
   }
 
   if (product.campaign.status !== 'ACTIVE') {
-    throw new AppError(400, 'Cannot delete products from a closed or sent campaign');
+    throw new AppError(400, 'Cannot delete products from a closed or sent group');
   }
 
   await prisma.product.delete({

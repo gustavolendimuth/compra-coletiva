@@ -45,7 +45,7 @@ const updateStatusSchema = z.object({
   status: z.enum(['ACTIVE', 'CLOSED', 'SENT', 'ARCHIVED'])
 });
 
-// GET /api/campaigns - Lista todas as campanhas
+// GET /api/campaigns - Lista todos os grupos
 router.get('/', asyncHandler(async (req, res) => {
   const campaigns = await prisma.campaign.findMany({
     orderBy: { createdAt: 'desc' },
@@ -59,7 +59,7 @@ router.get('/', asyncHandler(async (req, res) => {
   res.json(campaigns);
 }));
 
-// GET /api/campaigns/:id - Busca uma campanha específica
+// GET /api/campaigns/:id - Busca um grupo específico
 router.get('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -86,7 +86,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
   res.json(campaign);
 }));
 
-// POST /api/campaigns - Cria uma nova campanha
+// POST /api/campaigns - Cria um novo grupo
 router.post('/', asyncHandler(async (req, res) => {
   const data = createCampaignSchema.parse(req.body);
 
@@ -103,7 +103,7 @@ router.post('/', asyncHandler(async (req, res) => {
   res.status(201).json(campaign);
 }));
 
-// PATCH /api/campaigns/:id - Atualiza uma campanha
+// PATCH /api/campaigns/:id - Atualiza um grupo
 router.patch('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -123,7 +123,7 @@ router.patch('/:id', asyncHandler(async (req, res) => {
   res.json(campaign);
 }));
 
-// PATCH /api/campaigns/:id/status - Atualiza apenas o status da campanha
+// PATCH /api/campaigns/:id/status - Atualiza apenas o status do grupo
 router.patch('/:id/status', asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { status } = updateStatusSchema.parse(req.body);
@@ -136,7 +136,7 @@ router.patch('/:id/status', asyncHandler(async (req, res) => {
   res.json(campaign);
 }));
 
-// DELETE /api/campaigns/:id - Remove uma campanha
+// DELETE /api/campaigns/:id - Remove um grupo
 router.delete('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
 

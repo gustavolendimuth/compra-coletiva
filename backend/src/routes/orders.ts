@@ -34,7 +34,7 @@ const addItemSchema = z.object({
   quantity: z.number().int().min(1)
 });
 
-// GET /api/orders?campaignId=xxx - Lista pedidos de uma campanha
+// GET /api/orders?campaignId=xxx - Lista pedidos de um grupo
 router.get('/', asyncHandler(async (req, res) => {
   const { campaignId } = req.query;
 
@@ -83,7 +83,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
 router.post('/', asyncHandler(async (req, res) => {
   const data = createOrderSchema.parse(req.body);
 
-  // Verifica se a campanha está ativa
+  // Verifica se o grupo está ativo
   const campaign = await prisma.campaign.findUnique({
     where: { id: data.campaignId }
   });
@@ -93,7 +93,7 @@ router.post('/', asyncHandler(async (req, res) => {
   }
 
   if (campaign.status !== 'ACTIVE') {
-    throw new AppError(400, 'Cannot create orders in a closed or sent campaign');
+    throw new AppError(400, 'Cannot create orders in a closed or sent group');
   }
 
   // Busca produtos para calcular preços
@@ -190,7 +190,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
   }
 
   if (currentOrder.campaign.status !== 'ACTIVE') {
-    throw new AppError(400, 'Cannot update orders in a closed or sent campaign');
+    throw new AppError(400, 'Cannot update orders in a closed or sent group');
   }
 
   // Se há itens para atualizar
@@ -277,7 +277,7 @@ router.post('/:id/items', asyncHandler(async (req, res) => {
   }
 
   if (order.campaign.status !== 'ACTIVE') {
-    throw new AppError(400, 'Cannot add items to orders in a closed or sent campaign');
+    throw new AppError(400, 'Cannot add items to orders in a closed or sent group');
   }
 
   const product = await prisma.product.findUnique({
@@ -329,7 +329,7 @@ router.delete('/:id/items/:itemId', asyncHandler(async (req, res) => {
   }
 
   if (order.campaign.status !== 'ACTIVE') {
-    throw new AppError(400, 'Cannot remove items from orders in a closed or sent campaign');
+    throw new AppError(400, 'Cannot remove items from orders in a closed or sent group');
   }
 
   await prisma.orderItem.delete({
@@ -355,7 +355,7 @@ router.delete('/:id', asyncHandler(async (req, res) => {
   }
 
   if (order.campaign.status !== 'ACTIVE') {
-    throw new AppError(400, 'Cannot delete orders from a closed or sent campaign');
+    throw new AppError(400, 'Cannot delete orders from a closed or sent group');
   }
 
   await prisma.order.delete({

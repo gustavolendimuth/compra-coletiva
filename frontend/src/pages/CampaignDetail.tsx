@@ -250,9 +250,9 @@ export default function CampaignDetail() {
       campaignApi.update(id!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['campaign', id] });
-      toast.success('Campanha atualizada!');
+      toast.success('Grupo atualizado!');
     },
-    onError: () => toast.error('Erro ao atualizar campanha')
+    onError: () => toast.error('Erro ao atualizar grupo')
   });
 
   const handleCreateProduct = (e: React.FormEvent) => {
@@ -492,7 +492,7 @@ export default function CampaignDetail() {
   // Atalhos de teclado - Must be called before early returns
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // ESC - Fechar modal aberto
+      // ESC - Fechar modal/diálogo aberto
       if (e.key === 'Escape') {
         if (isOrderModalOpen) {
           setIsOrderModalOpen(false);
@@ -518,7 +518,7 @@ export default function CampaignDetail() {
         return;
       }
 
-      // Alt+N - Abrir modal de adicionar pedido (somente se campanha estiver ativa)
+      // Alt+N - Abrir modal de adicionar pedido (somente se grupo estiver ativo)
       if (e.altKey && e.key === 'n' && isActive && !isOrderModalOpen && !isEditOrderModalOpen) {
         e.preventDefault();
         setIsOrderModalOpen(true);
@@ -691,7 +691,7 @@ export default function CampaignDetail() {
                 variant="warning"
                 className="text-xs sm:text-sm whitespace-nowrap"
               >
-                Fechar Campanha
+                Fechar Grupo
               </IconButton>
             )}
 
@@ -725,7 +725,7 @@ export default function CampaignDetail() {
                 variant="warning"
                 className="text-xs sm:text-sm whitespace-nowrap"
               >
-                Reabrir Campanha
+                Reabrir Grupo
               </IconButton>
             )}
           </div>
@@ -740,13 +740,13 @@ export default function CampaignDetail() {
             <div>
               <h3 className={`font-semibold mb-1 ${isClosed ? 'text-yellow-900' : 'text-blue-900'
                 }`}>
-                {isClosed ? 'Campanha Fechada' : 'Campanha Enviada'}
+                {isClosed ? 'Grupo Fechado' : 'Grupo Enviado'}
               </h3>
               <p className={`text-sm ${isClosed ? 'text-yellow-800' : 'text-blue-800'
                 }`}>
                 {isClosed
-                  ? 'Esta campanha está fechada. Não é possível adicionar ou alterar produtos e pedidos.'
-                  : 'Esta campanha foi marcada como enviada. Não é possível adicionar ou alterar produtos e pedidos.'
+                  ? 'Este grupo está fechado. Não é possível adicionar ou alterar produtos e pedidos.'
+                  : 'Este grupo foi marcado como enviado. Não é possível adicionar ou alterar produtos e pedidos.'
                 }
               </p>
             </div>
@@ -1441,7 +1441,7 @@ export default function CampaignDetail() {
             <Card>
               <div className="text-center mb-6">
                 <Truck className="w-16 h-16 mx-auto text-primary-600 mb-4" />
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Frete Total da Campanha</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Frete Total do Grupo</h2>
                 <p className="text-gray-600">
                   O frete será distribuído proporcionalmente ao peso de cada pedido
                 </p>
@@ -1912,7 +1912,7 @@ export default function CampaignDetail() {
               autoFocus
             />
             <p className="text-sm text-gray-500 mt-2">
-              A campanha será fechada automaticamente quando atingir esta data. Formato: dd/mm/aaaa HH:mm (24h)
+              O grupo será fechado automaticamente quando atingir esta data. Formato: dd/mm/aaaa HH:mm (24h)
               {campaign?.deadline && ' Deixe em branco para remover a data limite.'}
             </p>
           </div>
@@ -1952,20 +1952,20 @@ export default function CampaignDetail() {
         isOpen={isCloseConfirmOpen}
         onClose={() => setIsCloseConfirmOpen(false)}
         onConfirm={() => updateStatusMutation.mutate('CLOSED')}
-        title="Fechar Campanha"
-        message="Tem certeza que deseja fechar esta campanha? Ninguém poderá adicionar ou alterar pedidos/produtos enquanto a campanha estiver fechada."
-        confirmText="Fechar Campanha"
+        title="Fechar Grupo"
+        message="Tem certeza que deseja fechar este grupo? Ninguém poderá adicionar ou alterar pedidos/produtos enquanto o grupo estiver fechado."
+        confirmText="Fechar Grupo"
         cancelText="Cancelar"
         variant="warning"
       />
 
-      {/* Diálogo de Confirmação: Reabrir Campanha */}
+      {/* Diálogo de Confirmação: Reabrir Grupo */}
       <ConfirmDialog
         isOpen={isReopenConfirmOpen}
         onClose={() => setIsReopenConfirmOpen(false)}
         onConfirm={() => updateStatusMutation.mutate('ACTIVE')}
-        title="Reabrir Campanha"
-        message="Deseja reabrir esta campanha? Será possível adicionar e alterar pedidos e produtos novamente."
+        title="Reabrir Grupo"
+        message="Deseja reabrir este grupo? Será possível adicionar e alterar pedidos e produtos novamente."
         confirmText="Reabrir"
         cancelText="Cancelar"
         variant="info"
@@ -1977,7 +1977,7 @@ export default function CampaignDetail() {
         onClose={() => setIsSentConfirmOpen(false)}
         onConfirm={() => updateStatusMutation.mutate('SENT')}
         title="Marcar como Enviado"
-        message="Deseja marcar esta campanha como enviada? Esta ação indica que os produtos foram despachados."
+        message="Deseja marcar este grupo como enviado? Esta ação indica que os produtos foram despachados."
         confirmText="Marcar como Enviado"
         cancelText="Cancelar"
         variant="info"

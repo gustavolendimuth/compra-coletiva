@@ -4,7 +4,7 @@ Sistema web profissional para gerenciamento de compras coletivas, desenvolvido c
 
 ## Funcionalidades
 
-- **Gestão de Campanhas**: Crie e gerencie múltiplas campanhas de compra coletiva
+- **Gestão de Grupos**: Crie e gerencie múltiplos grupos de compra coletiva
 - **Catálogo de Produtos**: Cadastre produtos com preço e peso
 - **Controle de Pedidos**: Registre pedidos de clientes com múltiplos produtos
 - **Cálculo Automático de Frete**: Frete distribuído proporcionalmente ao peso de cada pedido
@@ -107,27 +107,27 @@ npx prisma studio
 
 ## API Endpoints
 
-### Campanhas
-- `GET /api/campaigns` - Lista todas as campanhas
-- `GET /api/campaigns/:id` - Busca uma campanha específica
-- `POST /api/campaigns` - Cria nova campanha
-- `PATCH /api/campaigns/:id` - Atualiza campanha
-- `DELETE /api/campaigns/:id` - Remove campanha
+### Grupos
+- `GET /api/campaigns` - Lista todos os grupos
+- `GET /api/campaigns/:id` - Busca um grupo específico
+- `POST /api/campaigns` - Cria novo grupo
+- `PATCH /api/campaigns/:id` - Atualiza grupo
+- `DELETE /api/campaigns/:id` - Remove grupo
 
 ### Produtos
-- `GET /api/products?campaignId=xxx` - Lista produtos de uma campanha
+- `GET /api/products?campaignId=xxx` - Lista produtos de um grupo
 - `POST /api/products` - Adiciona produto
 - `PATCH /api/products/:id` - Atualiza produto
 - `DELETE /api/products/:id` - Remove produto
 
 ### Pedidos
-- `GET /api/orders?campaignId=xxx` - Lista pedidos de uma campanha
+- `GET /api/orders?campaignId=xxx` - Lista pedidos de um grupo
 - `POST /api/orders` - Cria pedido
 - `PATCH /api/orders/:id` - Atualiza pedido
 - `DELETE /api/orders/:id` - Remove pedido
 
 ### Analytics
-- `GET /api/analytics/campaign/:campaignId` - Retorna estatísticas da campanha
+- `GET /api/analytics/campaign/:campaignId` - Retorna estatísticas do grupo
 
 ## Deploy no Railway
 

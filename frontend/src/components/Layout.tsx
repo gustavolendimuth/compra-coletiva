@@ -23,7 +23,7 @@ export default function Layout() {
                     : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
-                Campanhas
+                Grupos
               </Link>
             </div>
           </div>

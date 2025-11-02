@@ -120,7 +120,7 @@ export class InvoiceGenerator {
         doc.moveDown();
 
         // Campaign info
-        doc.fontSize(12).font('Helvetica-Bold').text(`Campanha: ${data.campaignName}`);
+        doc.fontSize(12).font('Helvetica-Bold').text(`Grupo: ${data.campaignName}`);
         doc.fontSize(10).font('Helvetica').text(`ID: ${data.campaignId}`);
         if (data.campaignDeadline) {
           doc.text(`Prazo: ${new Date(data.campaignDeadline).toLocaleDateString('pt-BR')}`);

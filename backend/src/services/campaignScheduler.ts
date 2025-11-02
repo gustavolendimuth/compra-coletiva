@@ -1,7 +1,7 @@
 import { prisma } from '../index';
 
 /**
- * Fecha automaticamente campanhas que passaram da data limite
+ * Fecha automaticamente grupos que passaram da data limite
  */
 export async function closeExpiredCampaigns() {
   const now = new Date();
@@ -31,7 +31,7 @@ export async function closeExpiredCampaigns() {
 }
 
 /**
- * Inicia o scheduler para verificar campanhas expiradas
+ * Inicia o scheduler para verificar grupos expirados
  * @param intervalMs Intervalo em milissegundos (padrão: 1 minuto)
  */
 export function startCampaignScheduler(intervalMs: number = 60000) {

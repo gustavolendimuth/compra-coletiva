@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A monorepo for managing collective purchases (compra coletiva) with campaign management, product catalog, order tracking, and automatic shipping cost distribution. Built as a full-stack TypeScript application with React frontend and Express backend.
+A monorepo for managing collective purchases (compra coletiva) with group management, product catalog, order tracking, and automatic shipping cost distribution. Built as a full-stack TypeScript application with React frontend and Express backend.
 
 ## Development Commands
 
@@ -68,16 +68,16 @@ npm run clean --workspace=backend
 ### Data Model (Prisma Schema)
 The core business logic revolves around four main entities:
 
-1. **Campaign**: Container for collective purchases
+1. **Campaign**: Container for collective purchases (referred to as "grupo" in the UI)
    - Has many Products and Orders
    - Tracks total `shippingCost` that gets distributed across orders
    - Status: `ACTIVE`, `CLOSED`, or `ARCHIVED`
 
-2. **Product**: Items available in a campaign
+2. **Product**: Items available in a group
    - Belongs to Campaign
    - Has `price` and `weight` (weight is critical for shipping distribution)
 
-3. **Order**: Customer purchases within a campaign
+3. **Order**: Customer purchases within a group
    - Belongs to Campaign
    - Has many OrderItems
    - Tracks `subtotal`, `shippingFee`, and `total`
@@ -90,12 +90,12 @@ The core business logic revolves around four main entities:
 ### Shipping Distribution System
 The `ShippingCalculator` service (`backend/src/services/shippingCalculator.ts`) implements the core business logic:
 
-- **Proportional Distribution**: Campaign's total shipping cost is distributed to orders based on weight ratio
+- **Proportional Distribution**: Group's total shipping cost is distributed to orders based on weight ratio
 - **Automatic Recalculation**: Triggered whenever:
   - New order is created
   - Order items are added/removed
   - Order is deleted
-  - Campaign shipping cost is updated
+  - Group shipping cost is updated
 - **Rounding Handling**: Last order receives remaining amount to avoid rounding errors
 - **Two-Step Process**:
   1. Calculate order subtotals from items
@@ -162,6 +162,6 @@ Development setup includes:
 
 - **Shipping Recalculation**: Any order modification must trigger shipping recalculation to maintain accuracy
 - **Price Snapshots**: OrderItem stores `unitPrice` at creation time to preserve historical pricing
-- **Cascade Deletes**: Deleting campaigns removes all associated products/orders; deleting orders removes items
+- **Cascade Deletes**: Deleting groups removes all associated products/orders; deleting orders removes items
 - **Monorepo Commands**: Use `--workspace=<name>` or `--workspaces` flags for npm scripts
 - **Container First**: Development primarily uses Docker Compose; running services directly is optional
