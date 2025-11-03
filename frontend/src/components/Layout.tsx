@@ -6,31 +6,31 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <nav className="bg-primary-600 shadow-md">
-        <div className="container-custom py-4">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-primary-600 shadow-md">
+        <div className="container-custom py-3 md:py-4">
           <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-2 text-xl font-bold text-white">
-              <Users className="w-6 h-6" />
+            <Link to="/" className="flex items-center gap-2 text-lg md:text-xl font-bold text-white">
+              <Users className="w-5 h-5 md:w-6 md:h-6" />
               Compra Coletiva
             </Link>
 
-            <div className="flex gap-4">
+            <div className="flex gap-2 md:gap-4">
               <Link
                 to="/campaigns"
-                className={`px-4 py-2 rounded-lg transition-colors font-semibold ${
+                className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg transition-colors font-semibold text-sm md:text-base ${
                   location.pathname.includes('/campaigns')
                     ? 'bg-white text-primary-600 shadow-sm'
                     : 'text-white hover:bg-primary-700'
                 }`}
               >
-                Grupos
+                Campanhas
               </Link>
             </div>
           </div>
         </div>
       </nav>
 
-      <main className="flex-1">
+      <main className="flex-1 pt-16 md:pt-20">
         <div className="container-custom py-8">
           <Outlet />
         </div>

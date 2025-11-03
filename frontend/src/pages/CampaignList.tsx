@@ -36,12 +36,12 @@ export default function CampaignList() {
     mutationFn: campaignApi.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['campaigns'] });
-      toast.success('Grupo criado com sucesso!');
+      toast.success('Campanha criada com sucesso!');
       setIsModalOpen(false);
       setFormData({ name: '', description: '', deadline: '', shippingCost: '' });
     },
     onError: () => {
-      toast.error('Erro ao criar grupo');
+      toast.error('Erro ao criar campanha');
     }
   });
 
@@ -61,8 +61,8 @@ export default function CampaignList() {
     return (
       <div>
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Grupos</h1>
-          <Button disabled>Novo Grupo</Button>
+          <h1 className="text-3xl font-bold text-gray-900">Campanhas</h1>
+          <Button disabled>Nova Campanha</Button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -76,9 +76,9 @@ export default function CampaignList() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Grupos</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Campanhas</h1>
         <Button onClick={() => setIsModalOpen(true)}>
-          Novo Grupo
+          Nova Campanha
         </Button>
       </div>
 
@@ -87,14 +87,14 @@ export default function CampaignList() {
           <div className="text-center py-12">
             <Package className="w-16 h-16 mx-auto text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Nenhum grupo criado
+              Nenhuma campanha criada
             </h3>
             <p className="text-gray-500 mb-4">
-              Comece criando seu primeiro grupo de compra coletiva
+              Comece criando sua primeira campanha de compra coletiva
             </p>
             <Button onClick={() => setIsModalOpen(true)}>
               <Plus className="w-5 h-5 mr-2" />
-              Criar Grupo
+              Criar Campanha
             </Button>
           </div>
         </Card>
@@ -169,12 +169,12 @@ export default function CampaignList() {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title="Novo Grupo"
+        title="Nova Campanha"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nome do Grupo *
+              Nome da Campanha *
             </label>
             <input
               type="text"
@@ -195,7 +195,7 @@ export default function CampaignList() {
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               rows={3}
-              placeholder="Descrição opcional do grupo"
+              placeholder="Descrição opcional da campanha"
             />
           </div>
 
@@ -209,7 +209,7 @@ export default function CampaignList() {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
             <p className="text-sm text-gray-500 mt-2">
-              O grupo será fechado automaticamente quando atingir esta data. Formato: dd/mm/aaaa HH:mm (24h)
+              A campanha será fechada automaticamente quando atingir esta data. Formato: dd/mm/aaaa HH:mm (24h)
             </p>
           </div>
 
@@ -230,7 +230,7 @@ export default function CampaignList() {
 
           <div className="flex gap-3 pt-4">
             <Button type="submit" disabled={createMutation.isPending} className="flex-1">
-              {createMutation.isPending ? 'Criando...' : 'Criar Grupo'}
+              {createMutation.isPending ? 'Criando...' : 'Criar Campanha'}
             </Button>
             <Button
               type="button"
