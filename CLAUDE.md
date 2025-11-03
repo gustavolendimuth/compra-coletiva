@@ -138,17 +138,36 @@ The `ShippingCalculator` service (`backend/src/services/shippingCalculator.ts`) 
 
 ## Environment Configuration
 
+### Automatic Protocol Handling
+Both backend and frontend now support automatic protocol (http/https) handling for environment variables:
+
+**Rules:**
+- **Local domains** (localhost, 127.0.0.1, 0.0.0.0): Always use `http://`
+- **Remote domains**: Use `https://` in production, `http://` in development
+- **Manual protocol**: If you specify `http://` or `https://` in the URL, it will be used as-is
+
 ### Backend (.env in backend/)
 ```
 DATABASE_URL=postgresql://postgres:postgres@db:5432/compra_coletiva
 PORT=3000
-CORS_ORIGIN=http://localhost:5173
 NODE_ENV=development
+
+# CORS - Supports multiple domains (comma-separated)
+# Examples:
+#   Single: localhost:5173
+#   Multiple: localhost:5173,mydomain.com
+#   With protocol: http://localhost:5173,https://production.com
+CORS_ORIGIN=localhost:5173
 ```
 
 ### Frontend (.env in frontend/)
 ```
-VITE_API_URL=http://localhost:3000
+# API URL - Protocol will be added automatically based on environment
+# Examples:
+#   Local: localhost:3000
+#   Remote: api.mydomain.com
+#   With protocol: https://api.production.com
+VITE_API_URL=localhost:3000
 ```
 
 ### Docker Compose
