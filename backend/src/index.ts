@@ -16,16 +16,29 @@ const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
 
 // Parse CORS origins - accepts comma-separated list or single origin
-// Automatically adds both HTTP and HTTPS versions if protocol is not specified
+// Automatically adds correct protocol based on environment and domain
 const corsOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(',').flatMap(origin => {
+  ? process.env.CORS_ORIGIN.split(',').map(origin => {
       const trimmed = origin.trim();
+
       // If protocol is already specified, use as-is
       if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-        return [trimmed];
+        return trimmed;
       }
-      // Otherwise, add both HTTP and HTTPS versions
-      return [`http://${trimmed}`, `https://${trimmed}`];
+
+      // Determine if domain is local
+      const isLocal = trimmed.includes('localhost') ||
+                     trimmed.includes('127.0.0.1') ||
+                     trimmed.includes('0.0.0.0');
+
+      // Local domains always use http, remote domains use https in production
+      if (isLocal) {
+        return `http://${trimmed}`;
+      }
+
+      // Remote domains: use https in production, http in development
+      const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+      return `${protocol}://${trimmed}`;
     })
   : ['http://localhost:5173'];
 
