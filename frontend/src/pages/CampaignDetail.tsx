@@ -609,8 +609,8 @@ export default function CampaignDetail() {
   if (!campaign) {
     return (
       <div>
-        <div className="mb-6">
-          <Link to="/campaigns" className="inline-flex items-center text-primary-600 hover:text-primary-700 mb-4">
+        <div className="mb-4 md:mb-6">
+          <Link to="/campaigns" className="inline-flex items-center text-primary-600 hover:text-primary-700 mb-3 md:mb-4">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Voltar
           </Link>
@@ -652,8 +652,8 @@ export default function CampaignDetail() {
 
   return (
     <div>
-      <div className="mb-6">
-        <Link to="/campaigns" className="inline-flex items-center text-primary-600 hover:text-primary-700 mb-4">
+      <div className="mb-4 md:mb-6">
+        <Link to="/campaigns" className="inline-flex items-center text-primary-600 hover:text-primary-700 mb-3 md:mb-4">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Voltar
         </Link>
