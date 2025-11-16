@@ -3,6 +3,7 @@ import { prisma } from '../index';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
 import { z } from 'zod';
 import { InvoiceGenerator } from '../services/invoiceGenerator';
+import { ShippingCalculator } from '../services/shippingCalculator';
 
 const router = Router();
 
@@ -119,6 +120,11 @@ router.patch('/:id', asyncHandler(async (req, res) => {
     where: { id },
     data: prismaData
   });
+
+  // Se o shippingCost foi atualizado, redistribuir frete para todos os pedidos
+  if (data.shippingCost !== undefined) {
+    await ShippingCalculator.distributeShipping(id);
+  }
 
   res.json(campaign);
 }));
