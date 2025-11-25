@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates';
 import {
   ArrowLeft,
@@ -43,6 +44,7 @@ import Modal from '@/components/Modal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import DateTimeInput from '@/components/DateTimeInput';
 import { SkeletonDetailHeader, SkeletonProductCard } from '@/components/Skeleton';
+import OrderChat from '@/components/OrderChat';
 
 // Helper function para normalizar strings (remover acentos)
 const normalizeString = (str: string): string => {
@@ -55,6 +57,7 @@ const normalizeString = (str: string): string => {
 
 export default function CampaignDetail() {
   const { id } = useParams<{ id: string }>();
+  const { user, requireAuth } = useAuth();
   const queryClient = useQueryClient();
 
   // Ativa atualizações em tempo real para esta campanha
@@ -152,6 +155,11 @@ export default function CampaignDetail() {
     queryFn: () => analyticsApi.getByCampaign(id!),
     enabled: !!id && activeTab === 'overview'
   });
+
+  // Check if user can edit campaign (admin or creator)
+  const canEditCampaign = user && campaign && (
+    user.role === 'ADMIN' || campaign.creatorId === user.id
+  );
 
   const createProductMutation = useMutation({
     mutationFn: productApi.create,
@@ -972,7 +980,13 @@ export default function CampaignDetail() {
                 <IconButton
                   size="sm"
                   icon={<Package className="w-4 h-4" />}
-                  onClick={() => setIsProductModalOpen(true)}
+                  onClick={() => requireAuth(() => {
+                    if (!canEditCampaign) {
+                      toast.error('Você não tem permissão para adicionar produtos nesta campanha');
+                      return;
+                    }
+                    setIsProductModalOpen(true);
+                  })}
                   className="text-xs sm:text-sm"
                 >
                   Adicionar Produto
@@ -980,7 +994,7 @@ export default function CampaignDetail() {
                 <IconButton
                   size="sm"
                   icon={<ShoppingBag className="w-4 h-4" />}
-                  onClick={() => setIsOrderModalOpen(true)}
+                  onClick={() => requireAuth(() => setIsOrderModalOpen(true))}
                   className="text-xs sm:text-sm"
                   title="Adicionar Pedido (Alt+N)"
                 >
@@ -2443,6 +2457,11 @@ export default function CampaignDetail() {
                 <span className="text-gray-900">Total</span>
                 <span className="text-primary-600">{formatCurrency(viewingOrder.total)}</span>
               </div>
+            </div>
+
+            {/* Chat */}
+            <div>
+              <OrderChat orderId={viewingOrder.id} />
             </div>
 
             {/* Botões de Ação */}

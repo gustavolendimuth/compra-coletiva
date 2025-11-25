@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../index';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
+import { requireAuth, requireOrderOwnership, optionalAuth } from '../middleware/authMiddleware';
 import { z } from 'zod';
 import { ShippingCalculator } from '../services/shippingCalculator';
 import { emitOrderCreated, emitOrderUpdated, emitOrderDeleted, emitOrderStatusChanged } from '../services/socketService';
@@ -9,7 +10,7 @@ const router = Router();
 
 const createOrderSchema = z.object({
   campaignId: z.string(),
-  customerName: z.string().min(1),
+  customerName: z.string().min(1).optional(), // Opcional, usa user.name se não fornecido
   items: z.array(z.object({
     productId: z.string(),
     quantity: z.number().int().min(1)
@@ -36,15 +37,34 @@ const addItemSchema = z.object({
 });
 
 // GET /api/orders?campaignId=xxx - Lista pedidos de um grupo
-router.get('/', asyncHandler(async (req, res) => {
+// Opcional auth: Se autenticado e não for admin/criador, mostra apenas seus pedidos
+router.get('/', optionalAuth, asyncHandler(async (req, res) => {
   const { campaignId } = req.query;
 
   if (!campaignId || typeof campaignId !== 'string') {
     throw new AppError(400, 'campaignId is required');
   }
 
+  // Se usuário autenticado, verifica permissões
+  let whereClause: any = { campaignId };
+
+  if (req.user) {
+    // Admin e criador da campanha veem todos os pedidos
+    if (req.user.role !== 'ADMIN') {
+      const campaign = await prisma.campaign.findUnique({
+        where: { id: campaignId },
+        select: { creatorId: true },
+      });
+
+      // Se não for criador da campanha, mostra apenas seus próprios pedidos
+      if (campaign?.creatorId !== req.user.id) {
+        whereClause.userId = req.user.id;
+      }
+    }
+  }
+
   const orders = await prisma.order.findMany({
-    where: { campaignId },
+    where: whereClause,
     include: {
       items: {
         include: {
@@ -81,7 +101,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
 }));
 
 // POST /api/orders - Cria um novo pedido
-router.post('/', asyncHandler(async (req, res) => {
+router.post('/', requireAuth, asyncHandler(async (req, res) => {
   const data = createOrderSchema.parse(req.body);
 
   // Verifica se o grupo está ativo
@@ -106,11 +126,15 @@ router.post('/', asyncHandler(async (req, res) => {
   type ProductType = typeof products[number];
   const productMap = new Map<string, ProductType>(products.map(p => [p.id, p]));
 
+  // Usa nome fornecido ou nome do usuário
+  const customerName = data.customerName || req.user!.name;
+
   // Cria o pedido com itens
   const order = await prisma.order.create({
     data: {
       campaignId: data.campaignId,
-      customerName: data.customerName,
+      customerName,
+      userId: req.user!.id, // Adiciona userId do usuário autenticado
       items: {
         create: data.items.map(item => {
           const product = productMap.get(item.productId);
@@ -157,7 +181,7 @@ router.post('/', asyncHandler(async (req, res) => {
 }));
 
 // PATCH /api/orders/:id - Atualiza um pedido (apenas campos simples)
-router.patch('/:id', asyncHandler(async (req, res) => {
+router.patch('/:id', requireAuth, requireOrderOwnership, asyncHandler(async (req, res) => {
   const { id } = req.params;
   const data = updateOrderSchema.parse(req.body);
 
@@ -191,7 +215,7 @@ router.patch('/:id', asyncHandler(async (req, res) => {
 }));
 
 // PUT /api/orders/:id - Atualiza um pedido completo (com itens)
-router.put('/:id', asyncHandler(async (req, res) => {
+router.put('/:id', requireAuth, requireOrderOwnership, asyncHandler(async (req, res) => {
   const { id } = req.params;
   const data = updateOrderWithItemsSchema.parse(req.body);
 
@@ -288,7 +312,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
 }));
 
 // POST /api/orders/:id/items - Adiciona item ao pedido
-router.post('/:id/items', asyncHandler(async (req, res) => {
+router.post('/:id/items', requireAuth, requireOrderOwnership, asyncHandler(async (req, res) => {
   const { id } = req.params;
   const data = addItemSchema.parse(req.body);
 
@@ -347,7 +371,7 @@ router.post('/:id/items', asyncHandler(async (req, res) => {
 }));
 
 // DELETE /api/orders/:id/items/:itemId - Remove item do pedido
-router.delete('/:id/items/:itemId', asyncHandler(async (req, res) => {
+router.delete('/:id/items/:itemId', requireAuth, requireOrderOwnership, asyncHandler(async (req, res) => {
   const { id, itemId } = req.params;
 
   // Verifica o status da campanha
@@ -377,7 +401,7 @@ router.delete('/:id/items/:itemId', asyncHandler(async (req, res) => {
 }));
 
 // DELETE /api/orders/:id - Remove um pedido
-router.delete('/:id', asyncHandler(async (req, res) => {
+router.delete('/:id', requireAuth, requireOrderOwnership, asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   const order = await prisma.order.findUnique({

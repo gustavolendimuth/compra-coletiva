@@ -18,6 +18,11 @@ postgres_data/
 *.db
 *.sqlite
 
+# Backups
+backups/
+*.sql
+*.sql.gz
+
 # Logs
 logs/
 *.log

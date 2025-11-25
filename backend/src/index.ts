@@ -1,11 +1,15 @@
 import express from 'express';
 import { createServer } from 'http';
 import cors from 'cors';
+import passport from 'passport';
 import { PrismaClient } from '@prisma/client';
+import { configurePassport } from './config/passport';
+import authRoutes from './routes/auth';
 import campaignRoutes from './routes/campaigns';
 import productRoutes from './routes/products';
 import orderRoutes from './routes/orders';
 import analyticsRoutes from './routes/analytics';
+import messageRoutes from './routes/messages';
 import { errorHandler } from './middleware/errorHandler';
 import { startCampaignScheduler } from './services/campaignScheduler';
 import { initializeSocket } from './services/socketService';
@@ -14,6 +18,9 @@ const app = express();
 const httpServer = createServer(app);
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
+
+// Configure Passport
+configurePassport();
 
 // Parse CORS origins - accepts comma-separated list or single origin
 // Automatically adds correct protocol based on environment and domain
@@ -48,6 +55,7 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+app.use(passport.initialize());
 
 // Health check
 app.get('/health', (req, res) => {
@@ -55,10 +63,12 @@ app.get('/health', (req, res) => {
 });
 
 // Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/campaigns', campaignRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/messages', messageRoutes);
 
 // Error handling
 app.use(errorHandler);

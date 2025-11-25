@@ -1,5 +1,7 @@
 import axios from 'axios';
 import { API_URL } from './env';
+import { authStorage } from './authStorage';
+import { authApi } from './authApi';
 
 export const api = axios.create({
   baseURL: `${API_URL}/api`,
@@ -7,6 +9,97 @@ export const api = axios.create({
     'Content-Type': 'application/json'
   }
 });
+
+// Request interceptor: Add Authorization header if token exists
+api.interceptors.request.use(
+  (config) => {
+    const token = authStorage.getAccessToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor: Handle 401 errors and refresh token
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (value?: unknown) => void;
+  reject: (reason?: unknown) => void;
+}> = [];
+
+const processQueue = (error: unknown = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve();
+    }
+  });
+  failedQueue = [];
+};
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    // If error is not 401 or request already retried, reject immediately
+    if (error.response?.status !== 401 || originalRequest._retry) {
+      return Promise.reject(error);
+    }
+
+    // If already refreshing token, queue this request
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        failedQueue.push({ resolve, reject });
+      })
+        .then(() => {
+          return api(originalRequest);
+        })
+        .catch((err) => {
+          return Promise.reject(err);
+        });
+    }
+
+    originalRequest._retry = true;
+    isRefreshing = true;
+
+    const refreshToken = authStorage.getRefreshToken();
+
+    if (!refreshToken) {
+      // No refresh token, clear auth and reject
+      authStorage.clearAuth();
+      processQueue(new Error('No refresh token'));
+      isRefreshing = false;
+      return Promise.reject(error);
+    }
+
+    try {
+      // Try to refresh the access token
+      const { accessToken } = await authApi.refresh(refreshToken);
+      authStorage.setAccessToken(accessToken);
+
+      // Update the failed request with new token
+      originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+
+      processQueue();
+      isRefreshing = false;
+
+      // Retry the original request
+      return api(originalRequest);
+    } catch (refreshError) {
+      // Refresh failed, clear auth and reject
+      authStorage.clearAuth();
+      processQueue(refreshError);
+      isRefreshing = false;
+      return Promise.reject(refreshError);
+    }
+  }
+);
 
 // Types
 export interface Campaign {
@@ -56,6 +149,23 @@ export interface Order {
   createdAt: string;
   updatedAt: string;
   items: OrderItem[];
+}
+
+export interface OrderMessage {
+  id: string;
+  orderId: string;
+  senderId: string;
+  senderName: string;
+  senderType: 'ADMIN' | 'CUSTOMER';
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+  updatedAt: string;
+  sender: {
+    id: string;
+    name: string;
+    role: 'ADMIN' | 'CAMPAIGN_CREATOR' | 'CUSTOMER';
+  };
 }
 
 export interface Analytics {
@@ -140,6 +250,17 @@ export const orderApi = {
     items?: Array<{ productId: string; quantity: number }>;
   }) => api.put<Order>(`/orders/${id}`, data).then(res => res.data),
   delete: (id: string) => api.delete(`/orders/${id}`)
+};
+
+export const messageApi = {
+  getByOrder: (orderId: string) =>
+    api.get<OrderMessage[]>('/messages', { params: { orderId } }).then(res => res.data),
+  create: (data: {
+    orderId: string;
+    message: string;
+  }) => api.post<OrderMessage>('/messages', data).then(res => res.data),
+  getUnreadCount: () =>
+    api.get<{ count: number }>('/messages/unread-count').then(res => res.data)
 };
 
 export const analyticsApi = {

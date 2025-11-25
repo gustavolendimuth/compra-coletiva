@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../index';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
+import { requireAuth, requireRole, requireCampaignOwnership, optionalAuth } from '../middleware/authMiddleware';
 import { z } from 'zod';
 import { InvoiceGenerator } from '../services/invoiceGenerator';
 import { ShippingCalculator } from '../services/shippingCalculator';
@@ -88,7 +89,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
 }));
 
 // POST /api/campaigns - Cria um novo grupo
-router.post('/', asyncHandler(async (req, res) => {
+router.post('/', requireAuth, requireRole('CAMPAIGN_CREATOR', 'ADMIN'), asyncHandler(async (req, res) => {
   const data = createCampaignSchema.parse(req.body);
 
   // Convert deadline string to Date object for Prisma
@@ -96,6 +97,9 @@ router.post('/', asyncHandler(async (req, res) => {
   if (data.deadline) {
     prismaData.deadline = new Date(data.deadline);
   }
+
+  // Adiciona o creatorId do usuário autenticado
+  prismaData.creatorId = req.user!.id;
 
   const campaign = await prisma.campaign.create({
     data: prismaData
@@ -105,7 +109,7 @@ router.post('/', asyncHandler(async (req, res) => {
 }));
 
 // PATCH /api/campaigns/:id - Atualiza um grupo
-router.patch('/:id', asyncHandler(async (req, res) => {
+router.patch('/:id', requireAuth, requireCampaignOwnership, asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   const data = updateCampaignSchema.parse(req.body);
@@ -130,7 +134,7 @@ router.patch('/:id', asyncHandler(async (req, res) => {
 }));
 
 // PATCH /api/campaigns/:id/status - Atualiza apenas o status do grupo
-router.patch('/:id/status', asyncHandler(async (req, res) => {
+router.patch('/:id/status', requireAuth, requireCampaignOwnership, asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { status } = updateStatusSchema.parse(req.body);
 
@@ -143,7 +147,7 @@ router.patch('/:id/status', asyncHandler(async (req, res) => {
 }));
 
 // DELETE /api/campaigns/:id - Remove um grupo
-router.delete('/:id', asyncHandler(async (req, res) => {
+router.delete('/:id', requireAuth, requireCampaignOwnership, asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   await prisma.campaign.delete({

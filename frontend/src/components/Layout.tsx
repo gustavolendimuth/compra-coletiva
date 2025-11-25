@@ -1,5 +1,7 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { Users } from 'lucide-react';
+import { UserMenu } from './UserMenu';
+import { NotificationIcon } from './NotificationIcon';
 
 export default function Layout() {
   const location = useLocation();
@@ -14,7 +16,7 @@ export default function Layout() {
               Compra Coletiva
             </Link>
 
-            <div className="flex gap-2 md:gap-4">
+            <div className="flex items-center gap-2 md:gap-4">
               <Link
                 to="/campaigns"
                 className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg transition-colors font-semibold text-sm md:text-base ${
@@ -25,6 +27,11 @@ export default function Layout() {
               >
                 Campanhas
               </Link>
+
+              <div className="flex items-center gap-2 bg-white rounded-lg px-2 py-1">
+                <NotificationIcon />
+                <UserMenu />
+              </div>
             </div>
           </div>
         </div>

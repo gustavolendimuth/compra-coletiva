@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { Plus, Package, Users, Calendar, Clock } from 'lucide-react';
 import { campaignApi } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
 import Modal from '@/components/Modal';
@@ -12,6 +13,7 @@ import DateTimeInput from '@/components/DateTimeInput';
 import { SkeletonCard } from '@/components/Skeleton';
 
 export default function CampaignList() {
+  const { user, requireAuth } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState<{
     name: string;
@@ -73,11 +75,24 @@ export default function CampaignList() {
     );
   }
 
+  // Check if user can create campaigns
+  const canCreateCampaign = user && (user.role === 'ADMIN' || user.role === 'CAMPAIGN_CREATOR');
+
+  const handleNewCampaignClick = () => {
+    requireAuth(() => {
+      if (!canCreateCampaign) {
+        toast.error('Apenas criadores de campanha e administradores podem criar campanhas');
+        return;
+      }
+      setIsModalOpen(true);
+    });
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Campanhas</h1>
-        <Button onClick={() => setIsModalOpen(true)}>
+        <Button onClick={handleNewCampaignClick}>
           Nova Campanha
         </Button>
       </div>
@@ -92,7 +107,7 @@ export default function CampaignList() {
             <p className="text-gray-500 mb-4">
               Comece criando sua primeira campanha de compra coletiva
             </p>
-            <Button onClick={() => setIsModalOpen(true)}>
+            <Button onClick={handleNewCampaignClick}>
               <Plus className="w-5 h-5 mr-2" />
               Criar Campanha
             </Button>

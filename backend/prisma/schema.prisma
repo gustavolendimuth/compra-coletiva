@@ -7,6 +7,69 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ========== AUTHENTICATION MODELS ==========
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String?  // Nullable para Google OAuth
+  name      String
+  role      UserRole @default(CUSTOMER)
+  googleId  String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relações
+  campaigns           Campaign[]            @relation("CampaignCreator")
+  orders              Order[]               @relation("CustomerOrders")
+  sentMessages        OrderMessage[]        @relation("MessageSender")
+  sessions            Session[]
+  passwordResetTokens PasswordResetToken[]
+
+  @@map("users")
+  @@index([email])
+  @@index([googleId])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+enum UserRole {
+  ADMIN
+  CAMPAIGN_CREATOR
+  CUSTOMER
+}
+
+// ========== BUSINESS MODELS ==========
+
 model Campaign {
   id          String    @id @default(cuid())
   name        String
@@ -17,10 +80,16 @@ model Campaign {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
+  // Auth - NULLABLE durante migração
+  creatorId   String?
+  creator     User?     @relation("CampaignCreator", fields: [creatorId], references: [id])
+
   products    Product[]
   orders      Order[]
 
   @@map("campaigns")
+  @@index([creatorId])
+  @@index([status])
 }
 
 model Product {
@@ -42,7 +111,7 @@ model Product {
 model Order {
   id          String   @id @default(cuid())
   campaignId  String
-  customerName String
+  customerName String  // Mantém para histórico/legado
   isPaid      Boolean  @default(false)
   isSeparated Boolean  @default(false)
   subtotal    Float    @default(0)
@@ -51,12 +120,18 @@ model Order {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // Auth - NULLABLE durante migração
+  userId      String?
+  customer    User?    @relation("CustomerOrders", fields: [userId], references: [id])
+
   campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   items       OrderItem[]
+  messages    OrderMessage[]
 
   @@map("orders")
   @@index([campaignId])
   @@index([customerName])
+  @@index([userId])
 }
 
 model OrderItem {
@@ -75,6 +150,36 @@ model OrderItem {
   @@map("order_items")
   @@index([orderId])
   @@index([productId])
+}
+
+model OrderMessage {
+  id          String   @id @default(cuid())
+  orderId     String
+
+  // Campos legado - mantém para compatibilidade com mensagens antigas
+  senderName  String?
+  senderType  MessageSenderType?
+
+  // Novos campos auth
+  senderId    String?
+  sender      User?    @relation("MessageSender", fields: [senderId], references: [id])
+  isRead      Boolean  @default(false)
+
+  message     String   @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_messages")
+  @@index([orderId])
+  @@index([senderId])
+  @@index([orderId, isRead])
+}
+
+enum MessageSenderType {
+  ADMIN
+  CUSTOMER
 }
 
 enum CampaignStatus {
