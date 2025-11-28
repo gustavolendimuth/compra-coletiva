@@ -35,21 +35,22 @@ RUN apk add --no-cache openssl libc6-compat postgresql-client
 
 WORKDIR /app
 
-# Copia package.json
+# Copia package.json e prisma schema
 COPY package*.json ./
+COPY --from=builder /app/prisma ./prisma
 
-# Instala apenas dependências de produção
-RUN npm install --omit=dev
+# Instala apenas dependências de produção (--ignore-scripts evita rodar postinstall)
+RUN npm install --omit=dev --ignore-scripts
+
+# Copia o Prisma Client já gerado do builder
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
 # Instala Prisma CLI temporariamente para rodar migrations
 RUN npm install prisma --save-dev
 
 # Copia arquivos compilados do builder
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-
-# Copia prisma do builder (com migrations)
-COPY --from=builder /app/prisma ./prisma
 
 # Copia script de inicialização
 COPY start.sh ./start.sh
