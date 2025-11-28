@@ -10,27 +10,8 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma
 
-# Debug - verifica o schema copiado
-RUN echo "=== Checking schema.prisma content ===" && \
-    cat prisma/schema.prisma | grep -A 15 "^model User"
-
-# Instala dependências
+# Instala dependências (postinstall automaticamente gera Prisma Client)
 RUN npm install
-
-# Força geração do Prisma Client (garantir que roda mesmo se postinstall falhar)
-RUN npx prisma generate
-
-# Debug - verifica se migrations e Prisma Client existem
-RUN echo "=== Debug: Checking prisma in builder stage ===" && \
-    ls -la prisma/ && \
-    ls -la prisma/migrations/ && \
-    ls -la node_modules/@prisma/client/ && \
-    ls -la node_modules/.prisma/client/ && \
-    echo "=== Checking User model in generated types ===" && \
-    grep -i "user" node_modules/.prisma/client/index.d.ts | head -20 && \
-    echo "=== Checking if UserRole exists ===" && \
-    grep -A 3 "UserRole" node_modules/.prisma/client/index.d.ts | head -10 && \
-    echo "=== Migrations and Prisma Client found ===" || echo "=== ERROR: Missing files ==="
 
 # Copia o código fonte
 COPY src ./src
@@ -67,12 +48,6 @@ COPY --from=builder /app/dist ./dist
 COPY start.sh ./start.sh
 RUN chmod +x start.sh
 
-# Debug - verifica se migrations foram copiadas para produção
-RUN echo "=== Debug: Checking prisma in production stage ===" && \
-    ls -la prisma/ && \
-    echo "Checking migrations directory:" && \
-    ls -la prisma/migrations/ && \
-    echo "=== Migrations found in production ===" || echo "=== ERROR: Migrations not found in production ==="
 
 EXPOSE 3000
 
