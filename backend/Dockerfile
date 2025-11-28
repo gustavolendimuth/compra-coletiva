@@ -6,26 +6,25 @@ RUN apk add --no-cache openssl libc6-compat postgresql-client
 
 WORKDIR /app
 
-# Copia package.json
+# Copia package.json e prisma schema primeiro
 COPY package*.json ./
-RUN npm install
-
-# Copia o código fonte primeiro (exceto prisma)
-COPY src ./src
-COPY tsconfig.json ./
-COPY start.sh ./
-
-# Copia prisma separadamente para garantir que migrations venham junto
 COPY prisma ./prisma
 
-# Debug - verifica se migrations existem no builder
+# Instala dependências (o postinstall irá gerar o Prisma Client automaticamente)
+RUN npm install
+
+# Debug - verifica se migrations e Prisma Client existem
 RUN echo "=== Debug: Checking prisma in builder stage ===" && \
     ls -la prisma/ && \
     ls -la prisma/migrations/ && \
-    echo "=== Migrations found in builder ===" || echo "=== ERROR: Migrations not found in builder ==="
+    ls -la node_modules/@prisma/client/ && \
+    ls -la node_modules/.prisma/client/ && \
+    echo "=== Migrations and Prisma Client found ===" || echo "=== ERROR: Missing files ==="
 
-# Gera o Prisma Client
-RUN npx prisma generate
+# Copia o código fonte
+COPY src ./src
+COPY tsconfig.json ./
+COPY start.sh ./
 
 # Build da aplicação TypeScript
 RUN npm run build

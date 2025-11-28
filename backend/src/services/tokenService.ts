@@ -27,7 +27,7 @@ export class TokenService {
   static generateAccessToken(payload: TokenPayload): string {
     return jwt.sign(payload, JWT_ACCESS_SECRET, {
       expiresIn: JWT_ACCESS_EXPIRES_IN,
-    });
+    } as jwt.SignOptions);
   }
 
   /**
@@ -36,7 +36,7 @@ export class TokenService {
   static generateRefreshToken(payload: TokenPayload): string {
     return jwt.sign(payload, JWT_REFRESH_SECRET, {
       expiresIn: JWT_REFRESH_EXPIRES_IN,
-    });
+    } as jwt.SignOptions);
   }
 
   /**
