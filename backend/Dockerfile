@@ -10,8 +10,11 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma
 
-# Instala dependências (o postinstall irá gerar o Prisma Client automaticamente)
+# Instala dependências
 RUN npm install
+
+# Força geração do Prisma Client (garantir que roda mesmo se postinstall falhar)
+RUN npx prisma generate
 
 # Debug - verifica se migrations e Prisma Client existem
 RUN echo "=== Debug: Checking prisma in builder stage ===" && \
@@ -19,6 +22,8 @@ RUN echo "=== Debug: Checking prisma in builder stage ===" && \
     ls -la prisma/migrations/ && \
     ls -la node_modules/@prisma/client/ && \
     ls -la node_modules/.prisma/client/ && \
+    echo "=== Checking User model in generated types ===" && \
+    grep -A 5 "export type User = {" node_modules/.prisma/client/index.d.ts | head -10 && \
     echo "=== Migrations and Prisma Client found ===" || echo "=== ERROR: Missing files ==="
 
 # Copia o código fonte
