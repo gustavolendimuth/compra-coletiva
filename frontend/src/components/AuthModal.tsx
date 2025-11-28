@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { authStorage } from '../lib/authStorage';
 import { X } from 'lucide-react';
 import { API_URL } from '../lib/env';
 
@@ -10,7 +11,7 @@ interface AuthModalProps {
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'login' }) => {
-  const { login, register } = useAuth();
+  const { login, register, hasPendingAction } = useAuth();
   const [activeTab, setActiveTab] = useState<'login' | 'register'>(defaultTab);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -22,7 +23,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTa
   const [registerName, setRegisterName] = useState('');
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
-  const [registerRole, setRegisterRole] = useState<'CUSTOMER' | 'CAMPAIGN_CREATOR'>('CUSTOMER');
 
   // Reset forms when tab changes
   useEffect(() => {
@@ -31,7 +31,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTa
     setRegisterName('');
     setRegisterEmail('');
     setRegisterPassword('');
-    setRegisterRole('CUSTOMER');
   }, [activeTab]);
 
   // Reset forms when modal opens
@@ -62,7 +61,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTa
         name: registerName,
         email: registerEmail,
         password: registerPassword,
-        role: registerRole,
       });
       onClose();
     } catch (error) {
@@ -73,6 +71,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTa
   };
 
   const handleGoogleLogin = () => {
+    // Mark that there's a pending action if one exists
+    // This will be checked after OAuth callback completes
+    // Note: returnUrl is already saved by requireAuth in AuthContext
+    if (hasPendingAction()) {
+      authStorage.setPendingActionFlag();
+    }
+
+    // Debug: verificar se returnUrl está salvo
+    const savedReturnUrl = authStorage.getReturnUrl();
+    console.log('[AuthModal] handleGoogleLogin - returnUrl no storage:', savedReturnUrl);
+
     window.location.href = `${API_URL}/api/auth/google`;
   };
 
@@ -242,22 +251,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTa
                 <p className="text-xs text-gray-500 mt-1">
                   Mínimo 6 caracteres, 1 maiúscula, 1 minúscula, 1 número
                 </p>
-              </div>
-
-              <div>
-                <label htmlFor="register-role" className="block text-sm font-medium text-gray-700 mb-1">
-                  Tipo de conta
-                </label>
-                <select
-                  id="register-role"
-                  value={registerRole}
-                  onChange={(e) => setRegisterRole(e.target.value as 'CUSTOMER' | 'CAMPAIGN_CREATOR')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  disabled={isLoading}
-                >
-                  <option value="CUSTOMER">Comprador</option>
-                  <option value="CAMPAIGN_CREATOR">Criador de Campanhas</option>
-                </select>
               </div>
 
               <button

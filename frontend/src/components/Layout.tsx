@@ -2,6 +2,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { Users } from 'lucide-react';
 import { UserMenu } from './UserMenu';
 import { NotificationIcon } from './NotificationIcon';
+import { NewCampaignButton } from './NewCampaignButton';
 
 export default function Layout() {
   const location = useLocation();
@@ -10,13 +11,13 @@ export default function Layout() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <nav className="fixed top-0 left-0 right-0 z-50 bg-primary-600 shadow-md">
         <div className="container-custom py-3 md:py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between h-10 md:h-12">
             <Link to="/" className="flex items-center gap-2 text-lg md:text-xl font-bold text-white">
               <Users className="w-5 h-5 md:w-6 md:h-6" />
               Compra Coletiva
             </Link>
 
-            <div className="flex items-center gap-2 md:gap-4">
+            <div className="flex items-center gap-2 md:gap-4 h-full">
               <Link
                 to="/campaigns"
                 className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg transition-colors font-semibold text-sm md:text-base ${
@@ -28,7 +29,9 @@ export default function Layout() {
                 Campanhas
               </Link>
 
-              <div className="flex items-center gap-2 bg-white rounded-lg px-2 py-1">
+              <NewCampaignButton />
+
+              <div className="flex items-center gap-2 bg-white rounded-lg px-2 h-full">
                 <NotificationIcon />
                 <UserMenu />
               </div>

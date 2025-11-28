@@ -6,7 +6,6 @@ import { messageApi } from '../lib/api';
 export const NotificationIcon: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
 
   const fetchUnreadCount = async () => {
     if (!isAuthenticated) {
@@ -14,14 +13,11 @@ export const NotificationIcon: React.FC = () => {
       return;
     }
 
-    setIsLoading(true);
     try {
       const { count } = await messageApi.getUnreadCount();
       setUnreadCount(count);
     } catch (error) {
       console.error('Error fetching unread count:', error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -55,12 +51,12 @@ export const NotificationIcon: React.FC = () => {
   return (
     <button
       onClick={fetchUnreadCount}
-      className="relative p-2 rounded-md hover:bg-gray-100 transition-colors"
+      className="relative p-2 rounded-md hover:bg-gray-100 transition-colors flex items-center justify-center"
       title="Mensagens não lidas"
     >
-      <Bell size={20} className="text-gray-600" />
+      <Bell size={20} className="text-gray-600 flex-shrink-0" />
       {unreadCount > 0 && (
-        <span className="absolute top-0 right-0 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-600 rounded-full">
+        <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-600 rounded-full">
           {unreadCount > 99 ? '99+' : unreadCount}
         </span>
       )}

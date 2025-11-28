@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authStorage, StoredUser } from '../lib/authStorage';
+import { authStorage, StoredUser, PendingActionData } from '../lib/authStorage';
 import { authApi, RegisterRequest, LoginRequest } from '../lib/authApi';
 import { reconnectSocket } from '../lib/socket';
 import toast from 'react-hot-toast';
@@ -12,7 +12,10 @@ interface AuthContextType {
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
-  requireAuth: (callback: () => void) => void;
+  requireAuth: (callback: () => void, metadata?: PendingActionData) => void;
+  setPendingAction: (action: (() => void) | null) => void;
+  hasPendingAction: () => boolean;
+  executePendingActionFromData: (data: PendingActionData) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -32,6 +35,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<StoredUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
   // Initialize auth on mount
   useEffect(() => {
@@ -73,6 +77,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     initAuth();
   }, []);
 
+  // Listen for pending action execution after email/password login
+  useEffect(() => {
+    const handleExecutePendingAction = () => {
+      if (pendingAction && user) {
+        setTimeout(() => {
+          pendingAction();
+          setPendingAction(null);
+        }, 100);
+      }
+    };
+
+    window.addEventListener('executePendingAction', handleExecutePendingAction);
+    return () => {
+      window.removeEventListener('executePendingAction', handleExecutePendingAction);
+    };
+  }, [pendingAction, user]);
+
   const login = async (data: LoginRequest) => {
     try {
       const response = await authApi.login(data);
@@ -81,6 +102,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Reconnect socket with new auth token
       reconnectSocket();
       toast.success(`Bem-vindo, ${response.user.name}!`);
+
+      // Execute pending action if exists
+      if (pendingAction) {
+        setTimeout(() => {
+          pendingAction();
+          setPendingAction(null);
+        }, 100);
+      }
     } catch (error: any) {
       const message = error.response?.data?.message || 'Erro ao fazer login';
       toast.error(message);
@@ -96,6 +125,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Reconnect socket with new auth token
       reconnectSocket();
       toast.success(`Conta criada com sucesso! Bem-vindo, ${response.user.name}!`);
+
+      // Execute pending action if exists
+      if (pendingAction) {
+        setTimeout(() => {
+          pendingAction();
+          setPendingAction(null);
+        }, 100);
+      }
     } catch (error: any) {
       const message = error.response?.data?.message || 'Erro ao criar conta';
       toast.error(message);
@@ -133,14 +170,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // Helper function to check if user is authenticated before an action
-  const requireAuth = (callback: () => void) => {
+  const requireAuth = (callback: () => void, metadata?: PendingActionData) => {
     if (!user) {
+      // Store the pending action to execute after login
+      setPendingAction(() => callback);
+
+      // If metadata provided, also store it in sessionStorage for OAuth flow
+      if (metadata) {
+        authStorage.setPendingActionData(metadata);
+      }
+
+      // Store current URL for OAuth redirect back
+      const currentUrl = window.location.pathname + window.location.search;
+      console.log('[requireAuth] Salvando returnUrl:', currentUrl);
+      authStorage.setReturnUrl(currentUrl);
+
       toast.error('Você precisa fazer login para realizar esta ação');
       // Trigger auth modal (we'll implement this in the modal component)
       window.dispatchEvent(new CustomEvent('openAuthModal'));
       return;
     }
     callback();
+  };
+
+  // Check if there's a pending action
+  const hasPendingAction = () => {
+    return pendingAction !== null;
+  };
+
+  // Execute pending action from serialized data (used after OAuth redirect)
+  const executePendingActionFromData = (data: PendingActionData) => {
+    // Dispatch a custom event with the action data
+    // This will be caught by components that need to execute the action
+    window.dispatchEvent(new CustomEvent('executePendingActionFromData', { detail: data }));
   };
 
   const value: AuthContextType = {
@@ -152,6 +214,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
     refreshUser,
     requireAuth,
+    setPendingAction,
+    hasPendingAction,
+    executePendingActionFromData,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -3,16 +3,17 @@
  * Handles all authentication-related API calls
  */
 
-import axios from 'axios';
 import { StoredUser } from './authStorage';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// Import api instance to avoid circular dependency
+// We'll create a separate axios instance for auth to prevent circular deps
+import axios from 'axios';
+import { API_URL } from './env';
 
 export interface RegisterRequest {
   name: string;
   email: string;
   password: string;
-  role?: 'CUSTOMER' | 'CAMPAIGN_CREATOR';
 }
 
 export interface LoginRequest {
@@ -30,12 +31,20 @@ export interface RefreshResponse {
   accessToken: string;
 }
 
+// Create a separate axios instance for auth to avoid circular dependency with api.ts
+const authAxios = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
 export const authApi = {
   /**
    * Register a new user
    */
   async register(data: RegisterRequest): Promise<AuthResponse> {
-    const response = await axios.post<AuthResponse>(`${API_URL}/api/auth/register`, data);
+    const response = await authAxios.post<AuthResponse>('/api/auth/register', data);
     return response.data;
   },
 
@@ -43,7 +52,7 @@ export const authApi = {
    * Login with email and password
    */
   async login(data: LoginRequest): Promise<AuthResponse> {
-    const response = await axios.post<AuthResponse>(`${API_URL}/api/auth/login`, data);
+    const response = await authAxios.post<AuthResponse>('/api/auth/login', data);
     return response.data;
   },
 
@@ -51,8 +60,8 @@ export const authApi = {
    * Refresh access token using refresh token
    */
   async refresh(refreshToken: string): Promise<RefreshResponse> {
-    const response = await axios.post<RefreshResponse>(
-      `${API_URL}/api/auth/refresh`,
+    const response = await authAxios.post<RefreshResponse>(
+      '/api/auth/refresh',
       { refreshToken }
     );
     return response.data;
@@ -62,18 +71,18 @@ export const authApi = {
    * Logout (invalidate refresh token)
    */
   async logout(refreshToken: string): Promise<void> {
-    await axios.post(`${API_URL}/api/auth/logout`, { refreshToken });
+    await authAxios.post('/api/auth/logout', { refreshToken });
   },
 
   /**
    * Get current user info
    */
   async me(accessToken: string): Promise<StoredUser> {
-    const response = await axios.get<StoredUser>(`${API_URL}/api/auth/me`, {
+    const response = await authAxios.get<{ user: StoredUser }>('/api/auth/me', {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
     });
-    return response.data;
+    return response.data.user;
   },
 };

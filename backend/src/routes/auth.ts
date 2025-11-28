@@ -97,6 +97,19 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    // Verifica se nome já existe
+    const existingName = await prisma.user.findUnique({
+      where: { name },
+    });
+
+    if (existingName) {
+      res.status(409).json({
+        error: 'NAME_ALREADY_EXISTS',
+        message: 'Este nome já está em uso. Por favor, escolha outro nome',
+      });
+      return;
+    }
+
     // Hash da senha
     const hashedPassword = await AuthService.hashPassword(password);
 
@@ -286,6 +299,12 @@ router.post('/refresh', async (req: Request, res: Response): Promise<void> => {
     res.status(200).json({
       message: 'Token renovado com sucesso',
       accessToken: newAccessToken,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
     });
   } catch (error) {
     console.error('Erro ao renovar token:', error);
@@ -394,7 +413,7 @@ router.get('/google/callback',
         `${frontendUrl}/auth/callback?` +
         `accessToken=${tokens.accessToken}&` +
         `refreshToken=${tokens.refreshToken}&` +
-        `userId=${user.id}&` +
+        `userId=${encodeURIComponent(user.id)}&` +
         `userName=${encodeURIComponent(user.name)}&` +
         `userEmail=${encodeURIComponent(user.email)}&` +
         `userRole=${user.role}`
@@ -559,6 +578,19 @@ router.patch('/profile', requireAuth, async (req: Request, res: Response): Promi
 
     // Atualiza nome se fornecido
     if (name) {
+      // Verifica se nome já existe (exceto se for o próprio usuário)
+      const existingName = await prisma.user.findUnique({
+        where: { name },
+      });
+
+      if (existingName && existingName.id !== req.user!.id) {
+        res.status(409).json({
+          error: 'NAME_ALREADY_EXISTS',
+          message: 'Este nome já está em uso. Por favor, escolha outro nome',
+        });
+        return;
+      }
+
       updates.name = name;
     }
 

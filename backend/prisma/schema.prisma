@@ -13,7 +13,7 @@ model User {
   id        String   @id @default(cuid())
   email     String   @unique
   password  String?  // Nullable para Google OAuth
-  name      String
+  name      String   @unique
   role      UserRole @default(CUSTOMER)
   googleId  String?  @unique
   createdAt DateTime @default(now())
@@ -29,6 +29,7 @@ model User {
   @@map("users")
   @@index([email])
   @@index([googleId])
+  @@index([name])
 }
 
 model Session {
@@ -111,7 +112,7 @@ model Product {
 model Order {
   id          String   @id @default(cuid())
   campaignId  String
-  customerName String  // Mantém para histórico/legado
+  customerName String?  // Mantém para histórico/legado (agora opcional)
   isPaid      Boolean  @default(false)
   isSeparated Boolean  @default(false)
   subtotal    Float    @default(0)
@@ -120,15 +121,16 @@ model Order {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // Auth - NULLABLE durante migração
-  userId      String?
-  customer    User?    @relation("CustomerOrders", fields: [userId], references: [id])
+  // Auth - OBRIGATÓRIO para novos pedidos
+  userId      String
+  customer    User     @relation("CustomerOrders", fields: [userId], references: [id])
 
   campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   items       OrderItem[]
   messages    OrderMessage[]
 
   @@map("orders")
+  @@unique([campaignId, userId])
   @@index([campaignId])
   @@index([customerName])
   @@index([userId])

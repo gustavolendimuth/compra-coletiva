@@ -260,6 +260,79 @@ export const requireOrderOwnership = async (
 };
 
 /**
+ * Middleware que verifica se o usuário é o dono do pedido, criador da campanha ou admin
+ * Usado para operações que criadores de campanha precisam realizar em pedidos (como marcar como pago)
+ */
+export const requireOrderOrCampaignOwnership = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        error: 'UNAUTHORIZED',
+        message: 'Autenticação necessária',
+      });
+      return;
+    }
+
+    // Admin tem acesso total
+    if (req.user.role === 'ADMIN') {
+      next();
+      return;
+    }
+
+    const orderId = req.params.id;
+
+    if (!orderId) {
+      res.status(400).json({
+        error: 'BAD_REQUEST',
+        message: 'ID do pedido não fornecido',
+      });
+      return;
+    }
+
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        campaign: {
+          select: { creatorId: true },
+        },
+      },
+    });
+
+    if (!order) {
+      res.status(404).json({
+        error: 'NOT_FOUND',
+        message: 'Pedido não encontrado',
+      });
+      return;
+    }
+
+    // Permite se o usuário é o dono do pedido OU criador da campanha
+    const isOrderOwner = order.userId === req.user.id;
+    const isCampaignCreator = order.campaign.creatorId === req.user.id;
+
+    if (!isOrderOwner && !isCampaignCreator) {
+      res.status(403).json({
+        error: 'FORBIDDEN',
+        message: 'Você não tem permissão para modificar este pedido',
+      });
+      return;
+    }
+
+    next();
+  } catch (error) {
+    console.error('Erro ao verificar ownership do pedido/campanha:', error);
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Erro ao verificar permissões',
+    });
+  }
+};
+
+/**
  * Middleware que verifica se o usuário tem acesso às mensagens de um pedido
  * (Dono do pedido ou criador da campanha)
  */

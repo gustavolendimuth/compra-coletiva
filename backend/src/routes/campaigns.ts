@@ -89,7 +89,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
 }));
 
 // POST /api/campaigns - Cria um novo grupo
-router.post('/', requireAuth, requireRole('CAMPAIGN_CREATOR', 'ADMIN'), asyncHandler(async (req, res) => {
+router.post('/', requireAuth, asyncHandler(async (req, res) => {
   const data = createCampaignSchema.parse(req.body);
 
   // Convert deadline string to Date object for Prisma
@@ -101,8 +101,20 @@ router.post('/', requireAuth, requireRole('CAMPAIGN_CREATOR', 'ADMIN'), asyncHan
   // Adiciona o creatorId do usuário autenticado
   prismaData.creatorId = req.user!.id;
 
-  const campaign = await prisma.campaign.create({
-    data: prismaData
+  // Use transaction to upgrade role and create campaign atomically
+  const campaign = await prisma.$transaction(async (tx) => {
+    // Upgrade user to CAMPAIGN_CREATOR if they're currently a CUSTOMER
+    if (req.user!.role === 'CUSTOMER') {
+      await tx.user.update({
+        where: { id: req.user!.id },
+        data: { role: 'CAMPAIGN_CREATOR' }
+      });
+    }
+
+    // Create the campaign
+    return await tx.campaign.create({
+      data: prismaData
+    });
   });
 
   res.status(201).json(campaign);
@@ -158,7 +170,7 @@ router.delete('/:id', requireAuth, requireCampaignOwnership, asyncHandler(async 
 }));
 
 // GET /api/campaigns/:id/supplier-invoice - Gera fatura para fornecedor em PDF
-router.get('/:id/supplier-invoice', asyncHandler(async (req, res) => {
+router.get('/:id/supplier-invoice', requireAuth, requireCampaignOwnership, asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   const pdfBuffer = await InvoiceGenerator.generateSupplierInvoice(id);

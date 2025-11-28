@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { authStorage } from '@/lib/authStorage';
 import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates';
 import {
   ArrowLeft,
@@ -53,6 +54,16 @@ const normalizeString = (str: string): string => {
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .trim();
+};
+
+// Helper function para obter o nome de exibição do cliente
+// Para pedidos legados (usuário sistema), usa customerName original
+// Para pedidos novos (usuários reais), usa customer.name
+const getCustomerDisplayName = (order: Order): string => {
+  const isLegacyOrder = order.customer.email === 'sistema@compracoletiva.internal';
+  return isLegacyOrder && order.customerName
+    ? order.customerName
+    : order.customer.name;
 };
 
 export default function CampaignDetail() {
@@ -109,28 +120,18 @@ export default function CampaignDetail() {
   });
 
   const [orderForm, setOrderForm] = useState<{
-    customerName: string;
     items: Array<{ productId: string; quantity: number | '' }>;
   }>({
-    customerName: '',
     items: [{ productId: '', quantity: 1 }]
   });
 
   const [editOrderForm, setEditOrderForm] = useState<{
-    customerName: string;
     items: Array<{ productId: string; quantity: number | '' }>;
   }>({
-    customerName: '',
     items: [{ productId: '', quantity: 1 }]
   });
 
   const [shippingCost, setShippingCost] = useState<number | ''>(0);
-
-  // Estados para autocomplete de nomes
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
-  const [showEditSuggestions, setShowEditSuggestions] = useState(false);
-  const [selectedEditSuggestionIndex, setSelectedEditSuggestionIndex] = useState(-1);
 
   const { data: campaign } = useQuery({
     queryKey: ['campaign', id],
@@ -200,9 +201,9 @@ export default function CampaignDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders', id] });
       queryClient.invalidateQueries({ queryKey: ['analytics', id] });
-      toast.success('Pedido criado!');
-      setIsOrderModalOpen(false);
-      setOrderForm({ customerName: '', items: [{ productId: '', quantity: 1 }] });
+
+      // Não fecha o modal nem reseta o form no auto-save
+      // Não mostra toast para não poluir a interface
     },
     onError: () => toast.error('Erro ao criar pedido')
   });
@@ -221,14 +222,14 @@ export default function CampaignDetail() {
   const updateOrderWithItemsMutation = useMutation({
     mutationFn: ({ orderId, data }: {
       orderId: string;
-      data: { customerName?: string; items?: Array<{ productId: string; quantity: number }> }
+      data: { items?: Array<{ productId: string; quantity: number }> }
     }) => orderApi.updateWithItems(orderId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders', id] });
       queryClient.invalidateQueries({ queryKey: ['analytics', id] });
-      toast.success('Pedido atualizado!');
-      setIsEditOrderModalOpen(false);
-      setEditingOrder(null);
+
+      // Não fecha o modal nem reseta o form no auto-save
+      // Não mostra toast para não poluir a interface
     },
     onError: () => toast.error('Erro ao atualizar pedido')
   });
@@ -322,36 +323,141 @@ export default function CampaignDetail() {
     // Não reseta nada para permitir acumulação de produtos e persistência do nome
   };
 
-  const handleCreateOrder = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Helper function para pré-carregar pedido existente do usuário
+  const loadExistingOrder = () => {
+    if (!user || !orders) return;
 
-    // Validar se já existe um pedido com o mesmo nome
-    const existingOrder = orders?.find(
-      order => order.customerName.toLowerCase().trim() === orderForm.customerName.toLowerCase().trim()
-    );
+    // Busca pedido existente do usuário nesta campanha
+    const existingOrder = orders.find(order => order.userId === user.id);
 
-    if (existingOrder) {
-      toast.error(
-        'Já existe um pedido para esta pessoa. Por favor, edite o pedido existente ao invés de criar um novo.',
-        { duration: 5000 }
-      );
-      return;
+    if (existingOrder && existingOrder.items.length > 0) {
+      // Pré-carrega os itens do pedido existente
+      setOrderForm({
+        items: existingOrder.items.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity
+        }))
+      });
+    } else {
+      // Sem pedido existente, inicia com um item vazio
+      setOrderForm({
+        items: [{ productId: '', quantity: 1 }]
+      });
     }
+  };
+
+  const handleCreateOrder = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
 
     const validItems = orderForm.items
       .filter((item): item is { productId: string; quantity: number } =>
         item.productId !== '' && typeof item.quantity === 'number' && item.quantity > 0
       );
     if (validItems.length === 0) {
-      toast.error('Adicione pelo menos um produto ao pedido');
-      return;
+      return; // Não mostra erro no auto-save
     }
     createOrderMutation.mutate({
       campaignId: id!,
-      customerName: orderForm.customerName,
       items: validItems
     });
   };
+
+  // Auto-save para novo pedido (salva imediatamente quando houver alterações)
+  useEffect(() => {
+    // Não salva se o modal não estiver aberto
+    if (!isOrderModalOpen) return;
+
+    // Verifica se há itens válidos antes de tentar salvar
+    const validItems = orderForm.items.filter(
+      (item) => item.productId !== '' && typeof item.quantity === 'number' && item.quantity > 0
+    );
+
+    // Só auto-salva se houver pelo menos um item válido
+    if (validItems.length === 0) return;
+
+    // Salva imediatamente
+    handleCreateOrder();
+  }, [orderForm.items]);
+
+  // Check for and execute pending action after OAuth login
+  useEffect(() => {
+    // Only check once when component mounts and user is authenticated
+    if (!user) return;
+
+    const pendingActionData = authStorage.getPendingActionData();
+
+    if (pendingActionData) {
+      // Clear the stored data immediately
+      authStorage.clearPendingActionData();
+      authStorage.clearPendingActionFlag();
+
+      console.log('Executing pending action:', pendingActionData);
+
+      // Execute the appropriate action based on type
+      if (pendingActionData.type === 'UPDATE_ORDER_PAYMENT') {
+        const { orderId, isPaid } = pendingActionData.payload;
+
+        // Small delay to ensure component is fully mounted and mutations are ready
+        setTimeout(() => {
+          // Double-check user is still authenticated before executing
+          if (!user) {
+            console.warn('Usuário não mais autenticado, pulando ação pendente');
+            return;
+          }
+
+          console.log('Calling updateOrderMutation with:', { orderId, isPaid });
+          updateOrderMutation.mutate({
+            orderId,
+            data: { isPaid }
+          });
+        }, 500);
+      } else if (pendingActionData.type === 'EDIT_ORDER') {
+        const { orderId, campaignId } = pendingActionData.payload;
+
+        // Small delay to ensure component is fully mounted
+        setTimeout(() => {
+          // Validate user is still authenticated
+          if (!user) {
+            console.warn('User no longer authenticated, skipping pending action');
+            return;
+          }
+
+          // Validate we're on the correct campaign page
+          if (campaignId !== id) {
+            console.warn('Campaign ID mismatch, skipping pending action');
+            toast.error('Você foi redirecionado para uma campanha diferente');
+            return;
+          }
+
+          // Find the order from fresh query data (not stale persisted data)
+          const order = orders?.find(o => o.id === orderId);
+
+          if (!order) {
+            console.warn('Order not found:', orderId);
+            toast.error('Pedido não encontrado. Ele pode ter sido removido.');
+            return;
+          }
+
+          // Validate campaign is still active
+          if (campaign?.status !== 'ACTIVE') {
+            toast.error('A campanha não está mais ativa. Não é possível editar pedidos.');
+            return;
+          }
+
+          // Revalidate permissions with fresh data
+          const canEdit = order.userId === user.id || canEditCampaign;
+
+          if (!canEdit) {
+            toast.error('Você não tem permissão para editar este pedido.');
+            return;
+          }
+
+          // All validations passed - open the edit modal
+          openEditOrderModal(order);
+        }, 500);
+      }
+    }
+  }, [user, orders, campaign, id, canEditCampaign]);
 
   const handleUpdateShipping = (e: React.FormEvent) => {
     e.preventDefault();
@@ -364,42 +470,60 @@ export default function CampaignDetail() {
     updateDeadlineMutation.mutate(deadlineForm || null);
   };
 
-  const handleEditOrder = (e: React.FormEvent) => {
-    e.preventDefault();
+  const openEditOrderModal = (order: Order) => {
+    // Close view modal if open
+    setIsViewOrderModalOpen(false);
+    setViewingOrder(null);
+
+    // Set editing state with order data
+    setEditingOrder(order);
+    setEditOrderForm({
+      items: order.items.map(item => ({
+        productId: item.product.id,
+        quantity: item.quantity
+      }))
+    });
+
+    // Open edit modal
+    setIsEditOrderModalOpen(true);
+  };
+
+  const handleEditOrder = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!editingOrder) return;
-
-    // Validar se já existe outro pedido com o mesmo nome
-    const existingOrder = orders?.find(
-      order =>
-        order.id !== editingOrder.id &&
-        order.customerName.toLowerCase().trim() === editOrderForm.customerName.toLowerCase().trim()
-    );
-
-    if (existingOrder) {
-      toast.error(
-        'Já existe outro pedido para esta pessoa. Por favor, escolha um nome diferente ou edite o pedido existente.',
-        { duration: 5000 }
-      );
-      return;
-    }
 
     const validItems = editOrderForm.items
       .filter((item): item is { productId: string; quantity: number } =>
         item.productId !== '' && typeof item.quantity === 'number' && item.quantity > 0
       );
     if (validItems.length === 0) {
-      toast.error('Adicione pelo menos um produto ao pedido');
-      return;
+      return; // Não mostra erro no auto-save
     }
 
     updateOrderWithItemsMutation.mutate({
       orderId: editingOrder.id,
       data: {
-        customerName: editOrderForm.customerName,
         items: validItems
       }
     });
   };
+
+  // Auto-save para edição de pedido (salva imediatamente quando houver alterações)
+  useEffect(() => {
+    // Não salva se o modal não estiver aberto ou não houver pedido sendo editado
+    if (!editingOrder || !isEditOrderModalOpen) return;
+
+    // Verifica se há itens válidos antes de tentar salvar
+    const validItems = editOrderForm.items.filter(
+      (item) => item.productId !== '' && typeof item.quantity === 'number' && item.quantity > 0
+    );
+
+    // Só auto-salva se houver pelo menos um item válido
+    if (validItems.length === 0) return;
+
+    // Salva imediatamente
+    handleEditOrder();
+  }, [editOrderForm.items]);
 
   // Handler para alternar ordenação de pedidos
   const handleSort = (field: typeof orderSortField) => {
@@ -448,14 +572,14 @@ export default function CampaignDetail() {
   // Filtra e ordena pedidos
   const filteredOrders = orders
     ?.filter(order =>
-      normalizeString(order.customerName).includes(normalizeString(orderSearch))
+      normalizeString(getCustomerDisplayName(order)).includes(normalizeString(orderSearch))
     )
     .sort((a, b) => {
       let comparison = 0;
 
       switch (orderSortField) {
         case 'customerName':
-          comparison = a.customerName.localeCompare(b.customerName);
+          comparison = getCustomerDisplayName(a).localeCompare(getCustomerDisplayName(b));
           break;
         case 'subtotal':
           comparison = a.subtotal - b.subtotal;
@@ -498,6 +622,10 @@ export default function CampaignDetail() {
 
   // Handlers para edição inline do nome
   const handleNameClick = () => {
+    if (!canEditCampaign) {
+      toast.error('Apenas o criador da campanha pode editar o nome');
+      return;
+    }
     setEditedName(campaign?.name || '');
     setIsEditingName(true);
   };
@@ -525,6 +653,10 @@ export default function CampaignDetail() {
 
   // Handlers para edição inline da descrição
   const handleDescriptionClick = () => {
+    if (!canEditCampaign) {
+      toast.error('Apenas o criador da campanha pode editar a descrição');
+      return;
+    }
     setEditedDescription(campaign?.description || '');
     setIsEditingDescription(true);
   };
@@ -590,6 +722,7 @@ export default function CampaignDetail() {
       // Alt+N - Abrir modal de adicionar pedido (somente se campanha estiver ativa)
       if (e.altKey && e.key === 'n' && isActive && !isOrderModalOpen && !isEditOrderModalOpen) {
         e.preventDefault();
+        loadExistingOrder();
         setIsOrderModalOpen(true);
       }
 
@@ -746,32 +879,34 @@ export default function CampaignDetail() {
                     hour12: false
                   })}
                 </span>
-                <IconButton
-                  size="sm"
-                  variant="ghost"
-                  icon={<Edit className="w-3 h-3" />}
-                  onClick={() => {
-                    setIsEditDeadlineModalOpen(true);
-                    if (campaign.deadline) {
-                      const dt = new Date(campaign.deadline);
-                      // Create ISO string in local timezone
-                      const year = dt.getFullYear();
-                      const month = (dt.getMonth() + 1).toString().padStart(2, '0');
-                      const day = dt.getDate().toString().padStart(2, '0');
-                      const hours = dt.getHours().toString().padStart(2, '0');
-                      const minutes = dt.getMinutes().toString().padStart(2, '0');
-                      const seconds = dt.getSeconds().toString().padStart(2, '0');
-                      setDeadlineForm(`${year}-${month}-${day}T${hours}:${minutes}:${seconds}`);
-                    } else {
-                      setDeadlineForm('');
-                    }
-                  }}
-                  title="Editar data limite"
-                  className="!p-1"
-                />
+                {canEditCampaign && (
+                  <IconButton
+                    size="sm"
+                    variant="ghost"
+                    icon={<Edit className="w-3 h-3" />}
+                    onClick={() => {
+                      setIsEditDeadlineModalOpen(true);
+                      if (campaign.deadline) {
+                        const dt = new Date(campaign.deadline);
+                        // Create ISO string in local timezone
+                        const year = dt.getFullYear();
+                        const month = (dt.getMonth() + 1).toString().padStart(2, '0');
+                        const day = dt.getDate().toString().padStart(2, '0');
+                        const hours = dt.getHours().toString().padStart(2, '0');
+                        const minutes = dt.getMinutes().toString().padStart(2, '0');
+                        const seconds = dt.getSeconds().toString().padStart(2, '0');
+                        setDeadlineForm(`${year}-${month}-${day}T${hours}:${minutes}:${seconds}`);
+                      } else {
+                        setDeadlineForm('');
+                      }
+                    }}
+                    title="Editar data limite"
+                    className="!p-1"
+                  />
+                )}
               </div>
             )}
-            {!campaign.deadline && isActive && (
+            {!campaign.deadline && isActive && canEditCampaign && (
               <IconButton
                 size="sm"
                 variant="secondary"
@@ -789,7 +924,7 @@ export default function CampaignDetail() {
 
           {/* Botões de Ação da Campanha */}
           <div className="flex flex-wrap gap-2">
-            {orders && orders.length > 0 && (
+            {orders && orders.length > 0 && canEditCampaign && (
               <IconButton
                 size="sm"
                 variant="secondary"
@@ -808,7 +943,7 @@ export default function CampaignDetail() {
               </IconButton>
             )}
 
-            {isActive && (
+            {isActive && canEditCampaign && (
               <IconButton
                 size="sm"
                 icon={<Lock className="w-4 h-4" />}
@@ -820,7 +955,7 @@ export default function CampaignDetail() {
               </IconButton>
             )}
 
-            {isClosed && (
+            {isClosed && canEditCampaign && (
               <>
                 <IconButton
                   size="sm"
@@ -842,7 +977,7 @@ export default function CampaignDetail() {
               </>
             )}
 
-            {isSent && (
+            {isSent && canEditCampaign && (
               <IconButton
                 size="sm"
                 icon={<Unlock className="w-4 h-4" />}
@@ -977,24 +1112,23 @@ export default function CampaignDetail() {
             {/* Botões de Ação Principais */}
             {isActive && (
               <div className="flex gap-2 justify-center md:justify-end flex-wrap">
-                <IconButton
-                  size="sm"
-                  icon={<Package className="w-4 h-4" />}
-                  onClick={() => requireAuth(() => {
-                    if (!canEditCampaign) {
-                      toast.error('Você não tem permissão para adicionar produtos nesta campanha');
-                      return;
-                    }
-                    setIsProductModalOpen(true);
-                  })}
-                  className="text-xs sm:text-sm"
-                >
-                  Adicionar Produto
-                </IconButton>
+                {canEditCampaign && (
+                  <IconButton
+                    size="sm"
+                    icon={<Package className="w-4 h-4" />}
+                    onClick={() => setIsProductModalOpen(true)}
+                    className="text-xs sm:text-sm"
+                  >
+                    Adicionar Produto
+                  </IconButton>
+                )}
                 <IconButton
                   size="sm"
                   icon={<ShoppingBag className="w-4 h-4" />}
-                  onClick={() => requireAuth(() => setIsOrderModalOpen(true))}
+                  onClick={() => requireAuth(() => {
+                    loadExistingOrder();
+                    setIsOrderModalOpen(true);
+                  })}
                   className="text-xs sm:text-sm"
                   title="Adicionar Pedido (Alt+N)"
                 >
@@ -1044,20 +1178,48 @@ export default function CampaignDetail() {
                       {/* Botão de Ação */}
                       {isActive && (
                         <button
-                          onClick={() => {
-                            // Verifica se o produto já está na lista
-                            const productExists = orderForm.items.some(item => item.productId === product.id);
+                          onClick={() => requireAuth(() => {
+                            if (!user || !orders) {
+                              setIsOrderModalOpen(true);
+                              return;
+                            }
 
-                            if (!productExists) {
-                              // Adiciona o produto à lista existente, removendo campos vazios
+                            // Busca pedido existente do usuário nesta campanha
+                            const existingOrder = orders.find(order => order.userId === user.id);
+
+                            if (existingOrder && existingOrder.items.length > 0) {
+                              // Pré-carrega os itens do pedido existente
+                              const existingItems = existingOrder.items.map(item => ({
+                                productId: item.productId,
+                                quantity: item.quantity
+                              }));
+
+                              // Verifica se o produto clicado já está no pedido
+                              const existingItemIndex = existingItems.findIndex(item => item.productId === product.id);
+
+                              if (existingItemIndex >= 0) {
+                                // Produto já existe - incrementa a quantidade em +1
+                                const updatedItems = [...existingItems];
+                                updatedItems[existingItemIndex] = {
+                                  ...updatedItems[existingItemIndex],
+                                  quantity: updatedItems[existingItemIndex].quantity + 1
+                                };
+                                setOrderForm({ items: updatedItems });
+                              } else {
+                                // Produto novo - adiciona aos itens existentes com quantidade 1
+                                setOrderForm({
+                                  items: [...existingItems, { productId: product.id, quantity: 1 }]
+                                });
+                              }
+                            } else {
+                              // Sem pedido existente, inicia com este produto
                               setOrderForm({
-                                ...orderForm,
-                                items: [...orderForm.items.filter(item => item.productId !== ''), { productId: product.id, quantity: 1 }]
+                                items: [{ productId: product.id, quantity: 1 }]
                               });
                             }
 
                             setIsOrderModalOpen(true);
-                          }}
+                          })}
                           className="w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-1.5 px-3 rounded-lg transition-colors duration-200 text-sm"
                         >
                           Pedir
@@ -1117,10 +1279,10 @@ export default function CampaignDetail() {
                 <h4 className="font-semibold mb-4 text-gray-800">Por Pessoa</h4>
               <div className="space-y-3">
                 {[...analytics.byCustomer]
-                  .sort((a, b) => a.customerName.localeCompare(b.customerName))
+                  .sort((a, b) => (a.customerName || '').localeCompare(b.customerName || ''))
                   .map((item, index) => {
                     // Encontrar o pedido correspondente à pessoa
-                    const order = orders?.find(o => o.customerName === item.customerName);
+                    const order = orders?.find(o => getCustomerDisplayName(o) === item.customerName);
 
                     return (
                       <div key={index} className="flex flex-col gap-2 md:flex-row md:justify-between md:items-center pb-3 border-b last:border-b-0 last:pb-0">
@@ -1158,10 +1320,17 @@ export default function CampaignDetail() {
                                   variant={item.isPaid ? 'success' : 'secondary'}
                                   icon={<CircleDollarSign className="w-5 h-5" />}
                                   onClick={() =>
-                                    updateOrderMutation.mutate({
-                                      orderId: order.id,
-                                      data: { isPaid: !item.isPaid }
-                                    })
+                                    requireAuth(
+                                      () =>
+                                        updateOrderMutation.mutate({
+                                          orderId: order.id,
+                                          data: { isPaid: !item.isPaid }
+                                        }),
+                                      {
+                                        type: 'UPDATE_ORDER_PAYMENT',
+                                        payload: { orderId: order.id, isPaid: !item.isPaid }
+                                      }
+                                    )
                                   }
                                   title={item.isPaid ? 'Marcar como não pago' : 'Marcar como pago'}
                                 />
@@ -1197,7 +1366,7 @@ export default function CampaignDetail() {
         <div className="pb-20 md:pb-0">
           <div className="flex justify-between items-center mb-4 gap-2">
             <h2 className="text-2xl font-bold">Produtos</h2>
-            {isActive && (
+            {isActive && canEditCampaign && (
               <IconButton
                 size="sm"
                 icon={<Package className="w-4 h-4" />}
@@ -1260,7 +1429,7 @@ export default function CampaignDetail() {
                     <div className="space-y-2">
                       <div className="flex items-start justify-between gap-2">
                         <h3 className="font-semibold text-gray-900">{product.name}</h3>
-                        {isActive && (
+                        {isActive && canEditCampaign && (
                           <div className="flex gap-1 flex-shrink-0">
                             <IconButton
                               size="sm"
@@ -1339,7 +1508,7 @@ export default function CampaignDetail() {
                             {renderProductSortIcon('weight')}
                           </div>
                         </th>
-                        {isActive && (
+                        {isActive && canEditCampaign && (
                           <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">Ações</th>
                         )}
                       </tr>
@@ -1350,7 +1519,7 @@ export default function CampaignDetail() {
                           <td className="px-4 py-3 text-sm text-gray-900">{product.name}</td>
                           <td className="px-4 py-3 text-sm text-gray-900">{formatCurrency(product.price)}</td>
                           <td className="px-4 py-3 text-sm text-gray-900">{product.weight}g</td>
-                          {isActive && (
+                          {isActive && canEditCampaign && (
                             <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
                               <div className="flex gap-1 justify-end">
                                 <IconButton
@@ -1402,7 +1571,10 @@ export default function CampaignDetail() {
                 <IconButton
                   size="sm"
                   icon={<ShoppingBag className="w-4 h-4" />}
-                  onClick={() => setIsOrderModalOpen(true)}
+                  onClick={() => requireAuth(() => {
+                    loadExistingOrder();
+                    setIsOrderModalOpen(true);
+                  })}
                   className="text-xs sm:text-sm whitespace-nowrap"
                   title="Adicionar Pedido (Alt+N)"
                 >
@@ -1490,53 +1662,74 @@ export default function CampaignDetail() {
                             }`}>
                             {order.isPaid ? 'Pago' : 'Pendente'}
                           </span>
-                          <h3 className="font-semibold text-gray-900 truncate">{order.customerName}</h3>
+                          <h3 className="font-semibold text-gray-900 truncate">{getCustomerDisplayName(order)}</h3>
                         </div>
 
                         {/* Ações */}
                         <div className="flex gap-1 flex-shrink-0">
                           <IconButton
                             size="sm"
-                            variant={order.isPaid ? 'success' : 'secondary'}
-                            icon={<CircleDollarSign className="w-5 h-5" />}
-                            onClick={() =>
-                              updateOrderMutation.mutate({
-                                orderId: order.id,
-                                data: { isPaid: !order.isPaid }
-                              })
-                            }
-                            title={order.isPaid ? 'Marcar como não pago' : 'Marcar como pago'}
+                            variant="secondary"
+                            icon={<Eye className="w-5 h-5" />}
+                            onClick={() => {
+                              setViewingOrder(order);
+                              setIsViewOrderModalOpen(true);
+                            }}
+                            title="Visualizar pedido"
                           />
-                          {isActive && (
-                            <>
-                              <IconButton
-                                size="sm"
-                                variant="secondary"
-                                icon={<Edit className="w-4 h-4" />}
-                                onClick={() => {
+                          {canEditCampaign && (
+                            <IconButton
+                              size="sm"
+                              variant={order.isPaid ? 'success' : 'secondary'}
+                              icon={<CircleDollarSign className="w-5 h-5" />}
+                              onClick={() =>
+                                requireAuth(
+                                  () =>
+                                    updateOrderMutation.mutate({
+                                      orderId: order.id,
+                                      data: { isPaid: !order.isPaid }
+                                    }),
+                                  {
+                                    type: 'UPDATE_ORDER_PAYMENT',
+                                    payload: { orderId: order.id, isPaid: !order.isPaid }
+                                  }
+                                )
+                              }
+                              title={order.isPaid ? 'Marcar como não pago' : 'Marcar como pago'}
+                            />
+                          )}
+                          {isActive && (user?.id === order.userId || canEditCampaign) && (
+                            <IconButton
+                              size="sm"
+                              variant="secondary"
+                              icon={<Edit className="w-4 h-4" />}
+                              onClick={() =>
+                                requireAuth(() => {
                                   setEditingOrder(order);
                                   setEditOrderForm({
-                                    customerName: order.customerName,
                                     items: order.items.map(item => ({
                                       productId: item.product.id,
                                       quantity: item.quantity
                                     }))
                                   });
                                   setIsEditOrderModalOpen(true);
-                                }}
-                                title="Editar pedido"
-                              />
-                              <IconButton
-                                size="sm"
-                                variant="danger"
-                                icon={<Trash2 className="w-4 h-4" />}
-                                onClick={() => {
-                                  if (confirm('Tem certeza que deseja remover este pedido?')) {
-                                    deleteOrderMutation.mutate(order.id);
-                                  }
-                                }}
-                              />
-                            </>
+                                })
+                              }
+                              title="Editar pedido"
+                            />
+                          )}
+                          {isActive && canEditCampaign && (
+                            <IconButton
+                              size="sm"
+                              variant="danger"
+                              icon={<Trash2 className="w-4 h-4" />}
+                              onClick={() => {
+                                if (confirm('Tem certeza que deseja remover este pedido?')) {
+                                  deleteOrderMutation.mutate(order.id);
+                                }
+                              }}
+                              title="Remover pedido"
+                            />
                           )}
                         </div>
                       </div>
@@ -1630,7 +1823,7 @@ export default function CampaignDetail() {
                               {order.isPaid ? 'Pago' : 'Pendente'}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-900">{order.customerName}</td>
+                          <td className="px-4 py-3 text-sm text-gray-900">{getCustomerDisplayName(order)}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">
                             {order.items.map(item => `${item.quantity}x ${item.product.name}`).join(', ')}
                           </td>
@@ -1641,47 +1834,67 @@ export default function CampaignDetail() {
                             <div className="flex gap-1 justify-end">
                               <IconButton
                                 size="sm"
-                                variant={order.isPaid ? 'success' : 'secondary'}
-                                icon={<CircleDollarSign className="w-5 h-5" />}
-                                onClick={() =>
-                                  updateOrderMutation.mutate({
-                                    orderId: order.id,
-                                    data: { isPaid: !order.isPaid }
-                                  })
-                                }
-                                title={order.isPaid ? 'Marcar como não pago' : 'Marcar como pago'}
+                                variant="secondary"
+                                icon={<Eye className="w-5 h-5" />}
+                                onClick={() => {
+                                  setViewingOrder(order);
+                                  setIsViewOrderModalOpen(true);
+                                }}
+                                title="Visualizar pedido"
                               />
-                              {isActive && (
-                                <>
-                                  <IconButton
-                                    size="sm"
-                                    variant="secondary"
-                                    icon={<Edit className="w-4 h-4" />}
-                                    onClick={() => {
-                                      setEditingOrder(order);
-                                      setEditOrderForm({
-                                        customerName: order.customerName,
-                                        items: order.items.map(item => ({
-                                          productId: item.product.id,
-                                          quantity: item.quantity
-                                        }))
-                                      });
-                                      setIsEditOrderModalOpen(true);
-                                    }}
-                                    title="Editar pedido"
-                                  />
-                                  <IconButton
-                                    size="sm"
-                                    variant="danger"
-                                    icon={<Trash2 className="w-4 h-4" />}
-                                    onClick={() => {
-                                      if (confirm('Tem certeza que deseja remover este pedido?')) {
-                                        deleteOrderMutation.mutate(order.id);
+                              {canEditCampaign && (
+                                <IconButton
+                                  size="sm"
+                                  variant={order.isPaid ? 'success' : 'secondary'}
+                                  icon={<CircleDollarSign className="w-5 h-5" />}
+                                  onClick={() =>
+                                    requireAuth(
+                                      () =>
+                                        updateOrderMutation.mutate({
+                                          orderId: order.id,
+                                          data: { isPaid: !order.isPaid }
+                                        }),
+                                      {
+                                        type: 'UPDATE_ORDER_PAYMENT',
+                                        payload: { orderId: order.id, isPaid: !order.isPaid }
                                       }
-                                    }}
-                                    title="Remover pedido"
-                                  />
-                                </>
+                                    )
+                                  }
+                                  title={order.isPaid ? 'Marcar como não pago' : 'Marcar como pago'}
+                                />
+                              )}
+                              {isActive && (user?.id === order.userId || canEditCampaign) && (
+                                <IconButton
+                                  size="sm"
+                                  variant="secondary"
+                                  icon={<Edit className="w-4 h-4" />}
+                                  onClick={() =>
+                                    requireAuth(
+                                      () => openEditOrderModal(order),
+                                      {
+                                        type: 'EDIT_ORDER',
+                                        payload: {
+                                          orderId: order.id,
+                                          campaignId: id!
+                                        }
+                                      }
+                                    )
+                                  }
+                                  title="Editar pedido"
+                                />
+                              )}
+                              {isActive && canEditCampaign && (
+                                <IconButton
+                                  size="sm"
+                                  variant="danger"
+                                  icon={<Trash2 className="w-4 h-4" />}
+                                  onClick={() => {
+                                    if (confirm('Tem certeza que deseja remover este pedido?')) {
+                                      deleteOrderMutation.mutate(order.id);
+                                    }
+                                  }}
+                                  title="Remover pedido"
+                                />
                               )}
                             </div>
                           </td>
@@ -1713,7 +1926,7 @@ export default function CampaignDetail() {
                 <div className="text-4xl font-bold text-gray-900 mb-4">
                   {formatCurrency(campaign.shippingCost)}
                 </div>
-                {isActive && (
+                {isActive && canEditCampaign && (
                   <IconButton
                     icon={<Edit className="w-4 h-4" />}
                     onClick={() => {
@@ -1897,129 +2110,16 @@ export default function CampaignDetail() {
         onClose={handleCloseOrderModal}
         title="Novo Pedido"
       >
-        <form onSubmit={handleCreateOrder} className="space-y-4">
+        <div className="space-y-4">
           <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-sm text-blue-800">
               <strong>Atalho:</strong> Alt+P para adicionar produto
             </p>
-          </div>
-          <div className="relative">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nome e Sobrenome *
-            </label>
-            <input
-              type="text"
-              required
-              autoFocus
-              value={orderForm.customerName}
-              onChange={(e) => {
-                setOrderForm({ ...orderForm, customerName: e.target.value });
-                setShowSuggestions(true);
-                setSelectedSuggestionIndex(-1);
-              }}
-              onKeyDown={(e) => {
-                const normalizedInput = normalizeString(orderForm.customerName);
-                const suggestions = orders
-                  ?.map((order) => order.customerName)
-                  .filter((name, index, self) => self.indexOf(name) === index)
-                  .filter((name) => normalizeString(name).includes(normalizedInput))
-                  .sort() || [];
-
-                if (e.key === 'ArrowDown') {
-                  e.preventDefault();
-                  setSelectedSuggestionIndex((prev) =>
-                    prev < suggestions.length - 1 ? prev + 1 : prev
-                  );
-                } else if (e.key === 'ArrowUp') {
-                  e.preventDefault();
-                  setSelectedSuggestionIndex((prev) => (prev > 0 ? prev - 1 : -1));
-                } else if (e.key === 'Enter' && selectedSuggestionIndex >= 0) {
-                  e.preventDefault();
-                  setOrderForm({ ...orderForm, customerName: suggestions[selectedSuggestionIndex] });
-                  setShowSuggestions(false);
-                  setSelectedSuggestionIndex(-1);
-                } else if (e.key === 'Escape') {
-                  setShowSuggestions(false);
-                  setSelectedSuggestionIndex(-1);
-                }
-              }}
-              onFocus={() => setShowSuggestions(true)}
-              onBlur={() => {
-                // Delay para permitir clique nas sugestões
-                setTimeout(() => {
-                  setShowSuggestions(false);
-                  setSelectedSuggestionIndex(-1);
-                }, 200);
-              }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              autoComplete="off"
-            />
-            {showSuggestions && orderForm.customerName.trim() && (() => {
-              const normalizedInput = normalizeString(orderForm.customerName);
-              const suggestions = orders
-                ?.map((order) => order.customerName)
-                .filter((name, index, self) => self.indexOf(name) === index)
-                .filter((name) => normalizeString(name).includes(normalizedInput))
-                .sort() || [];
-
-              return suggestions.length > 0 ? (
-                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                  {suggestions.map((name, index) => (
-                    <div
-                      key={name}
-                      onClick={() => {
-                        setOrderForm({ ...orderForm, customerName: name });
-                        setShowSuggestions(false);
-                        setSelectedSuggestionIndex(-1);
-                      }}
-                      className={`px-3 py-2 cursor-pointer transition-colors ${
-                        index === selectedSuggestionIndex
-                          ? 'bg-primary-50 text-primary-700'
-                          : 'hover:bg-gray-50'
-                      }`}
-                    >
-                      {name}
-                    </div>
-                  ))}
-                </div>
-              ) : null;
-            })()}
-            {orderForm.customerName.trim() && (() => {
-              const existingOrder = orders?.find(
-                order => order.customerName.toLowerCase().trim() === orderForm.customerName.toLowerCase().trim()
-              );
-
-              return existingOrder ? (
-                <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2">
-                  <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-yellow-800">
-                    <p className="font-medium">Pedido já existe para esta pessoa</p>
-                    <p className="mt-1">
-                      Por favor,{' '}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsOrderModalOpen(false);
-                          setEditingOrder(existingOrder);
-                          setEditOrderForm({
-                            customerName: existingOrder.customerName,
-                            items: existingOrder.items.map(item => ({
-                              productId: item.productId,
-                              quantity: item.quantity
-                            }))
-                          });
-                          setIsEditOrderModalOpen(true);
-                        }}
-                        className="font-semibold underline hover:text-yellow-900 transition-colors"
-                      >
-                        edite o pedido existente
-                      </button>
-                      {' '}ao invés de criar um novo.
-                    </p>
-                  </div>
-                </div>
-              ) : null;
-            })()}
+            {createOrderMutation.isPending && (
+              <p className="text-sm text-blue-600 mt-2 flex items-center gap-2">
+                <span className="animate-spin">⏳</span> Salvando automaticamente...
+              </p>
+            )}
           </div>
 
           <div>
@@ -2089,19 +2189,16 @@ export default function CampaignDetail() {
           </div>
 
           <div className="flex gap-3 pt-4">
-            <Button type="submit" disabled={createOrderMutation.isPending} className="flex-1 whitespace-nowrap">
-              {createOrderMutation.isPending ? 'Criando...' : 'Criar Pedido'}
-            </Button>
             <Button
               type="button"
               variant="secondary"
               onClick={handleCloseOrderModal}
-              className="whitespace-nowrap"
+              className="w-full whitespace-nowrap"
             >
-              Cancelar
+              Fechar
             </Button>
           </div>
-        </form>
+        </div>
       </Modal>
 
       {/* Modal: Editar Frete */}
@@ -2119,7 +2216,6 @@ export default function CampaignDetail() {
               type="number"
               step="0.01"
               min="0"
-              required
               autoFocus
               value={shippingCost}
               onChange={(e) => setShippingCost(e.target.value === '' ? '' : parseFloat(e.target.value))}
@@ -2155,107 +2251,15 @@ export default function CampaignDetail() {
         }}
         title="Editar Pedido"
       >
-        <form onSubmit={handleEditOrder} className="space-y-4">
+        <div className="space-y-4">
           <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-sm text-blue-800">
               <strong>Atalho:</strong> Alt+P para adicionar produto
             </p>
-          </div>
-          <div className="relative">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nome e Sobrenome *
-            </label>
-            <input
-              type="text"
-              required
-              autoFocus
-              value={editOrderForm.customerName}
-              onChange={(e) => {
-                setEditOrderForm({ ...editOrderForm, customerName: e.target.value });
-                setShowEditSuggestions(true);
-                setSelectedEditSuggestionIndex(-1);
-              }}
-              onKeyDown={(e) => {
-                const normalizedInput = normalizeString(editOrderForm.customerName);
-                const suggestions = orders
-                  ?.filter((order) => order.id !== editingOrder?.id)
-                  .map((order) => order.customerName)
-                  .filter((name, index, self) => self.indexOf(name) === index)
-                  .filter((name) => normalizeString(name).includes(normalizedInput))
-                  .sort() || [];
-
-                if (e.key === 'ArrowDown') {
-                  e.preventDefault();
-                  setSelectedEditSuggestionIndex((prev) =>
-                    prev < suggestions.length - 1 ? prev + 1 : prev
-                  );
-                } else if (e.key === 'ArrowUp') {
-                  e.preventDefault();
-                  setSelectedEditSuggestionIndex((prev) => (prev > 0 ? prev - 1 : -1));
-                } else if (e.key === 'Enter' && selectedEditSuggestionIndex >= 0) {
-                  e.preventDefault();
-                  setEditOrderForm({ ...editOrderForm, customerName: suggestions[selectedEditSuggestionIndex] });
-                  setShowEditSuggestions(false);
-                  setSelectedEditSuggestionIndex(-1);
-                } else if (e.key === 'Escape') {
-                  setShowEditSuggestions(false);
-                  setSelectedEditSuggestionIndex(-1);
-                }
-              }}
-              onFocus={() => setShowEditSuggestions(true)}
-              onBlur={() => {
-                // Delay para permitir clique nas sugestões
-                setTimeout(() => {
-                  setShowEditSuggestions(false);
-                  setSelectedEditSuggestionIndex(-1);
-                }, 200);
-              }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              autoComplete="off"
-            />
-            {showEditSuggestions && editOrderForm.customerName.trim() && (() => {
-              const normalizedInput = normalizeString(editOrderForm.customerName);
-              const suggestions = orders
-                ?.filter((order) => order.id !== editingOrder?.id)
-                .map((order) => order.customerName)
-                .filter((name, index, self) => self.indexOf(name) === index)
-                .filter((name) => normalizeString(name).includes(normalizedInput))
-                .sort() || [];
-
-              return suggestions.length > 0 ? (
-                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                  {suggestions.map((name, index) => (
-                    <div
-                      key={name}
-                      onClick={() => {
-                        setEditOrderForm({ ...editOrderForm, customerName: name });
-                        setShowEditSuggestions(false);
-                        setSelectedEditSuggestionIndex(-1);
-                      }}
-                      className={`px-3 py-2 cursor-pointer transition-colors ${
-                        index === selectedEditSuggestionIndex
-                          ? 'bg-primary-50 text-primary-700'
-                          : 'hover:bg-gray-50'
-                      }`}
-                    >
-                      {name}
-                    </div>
-                  ))}
-                </div>
-              ) : null;
-            })()}
-            {editOrderForm.customerName.trim() && editingOrder && orders?.some(
-              order =>
-                order.id !== editingOrder.id &&
-                order.customerName.toLowerCase().trim() === editOrderForm.customerName.toLowerCase().trim()
-            ) && (
-              <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2">
-                <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-yellow-800">
-                  <p className="font-medium">Pedido já existe para esta pessoa</p>
-                  <p className="mt-1">Já existe outro pedido com este nome. Por favor, escolha um nome diferente.</p>
-                </div>
-              </div>
+            {updateOrderWithItemsMutation.isPending && (
+              <p className="text-sm text-blue-600 mt-2 flex items-center gap-2">
+                <span className="animate-spin">⏳</span> Salvando automaticamente...
+              </p>
             )}
           </div>
 
@@ -2326,9 +2330,6 @@ export default function CampaignDetail() {
           </div>
 
           <div className="flex gap-3 pt-4">
-            <Button type="submit" disabled={updateOrderWithItemsMutation.isPending} className="flex-1 whitespace-nowrap">
-              {updateOrderWithItemsMutation.isPending ? 'Atualizando...' : 'Atualizar Pedido'}
-            </Button>
             <Button
               type="button"
               variant="secondary"
@@ -2336,12 +2337,12 @@ export default function CampaignDetail() {
                 setIsEditOrderModalOpen(false);
                 setEditingOrder(null);
               }}
-              className="whitespace-nowrap"
+              className="w-full whitespace-nowrap"
             >
-              Cancelar
+              Fechar
             </Button>
           </div>
-        </form>
+        </div>
       </Modal>
 
       {/* Modal: Editar Data Limite */}
@@ -2466,21 +2467,20 @@ export default function CampaignDetail() {
 
             {/* Botões de Ação */}
             <div className="flex gap-3 pt-4">
-              {isActive && (
+              {isActive && (user?.id === viewingOrder.userId || canEditCampaign) && (
                 <Button
-                  onClick={() => {
-                    setEditingOrder(viewingOrder);
-                    setEditOrderForm({
-                      customerName: viewingOrder.customerName,
-                      items: viewingOrder.items.map(item => ({
-                        productId: item.product.id,
-                        quantity: item.quantity
-                      }))
-                    });
-                    setIsViewOrderModalOpen(false);
-                    setViewingOrder(null);
-                    setIsEditOrderModalOpen(true);
-                  }}
+                  onClick={() =>
+                    requireAuth(
+                      () => openEditOrderModal(viewingOrder),
+                      {
+                        type: 'EDIT_ORDER',
+                        payload: {
+                          orderId: viewingOrder.id,
+                          campaignId: id!
+                        }
+                      }
+                    )
+                  }
                   className="flex-1 gap-2"
                 >
                   <Edit className="w-4 h-4" />

@@ -109,6 +109,7 @@ export interface Campaign {
   status: 'ACTIVE' | 'CLOSED' | 'SENT' | 'ARCHIVED';
   deadline?: string;
   shippingCost: number;
+  creatorId: string;
   createdAt: string;
   updatedAt: string;
   _count?: {
@@ -140,7 +141,13 @@ export interface OrderItem {
 export interface Order {
   id: string;
   campaignId: string;
-  customerName: string;
+  customerName?: string; // Opcional para compatibilidade com pedidos antigos
+  userId: string;
+  customer: {
+    id: string;
+    name: string;
+    email: string;
+  };
   isPaid: boolean;
   isSeparated: boolean;
   subtotal: number;
@@ -240,13 +247,11 @@ export const orderApi = {
     api.get<Order[]>('/orders', { params: { campaignId } }).then(res => res.data),
   create: (data: {
     campaignId: string;
-    customerName: string;
     items: Array<{ productId: string; quantity: number }>;
   }) => api.post<Order>('/orders', data).then(res => res.data),
   update: (id: string, data: Partial<Order>) =>
     api.patch<Order>(`/orders/${id}`, data).then(res => res.data),
   updateWithItems: (id: string, data: {
-    customerName?: string;
     items?: Array<{ productId: string; quantity: number }>;
   }) => api.put<Order>(`/orders/${id}`, data).then(res => res.data),
   delete: (id: string) => api.delete(`/orders/${id}`)

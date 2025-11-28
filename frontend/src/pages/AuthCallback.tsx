@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authStorage } from '../lib/authStorage';
 import { reconnectSocket } from '../lib/socket';
@@ -7,8 +7,17 @@ import toast from 'react-hot-toast';
 export default function AuthCallback() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const hasShownToast = useRef(false);
+  const hasProcessedCallback = useRef(false);
 
   useEffect(() => {
+    // Prevent double execution in React StrictMode
+    if (hasProcessedCallback.current) {
+      console.log('[AuthCallback] Já processado, ignorando segunda execução');
+      return;
+    }
+    hasProcessedCallback.current = true;
+
     const handleCallback = () => {
       // Check for error
       const error = searchParams.get('error');
@@ -32,7 +41,7 @@ export default function AuthCallback() {
         return;
       }
 
-      // Save auth data
+      // Save auth data to localStorage
       authStorage.setAuth(accessToken, refreshToken, {
         id: userId,
         name: decodeURIComponent(userName),
@@ -43,13 +52,23 @@ export default function AuthCallback() {
       // Reconnect socket with new token
       reconnectSocket();
 
-      toast.success(`Bem-vindo, ${decodeURIComponent(userName)}!`);
+      // Get return URL or default to campaigns
+      const returnUrl = authStorage.getReturnUrl() || '/campaigns';
+      console.log('[AuthCallback] returnUrl recuperado do storage:', returnUrl);
+      authStorage.clearReturnUrl();
 
-      // Redirect to home
-      navigate('/campaigns');
+      // Show welcome message (prevent duplicate toasts)
+      if (!hasShownToast.current) {
+        toast.success(`Bem-vindo, ${decodeURIComponent(userName)}!`);
+        hasShownToast.current = true;
+      }
 
-      // Reload to update auth state in entire app
-      window.location.reload();
+      // Navigate to the original page using React Router
+      // This avoids full page reload and preserves React state
+      // The AuthContext will pick up the user from localStorage on init
+      // The destination component will read pendingActionData on mount
+      console.log('[AuthCallback] Navegando para:', returnUrl);
+      navigate(returnUrl, { replace: true });
     };
 
     handleCallback();

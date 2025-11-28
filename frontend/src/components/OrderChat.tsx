@@ -16,11 +16,20 @@ export default function OrderChat({ orderId }: OrderChatProps) {
   const queryClient = useQueryClient();
   const socket = getSocket();
 
-  // Buscar mensagens
-  const { data: messages = [], isLoading } = useQuery({
+  // Buscar mensagens - só executa se o usuário estiver autenticado
+  const { data: messages = [], isLoading, isError, error } = useQuery({
     queryKey: ['messages', orderId],
     queryFn: () => messageApi.getByOrder(orderId),
-    refetchOnWindowFocus: false
+    enabled: !!user, // Conditional query: só executa se houver usuário
+    refetchOnWindowFocus: false,
+    retry: (failureCount, error: any) => {
+      // Não retenta em erros de autenticação (401, 403)
+      if (error?.response?.status === 401 || error?.response?.status === 403) {
+        return false;
+      }
+      // Retenta outras falhas até 2 vezes
+      return failureCount < 2;
+    }
   });
 
   // Mutation para enviar mensagem
@@ -116,6 +125,65 @@ export default function OrderChat({ orderId }: OrderChatProps) {
     return groups;
   }, {} as Record<string, OrderMessage[]>);
 
+  // Renderiza estado de não autenticado
+  const renderUnauthenticatedState = () => (
+    <div className="flex items-center justify-center h-full">
+      <div className="text-center max-w-sm px-4">
+        <div className="mb-4">
+          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Login Necessário</h3>
+        <p className="text-sm text-gray-500 mb-4">
+          Faça login para visualizar e enviar mensagens sobre este pedido
+        </p>
+        <button
+          onClick={() => {
+            requireAuth(() => {
+              // Após login, as mensagens serão carregadas automaticamente
+              queryClient.invalidateQueries({ queryKey: ['messages', orderId] });
+            });
+          }}
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          Fazer Login
+        </button>
+      </div>
+    </div>
+  );
+
+  // Renderiza estado de erro
+  const renderErrorState = () => {
+    const errorMessage = (error as any)?.response?.data?.message || 'Erro ao carregar mensagens';
+    const statusCode = (error as any)?.response?.status;
+
+    // Se for erro de autenticação, mostra estado de não autenticado
+    if (statusCode === 401 || statusCode === 403) {
+      return renderUnauthenticatedState();
+    }
+
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center max-w-sm px-4">
+          <div className="mb-4">
+            <svg className="mx-auto h-12 w-12 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Erro ao Carregar Mensagens</h3>
+          <p className="text-sm text-gray-500 mb-4">{errorMessage}</p>
+          <button
+            onClick={() => queryClient.invalidateQueries({ queryKey: ['messages', orderId] })}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Tentar Novamente
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col h-[500px] border rounded-lg bg-gray-50">
       {/* Header */}
@@ -126,7 +194,11 @@ export default function OrderChat({ orderId }: OrderChatProps) {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {isLoading ? (
+        {!user ? (
+          renderUnauthenticatedState()
+        ) : isError ? (
+          renderErrorState()
+        ) : isLoading ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-gray-500">Carregando mensagens...</div>
           </div>
@@ -186,13 +258,13 @@ export default function OrderChat({ orderId }: OrderChatProps) {
             type="text"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder="Digite sua mensagem..."
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            disabled={sendMessageMutation.isPending}
+            placeholder={user ? "Digite sua mensagem..." : "Faça login para enviar mensagens"}
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+            disabled={!user || sendMessageMutation.isPending}
           />
           <button
             type="submit"
-            disabled={!message.trim() || sendMessageMutation.isPending}
+            disabled={!user || !message.trim() || sendMessageMutation.isPending}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {sendMessageMutation.isPending ? 'Enviando...' : 'Enviar'}

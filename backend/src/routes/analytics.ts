@@ -35,6 +35,12 @@ router.get('/campaign/:campaignId', asyncHandler(async (req, res) => {
             include: {
               product: true
             }
+          },
+          customer: {
+            select: {
+              name: true,
+              email: true
+            }
           }
         }
       }
@@ -69,13 +75,20 @@ router.get('/campaign/:campaignId', asyncHandler(async (req, res) => {
     }
 
     // Agrega por cliente
-    if (!customerMap.has(order.customerName)) {
-      customerMap.set(order.customerName, {
+    // Para pedidos legados (usuário sistema), usa customerName original
+    // Para pedidos novos (usuários reais), usa customer.name
+    const isLegacyOrder = order.customer.email === 'sistema@compracoletiva.internal';
+    const customerName = isLegacyOrder && order.customerName
+      ? order.customerName
+      : order.customer.name;
+
+    if (!customerMap.has(customerName)) {
+      customerMap.set(customerName, {
         total: 0,
         isPaid: order.isPaid
       });
     }
-    const customerData = customerMap.get(order.customerName)!;
+    const customerData = customerMap.get(customerName)!;
     customerData.total += order.total;
 
     // Agrega por produto
