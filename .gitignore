@@ -23,6 +23,9 @@ backups/
 *.sql
 *.sql.gz
 
+# EXCEPT: Keep Prisma migrations SQL files
+!**/prisma/migrations/**/*.sql
+
 # Logs
 logs/
 *.log
