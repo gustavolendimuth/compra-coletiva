@@ -1,16 +1,16 @@
 import { Router } from 'express';
 import { prisma } from '../index';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
-import { requireAuth, requireOrderOwnership, optionalAuth } from '../middleware/authMiddleware';
+import { requireAuth, requireOrderOwnership, requireOrderOrCampaignOwnership, optionalAuth } from '../middleware/authMiddleware';
 import { z } from 'zod';
 import { ShippingCalculator } from '../services/shippingCalculator';
 import { emitOrderCreated, emitOrderUpdated, emitOrderDeleted, emitOrderStatusChanged } from '../services/socketService';
+import { Money } from '../utils/money';
 
 const router = Router();
 
 const createOrderSchema = z.object({
   campaignId: z.string(),
-  customerName: z.string().min(1).optional(), // Opcional, usa user.name se não fornecido
   items: z.array(z.object({
     productId: z.string(),
     quantity: z.number().int().min(1)
@@ -70,6 +70,13 @@ router.get('/', optionalAuth, asyncHandler(async (req, res) => {
         include: {
           product: true
         }
+      },
+      customer: {
+        select: {
+          id: true,
+          name: true,
+          email: true
+        }
       }
     },
     orderBy: { createdAt: 'asc' }
@@ -89,6 +96,13 @@ router.get('/:id', asyncHandler(async (req, res) => {
         include: {
           product: true
         }
+      },
+      customer: {
+        select: {
+          id: true,
+          name: true,
+          email: true
+        }
       }
     }
   });
@@ -100,7 +114,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
   res.json(order);
 }));
 
-// POST /api/orders - Cria um novo pedido
+// POST /api/orders - Cria um novo pedido ou adiciona itens a um existente
 router.post('/', requireAuth, asyncHandler(async (req, res) => {
   const data = createOrderSchema.parse(req.body);
 
@@ -126,38 +140,81 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
   type ProductType = typeof products[number];
   const productMap = new Map<string, ProductType>(products.map(p => [p.id, p]));
 
-  // Usa nome fornecido ou nome do usuário
-  const customerName = data.customerName || req.user!.name;
+  // Verifica se já existe um pedido do usuário nesta campanha
+  const existingOrder = await prisma.order.findUnique({
+    where: {
+      campaignId_userId: {
+        campaignId: data.campaignId,
+        userId: req.user!.id
+      }
+    },
+    include: {
+      items: true
+    }
+  });
 
-  // Cria o pedido com itens
-  const order = await prisma.order.create({
-    data: {
-      campaignId: data.campaignId,
-      customerName,
-      userId: req.user!.id, // Adiciona userId do usuário autenticado
-      items: {
-        create: data.items.map(item => {
+  let order;
+  let isNewOrder = false;
+
+  if (existingOrder) {
+    // Pedido existe - substituir/atualizar itens
+    // Remove todos os itens antigos e cria novos com as quantidades enviadas
+    await prisma.$transaction(async (tx) => {
+      // Remove todos os itens antigos
+      await tx.orderItem.deleteMany({
+        where: { orderId: existingOrder.id }
+      });
+
+      // Cria novos itens com as quantidades enviadas
+      await tx.orderItem.createMany({
+        data: data.items.map(item => {
           const product = productMap.get(item.productId);
           if (!product) {
             throw new AppError(400, `Product ${item.productId} not found`);
           }
           return {
+            orderId: existingOrder.id,
             productId: item.productId,
             quantity: item.quantity,
             unitPrice: product.price,
-            subtotal: product.price * item.quantity
+            subtotal: Money.multiply(product.price, item.quantity)
           };
         })
-      }
-    },
-    include: {
-      items: {
-        include: {
-          product: true
+      });
+    });
+
+    order = existingOrder;
+  } else {
+    // Pedido não existe - criar novo
+    isNewOrder = true;
+    order = await prisma.order.create({
+      data: {
+        campaignId: data.campaignId,
+        userId: req.user!.id, // Vincula ao usuário autenticado
+        items: {
+          create: data.items.map(item => {
+            const product = productMap.get(item.productId);
+            if (!product) {
+              throw new AppError(400, `Product ${item.productId} not found`);
+            }
+            return {
+              productId: item.productId,
+              quantity: item.quantity,
+              unitPrice: product.price,
+              subtotal: Money.multiply(product.price, item.quantity)
+            };
+          })
+        }
+      },
+      include: {
+        items: {
+          include: {
+            product: true
+          }
         }
       }
-    }
-  });
+    });
+  }
 
   // Recalcula subtotal e frete
   await ShippingCalculator.recalculateOrderSubtotal(order.id);
@@ -170,18 +227,33 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
         include: {
           product: true
         }
+      },
+      customer: {
+        select: {
+          id: true,
+          name: true,
+          email: true
+        }
       }
     }
   });
 
-  // Emite evento de criação
-  emitOrderCreated(data.campaignId, updatedOrder);
+  // Emite evento apropriado
+  if (isNewOrder) {
+    emitOrderCreated(data.campaignId, updatedOrder);
+  } else {
+    emitOrderUpdated(data.campaignId, updatedOrder);
+  }
 
-  res.status(201).json(updatedOrder);
+  // Retorna status 200 se atualizou, 201 se criou
+  res.status(isNewOrder ? 201 : 200).json({
+    ...updatedOrder,
+    isNewOrder
+  });
 }));
 
 // PATCH /api/orders/:id - Atualiza um pedido (apenas campos simples)
-router.patch('/:id', requireAuth, requireOrderOwnership, asyncHandler(async (req, res) => {
+router.patch('/:id', requireAuth, requireOrderOrCampaignOwnership, asyncHandler(async (req, res) => {
   const { id } = req.params;
   const data = updateOrderSchema.parse(req.body);
 
@@ -194,7 +266,14 @@ router.patch('/:id', requireAuth, requireOrderOwnership, asyncHandler(async (req
           product: true
         }
       },
-      campaign: true
+      campaign: true,
+      customer: {
+        select: {
+          id: true,
+          name: true,
+          email: true
+        }
+      }
     }
   });
 
@@ -204,7 +283,7 @@ router.patch('/:id', requireAuth, requireOrderOwnership, asyncHandler(async (req
       orderId: order.id,
       isPaid: order.isPaid,
       isSeparated: order.isSeparated,
-      customerName: order.customerName
+      customerName: order.customer.name
     });
   } else {
     // Caso contrário, emite atualização geral
@@ -266,28 +345,15 @@ router.put('/:id', requireAuth, requireOrderOwnership, asyncHandler(async (req, 
             productId: item.productId,
             quantity: item.quantity,
             unitPrice: product.price,
-            subtotal: product.price * item.quantity
+            subtotal: Money.multiply(product.price, item.quantity)
           };
         })
       });
 
-      // Atualiza nome do cliente se fornecido
-      if (data.customerName) {
-        await tx.order.update({
-          where: { id },
-          data: { customerName: data.customerName }
-        });
-      }
     });
 
     // Recalcula subtotal e frete
     await ShippingCalculator.recalculateOrderSubtotal(id);
-  } else if (data.customerName) {
-    // Apenas atualiza o nome se não há itens
-    await prisma.order.update({
-      where: { id },
-      data: { customerName: data.customerName }
-    });
   }
 
   // Busca pedido atualizado
@@ -299,7 +365,14 @@ router.put('/:id', requireAuth, requireOrderOwnership, asyncHandler(async (req, 
           product: true
         }
       },
-      campaign: true
+      campaign: true,
+      customer: {
+        select: {
+          id: true,
+          name: true,
+          email: true
+        }
+      }
     }
   });
 
@@ -344,7 +417,7 @@ router.post('/:id/items', requireAuth, requireOrderOwnership, asyncHandler(async
       productId: data.productId,
       quantity: data.quantity,
       unitPrice: product.price,
-      subtotal: product.price * data.quantity
+      subtotal: Money.multiply(product.price, data.quantity)
     }
   });
 
@@ -358,7 +431,14 @@ router.post('/:id/items', requireAuth, requireOrderOwnership, asyncHandler(async
           product: true
         }
       },
-      campaign: true
+      campaign: true,
+      customer: {
+        select: {
+          id: true,
+          name: true,
+          email: true
+        }
+      }
     }
   });
 

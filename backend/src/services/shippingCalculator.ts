@@ -1,4 +1,5 @@
 import { prisma } from '../index';
+import { Money } from '../utils/money';
 
 interface OrderItemWithWeight {
   orderId: string;
@@ -32,7 +33,6 @@ export class ShippingCalculator {
 
     const totalShipping = campaign.shippingCost;
     const orderWeights: OrderItemWithWeight[] = [];
-    let totalWeight = 0;
 
     // Calcula peso total de cada pedido
     for (const order of campaign.orders) {
@@ -51,37 +51,26 @@ export class ShippingCalculator {
           totalWeight: orderWeight,
           subtotal
         });
-        totalWeight += orderWeight;
       }
     }
 
-    // Distribui o frete proporcionalmente
-    let distributedShipping = 0;
+    // Distribui o frete proporcionalmente usando Money utility
+    const weights = orderWeights.map(o => o.totalWeight);
+    const shippingFees = Money.distributeProportionally(totalShipping, weights);
 
+    // Atualiza cada pedido com o frete distribuído
     for (let i = 0; i < orderWeights.length; i++) {
       const orderData = orderWeights[i];
-      let shippingFee: number;
-
-      // Última linha recebe o resto para evitar erros de arredondamento
-      if (i === orderWeights.length - 1) {
-        shippingFee = totalShipping - distributedShipping;
-      } else {
-        shippingFee = totalWeight > 0
-          ? (orderData.totalWeight / totalWeight) * totalShipping
-          : 0;
-      }
-
-      const total = orderData.subtotal + shippingFee;
+      const shippingFee = shippingFees[i];
+      const total = Money.add(orderData.subtotal, shippingFee);
 
       await prisma.order.update({
         where: { id: orderData.orderId },
         data: {
-          shippingFee: Math.round(shippingFee * 100) / 100,
-          total: Math.round(total * 100) / 100
+          shippingFee,
+          total
         }
       });
-
-      distributedShipping += shippingFee;
     }
   }
 
@@ -98,7 +87,8 @@ export class ShippingCalculator {
       throw new Error('Order not found');
     }
 
-    const subtotal = order.items.reduce((sum, item) => sum + item.subtotal, 0);
+    // Sum item subtotals with Money utility
+    const subtotal = Money.sum(order.items.map(item => item.subtotal));
 
     await prisma.order.update({
       where: { id: orderId },
