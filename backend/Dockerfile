@@ -10,6 +10,10 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma
 
+# Debug - verifica o schema copiado
+RUN echo "=== Checking schema.prisma content ===" && \
+    cat prisma/schema.prisma | grep -A 15 "^model User"
+
 # Instala dependências
 RUN npm install
 
@@ -23,7 +27,9 @@ RUN echo "=== Debug: Checking prisma in builder stage ===" && \
     ls -la node_modules/@prisma/client/ && \
     ls -la node_modules/.prisma/client/ && \
     echo "=== Checking User model in generated types ===" && \
-    grep -A 5 "export type User = {" node_modules/.prisma/client/index.d.ts | head -10 && \
+    grep -i "user" node_modules/.prisma/client/index.d.ts | head -20 && \
+    echo "=== Checking if UserRole exists ===" && \
+    grep -A 3 "UserRole" node_modules/.prisma/client/index.d.ts | head -10 && \
     echo "=== Migrations and Prisma Client found ===" || echo "=== ERROR: Missing files ==="
 
 # Copia o código fonte
