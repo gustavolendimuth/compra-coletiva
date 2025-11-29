@@ -20,9 +20,11 @@ ls -la prisma/migrations/ || echo "⚠️  No migrations directory found"
 # Executa migrations do Prisma
 echo "📦 Running database migrations..."
 
-# Primeiro, resolve a migração falhada específica (se houver)
+# Primeiro, resolve migrações falhadas específicas (se houver)
 echo "🔍 Resolving any failed migrations..."
-npx prisma migrate resolve --rolled-back "20251125200000_populate_legacy_user_data" 2>/dev/null || echo "No failed migration to resolve (or already resolved)"
+npx prisma migrate resolve --rolled-back "20251125200000_populate_legacy_user_data" 2>/dev/null || true
+npx prisma migrate resolve --rolled-back "20251125232754_add_unique_constraint_campaign_user" 2>/dev/null || true
+echo "✅ Failed migrations resolved (if any)"
 
 # Agora roda as migrations
 npx prisma migrate deploy

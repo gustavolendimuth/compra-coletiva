@@ -130,10 +130,10 @@ model Order {
   messages    OrderMessage[]
 
   @@map("orders")
-  @@unique([campaignId, userId])
   @@index([campaignId])
   @@index([customerName])
   @@index([userId])
+  @@index([campaignId, userId])
 }
 
 model OrderItem {
