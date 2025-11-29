@@ -15,6 +15,7 @@
     "backup": "tsx scripts/backup-db.ts",
     "restore": "tsx scripts/restore-db.ts",
     "seed:migrate": "tsx prisma/seed-migration.ts",
+    "migration:add-legacy-field": "node scripts/add-is-legacy-user-field.js",
     "validate:financial": "node scripts/validate-financial-integrity.js",
     "fix:financial": "node scripts/recalculate-all-campaigns.js",
     "fix:legacy-users": "node scripts/fix-legacy-users.js",
