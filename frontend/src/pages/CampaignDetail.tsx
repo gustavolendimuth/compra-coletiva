@@ -57,13 +57,10 @@ const normalizeString = (str: string): string => {
 };
 
 // Helper function para obter o nome de exibição do cliente
-// Para pedidos legados (usuário sistema), usa customerName original
-// Para pedidos novos (usuários reais), usa customer.name
+// Com usuários virtuais, cada pedido legado tem seu próprio usuário virtual
+// Então podemos sempre usar customer.name
 const getCustomerDisplayName = (order: Order): string => {
-  const isLegacyOrder = order.customer.email === 'sistema@compracoletiva.internal';
-  return isLegacyOrder && order.customerName
-    ? order.customerName
-    : order.customer.name;
+  return order.customer.name;
 };
 
 export default function CampaignDetail() {

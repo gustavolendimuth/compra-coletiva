@@ -75,12 +75,9 @@ router.get('/campaign/:campaignId', asyncHandler(async (req, res) => {
     }
 
     // Agrega por cliente
-    // Para pedidos legados (usuário sistema), usa customerName original
-    // Para pedidos novos (usuários reais), usa customer.name
-    const isLegacyOrder = order.customer.email === 'sistema@compracoletiva.internal';
-    const customerName = isLegacyOrder && order.customerName
-      ? order.customerName
-      : order.customer.name;
+    // Com usuários virtuais, cada pedido legado tem seu próprio usuário virtual
+    // Então podemos sempre usar customer.name
+    const customerName = order.customer.name;
 
     if (!customerMap.has(customerName)) {
       customerMap.set(customerName, {

@@ -10,14 +10,15 @@ datasource db {
 // ========== AUTHENTICATION MODELS ==========
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String?  // Nullable para Google OAuth
-  name      String   @unique
-  role      UserRole @default(CUSTOMER)
-  googleId  String?  @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  email        String   @unique
+  password     String?  // Nullable para Google OAuth
+  name         String   // Removed @unique - uniqueness enforced at app level for non-legacy users
+  role         UserRole @default(CUSTOMER)
+  googleId     String?  @unique
+  isLegacyUser Boolean  @default(false) // Flag para diferenciar usuários virtuais (legados) de usuários reais
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Relações
   campaigns           Campaign[]            @relation("CampaignCreator")
