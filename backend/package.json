@@ -14,6 +14,8 @@
     "backup": "tsx scripts/backup-db.ts",
     "restore": "tsx scripts/restore-db.ts",
     "seed:migrate": "tsx prisma/seed-migration.ts",
+    "validate:financial": "node scripts/validate-financial-integrity.js",
+    "fix:financial": "node scripts/recalculate-all-campaigns.js",
     "clean": "rm -rf dist node_modules"
   },
   "dependencies": {

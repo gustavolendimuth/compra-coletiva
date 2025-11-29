@@ -14,7 +14,7 @@ Este guia descreve como aplicar o fix de precisão financeira nas campanhas em p
 
 Primeiro, vamos verificar quais campanhas têm erro de precisão:
 
-### Opção A: Via Railway CLI
+### Opção A: Via Railway CLI (Recomendado)
 
 ```bash
 # Instalar Railway CLI (se ainda não tiver)
@@ -27,10 +27,19 @@ railway login
 railway link
 
 # Executar validação
-railway run node scripts/validate-financial-integrity.js
+railway run npm run validate:financial
 ```
 
-### Opção B: Via Railway Console
+### Opção B: Via Railway SSH
+
+```bash
+railway ssh
+
+# Dentro do SSH
+npm run validate:financial
+```
+
+### Opção C: Via Railway Console (Database URL)
 
 1. Acesse https://railway.app
 2. Vá no seu projeto
@@ -81,13 +90,22 @@ Failed: 3  ← ⚠️ 3 campanhas precisam ser recalculadas
 
 ### Executar Recalculação
 
-#### Opção A: Via Railway CLI
+#### Opção A: Via Railway CLI (Recomendado)
 
 ```bash
-railway run node scripts/recalculate-all-campaigns.js
+railway run npm run fix:financial
 ```
 
-#### Opção B: Via Conexão Direta
+#### Opção B: Via Railway SSH
+
+```bash
+railway ssh
+
+# Dentro do SSH
+npm run fix:financial
+```
+
+#### Opção C: Via Conexão Direta
 
 ```bash
 DATABASE_URL="<DATABASE_URL>" node backend/scripts/recalculate-all-campaigns.js
@@ -116,8 +134,17 @@ Errors: 0
 
 Execute a validação novamente para confirmar que tudo está correto:
 
+### Via Railway CLI
+
 ```bash
-railway run node scripts/validate-financial-integrity.js
+railway run npm run validate:financial
+```
+
+### Via Railway SSH
+
+```bash
+railway ssh
+npm run validate:financial
 ```
 
 ### 🎯 Resultado Esperado
