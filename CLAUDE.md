@@ -42,6 +42,11 @@ npx prisma migrate dev --name <migration_name>
 
 # Apply migrations in production
 npx prisma migrate deploy
+# Or via npm script:
+npm run prisma:migrate:deploy
+
+# Migrate legacy users (creates virtual users for legacy orders)
+npm run fix:legacy-users
 
 # Open Prisma Studio (database GUI at http://localhost:5555)
 npx prisma studio
@@ -255,6 +260,37 @@ Every campaign must satisfy:
 
 If any validation fails, investigate before deploying to production.
 
+## Legacy Users & Data Migration
+
+### User Authentication System
+The system differentiates between real users and legacy virtual users:
+
+- **Real Users** (`isLegacyUser = false`):
+  - Can login with email/password or Google OAuth
+  - Have unique names (enforced by partial unique index)
+  - Can create campaigns and place orders
+
+- **Legacy Virtual Users** (`isLegacyUser = true`):
+  - Created automatically for orders that existed before authentication system
+  - Cannot login (no password, email domain `@legacy.local`)
+  - Allow duplicate names (to preserve historical data)
+  - Each `customerName` from legacy orders gets its own virtual user
+
+### Migration Commands
+
+```bash
+# Apply schema migration (adds isLegacyUser field)
+npm run prisma:migrate:deploy
+
+# Migrate legacy order data (creates virtual users)
+npm run fix:legacy-users
+
+# Validate data integrity after migration
+npm run validate:financial
+```
+
+**Documentation**: See [`QUICK_START_LEGACY_MIGRATION.md`](QUICK_START_LEGACY_MIGRATION.md) for complete guide.
+
 ## Important Notes
 
 - **Shipping Recalculation**: Any order modification must trigger shipping recalculation to maintain accuracy
@@ -263,3 +299,4 @@ If any validation fails, investigate before deploying to production.
 - **Monorepo Commands**: Use `--workspace=<name>` or `--workspaces` flags for npm scripts
 - **Container First**: Development primarily uses Docker Compose; running services directly is optional
 - **Financial Precision**: Always use Money utility for calculations - see Financial Calculations section above
+- **User Name Uniqueness**: Only enforced for non-legacy users via partial unique index and application-level validation

@@ -10,12 +10,14 @@
     "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "backup": "tsx scripts/backup-db.ts",
     "restore": "tsx scripts/restore-db.ts",
     "seed:migrate": "tsx prisma/seed-migration.ts",
     "validate:financial": "node scripts/validate-financial-integrity.js",
     "fix:financial": "node scripts/recalculate-all-campaigns.js",
+    "fix:legacy-users": "node scripts/fix-legacy-users.js",
     "clean": "rm -rf dist node_modules"
   },
   "dependencies": {

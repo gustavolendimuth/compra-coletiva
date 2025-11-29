@@ -1,44 +1,37 @@
 # Scripts de Migração - Usuários Legados
 
-## Execução Rápida
+## 🚀 Execução Rápida
 
 ### Ambiente Local (Docker)
 
 ```bash
-# 1. Criar migration do Prisma
-docker exec compra-coletiva-backend npx prisma migrate dev --name fix_legacy_users_structure
+# Método Recomendado (via npm scripts)
+docker exec compra-coletiva-backend npm run prisma:migrate:deploy
+docker exec compra-coletiva-backend npm run fix:legacy-users
 
-# Ou aplicar SQL diretamente (alternativa)
+# Método Alternativo (SQL direto)
 docker exec compra-coletiva-backend sh -c "PGPASSWORD=postgres psql -h db -U postgres -d compra_coletiva -f /app/scripts/fix-legacy-users.sql"
 
-# 2. Regenerar Prisma Client
-docker exec compra-coletiva-backend npx prisma generate
-
-# 3. Reiniciar backend
-docker-compose restart backend
-
-# 4. Verificar resultado
-docker exec compra-coletiva-backend sh -c "PGPASSWORD=postgres psql -h db -U postgres -d compra_coletiva -c \"SELECT name, email, \\\"isLegacyUser\\\", (SELECT COUNT(*) FROM orders WHERE \\\"userId\\\" = users.id) as order_count FROM users WHERE \\\"isLegacyUser\\\" = true;\""
+# Verificar resultado
+docker exec compra-coletiva-backend sh -c "PGPASSWORD=postgres psql -h db -U postgres -d compra_coletiva -c \"SELECT name, email, \\\"isLegacyUser\\\", (SELECT COUNT(*) FROM orders WHERE \\\"userId\\\" = users.id) as order_count FROM users WHERE \\\"isLegacyUser\\\" = true ORDER BY order_count DESC LIMIT 10;\""
 ```
 
 ### Railway (Produção)
 
 ```bash
-# Opção 1: Via Railway CLI
+# Método Recomendado (via Railway CLI + npm scripts)
 railway link
+railway run --service backend npm run prisma:migrate:deploy
+railway run --service backend npm run fix:legacy-users
+
+# Método Alternativo (SQL direto)
 railway run --service postgres psql < backend/scripts/fix-legacy-users.sql
 
-# Opção 2: Via Railway Connect
-railway connect postgres
-# Dentro do psql:
-\i backend/scripts/fix-legacy-users.sql
-
-# Opção 3: Via Railway Console
-# 1. Abrir Railway Dashboard
-# 2. Ir em Database > Query
-# 3. Copiar e colar conteúdo de fix-legacy-users.sql
-# 4. Executar
+# Verificar resultado
+railway run --service backend npx prisma studio
 ```
+
+**📖 Documentação Completa**: Ver [`../../RAILWAY_LEGACY_MIGRATION.md`](../../RAILWAY_LEGACY_MIGRATION.md)
 
 ## Verificação
 
