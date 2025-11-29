@@ -141,12 +141,10 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
   const productMap = new Map<string, ProductType>(products.map(p => [p.id, p]));
 
   // Verifica se já existe um pedido do usuário nesta campanha
-  const existingOrder = await prisma.order.findUnique({
+  const existingOrder = await prisma.order.findFirst({
     where: {
-      campaignId_userId: {
-        campaignId: data.campaignId,
-        userId: req.user!.id
-      }
+      campaignId: data.campaignId,
+      userId: req.user!.id
     },
     include: {
       items: true
