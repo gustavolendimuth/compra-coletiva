@@ -44,6 +44,9 @@ RUN npm install prisma --save-dev
 # Copia arquivos compilados do builder
 COPY --from=builder /app/dist ./dist
 
+# Copia scripts de manutenção e migrations
+COPY scripts ./scripts
+
 # Copia script de inicialização
 COPY start.sh ./start.sh
 RUN chmod +x start.sh
