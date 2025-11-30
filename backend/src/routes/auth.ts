@@ -97,12 +97,9 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Verifica se nome já existe (apenas entre usuários não-legados)
-    const existingName = await prisma.user.findFirst({
-      where: {
-        name,
-        isLegacyUser: false, // Apenas verifica usuários reais
-      },
+    // Verifica se nome já existe
+    const existingName = await prisma.user.findUnique({
+      where: { name },
     });
 
     if (existingName) {
@@ -581,16 +578,12 @@ router.patch('/profile', requireAuth, async (req: Request, res: Response): Promi
 
     // Atualiza nome se fornecido
     if (name) {
-      // Verifica se nome já existe (exceto se for o próprio usuário, apenas entre usuários não-legados)
-      const existingName = await prisma.user.findFirst({
-        where: {
-          name,
-          isLegacyUser: false, // Apenas verifica usuários reais
-          id: { not: req.user!.id },
-        },
+      // Verifica se nome já existe (exceto se for o próprio usuário)
+      const existingName = await prisma.user.findUnique({
+        where: { name },
       });
 
-      if (existingName) {
+      if (existingName && existingName.id !== req.user!.id) {
         res.status(409).json({
           error: 'NAME_ALREADY_EXISTS',
           message: 'Este nome já está em uso. Por favor, escolha outro nome',

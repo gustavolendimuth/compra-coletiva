@@ -14,6 +14,7 @@ export interface RegisterRequest {
   name: string;
   email: string;
   password: string;
+  role?: 'CUSTOMER' | 'CAMPAIGN_CREATOR';
 }
 
 export interface LoginRequest {
