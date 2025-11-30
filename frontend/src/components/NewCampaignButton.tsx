@@ -9,7 +9,7 @@ import Modal from '@/components/Modal';
 import DateTimeInput from '@/components/DateTimeInput';
 
 export const NewCampaignButton: React.FC = () => {
-  const { requireAuth, isAuthenticated, refreshUser } = useAuth();
+  const { requireAuth, refreshUser } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState<{
     name: string;
