@@ -57,10 +57,6 @@ export const NewCampaignButton: React.FC = () => {
     });
   };
 
-  if (!isAuthenticated) {
-    return null;
-  }
-
   return (
     <>
       <Button
