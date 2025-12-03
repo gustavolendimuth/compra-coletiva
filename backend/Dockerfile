@@ -13,6 +13,9 @@ COPY prisma ./prisma
 # Instala dependências (postinstall automaticamente gera Prisma Client)
 RUN npm install
 
+# Garante que o Prisma Client está gerado (dupla verificação)
+RUN npx prisma generate
+
 # Copia o código fonte
 COPY src ./src
 COPY tsconfig.json ./

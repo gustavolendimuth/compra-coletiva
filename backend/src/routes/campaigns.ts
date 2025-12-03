@@ -108,10 +108,12 @@ async function getSuggestions(
     ? Prisma.sql`AND c.id NOT IN (${Prisma.join(excludeIds.map(id => Prisma.sql`${id}`))})`
     : Prisma.sql``;
 
+  const whereCondition = Prisma.join(wordConditions, ' OR ');
+
   const results = await prisma.$queryRaw<{ id: string; createdAt: Date }[]>`
     SELECT DISTINCT c.id, c."createdAt"
     FROM campaigns c
-    WHERE (${Prisma.join(wordConditions, Prisma.sql` OR `)})
+    WHERE (${whereCondition})
     ${excludeCondition}
     ORDER BY c."createdAt" DESC
     LIMIT ${limit}
