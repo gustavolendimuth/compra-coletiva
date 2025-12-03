@@ -2,7 +2,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { LogOut, ChevronDown } from 'lucide-react';
 
-export const UserMenu: React.FC = () => {
+interface UserMenuProps {
+  variant?: 'default' | 'mobile';
+  onAction?: () => void; // Callback for when an action is performed (like logout)
+}
+
+export const UserMenu: React.FC<UserMenuProps> = ({ variant = 'default', onAction }) => {
   const { user, logout, isAuthenticated } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -27,6 +32,7 @@ export const UserMenu: React.FC = () => {
   const handleLogout = async () => {
     await logout();
     setIsOpen(false);
+    onAction?.(); // Call callback if provided
   };
 
   const openAuthModal = (tab: 'login' | 'register' = 'login') => {
@@ -65,6 +71,32 @@ export const UserMenu: React.FC = () => {
     }
   };
 
+  // Mobile variant - fixed layout with all info visible
+  if (variant === 'mobile') {
+    return (
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-medium text-lg flex-shrink-0">
+            {user.name.charAt(0).toUpperCase()}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-base font-semibold text-gray-900 truncate">{user.name}</div>
+            <div className="text-sm text-gray-600 truncate">{user.email}</div>
+            <div className="text-xs text-gray-500 mt-0.5">{getRoleName(user.role)}</div>
+          </div>
+        </div>
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+        >
+          <LogOut size={18} />
+          Sair da Conta
+        </button>
+      </div>
+    );
+  }
+
+  // Default variant - dropdown menu
   return (
     <div className="relative" ref={menuRef}>
       <button

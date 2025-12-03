@@ -46,6 +46,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import DateTimeInput from '@/components/DateTimeInput';
 import { SkeletonDetailHeader, SkeletonProductCard } from '@/components/Skeleton';
 import OrderChat from '@/components/OrderChat';
+import OrderCard from '@/components/campaign/OrderCard';
 
 // Helper function para normalizar strings (remover acentos)
 const normalizeString = (str: string): string => {
@@ -1232,36 +1233,36 @@ export default function CampaignDetail() {
           {/* Resumo Financeiro */}
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumo Financeiro</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <Card>
                 <div className="text-sm text-gray-500 mb-1">Total de Pessoas</div>
-                <div className="text-3xl font-bold text-gray-900">{analytics.byCustomer.length}</div>
+                <div className="text-2xl md:text-3xl font-bold text-gray-900">{analytics.byCustomer.length}</div>
               </Card>
               <Card>
                 <div className="text-sm text-gray-500 mb-1">Total de Itens</div>
-                <div className="text-3xl font-bold text-gray-900">{analytics.totalQuantity}</div>
+                <div className="text-2xl md:text-3xl font-bold text-gray-900">{analytics.totalQuantity}</div>
               </Card>
               <Card>
                 <div className="text-sm text-gray-500 mb-1">Total sem Frete</div>
-                <div className="text-3xl font-bold text-gray-900">
+                <div className="text-xl md:text-3xl font-bold text-gray-900">
                   {formatCurrency(analytics.totalWithoutShipping)}
                 </div>
               </Card>
               <Card>
                 <div className="text-sm text-gray-500 mb-1">Total com Frete</div>
-                <div className="text-3xl font-bold text-gray-900">
+                <div className="text-xl md:text-3xl font-bold text-gray-900">
                   {formatCurrency(analytics.totalWithShipping)}
                 </div>
               </Card>
               <Card>
                 <div className="text-sm text-gray-500 mb-1">Total Pago</div>
-                <div className="text-3xl font-bold text-green-600">
+                <div className="text-xl md:text-3xl font-bold text-green-600">
                   {formatCurrency(analytics.totalPaid)}
                 </div>
               </Card>
               <Card>
                 <div className="text-sm text-gray-500 mb-1">Total Não Pago</div>
-                <div className="text-3xl font-bold text-red-600">
+                <div className="text-xl md:text-3xl font-bold text-red-600">
                   {formatCurrency(analytics.totalUnpaid)}
                 </div>
               </Card>
@@ -1274,87 +1275,87 @@ export default function CampaignDetail() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
               <Card className="h-fit">
                 <h4 className="font-semibold mb-4 text-gray-800">Por Pessoa</h4>
-              <div className="space-y-3">
-                {[...analytics.byCustomer]
-                  .sort((a, b) => (a.customerName || '').localeCompare(b.customerName || ''))
-                  .map((item, index) => {
-                    // Encontrar o pedido correspondente à pessoa
-                    const order = orders?.find(o => getCustomerDisplayName(o) === item.customerName);
+                <div className="space-y-3">
+                  {[...analytics.byCustomer]
+                    .sort((a, b) => (a.customerName || '').localeCompare(b.customerName || ''))
+                    .map((item, index) => {
+                      // Encontrar o pedido correspondente à pessoa
+                      const order = orders?.find(o => getCustomerDisplayName(o) === item.customerName);
 
-                    return (
-                      <div key={index} className="flex flex-col gap-2 md:flex-row md:justify-between md:items-center pb-3 border-b last:border-b-0 last:pb-0">
-                        {/* Linha 1: Nome e Total */}
-                        <div className="flex justify-between items-center gap-3 md:flex-1">
-                          <span className="text-gray-900 font-medium flex-1 min-w-0">{item.customerName}</span>
-                          <span className="font-semibold text-gray-900 whitespace-nowrap">
-                            {formatCurrency(item.total)}
-                          </span>
-                        </div>
+                      return (
+                        <div key={index} className="flex flex-col gap-2 pb-3 border-b last:border-b-0 last:pb-0">
+                          {/* Linha 1: Nome e Botões de Ações */}
+                          <div className="flex justify-between items-center gap-3">
+                            <span className="text-gray-900 font-medium flex-1 min-w-0">{item.customerName}</span>
 
-                        {/* Linha 2: Status e Ações */}
-                        <div className="flex items-center justify-between gap-3 md:justify-end">
-                          <span className={`px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap ${item.isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                            }`}>
-                            {item.isPaid ? 'Pago' : 'Pendente'}
-                          </span>
+                            <div className="flex items-center gap-2">
+                              {order && (
+                                <>
+                                  <IconButton
+                                    size="sm"
+                                    variant="secondary"
+                                    icon={<Eye className="w-5 h-5" />}
+                                    onClick={() => {
+                                      setViewingOrder(order);
+                                      setIsViewOrderModalOpen(true);
+                                    }}
+                                    title="Visualizar pedido"
+                                  />
+                                  <IconButton
+                                    size="sm"
+                                    variant={item.isPaid ? 'success' : 'secondary'}
+                                    icon={<CircleDollarSign className="w-5 h-5" />}
+                                    onClick={() =>
+                                      requireAuth(
+                                        () =>
+                                          updateOrderMutation.mutate({
+                                            orderId: order.id,
+                                            data: { isPaid: !item.isPaid }
+                                          }),
+                                        {
+                                          type: 'UPDATE_ORDER_PAYMENT',
+                                          payload: { orderId: order.id, isPaid: !item.isPaid }
+                                        }
+                                      )
+                                    }
+                                    title={item.isPaid ? 'Marcar como não pago' : 'Marcar como pago'}
+                                  />
+                                </>
+                              )}
+                            </div>
+                          </div>
 
-                          <div className="flex items-center gap-2">
+                          {/* Linha 2: Status e Valor */}
+                          <div className="flex items-center justify-between gap-3">
+                            <span className={`px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap ${item.isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                              }`}>
+                              {item.isPaid ? 'Pago' : 'Pendente'}
+                            </span>
 
-                            {order && (
-                              <>
-                                <IconButton
-                                  size="sm"
-                                  variant="secondary"
-                                  icon={<Eye className="w-5 h-5" />}
-                                  onClick={() => {
-                                    setViewingOrder(order);
-                                    setIsViewOrderModalOpen(true);
-                                  }}
-                                  title="Visualizar pedido"
-                                />
-                                <IconButton
-                                  size="sm"
-                                  variant={item.isPaid ? 'success' : 'secondary'}
-                                  icon={<CircleDollarSign className="w-5 h-5" />}
-                                  onClick={() =>
-                                    requireAuth(
-                                      () =>
-                                        updateOrderMutation.mutate({
-                                          orderId: order.id,
-                                          data: { isPaid: !item.isPaid }
-                                        }),
-                                      {
-                                        type: 'UPDATE_ORDER_PAYMENT',
-                                        payload: { orderId: order.id, isPaid: !item.isPaid }
-                                      }
-                                    )
-                                  }
-                                  title={item.isPaid ? 'Marcar como não pago' : 'Marcar como pago'}
-                                />
-                              </>
-                            )}
+                            <span className="font-semibold text-gray-900 whitespace-nowrap">
+                              {formatCurrency(item.total)}
+                            </span>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            </Card>
+                      );
+                    })}
+                </div>
+              </Card>
 
-            <Card className="h-fit">
-              <h4 className="font-semibold mb-4 text-gray-800">Por Produto</h4>
-              <div className="space-y-2">
-                {analytics.byProduct.map((item) => (
-                  <div key={item.productId} className="flex justify-between items-center gap-3">
-                    <span className="text-gray-600 truncate flex-1 min-w-0">{item.productName}</span>
-                    <span className="font-medium text-gray-900 whitespace-nowrap flex-shrink-0">
-                      {item.quantity} <span className="hidden sm:inline">unidades</span><span className="sm:hidden">un.</span>
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </div>
+              <Card className="h-fit">
+                <h4 className="font-semibold mb-4 text-gray-800">Por Produto</h4>
+                <div className="space-y-2">
+                  {analytics.byProduct.map((item) => (
+                    <div key={item.productId} className="flex justify-between items-center gap-3">
+                      <span className="text-gray-600 truncate flex-1 min-w-0">{item.productName}</span>
+                      <span className="font-medium text-gray-900 whitespace-nowrap flex-shrink-0">
+                        {item.quantity} <span className="hidden sm:inline">unidades</span><span className="sm:hidden">un.</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </div>
           </div>
         </div>
       )}
@@ -1650,109 +1651,48 @@ export default function CampaignDetail() {
               {/* Mobile: Cards */}
               <div className="space-y-2 md:hidden">
                 {filteredOrders?.map((order) => (
-                  <Card key={order.id} className="py-3">
-                    <div className="flex flex-col gap-3">
-                      {/* Linha 1: Nome, status e ações */}
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <span className={`px-2 py-1 text-xs rounded-full whitespace-nowrap flex-shrink-0 ${order.isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                            }`}>
-                            {order.isPaid ? 'Pago' : 'Pendente'}
-                          </span>
-                          <h3 className="font-semibold text-gray-900 truncate">{getCustomerDisplayName(order)}</h3>
-                        </div>
-
-                        {/* Ações */}
-                        <div className="flex gap-1 flex-shrink-0">
-                          <IconButton
-                            size="sm"
-                            variant="secondary"
-                            icon={<Eye className="w-5 h-5" />}
-                            onClick={() => {
-                              setViewingOrder(order);
-                              setIsViewOrderModalOpen(true);
-                            }}
-                            title="Visualizar pedido"
-                          />
-                          {canEditCampaign && (
-                            <IconButton
-                              size="sm"
-                              variant={order.isPaid ? 'success' : 'secondary'}
-                              icon={<CircleDollarSign className="w-5 h-5" />}
-                              onClick={() =>
-                                requireAuth(
-                                  () =>
-                                    updateOrderMutation.mutate({
-                                      orderId: order.id,
-                                      data: { isPaid: !order.isPaid }
-                                    }),
-                                  {
-                                    type: 'UPDATE_ORDER_PAYMENT',
-                                    payload: { orderId: order.id, isPaid: !order.isPaid }
-                                  }
-                                )
-                              }
-                              title={order.isPaid ? 'Marcar como não pago' : 'Marcar como pago'}
-                            />
-                          )}
-                          {isActive && (user?.id === order.userId || canEditCampaign) && (
-                            <IconButton
-                              size="sm"
-                              variant="secondary"
-                              icon={<Edit className="w-4 h-4" />}
-                              onClick={() =>
-                                requireAuth(() => {
-                                  setEditingOrder(order);
-                                  setEditOrderForm({
-                                    items: order.items.map(item => ({
-                                      productId: item.product.id,
-                                      quantity: item.quantity
-                                    }))
-                                  });
-                                  setIsEditOrderModalOpen(true);
-                                })
-                              }
-                              title="Editar pedido"
-                            />
-                          )}
-                          {isActive && canEditCampaign && (
-                            <IconButton
-                              size="sm"
-                              variant="danger"
-                              icon={<Trash2 className="w-4 h-4" />}
-                              onClick={() => {
-                                if (confirm('Tem certeza que deseja remover este pedido?')) {
-                                  deleteOrderMutation.mutate(order.id);
-                                }
-                              }}
-                              title="Remover pedido"
-                            />
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Linha 2: Produtos (sempre visível, sem truncar) */}
-                      <p className="text-xs text-gray-500">
-                        {order.items.map(item => `${item.quantity}x ${item.product.name}`).join(', ')}
-                      </p>
-
-                      {/* Linha 3: Valores */}
-                      <div className="flex items-center gap-3 text-sm justify-between sm:justify-start">
-                        <div className="text-center sm:text-left">
-                          <div className="text-gray-500 text-xs">Subtotal</div>
-                          <div className="font-medium text-gray-900">{formatCurrency(order.subtotal)}</div>
-                        </div>
-                        <div className="text-center sm:text-left">
-                          <div className="text-gray-500 text-xs">Frete</div>
-                          <div className="font-medium text-gray-900">{formatCurrency(order.shippingFee)}</div>
-                        </div>
-                        <div className="text-center sm:text-left">
-                          <div className="text-gray-500 text-xs">Total</div>
-                          <div className="font-semibold text-gray-900">{formatCurrency(order.total)}</div>
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
+                  <OrderCard
+                    key={order.id}
+                    order={order}
+                    customerName={getCustomerDisplayName(order)}
+                    canEditCampaign={!!canEditCampaign}
+                    isActive={isActive}
+                    currentUserId={user?.id}
+                    onView={() => {
+                      setViewingOrder(order);
+                      setIsViewOrderModalOpen(true);
+                    }}
+                    onTogglePayment={() =>
+                      requireAuth(
+                        () =>
+                          updateOrderMutation.mutate({
+                            orderId: order.id,
+                            data: { isPaid: !order.isPaid }
+                          }),
+                        {
+                          type: 'UPDATE_ORDER_PAYMENT',
+                          payload: { orderId: order.id, isPaid: !order.isPaid }
+                        }
+                      )
+                    }
+                    onEdit={() =>
+                      requireAuth(() => {
+                        setEditingOrder(order);
+                        setEditOrderForm({
+                          items: order.items.map(item => ({
+                            productId: item.product.id,
+                            quantity: item.quantity
+                          }))
+                        });
+                        setIsEditOrderModalOpen(true);
+                      })
+                    }
+                    onDelete={() => {
+                      if (confirm('Tem certeza que deseja remover este pedido?')) {
+                        deleteOrderMutation.mutate(order.id);
+                      }
+                    }}
+                  />
                 ))}
               </div>
 

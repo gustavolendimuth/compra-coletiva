@@ -8,7 +8,11 @@ import Button from '@/components/Button';
 import Modal from '@/components/Modal';
 import DateTimeInput from '@/components/DateTimeInput';
 
-export const NewCampaignButton: React.FC = () => {
+interface NewCampaignButtonProps {
+  onModalOpen?: () => void; // Callback when modal is opened
+}
+
+export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({ onModalOpen }) => {
   const { requireAuth, refreshUser } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState<{
@@ -54,6 +58,7 @@ export const NewCampaignButton: React.FC = () => {
   const handleNewCampaignClick = () => {
     requireAuth(() => {
       setIsModalOpen(true);
+      onModalOpen?.(); // Call callback if provided
     });
   };
 

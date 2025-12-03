@@ -15,14 +15,12 @@ export const HamburgerButton: React.FC<HamburgerButtonProps> = ({
   onClick,
   className = ''
 }) => {
-  const handleClick = () => {
-    console.log('HamburgerButton clicked');
-    onClick();
-  };
-
   return (
     <button
-      onClick={handleClick}
+      onClick={() => {
+        console.log('Hamburger clicked!');
+        onClick();
+      }}
       className={`relative w-10 h-10 flex items-center justify-center rounded-lg hover:bg-primary-700 transition-colors ${className}`}
       aria-label={isOpen ? 'Fechar menu' : 'Abrir menu'}
       aria-expanded={isOpen}

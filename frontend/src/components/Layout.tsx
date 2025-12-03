@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { Users } from 'lucide-react';
 import { UserMenu } from './UserMenu';
@@ -12,11 +12,13 @@ export default function Layout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleMenuToggle = () => {
-    console.log('Menu toggle clicked, current state:', isMobileMenuOpen);
+    console.log('handleMenuToggle called, current:', isMobileMenuOpen, 'new will be:', !isMobileMenuOpen);
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
-  console.log('Layout render, isMobileMenuOpen:', isMobileMenuOpen);
+  const handleCloseMenu = useCallback(() => {
+    setIsMobileMenuOpen(false);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -55,16 +57,13 @@ export default function Layout() {
                 isOpen={isMobileMenuOpen}
                 onClick={handleMenuToggle}
               />
-              {/* Debug indicator */}
-              <span className="ml-2 text-xs text-white">
-              </span>
             </div>
           </div>
         </div>
       </nav>
 
       {/* Mobile Menu */}
-      <MobileMenu isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
+      <MobileMenu isOpen={isMobileMenuOpen} onClose={handleCloseMenu} />
 
       <main className="flex-1 pt-16 md:pt-20">
         <div className="container-custom py-8">

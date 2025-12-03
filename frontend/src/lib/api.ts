@@ -118,6 +118,41 @@ export interface Campaign {
   };
 }
 
+// Tipo estendido para listagem com preview de produtos
+export interface ProductPreview {
+  id: string;
+  name: string;
+  price: number;
+}
+
+export interface CampaignWithProducts extends Campaign {
+  creator?: {
+    id: string;
+    name: string;
+  };
+  products?: ProductPreview[];
+}
+
+// Parâmetros para listagem de campanhas
+export interface CampaignListParams {
+  cursor?: string;
+  limit?: number;
+  search?: string;
+  status?: 'ACTIVE' | 'CLOSED' | 'SENT' | 'ARCHIVED';
+  creatorId?: string;
+  fromSellers?: boolean;
+  similarProducts?: boolean;
+}
+
+// Resposta paginada de campanhas
+export interface CampaignListResponse {
+  data: CampaignWithProducts[];
+  suggestions?: CampaignWithProducts[]; // Sugestões quando busca retorna poucos/nenhum resultado
+  nextCursor: string | null;
+  hasMore: boolean;
+  total: number;
+}
+
 export interface Product {
   id: string;
   campaignId: string;
@@ -195,7 +230,13 @@ export interface Analytics {
 
 // API functions
 export const campaignApi = {
-  getAll: () => api.get<Campaign[]>('/campaigns').then(res => res.data),
+  // Nova API com paginação e filtros
+  list: (params: CampaignListParams = {}) =>
+    api.get<CampaignListResponse>('/campaigns', { params }).then(res => res.data),
+
+  // Mantém getAll para compatibilidade (agora usa a nova API internamente)
+  getAll: () => api.get<CampaignListResponse>('/campaigns').then(res => res.data.data),
+
   getById: (id: string) => api.get<Campaign>(`/campaigns/${id}`).then(res => res.data),
   create: (data: { name: string; description?: string; deadline?: string; shippingCost?: number }) =>
     api.post<Campaign>('/campaigns', data).then(res => res.data),
