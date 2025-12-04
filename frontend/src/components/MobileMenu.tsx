@@ -23,6 +23,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
   const location = useLocation();
   const menuRef = useRef<HTMLDivElement>(null);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [shouldAnimate, setShouldAnimate] = useState(false);
   const touchStartX = useRef<number>(0);
   const touchEndX = useRef<number>(0);
 
@@ -32,6 +33,14 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (isOpen) {
       setIsAnimating(true);
+      // Force a reflow to ensure initial state is rendered before transition
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setShouldAnimate(true);
+        });
+      });
+    } else {
+      setShouldAnimate(false);
     }
   }, [isOpen]);
 
@@ -93,7 +102,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
       {/* Full-screen backdrop with blur and darkening */}
       <div
         className={`fixed top-16 left-0 right-0 bottom-0 bg-black/40 backdrop-blur-sm z-[60] transition-all duration-300 ${
-          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          shouldAnimate ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         onClick={onClose}
         aria-hidden="true"
@@ -103,7 +112,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
       <div
         ref={menuRef}
         className={`fixed top-16 left-0 bottom-0 w-[85%] max-w-md bg-white shadow-[8px_0_24px_-8px_rgba(0,0,0,0.2)] z-[70] transform transition-transform duration-300 ease-out ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
+          shouldAnimate ? 'translate-x-0' : '-translate-x-full'
         }`}
         role="dialog"
         aria-modal="true"
@@ -124,9 +133,9 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
                   location.pathname.includes(item.to)
                     ? 'bg-primary-100 text-primary-700'
                     : 'text-gray-700 hover:bg-gray-100 hover:scale-[1.02]'
-                } ${isOpen ? 'animate-slide-in opacity-100' : 'opacity-0'}`}
+                } ${shouldAnimate ? 'animate-slide-in opacity-100' : 'opacity-0'}`}
                 style={{
-                  animationDelay: isOpen ? `${50 + index * 50}ms` : '0ms',
+                  animationDelay: shouldAnimate ? `${50 + index * 50}ms` : '0ms',
                   animationFillMode: 'backwards'
                 }}
               >
@@ -136,9 +145,9 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
 
             {/* New Campaign Button */}
             <div
-              className={`pt-2 ${isOpen ? 'animate-slide-in opacity-100' : 'opacity-0'}`}
+              className={`pt-2 ${shouldAnimate ? 'animate-slide-in opacity-100' : 'opacity-0'}`}
               style={{
-                animationDelay: isOpen ? `${50 + MENU_ITEMS.length * 50}ms` : '0ms',
+                animationDelay: shouldAnimate ? `${50 + MENU_ITEMS.length * 50}ms` : '0ms',
                 animationFillMode: 'backwards'
               }}
             >
@@ -147,9 +156,9 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
 
             {/* Notifications */}
             <div
-              className={`border-t pt-4 mt-4 ${isOpen ? 'animate-slide-in opacity-100' : 'opacity-0'}`}
+              className={`border-t pt-4 mt-4 ${shouldAnimate ? 'animate-slide-in opacity-100' : 'opacity-0'}`}
               style={{
-                animationDelay: isOpen ? `${50 + (MENU_ITEMS.length + 1) * 50}ms` : '0ms',
+                animationDelay: shouldAnimate ? `${50 + (MENU_ITEMS.length + 1) * 50}ms` : '0ms',
                 animationFillMode: 'backwards'
               }}
             >
@@ -165,9 +174,9 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
 
           {/* User menu at bottom */}
           <div
-            className={`border-t p-6 bg-gray-50 ${isOpen ? 'animate-slide-in opacity-100' : 'opacity-0'}`}
+            className={`border-t p-6 bg-gray-50 ${shouldAnimate ? 'animate-slide-in opacity-100' : 'opacity-0'}`}
             style={{
-              animationDelay: isOpen ? `${50 + (MENU_ITEMS.length + 2) * 50}ms` : '0ms',
+              animationDelay: shouldAnimate ? `${50 + (MENU_ITEMS.length + 2) * 50}ms` : '0ms',
               animationFillMode: 'backwards'
             }}
           >
