@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { X, Send, Bug, Lightbulb, Wrench, MessageSquare } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { feedbackApi } from '../lib/api';
+import { feedbackApi } from '../api';
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -106,11 +106,10 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                     key={value}
                     type="button"
                     onClick={() => setType(value)}
-                    className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all ${
-                      type === value
+                    className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all ${type === value
                         ? 'border-primary-500 bg-primary-50'
                         : 'border-gray-200 hover:border-gray-300'
-                    }`}
+                      }`}
                   >
                     <Icon className={`w-5 h-5 ${color}`} />
                     <span className="font-medium text-gray-900">{label}</span>

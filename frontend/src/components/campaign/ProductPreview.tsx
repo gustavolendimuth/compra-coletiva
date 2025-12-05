@@ -1,4 +1,4 @@
-import { ProductPreview as ProductPreviewType } from '@/lib/api';
+import { ProductPreview as ProductPreviewType } from '@/api';
 import { ProductPreviewInline } from './ProductPreviewInline';
 
 export type ProductPreviewVariant = 'inline' | 'expandable';

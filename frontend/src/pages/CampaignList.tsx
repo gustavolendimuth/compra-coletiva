@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { Package, RefreshCw, Lightbulb } from 'lucide-react';
-import { campaignApi } from '@/lib/api';
+import { campaignApi } from '@/api';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useIntersectionObserver } from '@/hooks/useIntersectionObserver';
 import {
@@ -10,7 +10,7 @@ import {
   CampaignFiltersState,
   CampaignGridSkeleton
 } from '@/components/campaign';
-import Card from '@/components/Card';
+import { Card } from '@/components/ui';
 
 export default function CampaignList() {
   const [search, setSearch] = useState('');

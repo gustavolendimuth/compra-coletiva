@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { X, Package, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { ProductPreview as ProductPreviewType } from '@/lib/api';
+import { ProductPreview as ProductPreviewType } from '@/api';
 import { formatCurrency } from '@/lib/utils';
 
 interface ProductPreviewModalProps {

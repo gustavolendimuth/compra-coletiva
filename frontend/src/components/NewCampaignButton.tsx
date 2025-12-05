@@ -2,10 +2,9 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { campaignApi } from '@/lib/api';
+import { campaignApi } from '@/api';
 import { useAuth } from '@/contexts/AuthContext';
-import Button from '@/components/Button';
-import Modal from '@/components/Modal';
+import { Button, Modal } from '@/components/ui';
 import DateTimeInput from '@/components/DateTimeInput';
 
 interface NewCampaignButtonProps {

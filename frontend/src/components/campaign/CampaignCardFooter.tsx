@@ -1,5 +1,5 @@
 import { Clock, Calendar } from 'lucide-react';
-import { CampaignWithProducts } from '@/lib/api';
+import { CampaignWithProducts } from '@/api';
 
 interface CampaignCardFooterProps {
   campaign: CampaignWithProducts;

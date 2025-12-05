@@ -27,8 +27,6 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
   const touchStartX = useRef<number>(0);
   const touchEndX = useRef<number>(0);
 
-  console.log('MobileMenu render - isOpen:', isOpen, 'isAnimating:', isAnimating);
-
   // Trigger animation when isOpen changes
   useEffect(() => {
     if (isOpen) {
@@ -101,9 +99,8 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
     <>
       {/* Full-screen backdrop with blur and darkening */}
       <div
-        className={`fixed top-16 left-0 right-0 bottom-0 bg-black/40 backdrop-blur-sm z-[60] transition-all duration-300 ${
-          shouldAnimate ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
+        className={`fixed top-16 left-0 right-0 bottom-0 bg-black/40 backdrop-blur-sm z-[60] transition-all duration-300 ${shouldAnimate ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          }`}
         onClick={onClose}
         aria-hidden="true"
       />
@@ -111,9 +108,8 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
       {/* Mobile menu panel */}
       <div
         ref={menuRef}
-        className={`fixed top-16 left-0 bottom-0 w-[85%] max-w-md bg-white shadow-[8px_0_24px_-8px_rgba(0,0,0,0.2)] z-[70] transform transition-transform duration-300 ease-out ${
-          shouldAnimate ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`fixed top-16 left-0 bottom-0 w-[85%] max-w-md bg-white shadow-[8px_0_24px_-8px_rgba(0,0,0,0.2)] z-[70] transform transition-transform duration-300 ease-out ${shouldAnimate ? 'translate-x-0' : '-translate-x-full'
+          }`}
         role="dialog"
         aria-modal="true"
         aria-label="Menu de navegação"
@@ -129,11 +125,10 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
               <Link
                 key={item.to}
                 to={item.to}
-                className={`block px-4 py-3 rounded-lg font-semibold text-base transition-all ${
-                  location.pathname.includes(item.to)
+                className={`block px-4 py-3 rounded-lg font-semibold text-base transition-all ${location.pathname.includes(item.to)
                     ? 'bg-primary-100 text-primary-700'
                     : 'text-gray-700 hover:bg-gray-100 hover:scale-[1.02]'
-                } ${shouldAnimate ? 'animate-slide-in opacity-100' : 'opacity-0'}`}
+                  } ${shouldAnimate ? 'animate-slide-in opacity-100' : 'opacity-0'}`}
                 style={{
                   animationDelay: shouldAnimate ? `${50 + index * 50}ms` : '0ms',
                   animationFillMode: 'backwards'

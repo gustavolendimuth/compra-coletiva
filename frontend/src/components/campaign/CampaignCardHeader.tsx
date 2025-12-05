@@ -1,4 +1,4 @@
-import { CampaignWithProducts } from '@/lib/api';
+import { CampaignWithProducts } from '@/api';
 
 interface CampaignCardHeaderProps {
   campaign: CampaignWithProducts;

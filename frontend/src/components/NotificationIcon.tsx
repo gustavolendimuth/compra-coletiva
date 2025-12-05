@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Bell } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { messageApi } from '../lib/api';
+import { messageApi } from '../api';
 
 export const NotificationIcon: React.FC = () => {
   const { isAuthenticated } = useAuth();

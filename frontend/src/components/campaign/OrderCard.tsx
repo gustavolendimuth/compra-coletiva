@@ -1,7 +1,7 @@
 import { Eye, CircleDollarSign, Edit, Trash2 } from 'lucide-react';
-import { Order } from '@/lib/api';
+import { Order } from '@/api';
 import { formatCurrency } from '@/lib/utils';
-import Card from '@/components/Card';
+import { Card } from '@/components/ui';
 import IconButton from '@/components/IconButton';
 
 interface OrderCardProps {

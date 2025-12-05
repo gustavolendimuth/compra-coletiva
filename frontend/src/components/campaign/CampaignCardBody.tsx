@@ -1,5 +1,5 @@
 import { Package, Users } from 'lucide-react';
-import { CampaignWithProducts } from '@/lib/api';
+import { CampaignWithProducts } from '@/api';
 
 interface CampaignCardBodyProps {
   campaign: CampaignWithProducts;

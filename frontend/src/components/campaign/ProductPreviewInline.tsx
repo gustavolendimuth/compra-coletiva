@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Eye } from 'lucide-react';
-import { ProductPreview as ProductPreviewType } from '@/lib/api';
+import { ProductPreview as ProductPreviewType } from '@/api';
 import { formatCurrency } from '@/lib/utils';
 import { ProductPreviewModal } from './ProductPreviewModal';
 

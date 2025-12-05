@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { CampaignWithProducts } from '@/lib/api';
+import { CampaignWithProducts } from '@/api';
 import { CampaignCardHeader } from './CampaignCardHeader';
 import { CampaignCardBody } from './CampaignCardBody';
 import { CampaignCardFooter } from './CampaignCardFooter';
