@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { ShippingCalculator } from '../services/shippingCalculator';
 import { emitOrderCreated, emitOrderUpdated, emitOrderDeleted, emitOrderStatusChanged } from '../services/socketService';
 import { Money } from '../utils/money';
+import { CampaignStatusService } from '../services/campaignStatusService';
 
 const router = Router();
 
@@ -283,6 +284,28 @@ router.patch('/:id', requireAuth, requireOrderOrCampaignOwnership, asyncHandler(
       isSeparated: order.isSeparated,
       customerName: order.customer.name
     });
+
+    // Se mudou status de pagamento, verifica se deve arquivar/desarquivar a campanha
+    if (data.isPaid !== undefined) {
+      try {
+        // Tentar arquivar (SENT → ARCHIVED se todos os pedidos estão pagos)
+        const archiveResult = await CampaignStatusService.checkAndArchiveCampaign(order.campaignId);
+
+        // Tentar desarquivar (ARCHIVED → SENT se algum pedido não está pago)
+        const unarchiveResult = await CampaignStatusService.checkAndUnarchiveCampaign(order.campaignId);
+
+        // Log resultado (apenas para debugging)
+        if (archiveResult.changed) {
+          console.log(`[Orders] Campaign ${order.campaignId} status changed: ${archiveResult.previousStatus} → ${archiveResult.newStatus}`);
+        }
+        if (unarchiveResult.changed) {
+          console.log(`[Orders] Campaign ${order.campaignId} status changed: ${unarchiveResult.previousStatus} → ${unarchiveResult.newStatus}`);
+        }
+      } catch (error) {
+        console.error('[Orders] Error in auto-status change:', error);
+        // Não falhar o request - erro no auto-arquivamento não deve bloquear atualização do pedido
+      }
+    }
   } else {
     // Caso contrário, emite atualização geral
     emitOrderUpdated(order.campaignId, order);

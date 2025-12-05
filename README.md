@@ -24,6 +24,7 @@ railway run --service backend npm run fix:legacy-users
 
 ## Funcionalidades
 
+### Core Features
 - **Gestão de Grupos**: Crie e gerencie múltiplos grupos de compra coletiva
 - **Catálogo de Produtos**: Cadastre produtos com preço e peso
 - **Controle de Pedidos**: Registre pedidos de clientes com múltiplos produtos
@@ -31,8 +32,38 @@ railway run --service backend npm run fix:legacy-users
 - **Controle de Pagamentos**: Marque pedidos como pagos ou não pagos
 - **Dashboard Analytics**: Visualize totais por produto, cliente e status de pagamento
 - **Design Responsivo**: Interface moderna e adaptável para todos os dispositivos
-- **Autenticação**: Sistema completo de login com Google OAuth
+
+### Authentication & Users
+- **Autenticação**: Sistema completo de login com Google OAuth e email/senha
 - **Usuários Legados**: Suporte para pedidos históricos pré-autenticação
+- **Sessões Seguras**: JWT-based authentication com refresh tokens
+
+### Communication Systems (NEW)
+- **Chat de Pedidos**: Mensagens privadas entre cliente e criador da campanha
+- **Q&A Público de Campanhas**: Sistema de perguntas e respostas públicas com:
+  - Moderação de spam com pontuação inteligente (8 fatores)
+  - Rate limiting para prevenir abuso
+  - Edição de perguntas (janela de 15 minutos)
+  - Sistema de reputação de usuários
+- **Notificações em Tempo Real**: Alertas via Socket.IO para:
+  - Campanhas prontas para enviar (todos pedidos pagos)
+  - Mudanças de status de campanhas
+  - Arquivamento automático de campanhas
+
+### Automation (NEW)
+- **Auto-arquivamento**: Campanhas são automaticamente arquivadas quando todos os pedidos estão pagos
+- **Auto-reversão**: Campanhas arquivadas voltam para SENT se houver pagamentos pendentes
+- **Notificações Automáticas**: Criadores são notificados quando campanha está pronta para envio
+
+### Feedback & Support (NEW)
+- **Sistema de Feedback**: Usuários podem reportar bugs, dar sugestões e feedback
+- **Feedback Anônimo**: Opção de enviar feedback sem login (com email)
+- **Gestão de Feedback**: API para administradores gerenciarem feedback
+
+### Security
+- **Proteção XSS**: Sanitização automática de conteúdo gerado por usuários
+- **Rate Limiting**: Proteção contra spam e abuso
+- **CORS Configurável**: Suporte a múltiplos domínios
 
 ## Stack Tecnológico
 
@@ -41,7 +72,10 @@ railway run --service backend npm run fix:legacy-users
 - **Express**: Framework web minimalista e robusto
 - **Prisma ORM**: ORM moderno com type-safety
 - **PostgreSQL**: Banco de dados relacional
+- **Socket.IO**: Real-time bidirectional communication
 - **Zod**: Validação de schemas
+- **Passport.js**: Autenticação (Local + Google OAuth)
+- **JWT**: JSON Web Tokens para sessões
 
 ### Frontend
 - **React 18** + **TypeScript**: Biblioteca UI com tipos
@@ -49,7 +83,11 @@ railway run --service backend npm run fix:legacy-users
 - **TailwindCSS**: Framework CSS utility-first
 - **React Query**: Gerenciamento de estado do servidor
 - **React Router**: Roteamento client-side
+- **Socket.IO Client**: Real-time updates
+- **DOMPurify**: Sanitização XSS
+- **Axios**: HTTP client
 - **Lucide React**: Ícones modernos
+- **React Hot Toast**: Notificações de UI
 
 ### DevOps
 - **Docker** + **Docker Compose**: Containerização
@@ -129,27 +167,60 @@ npx prisma studio
 
 ## API Endpoints
 
-### Grupos
-- `GET /api/campaigns` - Lista todos os grupos
-- `GET /api/campaigns/:id` - Busca um grupo específico
-- `POST /api/campaigns` - Cria novo grupo
-- `PATCH /api/campaigns/:id` - Atualiza grupo
-- `DELETE /api/campaigns/:id` - Remove grupo
+### Autenticação (`/api/auth`)
+- `POST /register` - Registrar novo usuário
+- `POST /login` - Login com email/senha
+- `POST /google` - Login com Google OAuth
+- `GET /me` - Obter usuário atual
+- `POST /logout` - Encerrar sessão
 
-### Produtos
-- `GET /api/products?campaignId=xxx` - Lista produtos de um grupo
-- `POST /api/products` - Adiciona produto
-- `PATCH /api/products/:id` - Atualiza produto
-- `DELETE /api/products/:id` - Remove produto
+### Grupos (`/api/campaigns`)
+- `GET /` - Lista todos os grupos
+- `GET /:id` - Busca um grupo específico
+- `POST /` - Cria novo grupo (auth requerida)
+- `PATCH /:id` - Atualiza grupo (owner only)
+- `DELETE /:id` - Remove grupo (owner only)
 
-### Pedidos
-- `GET /api/orders?campaignId=xxx` - Lista pedidos de um grupo
-- `POST /api/orders` - Cria pedido
-- `PATCH /api/orders/:id` - Atualiza pedido
-- `DELETE /api/orders/:id` - Remove pedido
+### Produtos (`/api/products`)
+- `GET /?campaignId=xxx` - Lista produtos de um grupo
+- `POST /` - Adiciona produto (auth requerida)
+- `PATCH /:id` - Atualiza produto
+- `DELETE /:id` - Remove produto
 
-### Analytics
-- `GET /api/analytics/campaign/:campaignId` - Retorna estatísticas do grupo
+### Pedidos (`/api/orders`)
+- `GET /?campaignId=xxx` - Lista pedidos de um grupo
+- `POST /` - Cria pedido (auth requerida)
+- `PATCH /:id` - Atualiza pedido
+- `PATCH /:id/payment` - Alterna status de pagamento
+- `DELETE /:id` - Remove pedido
+
+### Mensagens de Campanhas (`/api/campaign-messages`) - NEW
+- `GET /?campaignId=xxx` - Lista Q&As públicos (sem auth)
+- `GET /mine?campaignId=xxx` - Minhas perguntas (auth requerida)
+- `GET /unanswered?campaignId=xxx` - Não respondidas (criador only)
+- `POST /` - Fazer pergunta (auth requerida, rate limited)
+- `PATCH /:id` - Editar pergunta (janela de 15min)
+- `PATCH /:id/answer` - Responder pergunta (criador only)
+- `DELETE /:id` - Deletar spam (criador only)
+
+### Feedback (`/api/feedback`) - NEW
+- `POST /` - Enviar feedback (auth opcional)
+- `GET /` - Listar todos (admin only)
+- `GET /my` - Meus feedbacks (auth requerida)
+- `GET /stats` - Estatísticas (admin only)
+- `PATCH /:id` - Atualizar status (admin only)
+- `DELETE /:id` - Deletar (admin only)
+
+### Notificações (`/api/notifications`) - NEW
+- `GET /` - Minhas notificações
+- `PATCH /:id/read` - Marcar como lida
+- `DELETE /:id` - Deletar notificação
+
+### Analytics (`/api/analytics`)
+- `GET /campaign/:campaignId` - Retorna estatísticas do grupo
+
+### Validação (`/api/validation`)
+- `GET /campaign/:campaignId` - Validar integridade financeira
 
 ## Deploy no Railway
 

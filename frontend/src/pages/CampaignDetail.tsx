@@ -27,7 +27,9 @@ import {
   ArrowUp,
   ArrowDown,
   Eye,
-  X
+  X,
+  MessageCircle,
+  MessagesSquare
 } from 'lucide-react';
 import {
   campaignApi,
@@ -47,6 +49,8 @@ import DateTimeInput from '@/components/DateTimeInput';
 import { SkeletonDetailHeader, SkeletonProductCard } from '@/components/Skeleton';
 import OrderChat from '@/components/OrderChat';
 import OrderCard from '@/components/campaign/OrderCard';
+import CampaignChat from '@/components/CampaignChat';
+import CampaignQuestionsPanel from '@/components/CampaignQuestionsPanel';
 
 // Helper function para normalizar strings (remover acentos)
 const normalizeString = (str: string): string => {
@@ -72,7 +76,7 @@ export default function CampaignDetail() {
   // Ativa atualizações em tempo real para esta campanha
   useRealtimeUpdates({ campaignId: id || '', enabled: !!id });
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders' | 'shipping'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders' | 'shipping' | 'questions'>('overview');
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isEditProductModalOpen, setIsEditProductModalOpen] = useState(false);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
@@ -1054,6 +1058,18 @@ export default function CampaignDetail() {
           <Truck className="w-4 h-4 flex-shrink-0" />
           <span>Frete</span>
         </button>
+        {canEditCampaign && (
+          <button
+            onClick={() => setActiveTab('questions')}
+            className={`flex items-center justify-center gap-2 px-3 py-2 font-medium transition-colors flex-1 md:flex-initial rounded-t-lg ${activeTab === 'questions'
+              ? 'text-primary-600 border-b-2 border-primary-600 bg-primary-50'
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-b-2 border-transparent'
+              }`}
+          >
+            <MessagesSquare className="w-4 h-4 flex-shrink-0" />
+            <span>Moderar</span>
+          </button>
+        )}
       </div>
 
       {/* Mobile: Fixed bottom navigation bar */}
@@ -1099,6 +1115,18 @@ export default function CampaignDetail() {
             <Truck className="w-5 h-5 flex-shrink-0 mb-0.5" />
             <span className="text-xs font-medium">Frete</span>
           </button>
+          {canEditCampaign && (
+            <button
+              onClick={() => setActiveTab('questions')}
+              className={`flex flex-col items-center justify-center flex-1 py-2 px-1 transition-colors ${activeTab === 'questions'
+                ? 'text-yellow-300 font-bold border-b-4 border-yellow-300'
+                : 'text-white hover:text-yellow-200'
+                }`}
+            >
+              <MessagesSquare className="w-5 h-5 flex-shrink-0 mb-0.5" />
+              <span className="text-xs font-medium">Moderar</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -1357,6 +1385,22 @@ export default function CampaignDetail() {
               </Card>
             </div>
           </div>
+
+          {/* Seção de Perguntas e Respostas */}
+          {id && (
+            <div className="mt-8">
+              <div className="mb-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+                  <MessageCircle className="w-6 h-6 text-primary-600" />
+                  Perguntas e Respostas
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  Faça perguntas sobre os produtos e a campanha. O criador responderá em breve.
+                </p>
+              </div>
+              <CampaignChat campaignId={id} isCreator={canEditCampaign} />
+            </div>
+          )}
         </div>
       )}
 
@@ -1896,6 +1940,36 @@ export default function CampaignDetail() {
                 </div>
               </div>
             </Card>
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Perguntas (Chat Público) */}
+      {activeTab === 'chat' && id && (
+        <div className="pb-20 md:pb-0">
+          <div className="max-w-4xl mx-auto">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Perguntas e Respostas</h2>
+              <p className="text-gray-600">
+                Faça perguntas sobre os produtos e a campanha. O criador responderá em breve.
+              </p>
+            </div>
+            <CampaignChat campaignId={id} isCreator={canEditCampaign} />
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Moderação (Apenas Criador) */}
+      {activeTab === 'questions' && canEditCampaign && id && (
+        <div className="pb-20 md:pb-0">
+          <div className="max-w-4xl mx-auto">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Moderar Perguntas</h2>
+              <p className="text-gray-600">
+                Responda as perguntas dos usuários. Suas respostas serão publicadas automaticamente.
+              </p>
+            </div>
+            <CampaignQuestionsPanel campaignId={id} />
           </div>
         </div>
       )}

@@ -266,9 +266,184 @@ backend:
 - **Limite logs** se forem muito verbosos
 - **Use Docker Desktop** para monitorar recursos
 
+## Funcionalidades Implementadas
+
+### Sistema de Autenticação
+
+**Login/Registro:**
+- Login com email/senha
+- Google OAuth 2.0
+- Sistema de sessões com JWT
+- Proteção de rotas (middleware)
+- Suporte a usuários legados (virtual users)
+
+**Reset de Senha:**
+- Token de recuperação via email
+- Validação de token com expiração
+- Interface de redefinição de senha
+
+### Sistema de Feedback (NEW - Dec 2025)
+
+**Para Usuários:**
+- Botão flutuante em todas as páginas
+- Modal de envio com tipos: Bug, Sugestão, Melhoria, Outro
+- Feedback anônimo (com email) ou autenticado
+- Link direto por email no rodapé
+- Componente: `FeedbackModal.tsx`
+
+**Para Administradores (API):**
+
+```bash
+# Listar feedbacks
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:3000/api/feedback?status=PENDING
+
+# Estatísticas
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:3000/api/feedback/stats
+
+# Atualizar status
+curl -X PATCH \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "IN_PROGRESS", "adminNotes": "Investigando"}' \
+  http://localhost:3000/api/feedback/FEEDBACK_ID
+```
+
+Status disponíveis: `PENDING`, `IN_PROGRESS`, `RESOLVED`, `DISMISSED`
+
+### Menu Mobile
+
+- Menu full-screen com animações suaves
+- Acessibilidade completa (ARIA labels, keyboard navigation)
+- Backdrop com blur effect
+- Componentes modulares (HamburgerButton, MobileMenu)
+
+### Chat de Pedidos (Order Messages)
+
+- Mensagens privadas entre cliente e criador da campanha
+- Sistema de leitura/não lida
+- Contador de mensagens não lidas
+- Notificações em tempo real (Socket.IO)
+- Componente: `OrderChat.tsx`
+
+### Chat de Campanhas - Q&A Público (NEW - Dec 2025)
+
+**Para Usuários:**
+- Perguntas públicas visíveis a todos após resposta
+- Edição de perguntas (janela de 15 minutos, apenas não respondidas)
+- Visualização de suas próprias perguntas (respondidas e não respondidas)
+- Interface com contador de caracteres (1000 para perguntas)
+- Componente: `CampaignChat.tsx`
+
+**Para Criadores:**
+- Painel de moderação com abas (Pendentes/Respondidas)
+- Visualização de spam score e fatores de risco
+- Informações do remetente (idade da conta, pedidos na campanha)
+- Resposta com auto-publicação (2000 caracteres)
+- Opção de deletar spam
+- Desktop notifications para novas perguntas
+- Componente: `CampaignQuestionsPanel.tsx`
+
+**Sistema Anti-Spam:**
+- Pontuação 0-100 baseada em 8 fatores:
+  1. URLs na mensagem (até 30 pontos)
+  2. Maiúsculas excessivas (20 pontos)
+  3. Caracteres repetidos (até 15 pontos)
+  4. Conta nova (<24h) (15 pontos)
+  5. Sem pedidos na campanha (10 pontos)
+  6. Histórico de spam (20 pontos)
+  7. Mensagens não respondidas (até 15 pontos)
+  8. Palavras proibidas (30 pontos)
+
+**Rate Limiting:**
+- Global: 10 mensagens por hora
+- Por campanha: 1 mensagem a cada 2 minutos
+- Burst: 3 mensagens por minuto
+- Retry-after calculado automaticamente
+
+**Reputação de Usuários:**
+- `messageCount`: Total de perguntas feitas
+- `answeredCount`: Total de respostas dadas (criadores)
+- `spamScore`: Pontuação de risco (0-100)
+- `isBanned`: Flag para banir usuários
+- Score reduzido quando perguntas são respondidas
+
+### Sistema de Notificações (NEW - Dec 2025)
+
+**Tipos de Notificações:**
+- `CAMPAIGN_READY_TO_SEND`: Todos os pedidos pagos, pronto para enviar ao fornecedor
+- `CAMPAIGN_STATUS_CHANGED`: Status da campanha alterado
+- `CAMPAIGN_ARCHIVED`: Campanha arquivada automaticamente
+
+**Funcionalidades:**
+- Notificações em tempo real via Socket.IO
+- Contador visual de não lidas
+- Metadata com detalhes (campaignId, campaignName)
+- Marcar como lida e deletar
+- Auto-criação quando condições atendidas
+
+**Triggers Automáticos:**
+- Campanha CLOSED + todos pedidos pagos → notificação READY_TO_SEND
+- Campanha SENT + todos pedidos pagos → auto-archive + notificação CAMPAIGN_ARCHIVED
+- Campanha ARCHIVED + pedido não pago → auto-unarchive + notificação STATUS_CHANGED
+
+### Automação de Status de Campanhas (NEW - Dec 2025)
+
+**CampaignStatusService:**
+- Auto-arquivamento: SENT → ARCHIVED quando todos os pedidos estão pagos
+- Auto-reversão: ARCHIVED → SENT quando algum pedido é marcado como não pago
+- Emite eventos Socket.IO para notificar clientes conectados
+- Integrado com NotificationService
+
+**Condições de Arquivamento:**
+1. Status deve ser SENT
+2. Pelo menos 1 pedido na campanha
+3. TODOS os pedidos marcados como pagos (`isPaid = true`)
+
+**Condições de Reversão:**
+1. Status deve ser ARCHIVED
+2. Pelo menos 1 pedido na campanha
+3. PELO MENOS UM pedido não pago (`isPaid = false`)
+
+### Segurança XSS (NEW - Dec 2025)
+
+**Sanitização de Conteúdo:**
+- Utility: `frontend/src/lib/sanitize.ts`
+- Usa DOMPurify para prevenir XSS attacks
+- Funções:
+  - `sanitizeText(text)`: Escapa HTML, preserva quebras de linha
+  - `sanitizeHtml(html)`: Permite apenas tags seguras (b, i, em, strong, u, br, p, span)
+
+**Aplicado em:**
+- Mensagens de campanhas (perguntas e respostas)
+- Mensagens de pedidos
+- Descrições de campanhas/produtos
+- Feedback de usuários
+
+### Real-Time Features (Socket.IO)
+
+**Eventos Disponíveis:**
+- `campaign-question-received`: Nova pergunta em campanha
+- `campaign-message-published`: Pergunta respondida e publicada
+- `campaign-message-edited`: Pergunta editada
+- `campaign-message-deleted`: Pergunta deletada (spam)
+- `campaign-updated`: Status de campanha alterado
+- `notification-created`: Nova notificação para usuário
+- `order-chat-message`: Mensagem privada em pedido
+
+**Rooms:**
+- `user:{userId}`: Notificações específicas do usuário
+- `campaign:{campaignId}`: Updates de campanha específica
+- `order:{orderId}`: Chat de pedido específico
+
 ## Próximos Passos
 
 - Configure ESLint + Prettier para code quality
 - Adicione testes automatizados (Jest/Vitest)
 - Configure CI/CD pipeline
 - Adicione pre-commit hooks (Husky)
+- **Interface web de admin** para gerenciar feedbacks visualmente
+- **Pagination** para lista de mensagens/notificações
+- **Email notifications** para perguntas respondidas
+- **Push notifications** (web/mobile)

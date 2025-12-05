@@ -70,6 +70,12 @@ export const initializeSocket = (httpServer: HttpServer): Server => {
   io.on('connection', (socket: AuthenticatedSocket) => {
     console.log(`✅ Client connected: ${socket.id}`);
 
+    // Auto-join user room (for user-specific notifications)
+    if (socket.user) {
+      socket.join(`user-${socket.user.id}`);
+      console.log(`📌 Socket ${socket.id} auto-joined user-${socket.user.id}`);
+    }
+
     // Join campaign room
     socket.on('join-campaign', (campaignId: string) => {
       socket.join(`campaign-${campaignId}`);
@@ -92,6 +98,28 @@ export const initializeSocket = (httpServer: HttpServer): Server => {
     socket.on('leave-order', (orderId: string) => {
       socket.leave(`order-${orderId}`);
       console.log(`📍 Socket ${socket.id} left order-${orderId}`);
+    });
+
+    // Typing indicator for campaign chat
+    socket.on('typing', (data: { campaignId: string; isTyping: boolean }) => {
+      if (socket.user) {
+        socket.to(`campaign-${data.campaignId}`).emit('user-typing', {
+          userId: socket.user.id,
+          userName: socket.user.name,
+          isTyping: data.isTyping
+        });
+      }
+    });
+
+    // Creator typing indicator (sent to specific user)
+    socket.on('creator-typing', (data: { userId: string; isTyping: boolean }) => {
+      if (socket.user) {
+        socket.to(`user-${data.userId}`).emit('creator-typing', {
+          creatorId: socket.user.id,
+          creatorName: socket.user.name,
+          isTyping: data.isTyping
+        });
+      }
     });
 
     socket.on('disconnect', () => {
@@ -144,4 +172,42 @@ export const emitMessageSent = (orderId: string, data: any) => {
   const io = getIO();
   io.to(`order-${orderId}`).emit('message-sent', data);
   console.log(`📡 Emitted message-sent to order-${orderId}`, data);
+};
+
+// Campaign Messages Events
+export const emitCampaignQuestionReceived = (creatorId: string, campaignId: string, data: any) => {
+  const io = getIO();
+  // Emite apenas para o criador (via room específica)
+  io.to(`user-${creatorId}`).emit('campaign-question-received', data);
+  console.log(`📡 Emitted campaign-question-received to user-${creatorId} (campaign ${campaignId})`, data);
+};
+
+export const emitCampaignMessagePublished = (campaignId: string, data: any) => {
+  const io = getIO();
+  // Emite para todos na room da campanha
+  io.to(`campaign-${campaignId}`).emit('campaign-message-published', data);
+  console.log(`📡 Emitted campaign-message-published to campaign-${campaignId}`, data);
+};
+
+export const emitCampaignMessageEdited = (creatorId: string, campaignId: string, data: any) => {
+  const io = getIO();
+  // Emite para o criador (se a pergunta ainda não foi respondida)
+  io.to(`user-${creatorId}`).emit('campaign-message-edited', data);
+  console.log(`📡 Emitted campaign-message-edited to user-${creatorId} (campaign ${campaignId})`, data);
+};
+
+export const emitCampaignMessageDeleted = (campaignId: string, data: any) => {
+  const io = getIO();
+  io.to(`campaign-${campaignId}`).emit('campaign-message-deleted', data);
+  console.log(`📡 Emitted campaign-message-deleted to campaign-${campaignId}`, data);
+};
+
+export const emitUserTyping = (campaignId: string, data: any) => {
+  const io = getIO();
+  io.to(`campaign-${campaignId}`).emit('user-typing', data);
+};
+
+export const emitCreatorTyping = (userId: string, data: any) => {
+  const io = getIO();
+  io.to(`user-${userId}`).emit('creator-typing', data);
 };

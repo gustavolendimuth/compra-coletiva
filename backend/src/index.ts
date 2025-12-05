@@ -10,7 +10,9 @@ import productRoutes from './routes/products';
 import orderRoutes from './routes/orders';
 import analyticsRoutes from './routes/analytics';
 import messageRoutes from './routes/messages';
+import campaignMessageRoutes from './routes/campaignMessages';
 import validationRoutes from './routes/validation';
+import feedbackRoutes from './routes/feedback';
 import { errorHandler } from './middleware/errorHandler';
 import { startCampaignScheduler } from './services/campaignScheduler';
 import { initializeSocket } from './services/socketService';
@@ -70,7 +72,9 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/campaign-messages', campaignMessageRoutes);
 app.use('/api/validation', validationRoutes);
+app.use('/api/feedback', feedbackRoutes);
 
 // Error handling
 app.use(errorHandler);

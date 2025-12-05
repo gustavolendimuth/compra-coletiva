@@ -210,6 +210,44 @@ export interface OrderMessage {
   };
 }
 
+export interface CampaignMessage {
+  id: string;
+  campaignId: string;
+  senderId: string;
+  question: string;
+  isEdited: boolean;
+  editedAt?: string;
+  answer?: string;
+  answeredAt?: string;
+  answeredBy?: string;
+  spamScore: number;
+  isPublic: boolean;
+  metadata?: {
+    factors?: Array<{
+      name: string;
+      value: number | boolean;
+      weight: number;
+      description: string;
+    }>;
+  };
+  createdAt: string;
+  updatedAt: string;
+  sender: {
+    id: string;
+    name: string;
+  };
+  answerer?: {
+    id: string;
+    name: string;
+  };
+}
+
+export interface CampaignMessageListResponse {
+  messages: CampaignMessage[];
+  total: number;
+  hasMore: boolean;
+}
+
 export interface Analytics {
   totalQuantity: number;
   totalWithoutShipping: number;
@@ -312,4 +350,77 @@ export const messageApi = {
 export const analyticsApi = {
   getByCampaign: (campaignId: string) =>
     api.get<Analytics>(`/analytics/campaign/${campaignId}`).then(res => res.data)
+};
+
+export const campaignMessageApi = {
+  // Listar mensagens públicas de uma campanha
+  list: (campaignId: string, params?: { limit?: number; offset?: number }) =>
+    api.get<CampaignMessageListResponse>('/campaign-messages', {
+      params: { campaignId, ...params }
+    }).then(res => res.data),
+
+  // Criar nova pergunta
+  create: (data: { campaignId: string; question: string }) =>
+    api.post<{
+      message: CampaignMessage;
+      canEditUntil: string;
+      spamScore: number;
+    }>('/campaign-messages', data).then(res => res.data),
+
+  // Editar pergunta própria (15 min, não respondida)
+  edit: (id: string, question: string) =>
+    api.patch<CampaignMessage>(`/campaign-messages/${id}`, { question }).then(res => res.data),
+
+  // Listar próprias perguntas
+  getMine: (campaignId: string) =>
+    api.get<CampaignMessage[]>('/campaign-messages/mine', {
+      params: { campaignId }
+    }).then(res => res.data),
+
+  // [CRIADOR] Listar perguntas não respondidas
+  getUnanswered: (campaignId: string) =>
+    api.get<CampaignMessage[]>('/campaign-messages/unanswered', {
+      params: { campaignId }
+    }).then(res => res.data),
+
+  // [CRIADOR] Responder pergunta
+  answer: (id: string, answer: string) =>
+    api.patch<CampaignMessage>(`/campaign-messages/${id}/answer`, { answer }).then(res => res.data),
+
+  // [CRIADOR] Deletar pergunta (spam)
+  delete: (id: string) =>
+    api.delete(`/campaign-messages/${id}`)
+};
+
+export const feedbackApi = {
+  // Criar novo feedback (autenticado ou anônimo)
+  create: (data: {
+    type: 'BUG' | 'SUGGESTION' | 'IMPROVEMENT' | 'OTHER';
+    title: string;
+    description: string;
+    email?: string;
+  }) => api.post('/feedback', data).then(res => res.data),
+
+  // Listar todos os feedbacks (apenas ADMIN)
+  list: (params?: {
+    type?: string;
+    status?: string;
+    limit?: number;
+    offset?: number;
+  }) => api.get('/feedback', { params }).then(res => res.data),
+
+  // Listar meus feedbacks (usuário autenticado)
+  getMine: () => api.get('/feedback/my').then(res => res.data),
+
+  // Estatísticas (apenas ADMIN)
+  getStats: () => api.get('/feedback/stats').then(res => res.data),
+
+  // Atualizar status (apenas ADMIN)
+  updateStatus: (id: string, data: {
+    status: 'PENDING' | 'IN_PROGRESS' | 'RESOLVED' | 'DISMISSED';
+    adminNotes?: string;
+  }) => api.patch(`/feedback/${id}`, data).then(res => res.data),
+
+  // Deletar (apenas ADMIN)
+  delete: (id: string) => api.delete(`/feedback/${id}`)
 };

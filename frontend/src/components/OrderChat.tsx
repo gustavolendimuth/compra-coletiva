@@ -185,7 +185,7 @@ export default function OrderChat({ orderId }: OrderChatProps) {
   };
 
   return (
-    <div className="flex flex-col h-[500px] border rounded-lg bg-gray-50">
+    <div className="flex flex-col border rounded-lg bg-gray-50" style={{ height: 'min(500px, 50vh)' }}>
       {/* Header */}
       <div className="p-4 border-b bg-white rounded-t-lg">
         <h3 className="font-semibold text-gray-900">Chat do Pedido</h3>
@@ -253,7 +253,7 @@ export default function OrderChat({ orderId }: OrderChatProps) {
 
       {/* Input */}
       <form onSubmit={handleSubmit} className="p-4 border-t bg-white rounded-b-lg">
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <input
             type="text"
             value={message}
@@ -265,7 +265,7 @@ export default function OrderChat({ orderId }: OrderChatProps) {
           <button
             type="submit"
             disabled={!user || !message.trim() || sendMessageMutation.isPending}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {sendMessageMutation.isPending ? 'Enviando...' : 'Enviar'}
           </button>

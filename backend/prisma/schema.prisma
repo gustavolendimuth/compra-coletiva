@@ -20,17 +20,50 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  // Campaign Chat - Reputation & Rate Limiting
+  messageCount  Int      @default(0)      // Total de perguntas feitas
+  answeredCount Int      @default(0)      // Total de respostas fornecidas (criadores apenas)
+  spamScore     Float    @default(0)      // Pontuação de risco 0-100
+  lastMessageAt DateTime?                 // Para rate limiting
+  isBanned      Boolean  @default(false)  // Não pode enviar mensagens
+
   // Relações
-  campaigns           Campaign[]            @relation("CampaignCreator")
-  orders              Order[]               @relation("CustomerOrders")
-  sentMessages        OrderMessage[]        @relation("MessageSender")
-  sessions            Session[]
-  passwordResetTokens PasswordResetToken[]
+  campaigns                Campaign[]            @relation("CampaignCreator")
+  orders                   Order[]               @relation("CustomerOrders")
+  sentMessages             OrderMessage[]        @relation("MessageSender")
+  sentCampaignMessages     CampaignMessage[]     @relation("SentCampaignMessages")
+  answeredCampaignMessages CampaignMessage[]     @relation("AnsweredCampaignMessages")
+  sessions                 Session[]
+  passwordResetTokens      PasswordResetToken[]
+  notifications            Notification[]
+  feedback                 Feedback[]
 
   @@map("users")
   @@index([email])
   @@index([googleId])
   @@index([name])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  message   String
+  metadata  Json?
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@map("notifications")
+  @@index([userId, read])
+  @@index([userId, createdAt])
+}
+
+enum NotificationType {
+  CAMPAIGN_READY_TO_SEND
+  CAMPAIGN_STATUS_CHANGED
+  CAMPAIGN_ARCHIVED
 }
 
 model Session {
@@ -88,6 +121,7 @@ model Campaign {
 
   products    Product[]
   orders      Order[]
+  messages    CampaignMessage[]
 
   @@map("campaigns")
   @@index([creatorId])
@@ -190,4 +224,74 @@ enum CampaignStatus {
   CLOSED
   SENT
   ARCHIVED
+}
+
+// ========== FEEDBACK SYSTEM ==========
+
+model Feedback {
+  id          String       @id @default(cuid())
+  userId      String?
+  user        User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  type        FeedbackType
+  title       String
+  description String       @db.Text
+  email       String?      // Email para feedback anônimo
+  status      FeedbackStatus @default(PENDING)
+  adminNotes  String?      @db.Text
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("feedback")
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum FeedbackType {
+  BUG
+  SUGGESTION
+  IMPROVEMENT
+  OTHER
+}
+
+enum FeedbackStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+  DISMISSED
+}
+
+// ========== CAMPAIGN CHAT MODELS ==========
+
+model CampaignMessage {
+  id         String   @id @default(cuid())
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  // Pergunta (do usuário)
+  senderId   String
+  sender     User     @relation("SentCampaignMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  question   String   @db.Text
+  isEdited   Boolean  @default(false)
+  editedAt   DateTime?
+
+  // Resposta (do criador)
+  answer     String?  @db.Text
+  answeredAt DateTime?
+  answeredBy String?
+  answerer   User?    @relation("AnsweredCampaignMessages", fields: [answeredBy], references: [id], onDelete: SetNull)
+
+  // Metadata
+  spamScore  Float    @default(0)      // Pontuação de spam 0-100
+  isPublic   Boolean  @default(false)  // Verdadeiro apenas após resposta
+  metadata   Json?                     // Fatores de spam para análise
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("campaign_messages")
+  @@index([campaignId, isPublic, createdAt])
+  @@index([senderId, createdAt])
+  @@index([campaignId, isPublic])
 }
