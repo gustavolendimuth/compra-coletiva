@@ -65,6 +65,11 @@ const updateStatusSchema = z.object({
   status: z.enum(['ACTIVE', 'CLOSED', 'SENT', 'ARCHIVED'])
 });
 
+const cloneCampaignSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().optional()
+});
+
 // Função auxiliar para buscar IDs de campanhas usando unaccent (busca sem acentos)
 async function searchCampaignIds(searchTerm: string): Promise<string[]> {
   const results = await prisma.$queryRaw<{ id: string }[]>`
@@ -403,6 +408,61 @@ router.get('/:id/supplier-invoice', requireAuth, requireCampaignOwnership, async
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   res.send(pdfBuffer);
+}));
+
+// POST /api/campaigns/:id/clone - Clona uma campanha com todos os produtos
+router.post('/:id/clone', requireAuth, requireCampaignOwnership, asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const data = cloneCampaignSchema.parse(req.body);
+
+  // Get the original campaign and its products
+  const originalCampaign = await prisma.campaign.findUnique({
+    where: { id },
+    include: {
+      products: {
+        select: {
+          name: true,
+          price: true,
+          weight: true
+        }
+      }
+    }
+  });
+
+  if (!originalCampaign) {
+    throw new AppError(404, 'Campaign not found');
+  }
+
+  // Create the cloned campaign with products in a transaction
+  const clonedCampaign = await prisma.$transaction(async (tx) => {
+    // Create the new campaign (without deadline, orders, and shipping)
+    const newCampaign = await tx.campaign.create({
+      data: {
+        name: data.name,
+        description: data.description,
+        status: 'ACTIVE',
+        deadline: null,
+        shippingCost: 0,
+        creatorId: req.user!.id
+      }
+    });
+
+    // Clone all products from the original campaign
+    if (originalCampaign.products.length > 0) {
+      await tx.product.createMany({
+        data: originalCampaign.products.map(product => ({
+          campaignId: newCampaign.id,
+          name: product.name,
+          price: product.price,
+          weight: product.weight
+        }))
+      });
+    }
+
+    return newCampaign;
+  });
+
+  res.status(201).json(clonedCampaign);
 }));
 
 export default router;

@@ -7,6 +7,7 @@ import {
   CloseConfirmDialog,
   ReopenConfirmDialog,
   SentConfirmDialog,
+  CloneModal,
 } from './modals/CampaignModals';
 
 interface CampaignModalsProps {
@@ -108,6 +109,18 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
         isOpen={hook.isSentConfirmOpen}
         onClose={() => hook.setIsSentConfirmOpen(false)}
         onConfirm={() => hook.handleUpdateStatus('SENT')}
+      />
+
+      <CloneModal
+        isOpen={hook.isCloneModalOpen}
+        campaign={hook.campaign}
+        cloneName={hook.cloneName}
+        cloneDescription={hook.cloneDescription}
+        isPending={hook.cloneCampaignMutation?.isPending || false}
+        onClose={() => hook.setIsCloneModalOpen(false)}
+        onChangeName={hook.setCloneName}
+        onChangeDescription={hook.setCloneDescription}
+        onSubmit={hook.handleCloneCampaign}
       />
     </>
   );

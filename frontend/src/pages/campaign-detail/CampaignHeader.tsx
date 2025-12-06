@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Edit, Lock, Unlock, Send, AlertCircle, Calendar, Clock, FileText } from 'lucide-react';
+import { ArrowLeft, Edit, Lock, Unlock, Send, AlertCircle, Calendar, Clock, FileText, Copy } from 'lucide-react';
 import IconButton from '@/components/IconButton';
 import { Campaign, campaignApi } from '@/api';
 import toast from 'react-hot-toast';
@@ -14,6 +14,7 @@ interface CampaignHeaderProps {
   onReopenCampaign: () => void;
   onMarkAsSent: () => void;
   onUpdateCampaign: (data: { name?: string; description?: string }) => void;
+  onCloneCampaign: () => void;
 }
 
 export function CampaignHeader({
@@ -25,6 +26,7 @@ export function CampaignHeader({
   onReopenCampaign,
   onMarkAsSent,
   onUpdateCampaign,
+  onCloneCampaign,
 }: CampaignHeaderProps) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
@@ -205,6 +207,18 @@ export function CampaignHeader({
 
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-2">
+          {canEditCampaign && (
+            <IconButton
+              size="sm"
+              variant="secondary"
+              icon={<Copy className="w-4 h-4" />}
+              onClick={onCloneCampaign}
+              className="text-xs sm:text-sm whitespace-nowrap"
+            >
+              Clonar Campanha
+            </IconButton>
+          )}
+
           {ordersCount > 0 && canEditCampaign && (
             <IconButton
               size="sm"

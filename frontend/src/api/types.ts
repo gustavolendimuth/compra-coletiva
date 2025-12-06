@@ -104,6 +104,11 @@ export interface UpdateCampaignDto {
   status?: 'ACTIVE' | 'CLOSED' | 'SENT' | 'ARCHIVED';
 }
 
+export interface CloneCampaignDto {
+  name: string;
+  description?: string;
+}
+
 // ============================================================================
 // Product Types
 // ============================================================================

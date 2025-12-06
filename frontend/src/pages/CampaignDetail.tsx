@@ -1,25 +1,27 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useCampaignDetail } from './campaign-detail/useCampaignDetail';
-import { LoadingSkeleton } from './campaign-detail/LoadingSkeleton';
-import { CampaignHeader } from './campaign-detail';
-import { TabNavigation } from './campaign-detail';
-import { OverviewTab } from './campaign-detail/tabs/OverviewTab';
-import { ProductsTab } from './campaign-detail/tabs/ProductsTab';
-import { OrdersTab } from './campaign-detail/tabs/OrdersTab';
-import { ShippingTab } from './campaign-detail/tabs/ShippingTab';
-import { QuestionsTab } from './campaign-detail/tabs/QuestionsTab';
-import { CampaignModals } from './campaign-detail/CampaignModals';
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useCampaignDetail } from "./campaign-detail/useCampaignDetail";
+import { LoadingSkeleton } from "./campaign-detail/LoadingSkeleton";
+import { CampaignHeader } from "./campaign-detail";
+import { TabNavigation } from "./campaign-detail";
+import { OverviewTab } from "./campaign-detail/tabs/OverviewTab";
+import { ProductsTab } from "./campaign-detail/tabs/ProductsTab";
+import { OrdersTab } from "./campaign-detail/tabs/OrdersTab";
+import { ShippingTab } from "./campaign-detail/tabs/ShippingTab";
+import { QuestionsTab } from "./campaign-detail/tabs/QuestionsTab";
+import { CampaignModals } from "./campaign-detail/CampaignModals";
 
 export default function CampaignDetail() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders' | 'shipping' | 'questions'>('overview');
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "products" | "orders" | "shipping" | "questions"
+  >("overview");
   const hook = useCampaignDetail();
 
   // Handle navigation from notifications
   useEffect(() => {
     if (hook.shouldOpenQuestionsTab) {
-      setActiveTab('questions');
+      setActiveTab("questions");
       hook.setShouldOpenQuestionsTab(false);
     }
   }, [hook.shouldOpenQuestionsTab, hook.setShouldOpenQuestionsTab]);
@@ -40,6 +42,7 @@ export default function CampaignDetail() {
           onReopenCampaign={() => hook.setIsReopenConfirmOpen(true)}
           onMarkAsSent={() => hook.setIsSentConfirmOpen(true)}
           onUpdateCampaign={hook.handleUpdateCampaign}
+          onCloneCampaign={hook.handleOpenCloneModal}
         />
       </div>
 
@@ -49,7 +52,7 @@ export default function CampaignDetail() {
         canEditCampaign={hook.canEditCampaign}
       />
 
-      {activeTab === 'overview' && hook.analytics && (
+      {activeTab === "overview" && hook.analytics && (
         <OverviewTab
           campaignId={hook.campaign.id}
           analytics={hook.analytics}
@@ -71,7 +74,7 @@ export default function CampaignDetail() {
         />
       )}
 
-      {activeTab === 'products' && (
+      {activeTab === "products" && (
         <ProductsTab
           products={hook.products || []}
           sortedProducts={hook.sortedProducts || []}
@@ -86,7 +89,7 @@ export default function CampaignDetail() {
         />
       )}
 
-      {activeTab === 'orders' && (
+      {activeTab === "orders" && (
         <OrdersTab
           orders={hook.orders || []}
           filteredOrders={hook.filteredOrders || []}
@@ -112,7 +115,7 @@ export default function CampaignDetail() {
         />
       )}
 
-      {activeTab === 'shipping' && hook.campaign && (
+      {activeTab === "shipping" && hook.campaign && (
         <ShippingTab
           campaign={hook.campaign}
           isActive={hook.isActive}
@@ -124,8 +127,11 @@ export default function CampaignDetail() {
         />
       )}
 
-      {activeTab === 'questions' && hook.canEditCampaign && (
-        <QuestionsTab campaignId={hook.campaign.id} canEditCampaign={hook.canEditCampaign} />
+      {activeTab === "questions" && hook.canEditCampaign && (
+        <QuestionsTab
+          campaignId={hook.campaign.id}
+          canEditCampaign={hook.canEditCampaign}
+        />
       )}
 
       <CampaignModals hook={hook} />

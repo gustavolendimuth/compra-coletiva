@@ -39,6 +39,7 @@ export function useCampaignDetail() {
   const [isCloseConfirmOpen, setIsCloseConfirmOpen] = useState(false);
   const [isReopenConfirmOpen, setIsReopenConfirmOpen] = useState(false);
   const [isSentConfirmOpen, setIsSentConfirmOpen] = useState(false);
+  const [isCloneModalOpen, setIsCloneModalOpen] = useState(false);
 
   // Editing states
   const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
@@ -75,6 +76,8 @@ export function useCampaignDetail() {
 
   const [shippingCost, setShippingCost] = useState(0);
   const [deadlineForm, setDeadlineForm] = useState('');
+  const [cloneName, setCloneName] = useState('');
+  const [cloneDescription, setCloneDescription] = useState('');
 
   // Campaign inline edit states
   const [isEditingName, setIsEditingName] = useState(false);
@@ -328,6 +331,21 @@ export function useCampaignDetail() {
     onError: () => toast.error('Erro ao atualizar pedido')
   });
 
+  const cloneCampaignMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { name: string; description?: string } }) =>
+      campaignApi.clone(id, data),
+    onSuccess: (newCampaign) => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+      toast.success('Campanha clonada com sucesso!');
+      setIsCloneModalOpen(false);
+      setCloneName('');
+      setCloneDescription('');
+      // Navigate to the new campaign
+      navigate(`/campaigns/${newCampaign.id}`);
+    },
+    onError: () => toast.error('Erro ao clonar campanha')
+  });
+
   // Handlers
   const handleCreateProduct = (e: React.FormEvent) => {
     e.preventDefault();
@@ -557,6 +575,26 @@ export function useCampaignDetail() {
     }
   };
 
+  const handleOpenCloneModal = () => {
+    if (campaign) {
+      setCloneName(`${campaign.name} (Cópia)`);
+      setCloneDescription(campaign.description || '');
+      setIsCloneModalOpen(true);
+    }
+  };
+
+  const handleCloneCampaign = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!campaignId || !cloneName.trim()) return;
+    cloneCampaignMutation.mutate({
+      id: campaignId,
+      data: {
+        name: cloneName.trim(),
+        description: cloneDescription.trim() || undefined
+      }
+    });
+  };
+
   return {
     // Data
     campaign,
@@ -624,6 +662,14 @@ export function useCampaignDetail() {
     isSentConfirmOpen,
     setIsSentConfirmOpen,
 
+    // Clone Modal State
+    isCloneModalOpen,
+    setIsCloneModalOpen,
+    cloneName,
+    setCloneName,
+    cloneDescription,
+    setCloneDescription,
+
     // Campaign Inline Edit State
     isEditingName,
     setIsEditingName,
@@ -672,6 +718,8 @@ export function useCampaignDetail() {
     handleEditOrderFromView,
     handleReopenCampaign,
     handleOpenEditDeadline,
+    handleOpenCloneModal,
+    handleCloneCampaign,
 
     // Mutations
     createProductMutation,
@@ -681,5 +729,6 @@ export function useCampaignDetail() {
     updateStatusMutation,
     createOrderMutation,
     updateOrderWithItemsMutation,
+    cloneCampaignMutation,
   };
 }

@@ -3,6 +3,18 @@ import DateTimeInput from '@/components/DateTimeInput';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { Campaign } from '@/api';
 
+interface CloneModalProps {
+  isOpen: boolean;
+  campaign: Campaign | null;
+  cloneName: string;
+  cloneDescription: string;
+  isPending: boolean;
+  onClose: () => void;
+  onChangeName: (name: string) => void;
+  onChangeDescription: (description: string) => void;
+  onSubmit: (e: React.FormEvent) => void;
+}
+
 interface ShippingModalProps {
   isOpen: boolean;
   shippingCost: number | '';
@@ -192,5 +204,76 @@ export function SentConfirmDialog({ isOpen, onClose, onConfirm }: SentConfirmDia
       cancelText="Cancelar"
       variant="info"
     />
+  );
+}
+
+export function CloneModal({
+  isOpen,
+  campaign,
+  cloneName,
+  cloneDescription,
+  isPending,
+  onClose,
+  onChangeName,
+  onChangeDescription,
+  onSubmit,
+}: CloneModalProps) {
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Clonar Campanha">
+      <form onSubmit={onSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="clone-name" className="block text-sm font-medium text-gray-700 mb-1">
+            Nome da Nova Campanha *
+          </label>
+          <input
+            id="clone-name"
+            type="text"
+            required
+            autoFocus
+            value={cloneName}
+            onChange={(e) => onChangeName(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            placeholder="Digite o nome da nova campanha"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="clone-description" className="block text-sm font-medium text-gray-700 mb-1">
+            Descrição (opcional)
+          </label>
+          <textarea
+            id="clone-description"
+            rows={3}
+            value={cloneDescription}
+            onChange={(e) => onChangeDescription(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+            placeholder="Adicione uma descrição"
+          />
+        </div>
+
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <p className="text-sm text-blue-800">
+            <strong>O que será clonado:</strong> Todos os produtos ({campaign?._count?.products || 0}) com seus nomes, preços e pesos.
+          </p>
+          <p className="text-sm text-blue-800 mt-2">
+            <strong>O que NÃO será clonado:</strong> Data limite, pedidos, frete e mensagens.
+          </p>
+        </div>
+
+        <div className="flex gap-3 pt-4">
+          <Button type="submit" disabled={isPending || !cloneName.trim()} className="flex-1 whitespace-nowrap">
+            {isPending ? 'Clonando...' : 'Clonar Campanha'}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onClose}
+            className="whitespace-nowrap"
+          >
+            Cancelar
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }

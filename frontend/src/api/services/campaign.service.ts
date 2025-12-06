@@ -9,7 +9,8 @@ import type {
   CampaignListParams,
   CampaignListResponse,
   CreateCampaignDto,
-  UpdateCampaignDto
+  UpdateCampaignDto,
+  CloneCampaignDto
 } from '../types';
 
 export const campaignService = {
@@ -99,5 +100,14 @@ export const campaignService = {
     link.click();
     link.remove();
     window.URL.revokeObjectURL(url);
-  }
+  },
+
+  /**
+   * Clone a campaign with all its products
+   * @param id - Campaign ID to clone
+   * @param data - New campaign data (name and optional description)
+   * @returns Created campaign
+   */
+  clone: (id: string, data: CloneCampaignDto) =>
+    apiClient.post<Campaign>(`/campaigns/${id}/clone`, data).then(res => res.data)
 };
