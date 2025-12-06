@@ -1,6 +1,4 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCampaignDetail } from './campaign-detail/useCampaignDetail';
 import { LoadingSkeleton } from './campaign-detail/LoadingSkeleton';
@@ -17,6 +15,14 @@ export default function CampaignDetail() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders' | 'shipping' | 'questions'>('overview');
   const hook = useCampaignDetail();
+
+  // Handle navigation from notifications
+  useEffect(() => {
+    if (hook.shouldOpenQuestionsTab) {
+      setActiveTab('questions');
+      hook.setShouldOpenQuestionsTab(false);
+    }
+  }, [hook.shouldOpenQuestionsTab, hook.setShouldOpenQuestionsTab]);
 
   if (!hook.campaign) {
     return <LoadingSkeleton />;

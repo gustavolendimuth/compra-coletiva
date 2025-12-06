@@ -153,19 +153,21 @@ describe('Money Utility', () => {
     });
 
     it('should use default tolerance', () => {
-      expect(Money.equals(10.005, 10.000)).toBe(true);
+      expect(Money.equals(10.004, 10.000)).toBe(true); // 0.004 < 0.005 default tolerance
+      expect(Money.equals(10.006, 10.000)).toBe(false); // 0.006 >= 0.005 default tolerance
     });
   });
 
   describe('format', () => {
     it('should format as BRL currency', () => {
-      expect(Money.format(1234.56)).toBe('R$ 1.234,56');
-      expect(Money.format(0.50)).toBe('R$ 0,50');
-      expect(Money.format(1000000.00)).toBe('R$ 1.000.000,00');
+      // Note: Intl.NumberFormat uses non-breaking space (U+00A0) not regular space
+      expect(Money.format(1234.56)).toBe('R$\u00a01.234,56');
+      expect(Money.format(0.50)).toBe('R$\u00a00,50');
+      expect(Money.format(1000000.00)).toBe('R$\u00a01.000.000,00');
     });
 
     it('should handle zero', () => {
-      expect(Money.format(0)).toBe('R$ 0,00');
+      expect(Money.format(0)).toBe('R$\u00a00,00');
     });
   });
 

@@ -13,6 +13,7 @@ import messageRoutes from './routes/messages';
 import campaignMessageRoutes from './routes/campaignMessages';
 import validationRoutes from './routes/validation';
 import feedbackRoutes from './routes/feedback';
+import notificationRoutes from './routes/notifications';
 import { errorHandler } from './middleware/errorHandler';
 import { startCampaignScheduler } from './services/campaignScheduler';
 import { initializeSocket } from './services/socketService';
@@ -75,6 +76,7 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/campaign-messages', campaignMessageRoutes);
 app.use('/api/validation', validationRoutes);
 app.use('/api/feedback', feedbackRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Error handling
 app.use(errorHandler);

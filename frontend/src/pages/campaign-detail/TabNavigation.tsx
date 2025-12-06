@@ -9,15 +9,15 @@ interface TabNavigationProps {
 }
 
 export function TabNavigation({ activeTab, onTabChange, canEditCampaign }: TabNavigationProps) {
-  const tabs = [
-    { id: 'overview' as const, label: 'Visão Geral', shortLabel: 'Geral', icon: TrendingUp },
-    { id: 'orders' as const, label: 'Pedidos', shortLabel: 'Pedidos', icon: ShoppingBag },
-    { id: 'products' as const, label: 'Produtos', shortLabel: 'Produtos', icon: Package },
-    { id: 'shipping' as const, label: 'Frete', shortLabel: 'Frete', icon: Truck },
+  const tabs: Array<{ id: TabType; label: string; shortLabel: string; icon: any }> = [
+    { id: 'overview', label: 'Visão Geral', shortLabel: 'Geral', icon: TrendingUp },
+    { id: 'orders', label: 'Pedidos', shortLabel: 'Pedidos', icon: ShoppingBag },
+    { id: 'products', label: 'Produtos', shortLabel: 'Produtos', icon: Package },
+    { id: 'shipping', label: 'Frete', shortLabel: 'Frete', icon: Truck },
   ];
 
   if (canEditCampaign) {
-    tabs.push({ id: 'questions' as const, label: 'Moderar', shortLabel: 'Moderar', icon: MessagesSquare });
+    tabs.push({ id: 'questions', label: 'Moderar', shortLabel: 'Moderar', icon: MessagesSquare });
   }
 
   return (

@@ -1,5 +1,4 @@
 import { Modal, Button } from '@/components/ui';
-import { Product } from '@/api';
 
 interface ProductForm {
   name: string;
@@ -101,7 +100,6 @@ export function AddProductModal({
 
 interface EditProductModalProps {
   isOpen: boolean;
-  product: Product | null;
   form: ProductForm;
   isPending: boolean;
   onClose: () => void;
@@ -111,7 +109,6 @@ interface EditProductModalProps {
 
 export function EditProductModal({
   isOpen,
-  product,
   form,
   isPending,
   onClose,

@@ -25,7 +25,7 @@ interface OrdersTabProps {
 }
 
 export function OrdersTab({
-  orders,
+  orders: _orders,
   filteredOrders,
   isActive,
   canEditCampaign,

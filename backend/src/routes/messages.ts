@@ -4,6 +4,7 @@ import { asyncHandler, AppError } from '../middleware/errorHandler';
 import { requireAuth, requireMessageAccess } from '../middleware/authMiddleware';
 import { z } from 'zod';
 import { emitMessageSent } from '../services/socketService';
+import { NotificationService } from '../services/notificationService';
 
 const router = Router();
 
@@ -61,7 +62,10 @@ router.post('/', requireAuth, requireMessageAccess, asyncHandler(async (req, res
     where: { id: data.orderId },
     include: {
       campaign: {
-        select: { creatorId: true }
+        select: {
+          creatorId: true,
+          name: true
+        }
       }
     }
   });
@@ -94,6 +98,33 @@ router.post('/', requireAuth, requireMessageAccess, asyncHandler(async (req, res
 
   // Emite evento Socket.io
   emitMessageSent(data.orderId, message);
+
+  // Criar notificação para o destinatário
+  // Se o sender é o criador da campanha, notifica o cliente (dono do pedido)
+  // Se o sender é o cliente, notifica o criador da campanha
+  const recipientId = order.campaign.creatorId === req.user!.id
+    ? order.userId
+    : order.campaign.creatorId;
+
+  if (recipientId) {
+    try {
+      await NotificationService.createNotification(
+        recipientId,
+        'NEW_MESSAGE',
+        'Nova mensagem no pedido',
+        `${req.user!.name} enviou: "${data.message.substring(0, 50)}${data.message.length > 50 ? '...' : ''}"`,
+        {
+          orderId: order.id,
+          campaignId: order.campaignId,
+          campaignName: order.campaign.name,
+          messageId: message.id
+        }
+      );
+    } catch (error) {
+      console.error('[Messages] Error creating notification:', error);
+      // Não falha a request se a notificação falhar
+    }
+  }
 
   res.status(201).json(message);
 }));

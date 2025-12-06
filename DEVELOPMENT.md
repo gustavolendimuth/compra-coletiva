@@ -437,13 +437,92 @@ Status disponíveis: `PENDING`, `IN_PROGRESS`, `RESOLVED`, `DISMISSED`
 - `campaign:{campaignId}`: Updates de campanha específica
 - `order:{orderId}`: Chat de pedido específico
 
+## Sistema de Testes (IMPLEMENTADO ✅)
+
+### Frontend (Vitest + React Testing Library)
+
+**Infraestrutura**:
+- Vitest 4.0.15 + React Testing Library
+- Setup global em `frontend/src/__tests__/setup.ts`
+- Mock data factories em `frontend/src/__tests__/mock-data.ts`
+
+**Cobertura Atual**:
+- 164 testes passando (2 skipped)
+- 8 arquivos de teste
+- Tempo de execução: ~3.7 segundos
+- Campaign listing: 100% coberto
+
+**Arquivos de Teste**:
+1. `src/__tests__/mock-data.ts` - Factories para dados mock
+2. `src/pages/__tests__/CampaignList.test.tsx` - 19 testes
+3. `src/components/campaign/__tests__/CampaignFilters.test.tsx` - 28 testes
+4. `src/components/campaign/__tests__/CampaignCard.test.tsx` - 22 testes
+5. `src/components/campaign/__tests__/CampaignCardHeader.test.tsx` - 14 testes
+6. `src/components/campaign/__tests__/CampaignCardBody.test.tsx` - 17 testes
+7. `src/components/campaign/__tests__/CampaignCardFooter.test.tsx` - 24 testes
+8. `src/components/campaign/__tests__/CampaignCardSkeleton.test.tsx` - 30 testes
+
+**Comandos**:
+```bash
+npm test --workspace=frontend              # Rodar testes
+npm run test:ui --workspace=frontend       # UI interativa
+npm run test:coverage --workspace=frontend # Relatório de cobertura
+```
+
+**Mock Data Factories**:
+```typescript
+import { createMockCampaign, mockActiveCampaign } from '@/tests/mock-data';
+
+const campaign = createMockCampaign({ status: 'ACTIVE' });
+const campaigns = [mockActiveCampaign, mockClosedCampaign];
+```
+
+### Backend (Jest + ts-jest)
+
+**Infraestrutura**:
+- Jest 29.7.0 + ts-jest
+- Setup global em `backend/src/__tests__/setup.ts`
+
+**Cobertura Atual**:
+- 31 testes passando
+- 1 arquivo de teste
+- Tempo de execução: <1 segundo
+- Money utility: 100% coverage
+
+**Arquivo de Teste**:
+1. `src/utils/money.test.ts` - 31 testes (cálculos financeiros críticos)
+
+**Comandos**:
+```bash
+npm test --workspace=backend              # Rodar testes
+npm run test:coverage --workspace=backend # Relatório de cobertura
+```
+
+### Estatísticas Totais
+
+- **195 testes passando** (164 frontend + 31 backend)
+- **9 arquivos de teste**
+- **100% taxa de sucesso**
+- **~4.7 segundos** tempo total de execução
+
+### Padrões de Teste Estabelecidos
+
+1. **Factory Pattern**: Dados mock consistentes
+2. **AAA Pattern**: Arrange, Act, Assert
+3. **Mobile-First Testing**: Testes responsivos
+4. **Accessibility Testing**: ARIA, keyboard navigation
+5. **Edge Cases**: Estados vazios, erros, dados faltando
+
 ## Próximos Passos
 
 - Configure ESLint + Prettier para code quality
-- Adicione testes automatizados (Jest/Vitest)
-- Configure CI/CD pipeline
+- ✅ ~~Adicione testes automatizados (Jest/Vitest)~~ - COMPLETO
+- ✅ ~~Configure CI/CD pipeline~~ - GitHub Actions configurado
 - Adicione pre-commit hooks (Husky)
+- **Expandir testes**: CampaignDetail, hooks, backend routes
 - **Interface web de admin** para gerenciar feedbacks visualmente
 - **Pagination** para lista de mensagens/notificações
 - **Email notifications** para perguntas respondidas
 - **Push notifications** (web/mobile)
+- **E2E tests** com Playwright
+- **Visual regression testing**

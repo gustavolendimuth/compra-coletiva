@@ -4,6 +4,7 @@ import { prisma } from '../index';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
 import { requireAuth, requireCampaignOwnership } from '../middleware/authMiddleware';
 import { SpamDetectionService } from '../services/spamDetectionService';
+import { NotificationService } from '../services/notificationService';
 import {
   emitCampaignQuestionReceived,
   emitCampaignMessagePublished,
@@ -152,7 +153,7 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
       spamScore: spamAnalysis.score,
       metadata: {
         factors: spamAnalysis.factors
-      },
+      } as any,
       isPublic: false
     },
     include: {
@@ -180,6 +181,25 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
       spamScore: message.spamScore,
       createdAt: message.createdAt
     });
+
+    // Criar notificação para o criador da campanha
+    try {
+      await NotificationService.createNotification(
+        campaign.creatorId,
+        'NEW_MESSAGE',
+        'Nova pergunta na campanha',
+        `${message.sender.name} perguntou: "${data.question.substring(0, 50)}${data.question.length > 50 ? '...' : ''}"`,
+        {
+          campaignId: campaign.id,
+          campaignName: campaign.name,
+          messageId: message.id,
+          isQuestion: true
+        }
+      );
+    } catch (error) {
+      console.error('[CampaignMessages] Error creating notification:', error);
+      // Não falha a request se a notificação falhar
+    }
   }
 
   // Calcular quando pode editar (15 minutos)

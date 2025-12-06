@@ -11,6 +11,7 @@ interface AuthenticatedSocket extends Socket {
     id: string;
     email: string;
     role: string;
+    name: string | null;
   };
 }
 
@@ -49,7 +50,7 @@ export const initializeSocket = (httpServer: HttpServer): Server => {
       // Get user from database
       const user = await prisma.user.findUnique({
         where: { id: payload.userId },
-        select: { id: true, email: true, role: true }
+        select: { id: true, email: true, role: true, name: true }
       });
 
       if (!user) {
@@ -210,4 +211,11 @@ export const emitUserTyping = (campaignId: string, data: any) => {
 export const emitCreatorTyping = (userId: string, data: any) => {
   const io = getIO();
   io.to(`user-${userId}`).emit('creator-typing', data);
+};
+
+// Notification Events
+export const emitNotificationCreated = (userId: string, data: any) => {
+  const io = getIO();
+  io.to(`user-${userId}`).emit('notification-created', data);
+  console.log(`📡 Emitted notification-created to user-${userId}`, data);
 };

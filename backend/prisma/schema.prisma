@@ -64,6 +64,7 @@ enum NotificationType {
   CAMPAIGN_READY_TO_SEND
   CAMPAIGN_STATUS_CHANGED
   CAMPAIGN_ARCHIVED
+  NEW_MESSAGE
 }
 
 model Session {

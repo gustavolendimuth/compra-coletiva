@@ -282,7 +282,7 @@ export interface CampaignMessageListParams {
 export interface Notification {
   id: string;
   userId: string;
-  type: 'CAMPAIGN_READY_TO_SEND' | 'CAMPAIGN_STATUS_CHANGED' | 'CAMPAIGN_ARCHIVED';
+  type: 'CAMPAIGN_READY_TO_SEND' | 'CAMPAIGN_STATUS_CHANGED' | 'CAMPAIGN_ARCHIVED' | 'NEW_MESSAGE';
   title: string;
   message: string;
   isRead: boolean;

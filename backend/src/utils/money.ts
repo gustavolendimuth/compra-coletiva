@@ -100,7 +100,7 @@ export class Money {
   /**
    * Compares two monetary values for equality (with tolerance for floating-point errors)
    */
-  static equals(a: number, b: number, tolerance: number = 0.01): boolean {
+  static equals(a: number, b: number, tolerance: number = 0.005): boolean {
     return Math.abs(a - b) < tolerance;
   }
 

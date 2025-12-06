@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { campaignApi, productApi, orderApi, analyticsApi, Order, Product } from '@/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -113,6 +113,43 @@ export function useCampaignDetail() {
     queryFn: () => analyticsApi.getByCampaign(campaignId!),
     enabled: !!campaignId
   });
+
+  // Handle navigation from notifications
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // State for handling navigation from notifications
+  const [shouldOpenQuestionsTab, setShouldOpenQuestionsTab] = useState(false);
+
+  useEffect(() => {
+    const state = location.state as {
+      openOrderChat?: boolean;
+      orderId?: string;
+      openQuestionsTab?: boolean;
+    } | null;
+
+    if (state?.openOrderChat && state?.orderId && orders) {
+      // Find the order
+      const order = orders.find(o => o.id === state.orderId);
+
+      if (order) {
+        // Open the order modal
+        setViewingOrder(order);
+        setIsViewOrderModalOpen(true);
+
+        // Clear the state to prevent reopening on refresh
+        navigate(location.pathname, { replace: true, state: {} });
+      }
+    }
+
+    if (state?.openQuestionsTab) {
+      // Signal to open questions tab
+      setShouldOpenQuestionsTab(true);
+
+      // Clear the state to prevent reopening on refresh
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, orders, navigate, location.pathname]);
 
   // Computed states
   const isActive = campaign?.status === 'ACTIVE';
@@ -535,6 +572,10 @@ export function useCampaignDetail() {
     isClosed,
     isSent,
     canEditCampaign,
+
+    // Navigation state
+    shouldOpenQuestionsTab,
+    setShouldOpenQuestionsTab,
 
     // Product Modal State
     isProductModalOpen,

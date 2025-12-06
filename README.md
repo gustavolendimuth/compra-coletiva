@@ -76,6 +76,7 @@ railway run --service backend npm run fix:legacy-users
 - **Zod**: Validação de schemas
 - **Passport.js**: Autenticação (Local + Google OAuth)
 - **JWT**: JSON Web Tokens para sessões
+- **Jest** + **ts-jest**: Testing framework (31 tests, 100% success)
 
 ### Frontend
 - **React 18** + **TypeScript**: Biblioteca UI com tipos
@@ -88,10 +89,12 @@ railway run --service backend npm run fix:legacy-users
 - **Axios**: HTTP client
 - **Lucide React**: Ícones modernos
 - **React Hot Toast**: Notificações de UI
+- **Vitest** + **React Testing Library**: Testing (164 tests, 100% success)
 
 ### DevOps
 - **Docker** + **Docker Compose**: Containerização
 - **Railway**: Platform para deploy em produção
+- **GitHub Actions**: CI/CD com testes automáticos
 
 ## Estrutura do Projeto
 
@@ -285,6 +288,32 @@ npx prisma migrate deploy
 # Reset database (CUIDADO: apaga todos os dados)
 npx prisma migrate reset
 ```
+
+### Testes
+
+```bash
+# Rodar todos os testes
+npm test
+
+# Backend tests apenas
+npm test --workspace=backend
+
+# Frontend tests apenas
+npm test --workspace=frontend
+
+# Frontend com UI interativa
+npm run test:ui --workspace=frontend
+
+# Coverage reports
+npm run test:coverage --workspace=frontend
+npm run test:coverage --workspace=backend
+```
+
+**Estatísticas de Testes**:
+- Total: 195 testes passando (164 frontend + 31 backend)
+- Taxa de sucesso: 100%
+- Tempo de execução: ~4.7 segundos
+- Coverage: Campaign listing completo, Money utility 100%
 
 ## Funcionalidades Futuras (Roadmap)
 

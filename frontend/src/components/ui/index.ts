@@ -12,6 +12,7 @@ export { Badge, StatusBadge } from './Badge';
 export { Modal } from './Modal';
 export { Divider } from './Divider';
 export { GoogleButton } from './GoogleButton';
+export { NotificationItem } from './NotificationItem';
 
 // Re-export default for backward compatibility
 export { default as ButtonDefault } from './Button';

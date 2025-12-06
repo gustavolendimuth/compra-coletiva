@@ -29,7 +29,6 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
 
       <EditProductModal
         isOpen={hook.isEditProductModalOpen}
-        product={hook.editingProduct}
         form={hook.editProductForm}
         isPending={hook.updateProductMutation.isPending}
         onClose={() => hook.setIsEditProductModalOpen(false)}
