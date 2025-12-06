@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -57,6 +57,10 @@ export function useCampaignDetail() {
   const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
+  // Flag para indicar se a mutação foi disparada pelo botão "Pedir"
+  // Quando true, não fecha o modal automaticamente
+  const isAddingFromButtonRef = useRef(false);
 
   // Form states
   const [productForm, setProductForm] = useState<ProductForm>({
@@ -268,13 +272,18 @@ export function useCampaignDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders", campaignId] });
       queryClient.invalidateQueries({ queryKey: ["analytics", campaignId] });
-      toast.success("Pedido criado!");
-      setIsOrderModalOpen(false);
-      setOrderForm({
-        campaignId: campaignId || "",
-        customerName: "",
-        items: [],
-      });
+
+      // Só limpa o formulário e fecha o modal se o modal estiver aberto
+      // (ou seja, se foi criado manualmente via modal, não automaticamente)
+      if (isOrderModalOpen) {
+        toast.success("Pedido criado!");
+        setIsOrderModalOpen(false);
+        setOrderForm({
+          campaignId: campaignId || "",
+          customerName: "",
+          items: [],
+        });
+      }
     },
     onError: () => toast.error("Erro ao criar pedido"),
   });
@@ -287,14 +296,26 @@ export function useCampaignDetail() {
       orderId: string;
       data: { items?: Array<{ productId: string; quantity: number }> };
     }) => orderApi.updateWithItems(orderId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["orders", campaignId] });
-      queryClient.invalidateQueries({ queryKey: ["analytics", campaignId] });
-      toast.success("Pedido atualizado!");
-      setIsEditOrderModalOpen(false);
-      setEditingOrder(null);
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["orders", campaignId] });
+      await queryClient.invalidateQueries({
+        queryKey: ["analytics", campaignId],
+      });
+
+      // Só fecha o modal se foi uma edição manual (não veio do botão "Pedir")
+      if (isEditOrderModalOpen && !isAddingFromButtonRef.current) {
+        toast.success("Pedido atualizado!");
+        setIsEditOrderModalOpen(false);
+        setEditingOrder(null);
+      }
+
+      // Reseta a flag após processar
+      isAddingFromButtonRef.current = false;
     },
-    onError: () => toast.error("Erro ao atualizar pedido"),
+    onError: () => {
+      toast.error("Erro ao atualizar pedido");
+      isAddingFromButtonRef.current = false;
+    },
   });
 
   const deleteOrderMutation = useMutation({
@@ -431,7 +452,8 @@ export function useCampaignDetail() {
 
   const handleCloseOrderModal = () => {
     setIsOrderModalOpen(false);
-    setOrderForm({ campaignId: campaignId || "", customerName: "", items: [] });
+    // Mantém os items para que o usuário possa continuar adicionando produtos depois
+    // Os items só são limpos quando o pedido é criado com sucesso
   };
 
   const loadExistingOrder = () => {
@@ -578,57 +600,92 @@ export function useCampaignDetail() {
     });
   };
 
-  const handleAddToOrder = (product: Product) => {
-    const existingOrder = orders?.find((o) => o.userId === user?.id);
+  const handleAddToOrder = async (product: Product) => {
+    requireAuth(async () => {
+      const existingOrder = orders?.find((o) => o.userId === user?.id);
 
-    if (existingOrder) {
-      // Se o usuário já tem um pedido, adiciona o produto
-      const items = existingOrder.items.map((item) => ({
-        productId: item.productId,
-        quantity: item.quantity,
-      }));
+      if (existingOrder) {
+        // Se o usuário já tem um pedido, adiciona o produto e salva automaticamente
+        const items = existingOrder.items.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+        }));
 
-      const existingItemIndex = items.findIndex(
-        (item) => item.productId === product.id
-      );
-      if (existingItemIndex >= 0) {
-        items[existingItemIndex].quantity++;
-      } else {
-        items.push({ productId: product.id, quantity: 1 });
-      }
+        const existingItemIndex = items.findIndex(
+          (item) => item.productId === product.id
+        );
+        if (existingItemIndex >= 0) {
+          items[existingItemIndex].quantity++;
+          toast.success(`Quantidade de "${product.name}" aumentada!`);
+        } else {
+          items.push({ productId: product.id, quantity: 1 });
+          toast.success(`"${product.name}" adicionado ao pedido!`);
+        }
 
-      updateOrderWithItemsMutation.mutate({
-        orderId: existingOrder.id,
-        data: { items },
-      });
-    } else {
-      // Se o usuário NÃO tem pedido, abre o modal com o produto pré-selecionado
-      requireAuth(() => {
-        loadExistingOrder();
-
-        // Adiciona o produto ao formulário de pedido
-        setOrderForm((prev) => {
-          const items = prev.items || [];
-          const existingItemIndex = items.findIndex(
-            (item) => item.productId === product.id
-          );
-
-          if (existingItemIndex >= 0) {
-            const updatedItems = [...items];
-            updatedItems[existingItemIndex].quantity++;
-            return { ...prev, items: updatedItems };
-          } else {
-            return {
-              ...prev,
-              items: [...items, { productId: product.id, quantity: 1 }],
-            };
-          }
+        // Atualiza o formulário de edição ANTES da mutação
+        setEditOrderForm({
+          campaignId: campaignId || "",
+          customerName: existingOrder.customerName || "",
+          items: items,
         });
+        setEditingOrder(existingOrder);
 
-        setIsOrderModalOpen(true);
-        toast.success("Produto adicionado! Complete seu pedido.");
-      });
-    }
+        // Define a flag para indicar que veio do botão "Pedir"
+        // Isso evita que o modal seja fechado automaticamente no onSuccess
+        isAddingFromButtonRef.current = true;
+
+        // Abre o modal imediatamente
+        setIsEditOrderModalOpen(true);
+
+        // Faz a mutação em background
+        updateOrderWithItemsMutation.mutate({
+          orderId: existingOrder.id,
+          data: { items },
+        });
+      } else {
+        // Se o usuário NÃO tem pedido, cria automaticamente com o produto
+        if (!user?.name) {
+          toast.error("Erro: Nome de usuário não encontrado");
+          return;
+        }
+
+        toast.success(`Pedido criado com "${product.name}"!`);
+
+        // Prepara o formulário antes de criar
+        const newOrderForm = {
+          campaignId: campaignId || "",
+          customerName: user.name,
+          items: [{ productId: product.id, quantity: 1 }],
+        };
+
+        // Define a flag para indicar que veio do botão "Pedir"
+        isAddingFromButtonRef.current = true;
+
+        // Cria o pedido
+        createOrderMutation.mutate(newOrderForm, {
+          onSuccess: async () => {
+            // Aguarda as queries serem atualizadas
+            await queryClient.invalidateQueries({
+              queryKey: ["orders", campaignId],
+            });
+
+            // Aguarda um pouco para garantir que a query foi atualizada
+            setTimeout(() => {
+              // Busca o pedido recém-criado
+              queryClient
+                .refetchQueries({ queryKey: ["orders", campaignId] })
+                .then(() => {
+                  const newOrder = orders?.find((o) => o.userId === user?.id);
+                  if (newOrder) {
+                    isAddingFromButtonRef.current = true;
+                    openEditOrderModal(newOrder);
+                  }
+                });
+            }, 300);
+          },
+        });
+      }
+    });
   };
 
   const handleEditOrderFromView = () => {
