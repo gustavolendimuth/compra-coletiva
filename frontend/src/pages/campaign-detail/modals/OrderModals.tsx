@@ -1,12 +1,12 @@
-import { Plus, Trash2, Edit } from 'lucide-react';
-import { Modal, Button } from '@/components/ui';
-import IconButton from '@/components/IconButton';
-import { OrderChat } from '@/components/campaign';
-import { formatCurrency } from '@/lib/utils';
-import { Order, Product } from '@/api';
+import { Plus, Trash2, Edit } from "lucide-react";
+import { Modal, Button, Input, Select } from "@/components/ui";
+import IconButton from "@/components/IconButton";
+import { OrderChat } from "@/components/campaign";
+import { formatCurrency } from "@/lib/utils";
+import { Order, Product } from "@/api";
 
 interface OrderForm {
-  items: Array<{ productId: string; quantity: number | '' }>;
+  items: Array<{ productId: string; quantity: number | "" }>;
 }
 
 interface OrderModalBaseProps {
@@ -29,7 +29,7 @@ export function AddOrderModal({
   isPending,
   onClose,
   onChange,
-  title = 'Novo Pedido',
+  title = "Novo Pedido",
 }: AddOrderModalProps) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title}>
@@ -40,16 +40,19 @@ export function AddOrderModal({
           </p>
           {isPending && (
             <p className="text-sm text-blue-600 mt-2 flex items-center gap-2">
-              <span className="animate-spin">⏳</span> Salvando automaticamente...
+              <span className="animate-spin">⏳</span> Salvando
+              automaticamente...
             </p>
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Produtos *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Produtos *
+          </label>
           {form.items.map((item, index) => (
             <div key={index} className="flex gap-2 mb-2">
-              <select
+              <Select
                 required
                 value={item.productId}
                 onChange={(e) => {
@@ -57,7 +60,7 @@ export function AddOrderModal({
                   newItems[index].productId = e.target.value;
                   onChange({ items: newItems });
                 }}
-                className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="flex-1 min-w-0"
               >
                 <option value="">Selecione um produto</option>
                 {products.map((product) => (
@@ -65,8 +68,8 @@ export function AddOrderModal({
                     {product.name} - {formatCurrency(product.price)}
                   </option>
                 ))}
-              </select>
-              <input
+              </Select>
+              <Input
                 type="number"
                 min="1"
                 required
@@ -74,10 +77,10 @@ export function AddOrderModal({
                 onChange={(e) => {
                   const newItems = [...form.items];
                   newItems[index].quantity =
-                    e.target.value === '' ? '' : parseInt(e.target.value);
+                    e.target.value === "" ? "" : parseInt(e.target.value);
                   onChange({ items: newItems });
                 }}
-                className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-24"
                 placeholder="Qtd"
               />
               {form.items.length > 1 && (
@@ -101,7 +104,7 @@ export function AddOrderModal({
             icon={<Plus className="w-4 h-4" />}
             onClick={() => {
               onChange({
-                items: [...form.items, { productId: '', quantity: 1 }],
+                items: [...form.items, { productId: "", quantity: 1 }],
               });
             }}
           >
@@ -170,17 +173,19 @@ export function ViewOrderModal({
           <div className="bg-gray-50 rounded-lg p-4 space-y-3">
             <div>
               <span className="text-sm text-gray-500">Cliente</span>
-              <p className="font-semibold text-gray-900">{order.customerName}</p>
+              <p className="font-semibold text-gray-900">
+                {order.customerName}
+              </p>
             </div>
 
             <div>
               <span className="text-sm text-gray-500">Status de Pagamento</span>
               <p
                 className={`font-medium ${
-                  order.isPaid ? 'text-green-600' : 'text-red-600'
+                  order.isPaid ? "text-green-600" : "text-red-600"
                 }`}
               >
-                {order.isPaid ? 'Pago' : 'Pendente'}
+                {order.isPaid ? "Pago" : "Pendente"}
               </p>
             </div>
           </div>
@@ -190,9 +195,14 @@ export function ViewOrderModal({
             <h4 className="font-semibold text-gray-900 mb-2">Produtos</h4>
             <div className="border rounded-lg divide-y">
               {order.items.map((item, index) => (
-                <div key={index} className="p-3 flex justify-between items-center">
+                <div
+                  key={index}
+                  className="p-3 flex justify-between items-center"
+                >
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900">{item.product.name}</p>
+                    <p className="font-medium text-gray-900">
+                      {item.product.name}
+                    </p>
                     <p className="text-sm text-gray-500">
                       {item.quantity}x {formatCurrency(item.unitPrice)}
                     </p>
@@ -221,7 +231,9 @@ export function ViewOrderModal({
             </div>
             <div className="flex justify-between text-lg font-bold pt-2 border-t border-primary-200">
               <span className="text-gray-900">Total</span>
-              <span className="text-primary-600">{formatCurrency(order.total)}</span>
+              <span className="text-primary-600">
+                {formatCurrency(order.total)}
+              </span>
             </div>
           </div>
 
@@ -238,7 +250,12 @@ export function ViewOrderModal({
                 Editar Pedido
               </Button>
             )}
-            <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onClose}
+              className="flex-1"
+            >
               Fechar
             </Button>
           </div>

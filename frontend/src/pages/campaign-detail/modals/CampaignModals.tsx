@@ -1,7 +1,7 @@
-import { Modal, Button } from '@/components/ui';
-import DateTimeInput from '@/components/DateTimeInput';
-import ConfirmDialog from '@/components/ConfirmDialog';
-import { Campaign } from '@/api';
+import { Modal, Button, Input, Textarea } from "@/components/ui";
+import DateTimeInput from "@/components/DateTimeInput";
+import ConfirmDialog from "@/components/ConfirmDialog";
+import { Campaign } from "@/api";
 
 interface CloneModalProps {
   isOpen: boolean;
@@ -17,10 +17,10 @@ interface CloneModalProps {
 
 interface ShippingModalProps {
   isOpen: boolean;
-  shippingCost: number | '';
+  shippingCost: number | "";
   isPending: boolean;
   onClose: () => void;
-  onChange: (cost: number | '') => void;
+  onChange: (cost: number | "") => void;
   onSubmit: (e: React.FormEvent) => void;
 }
 
@@ -35,30 +35,27 @@ export function ShippingModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Editar Frete Total">
       <form onSubmit={onSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="shipping-cost" className="block text-sm font-medium text-gray-700 mb-1">
-            Valor do Frete Total (R$)
-          </label>
-          <input
-            id="shipping-cost"
-            type="number"
-            step="0.01"
-            min="0"
-            autoFocus
-            value={shippingCost}
-            onChange={(e) =>
-              onChange(e.target.value === '' ? '' : parseFloat(e.target.value))
-            }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-          />
-          <p className="text-sm text-gray-500 mt-2">
-            O frete será distribuído proporcionalmente ao peso de cada pedido.
-          </p>
-        </div>
+        <Input
+          id="shipping-cost"
+          type="number"
+          step="0.01"
+          min="0"
+          autoFocus
+          value={shippingCost}
+          onChange={(e) =>
+            onChange(e.target.value === "" ? "" : parseFloat(e.target.value))
+          }
+          label="Valor do Frete Total (R$)"
+          helperText="O frete será distribuído proporcionalmente ao peso de cada pedido."
+        />
 
         <div className="flex gap-3 pt-4">
-          <Button type="submit" disabled={isPending} className="flex-1 whitespace-nowrap">
-            {isPending ? 'Atualizando...' : 'Atualizar Frete'}
+          <Button
+            type="submit"
+            disabled={isPending}
+            className="flex-1 whitespace-nowrap"
+          >
+            {isPending ? "Atualizando..." : "Atualizar Frete"}
           </Button>
           <Button
             type="button"
@@ -102,22 +99,22 @@ export function DeadlineModal({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Data e Hora Limite
           </label>
-          <DateTimeInput
-            value={deadlineForm}
-            onChange={onChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            autoFocus
-          />
+          <DateTimeInput value={deadlineForm} onChange={onChange} autoFocus />
           <p className="text-sm text-gray-500 mt-2">
-            A campanha será fechada automaticamente quando atingir esta data. Formato: dd/mm/aaaa
-            HH:mm (24h)
-            {campaign?.deadline && ' Deixe em branco para remover a data limite.'}
+            A campanha será fechada automaticamente quando atingir esta data.
+            Formato: dd/mm/aaaa HH:mm (24h)
+            {campaign?.deadline &&
+              " Deixe em branco para remover a data limite."}
           </p>
         </div>
 
         <div className="flex gap-3 pt-4">
-          <Button type="submit" disabled={isPending} className="flex-1 whitespace-nowrap">
-            {isPending ? 'Salvando...' : 'Salvar'}
+          <Button
+            type="submit"
+            disabled={isPending}
+            className="flex-1 whitespace-nowrap"
+          >
+            {isPending ? "Salvando..." : "Salvar"}
           </Button>
           {campaign?.deadline && (
             <Button
@@ -150,7 +147,11 @@ interface CloseConfirmDialogProps {
   onConfirm: () => void;
 }
 
-export function CloseConfirmDialog({ isOpen, onClose, onConfirm }: CloseConfirmDialogProps) {
+export function CloseConfirmDialog({
+  isOpen,
+  onClose,
+  onConfirm,
+}: CloseConfirmDialogProps) {
   return (
     <ConfirmDialog
       isOpen={isOpen}
@@ -171,7 +172,11 @@ interface ReopenConfirmDialogProps {
   onConfirm: () => void;
 }
 
-export function ReopenConfirmDialog({ isOpen, onClose, onConfirm }: ReopenConfirmDialogProps) {
+export function ReopenConfirmDialog({
+  isOpen,
+  onClose,
+  onConfirm,
+}: ReopenConfirmDialogProps) {
   return (
     <ConfirmDialog
       isOpen={isOpen}
@@ -192,7 +197,11 @@ interface SentConfirmDialogProps {
   onConfirm: () => void;
 }
 
-export function SentConfirmDialog({ isOpen, onClose, onConfirm }: SentConfirmDialogProps) {
+export function SentConfirmDialog({
+  isOpen,
+  onClose,
+  onConfirm,
+}: SentConfirmDialogProps) {
   return (
     <ConfirmDialog
       isOpen={isOpen}
@@ -221,48 +230,44 @@ export function CloneModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Clonar Campanha">
       <form onSubmit={onSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="clone-name" className="block text-sm font-medium text-gray-700 mb-1">
-            Nome da Nova Campanha *
-          </label>
-          <input
-            id="clone-name"
-            type="text"
-            required
-            autoFocus
-            value={cloneName}
-            onChange={(e) => onChangeName(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            placeholder="Digite o nome da nova campanha"
-          />
-        </div>
+        <Input
+          id="clone-name"
+          type="text"
+          required
+          autoFocus
+          value={cloneName}
+          onChange={(e) => onChangeName(e.target.value)}
+          label="Nome da Nova Campanha *"
+          placeholder="Digite o nome da nova campanha"
+        />
 
-        <div>
-          <label htmlFor="clone-description" className="block text-sm font-medium text-gray-700 mb-1">
-            Descrição (opcional)
-          </label>
-          <textarea
-            id="clone-description"
-            rows={3}
-            value={cloneDescription}
-            onChange={(e) => onChangeDescription(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
-            placeholder="Adicione uma descrição"
-          />
-        </div>
+        <Textarea
+          id="clone-description"
+          rows={3}
+          value={cloneDescription}
+          onChange={(e) => onChangeDescription(e.target.value)}
+          label="Descrição (opcional)"
+          placeholder="Adicione uma descrição"
+        />
 
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
           <p className="text-sm text-blue-800">
-            <strong>O que será clonado:</strong> Todos os produtos ({campaign?._count?.products || 0}) com seus nomes, preços e pesos.
+            <strong>O que será clonado:</strong> Todos os produtos (
+            {campaign?._count?.products || 0}) com seus nomes, preços e pesos.
           </p>
           <p className="text-sm text-blue-800 mt-2">
-            <strong>O que NÃO será clonado:</strong> Data limite, pedidos, frete e mensagens.
+            <strong>O que NÃO será clonado:</strong> Data limite, pedidos, frete
+            e mensagens.
           </p>
         </div>
 
         <div className="flex gap-3 pt-4">
-          <Button type="submit" disabled={isPending || !cloneName.trim()} className="flex-1 whitespace-nowrap">
-            {isPending ? 'Clonando...' : 'Clonar Campanha'}
+          <Button
+            type="submit"
+            disabled={isPending || !cloneName.trim()}
+            className="flex-1 whitespace-nowrap"
+          >
+            {isPending ? "Clonando..." : "Clonar Campanha"}
           </Button>
           <Button
             type="button"

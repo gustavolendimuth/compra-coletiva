@@ -27,6 +27,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           ref={ref}
           className={cn(
             'w-full px-4 py-2',
+            'bg-white text-gray-900', // Explicit colors to prevent dark mode issues
             'text-base', // 16px minimum to prevent iOS zoom
             'border border-gray-300 rounded-lg',
             'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',

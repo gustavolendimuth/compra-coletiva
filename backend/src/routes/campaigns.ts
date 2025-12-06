@@ -405,6 +405,7 @@ router.post(
 router.post(
   "/:id/clone",
   requireAuth,
+  requireCampaignOwnership,
   asyncHandler(async (req, res) => {
     const { id } = req.params;
     const data = cloneCampaignSchema.parse(req.body);
