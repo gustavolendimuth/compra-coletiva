@@ -5,7 +5,7 @@ import { formatCurrency } from '@/lib/utils';
 import { Campaign } from '@/api';
 
 interface ShippingTabProps {
-  campaign: Campaign;
+  campaign: Campaign | null;
   isActive: boolean;
   canEditCampaign: boolean;
   onEditShipping: () => void;
@@ -17,6 +17,10 @@ export function ShippingTab({
   canEditCampaign,
   onEditShipping,
 }: ShippingTabProps) {
+  if (!campaign) {
+    return null;
+  }
+
   return (
     <div className="pb-20 md:pb-0">
       <div className="max-w-2xl mx-auto">

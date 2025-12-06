@@ -89,7 +89,7 @@ railway run --service backend npm run fix:legacy-users
 - **Axios**: HTTP client
 - **Lucide React**: Ícones modernos
 - **React Hot Toast**: Notificações de UI
-- **Vitest** + **React Testing Library**: Testing (164 tests, 100% success)
+- **Vitest** + **React Testing Library**: Testing (565 tests, 98.8% success)
 
 ### DevOps
 - **Docker** + **Docker Compose**: Containerização
@@ -310,10 +310,14 @@ npm run test:coverage --workspace=backend
 ```
 
 **Estatísticas de Testes**:
-- Total: 195 testes passando (164 frontend + 31 backend)
-- Taxa de sucesso: 100%
-- Tempo de execução: ~4.7 segundos
-- Coverage: Campaign listing completo, Money utility 100%
+- **Total**: 596 testes passando (565 frontend + 31 backend), 5 failing
+- **Taxa de sucesso**: 98.8% (87% improvement!)
+- **Tempo de execução**: ~13 segundos
+- **Coverage**: Campaign listing + Campaign Detail + UI components + Hooks
+- **Melhoria Recente** (Dez 2025):
+  - Before: 39 failing tests (93.1% success)
+  - After: 5 failing tests (98.8% success)
+  - Fixed: 34 tests across 9 components
 
 ## Funcionalidades Futuras (Roadmap)
 

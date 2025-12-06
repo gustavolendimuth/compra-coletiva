@@ -24,10 +24,11 @@ export function ShippingModal({
     <Modal isOpen={isOpen} onClose={onClose} title="Editar Frete Total">
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="shipping-cost" className="block text-sm font-medium text-gray-700 mb-1">
             Valor do Frete Total (R$)
           </label>
           <input
+            id="shipping-cost"
             type="number"
             step="0.01"
             min="0"

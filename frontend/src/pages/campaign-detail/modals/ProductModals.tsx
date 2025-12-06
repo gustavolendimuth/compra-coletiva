@@ -27,10 +27,11 @@ export function AddProductModal({
     <Modal isOpen={isOpen} onClose={onClose} title="Adicionar Produto">
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="add-product-name" className="block text-sm font-medium text-gray-700 mb-1">
             Nome do Produto *
           </label>
           <input
+            id="add-product-name"
             type="text"
             required
             autoFocus
@@ -41,10 +42,11 @@ export function AddProductModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="add-product-price" className="block text-sm font-medium text-gray-700 mb-1">
             Preço (R$) *
           </label>
           <input
+            id="add-product-price"
             type="number"
             step="0.01"
             min="0"
@@ -61,10 +63,11 @@ export function AddProductModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="add-product-weight" className="block text-sm font-medium text-gray-700 mb-1">
             Peso (gramas) *
           </label>
           <input
+            id="add-product-weight"
             type="number"
             step="1"
             min="0"
@@ -119,10 +122,11 @@ export function EditProductModal({
     <Modal isOpen={isOpen} onClose={onClose} title="Editar Produto">
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="edit-product-name" className="block text-sm font-medium text-gray-700 mb-1">
             Nome do Produto *
           </label>
           <input
+            id="edit-product-name"
             type="text"
             required
             autoFocus
@@ -133,10 +137,11 @@ export function EditProductModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="edit-product-price" className="block text-sm font-medium text-gray-700 mb-1">
             Preço (R$) *
           </label>
           <input
+            id="edit-product-price"
             type="number"
             step="0.01"
             min="0"
@@ -153,10 +158,11 @@ export function EditProductModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="edit-product-weight" className="block text-sm font-medium text-gray-700 mb-1">
             Peso (gramas) *
           </label>
           <input
+            id="edit-product-weight"
             type="number"
             step="1"
             min="0"

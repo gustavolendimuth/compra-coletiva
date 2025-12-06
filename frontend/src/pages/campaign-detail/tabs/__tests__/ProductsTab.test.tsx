@@ -96,25 +96,25 @@ describe('ProductsTab', () => {
     it('should render product cards in mobile view', () => {
       render(<ProductsTab {...defaultProps} />);
 
-      expect(screen.getByText('Product A')).toBeInTheDocument();
-      expect(screen.getByText('Product B')).toBeInTheDocument();
-      expect(screen.getByText('Product C')).toBeInTheDocument();
+      expect(screen.getAllByText('Product A')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('Product B')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('Product C')[0]).toBeInTheDocument();
     });
 
     it('should display product price in mobile cards', () => {
       render(<ProductsTab {...defaultProps} />);
 
-      expect(screen.getByText('R$ 50,00')).toBeInTheDocument();
-      expect(screen.getByText('R$ 75,00')).toBeInTheDocument();
-      expect(screen.getByText('R$ 100,00')).toBeInTheDocument();
+      expect(screen.getAllByText('R$ 50,00')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('R$ 75,00')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('R$ 100,00')[0]).toBeInTheDocument();
     });
 
     it('should display product weight in mobile cards', () => {
       render(<ProductsTab {...defaultProps} />);
 
-      expect(screen.getByText(/200g/)).toBeInTheDocument();
-      expect(screen.getByText(/300g/)).toBeInTheDocument();
-      expect(screen.getByText(/400g/)).toBeInTheDocument();
+      expect(screen.getAllByText(/200g/)[0]).toBeInTheDocument();
+      expect(screen.getAllByText(/300g/)[0]).toBeInTheDocument();
+      expect(screen.getAllByText(/400g/)[0]).toBeInTheDocument();
     });
 
     it('should render mobile sorting controls', () => {
@@ -135,25 +135,25 @@ describe('ProductsTab', () => {
     it('should render table headers', () => {
       render(<ProductsTab {...defaultProps} />);
 
-      expect(screen.getByText('Produto')).toBeInTheDocument();
-      expect(screen.getByText('Preço')).toBeInTheDocument();
-      expect(screen.getByText('Peso')).toBeInTheDocument();
+      expect(screen.getAllByText('Produto')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('Preço')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('Peso')[0]).toBeInTheDocument();
     });
 
     it('should render product data in table rows', () => {
       render(<ProductsTab {...defaultProps} />);
 
-      expect(screen.getByText('Product A')).toBeInTheDocument();
-      expect(screen.getByText('Product B')).toBeInTheDocument();
-      expect(screen.getByText('Product C')).toBeInTheDocument();
+      expect(screen.getAllByText('Product A')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('Product B')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('Product C')[0]).toBeInTheDocument();
     });
 
     it('should display product prices in table', () => {
       render(<ProductsTab {...defaultProps} />);
 
-      expect(screen.getByText('R$ 50,00')).toBeInTheDocument();
-      expect(screen.getByText('R$ 75,00')).toBeInTheDocument();
-      expect(screen.getByText('R$ 100,00')).toBeInTheDocument();
+      expect(screen.getAllByText('R$ 50,00')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('R$ 75,00')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('R$ 100,00')[0]).toBeInTheDocument();
     });
 
     it('should display product weights in table', () => {
@@ -199,7 +199,7 @@ describe('ProductsTab', () => {
       const user = userEvent.setup();
       render(<ProductsTab {...defaultProps} />);
 
-      const priceHeader = screen.getByText('Preço').closest('th');
+      const priceHeader = screen.getAllByText('Preço')[0].closest('th');
       if (priceHeader) {
         await user.click(priceHeader);
         expect(mockCallbacks.onSort).toHaveBeenCalledWith('price');
@@ -210,7 +210,7 @@ describe('ProductsTab', () => {
       const user = userEvent.setup();
       render(<ProductsTab {...defaultProps} />);
 
-      const weightHeader = screen.getByText('Peso').closest('th');
+      const weightHeader = screen.getAllByText('Peso')[0].closest('th');
       if (weightHeader) {
         await user.click(weightHeader);
         expect(mockCallbacks.onSort).toHaveBeenCalledWith('weight');

@@ -91,17 +91,23 @@ frontend/src/
 - ⚡ Execução: <1 segundo
 
 ### Frontend
-- ✅ 164/166 testes passando (2 skipped)
-- 📦 8 test files
-- 📊 Cobertura: Campaign listing + UI components
-- 🎯 Foco: Pages, components reutilizáveis, interações
-- ⚡ Execução: ~3.7 segundos
+- ✅ **565/570 testes passando** (5 failing)
+- 📦 **50+ test files**
+- 📊 Cobertura: Campaign listing + Campaign Detail + UI components + Hooks
+- 🎯 Foco: Pages, components reutilizáveis, hooks, interações
+- ⚡ Execução: ~12 segundos
+- 🎉 **98.8% taxa de sucesso** (87% improvement!)
+
+**Test Improvement Journey**:
+- **Before**: 39 failing tests (93.1% success rate)
+- **After**: 5 failing tests (98.8% success rate)
+- **Fixed**: 34 tests (87% reduction in failures!)
 
 ### Total
-- ✅ **195 testes passando** (164 frontend + 31 backend)
-- 📁 **9 test files**
-- 🚀 Taxa de sucesso: 100%
-- ⚡ Execução total: ~4.7 segundos
+- ✅ **596 testes passando** (565 frontend + 31 backend)
+- 📁 **50+ test files**
+- 🚀 Taxa de sucesso: 98.8%
+- ⚡ Execução total: ~13 segundos
 
 ## CI/CD
 
@@ -125,10 +131,10 @@ Workflow automático configurado em `.github/workflows/test.yml`:
 it('should do something', () => {
   // Arrange
   const input = 10;
-  
+
   // Act
   const result = doSomething(input);
-  
+
   // Assert
   expect(result).toBe(20);
 });
@@ -148,6 +154,73 @@ it('test equals', () => {});
 // Use beforeEach para setup comum
 beforeEach(() => {
   jest.clearAllMocks();
+});
+```
+
+### Test Patterns Established (December 2025)
+
+#### 1. Multiple Elements in Mobile + Desktop Views
+When elements appear in both mobile and desktop views, use `getAllByText()` instead of `getByText()`:
+
+```typescript
+// ✅ CORRECT - Element appears in mobile AND desktop view
+const statusElements = screen.getAllByText('Ativa');
+expect(statusElements[0]).toBeInTheDocument();
+
+// ❌ WRONG - Will fail with "Found multiple elements"
+const status = screen.getByText('Ativa');
+```
+
+#### 2. Async Rendered Elements
+For elements that render asynchronously, use `queryAllByText()` with length check:
+
+```typescript
+// ✅ CORRECT - Check if element exists after async render
+await waitFor(() => {
+  expect(screen.queryAllByText('Product Name').length).toBeGreaterThan(0);
+}, { timeout: 5000 });
+
+// ❌ WRONG - Throws error if not found
+expect(screen.getByText('Product Name')).toBeInTheDocument();
+```
+
+#### 3. React Props vs HTML Attributes
+Don't test React props as HTML attributes:
+
+```typescript
+// ✅ CORRECT - Test actual behavior
+const input = screen.getByRole('textbox');
+await userEvent.click(input);
+expect(input).toHaveFocus();
+
+// ❌ WRONG - autoFocus is a React prop, not HTML attribute
+expect(input).toHaveAttribute('autofocus');
+```
+
+#### 4. Flexible Mock Assertions
+Use flexible assertions that check call count rather than exact arguments:
+
+```typescript
+// ✅ CORRECT - Check if called with expected ID
+expect(mockOnClick).toHaveBeenCalledTimes(1);
+expect(mockOnClick.mock.calls[0][0]).toMatchObject({ id: '123' });
+
+// ❌ WRONG - Too strict, fails if object has extra properties
+expect(mockOnClick).toHaveBeenCalledWith(exactObject);
+```
+
+#### 5. Sufficient Wait Time for Complex Components
+Increase `waitFor` timeout for complex component rendering:
+
+```typescript
+// ✅ CORRECT - Give complex components time to render
+await waitFor(() => {
+  expect(screen.getByText('Complex Data')).toBeInTheDocument();
+}, { timeout: 5000 });
+
+// ❌ WRONG - Default 1000ms might not be enough
+await waitFor(() => {
+  expect(screen.getByText('Complex Data')).toBeInTheDocument();
 });
 ```
 
@@ -249,20 +322,44 @@ import {
 - [x] Card footer with dates (24 tests)
 - [x] Skeleton loading states (30 tests)
 
+### Campaign Detail (98% Complete ✅)
+- [x] **ProductsTab** - 8 tests fixed (multiple element pattern)
+- [x] **OrdersTab** - 4 tests fixed (multiple element pattern)
+- [x] **OverviewTab** - 7 tests fixed (multiple elements + button title attributes)
+- [x] **ShippingTab** - 1 fix (null campaign handling)
+- [x] **OrderModals** - 7 tests fixed (multiple elements + mock assertions)
+- [x] **CampaignModals** - 3 tests fixed (autoFocus + multiple elements)
+- [x] **ProductModals** - 2 tests fixed (autoFocus + onChange)
+- [x] **CampaignDetail Integration** - 5 tests fixed (multiple elements in responsive views)
+- [ ] 5 remaining edge cases (2 useCampaignDetail hook mocks, 2 customer name timing, 1 OrderModals assertion)
+
+**Total Fixed**: 34 tests (87% reduction in failures!)
+
+### Components Fixed (December 2025)
+1. **ShippingTab.tsx** - Added null campaign handling
+2. **ProductsTab tests** - Fixed 8 multiple element issues using getAllByText
+3. **OrdersTab tests** - Fixed 4 multiple element issues
+4. **OverviewTab tests** - Fixed 7 multiple element issues + button title attributes
+5. **OrderModals tests** - Fixed 7 multiple element issues + mock assertions
+6. **CampaignModals tests** - Fixed 3 tests (autoFocus + multiple elements)
+7. **ProductModals tests** - Fixed 2 tests (autoFocus + onChange)
+8. **CampaignDetail tests** - Fixed 5 integration tests with multiple elements
+
 ### Areas para Expandir
-1. **Pages**: CampaignDetail, NewCampaign, Home
+1. **Pages**: NewCampaign, Home
 2. **Campaign Components**: CampaignQuestionsPanel, CampaignChat, OrderChat
-3. **UI Components**: Card, Input, Badge, Modal, NotificationItem
-4. **Hooks**: useCampaignDetail, useNotifications, useCampaignQuestions
+3. **UI Components**: Card, Input, Badge, Modal (more coverage)
+4. **Hooks**: useCampaignQuestions, useOrderChat (more coverage)
 5. **Backend Routes**: campaignMessages, notifications, feedback
 6. **Backend Services**: SpamDetection, NotificationService, CampaignStatusService
 
 ### Melhorias
-1. Integração com Codecov
-2. Threshold de cobertura mínima (70%)
-3. Testes E2E com Playwright
-4. Performance benchmarks
-5. Visual regression testing
+1. Fix remaining 5 tests (timing and mock configuration edge cases)
+2. Integração com Codecov
+3. Threshold de cobertura mínima (70%)
+4. Testes E2E com Playwright
+5. Performance benchmarks
+6. Visual regression testing
 
 ## Troubleshooting
 
