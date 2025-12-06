@@ -1,9 +1,16 @@
-import { useState, useMemo, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
-import { campaignApi, productApi, orderApi, analyticsApi, Order, Product } from '@/api';
-import { useAuth } from '@/contexts/AuthContext';
+import { useState, useMemo, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
+import {
+  campaignApi,
+  productApi,
+  orderApi,
+  analyticsApi,
+  Order,
+  Product,
+} from "@/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ProductForm {
   campaignId: string;
@@ -19,9 +26,14 @@ interface OrderForm {
   items: Array<{ productId: string; quantity: number }>;
 }
 
-type SortField = 'customerName' | 'subtotal' | 'shippingFee' | 'total' | 'isPaid';
-type SortDirection = 'asc' | 'desc';
-type ProductSortField = 'name' | 'price' | 'weight';
+type SortField =
+  | "customerName"
+  | "subtotal"
+  | "shippingFee"
+  | "total"
+  | "isPaid";
+type SortDirection = "asc" | "desc";
+type ProductSortField = "name" | "price" | "weight";
 
 export function useCampaignDetail() {
   const { id: campaignId } = useParams<{ id: string }>();
@@ -48,73 +60,77 @@ export function useCampaignDetail() {
 
   // Form states
   const [productForm, setProductForm] = useState<ProductForm>({
-    campaignId: campaignId || '',
-    name: '',
+    campaignId: campaignId || "",
+    name: "",
     price: 0,
     weight: 0,
-    imageUrl: ''
+    imageUrl: "",
   });
 
   const [editProductForm, setEditProductForm] = useState({
-    name: '',
+    name: "",
     price: 0,
     weight: 0,
-    imageUrl: ''
+    imageUrl: "",
   });
 
   const [orderForm, setOrderForm] = useState<OrderForm>({
-    campaignId: campaignId || '',
-    customerName: '',
-    items: []
+    campaignId: campaignId || "",
+    customerName: "",
+    items: [],
   });
 
   const [editOrderForm, setEditOrderForm] = useState<OrderForm>({
-    campaignId: campaignId || '',
-    customerName: '',
-    items: []
+    campaignId: campaignId || "",
+    customerName: "",
+    items: [],
   });
 
   const [shippingCost, setShippingCost] = useState(0);
-  const [deadlineForm, setDeadlineForm] = useState('');
-  const [cloneName, setCloneName] = useState('');
-  const [cloneDescription, setCloneDescription] = useState('');
+  const [deadlineForm, setDeadlineForm] = useState("");
+  const [cloneName, setCloneName] = useState("");
+  const [cloneDescription, setCloneDescription] = useState("");
 
   // Campaign inline edit states
   const [isEditingName, setIsEditingName] = useState(false);
-  const [editedName, setEditedName] = useState('');
+  const [editedName, setEditedName] = useState("");
   const [isEditingDescription, setIsEditingDescription] = useState(false);
-  const [editedDescription, setEditedDescription] = useState('');
+  const [editedDescription, setEditedDescription] = useState("");
 
   // Search & Sort states
-  const [orderSearch, setOrderSearch] = useState('');
-  const [orderSortField, setOrderSortField] = useState<SortField>('customerName');
-  const [orderSortDirection, setOrderSortDirection] = useState<SortDirection>('asc');
-  const [productSortField, setProductSortField] = useState<ProductSortField>('name');
-  const [productSortDirection, setProductSortDirection] = useState<SortDirection>('asc');
+  const [orderSearch, setOrderSearch] = useState("");
+  const [orderSortField, setOrderSortField] =
+    useState<SortField>("customerName");
+  const [orderSortDirection, setOrderSortDirection] =
+    useState<SortDirection>("asc");
+  const [productSortField, setProductSortField] =
+    useState<ProductSortField>("name");
+  const [productSortDirection, setProductSortDirection] =
+    useState<SortDirection>("asc");
 
   // Queries
   const { data: campaign } = useQuery({
-    queryKey: ['campaign', campaignId],
+    queryKey: ["campaign", campaignId],
     queryFn: () => campaignApi.getById(campaignId!),
-    enabled: !!campaignId
+    enabled: !!campaignId,
   });
 
   const { data: products } = useQuery({
-    queryKey: ['products', campaignId],
+    queryKey: ["products", campaignId],
     queryFn: () => productApi.getByCampaign(campaignId!),
-    enabled: !!campaignId
+    enabled: !!campaignId,
   });
 
   const { data: orders } = useQuery({
-    queryKey: ['orders', campaignId],
+    queryKey: ["orders", campaignId],
     queryFn: () => orderApi.getByCampaign(campaignId!),
-    enabled: !!campaignId
+    enabled: !!campaignId,
   });
 
   const { data: analytics } = useQuery({
-    queryKey: ['analytics', campaignId],
+    queryKey: ["analytics", campaignId],
     queryFn: () => analyticsApi.getByCampaign(campaignId!),
-    enabled: !!campaignId
+    enabled: !!campaignId,
   });
 
   // Handle navigation from notifications
@@ -133,7 +149,7 @@ export function useCampaignDetail() {
 
     if (state?.openOrderChat && state?.orderId && orders) {
       // Find the order
-      const order = orders.find(o => o.id === state.orderId);
+      const order = orders.find((o) => o.id === state.orderId);
 
       if (order) {
         // Open the order modal
@@ -155,9 +171,9 @@ export function useCampaignDetail() {
   }, [location.state, orders, navigate, location.pathname]);
 
   // Computed states
-  const isActive = campaign?.status === 'ACTIVE';
-  const isClosed = campaign?.status === 'CLOSED';
-  const isSent = campaign?.status === 'SENT';
+  const isActive = campaign?.status === "ACTIVE";
+  const isClosed = campaign?.status === "CLOSED";
+  const isSent = campaign?.status === "SENT";
   const canEditCampaign = campaign?.creatorId === user?.id;
 
   // Sorted & filtered data
@@ -166,8 +182,8 @@ export function useCampaignDetail() {
     return [...products].sort((a, b) => {
       const aVal = a[productSortField];
       const bVal = b[productSortField];
-      const modifier = productSortDirection === 'asc' ? 1 : -1;
-      if (typeof aVal === 'string' && typeof bVal === 'string') {
+      const modifier = productSortDirection === "asc" ? 1 : -1;
+      if (typeof aVal === "string" && typeof bVal === "string") {
         return aVal.localeCompare(bVal) * modifier;
       }
       return ((aVal as number) - (bVal as number)) * modifier;
@@ -178,18 +194,18 @@ export function useCampaignDetail() {
     if (!orders) return [];
     let filtered = orders;
     if (orderSearch) {
-      filtered = filtered.filter(order =>
+      filtered = filtered.filter((order) =>
         order.customerName?.toLowerCase().includes(orderSearch.toLowerCase())
       );
     }
     return [...filtered].sort((a, b) => {
       const aVal = a[orderSortField];
       const bVal = b[orderSortField];
-      const modifier = orderSortDirection === 'asc' ? 1 : -1;
-      if (typeof aVal === 'boolean') {
+      const modifier = orderSortDirection === "asc" ? 1 : -1;
+      if (typeof aVal === "boolean") {
         return (aVal === bVal ? 0 : aVal ? -1 : 1) * modifier;
       }
-      if (typeof aVal === 'string' && typeof bVal === 'string') {
+      if (typeof aVal === "string" && typeof bVal === "string") {
         return aVal.localeCompare(bVal) * modifier;
       }
       return ((aVal as number) - (bVal as number)) * modifier;
@@ -205,145 +221,175 @@ export function useCampaignDetail() {
   const createProductMutation = useMutation({
     mutationFn: productApi.create,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products', campaignId] });
-      toast.success('Produto adicionado!');
+      queryClient.invalidateQueries({ queryKey: ["products", campaignId] });
+      toast.success("Produto adicionado!");
       setIsProductModalOpen(false);
-      setProductForm({ campaignId: campaignId || '', name: '', price: 0, weight: 0, imageUrl: '' });
+      setProductForm({
+        campaignId: campaignId || "",
+        name: "",
+        price: 0,
+        weight: 0,
+        imageUrl: "",
+      });
     },
-    onError: () => toast.error('Erro ao adicionar produto')
+    onError: () => toast.error("Erro ao adicionar produto"),
   });
 
   const updateProductMutation = useMutation({
-    mutationFn: ({ productId, data }: { productId: string; data: Partial<Product> }) =>
-      productApi.update(productId, data),
+    mutationFn: ({
+      productId,
+      data,
+    }: {
+      productId: string;
+      data: Partial<Product>;
+    }) => productApi.update(productId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products', campaignId] });
-      queryClient.invalidateQueries({ queryKey: ['orders', campaignId] });
-      queryClient.invalidateQueries({ queryKey: ['analytics', campaignId] });
-      toast.success('Produto atualizado!');
+      queryClient.invalidateQueries({ queryKey: ["products", campaignId] });
+      queryClient.invalidateQueries({ queryKey: ["orders", campaignId] });
+      queryClient.invalidateQueries({ queryKey: ["analytics", campaignId] });
+      toast.success("Produto atualizado!");
       setIsEditProductModalOpen(false);
       setEditingProduct(null);
     },
-    onError: () => toast.error('Erro ao atualizar produto')
+    onError: () => toast.error("Erro ao atualizar produto"),
   });
 
   const deleteProductMutation = useMutation({
     mutationFn: productApi.delete,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products', campaignId] });
-      toast.success('Produto removido!');
+      queryClient.invalidateQueries({ queryKey: ["products", campaignId] });
+      toast.success("Produto removido!");
     },
-    onError: () => toast.error('Erro ao remover produto')
+    onError: () => toast.error("Erro ao remover produto"),
   });
 
   const createOrderMutation = useMutation({
     mutationFn: orderApi.create,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['orders', campaignId] });
-      queryClient.invalidateQueries({ queryKey: ['analytics', campaignId] });
-      toast.success('Pedido criado!');
+      queryClient.invalidateQueries({ queryKey: ["orders", campaignId] });
+      queryClient.invalidateQueries({ queryKey: ["analytics", campaignId] });
+      toast.success("Pedido criado!");
       setIsOrderModalOpen(false);
-      setOrderForm({ campaignId: campaignId || '', customerName: '', items: [] });
+      setOrderForm({
+        campaignId: campaignId || "",
+        customerName: "",
+        items: [],
+      });
     },
-    onError: () => toast.error('Erro ao criar pedido')
+    onError: () => toast.error("Erro ao criar pedido"),
   });
 
   const updateOrderWithItemsMutation = useMutation({
-    mutationFn: ({ orderId, data }: {
+    mutationFn: ({
+      orderId,
+      data,
+    }: {
       orderId: string;
-      data: { items?: Array<{ productId: string; quantity: number }> }
+      data: { items?: Array<{ productId: string; quantity: number }> };
     }) => orderApi.updateWithItems(orderId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['orders', campaignId] });
-      queryClient.invalidateQueries({ queryKey: ['analytics', campaignId] });
-      toast.success('Pedido atualizado!');
+      queryClient.invalidateQueries({ queryKey: ["orders", campaignId] });
+      queryClient.invalidateQueries({ queryKey: ["analytics", campaignId] });
+      toast.success("Pedido atualizado!");
       setIsEditOrderModalOpen(false);
       setEditingOrder(null);
     },
-    onError: () => toast.error('Erro ao atualizar pedido')
+    onError: () => toast.error("Erro ao atualizar pedido"),
   });
 
   const deleteOrderMutation = useMutation({
     mutationFn: orderApi.delete,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['orders', campaignId] });
-      queryClient.invalidateQueries({ queryKey: ['analytics', campaignId] });
-      toast.success('Pedido removido!');
+      queryClient.invalidateQueries({ queryKey: ["orders", campaignId] });
+      queryClient.invalidateQueries({ queryKey: ["analytics", campaignId] });
+      toast.success("Pedido removido!");
     },
-    onError: () => toast.error('Erro ao remover pedido')
+    onError: () => toast.error("Erro ao remover pedido"),
   });
 
   const updateShippingMutation = useMutation({
-    mutationFn: (cost: number) => campaignApi.update(campaignId!, { shippingCost: cost }),
+    mutationFn: (cost: number) =>
+      campaignApi.update(campaignId!, { shippingCost: cost }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] });
-      queryClient.invalidateQueries({ queryKey: ['orders', campaignId] });
-      queryClient.invalidateQueries({ queryKey: ['analytics', campaignId] });
-      toast.success('Frete atualizado!');
+      queryClient.invalidateQueries({ queryKey: ["campaign", campaignId] });
+      queryClient.invalidateQueries({ queryKey: ["orders", campaignId] });
+      queryClient.invalidateQueries({ queryKey: ["analytics", campaignId] });
+      toast.success("Frete atualizado!");
       setIsShippingModalOpen(false);
     },
-    onError: () => toast.error('Erro ao atualizar frete')
+    onError: () => toast.error("Erro ao atualizar frete"),
   });
 
   const updateDeadlineMutation = useMutation({
-    mutationFn: (deadline: string | null) => campaignApi.update(campaignId!, { deadline: deadline || undefined }),
+    mutationFn: (deadline: string | null) =>
+      campaignApi.update(campaignId!, { deadline: deadline || undefined }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] });
-      toast.success('Data limite atualizada!');
+      queryClient.invalidateQueries({ queryKey: ["campaign", campaignId] });
+      toast.success("Data limite atualizada!");
       setIsEditDeadlineModalOpen(false);
     },
-    onError: () => toast.error('Erro ao atualizar data limite')
+    onError: () => toast.error("Erro ao atualizar data limite"),
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: (status: 'ACTIVE' | 'CLOSED' | 'SENT' | 'ARCHIVED') =>
+    mutationFn: (status: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED") =>
       campaignApi.updateStatus(campaignId!, status),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] });
-      toast.success('Status atualizado!');
+      queryClient.invalidateQueries({ queryKey: ["campaign", campaignId] });
+      toast.success("Status atualizado!");
       setIsCloseConfirmOpen(false);
       setIsReopenConfirmOpen(false);
       setIsSentConfirmOpen(false);
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Erro ao atualizar status');
-    }
+      toast.error(error.response?.data?.message || "Erro ao atualizar status");
+    },
   });
 
   const updateCampaignMutation = useMutation({
     mutationFn: (data: { name?: string; description?: string }) =>
       campaignApi.update(campaignId!, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] });
-      toast.success('Campanha atualizada!');
+      queryClient.invalidateQueries({ queryKey: ["campaign", campaignId] });
+      toast.success("Campanha atualizada!");
     },
-    onError: () => toast.error('Erro ao atualizar campanha')
+    onError: () => toast.error("Erro ao atualizar campanha"),
   });
 
   const updateOrderMutation = useMutation({
-    mutationFn: ({ orderId, data }: { orderId: string; data: Partial<Order> }) =>
-      orderApi.update(orderId, data),
+    mutationFn: ({
+      orderId,
+      data,
+    }: {
+      orderId: string;
+      data: Partial<Order>;
+    }) => orderApi.update(orderId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['orders', campaignId] });
-      queryClient.invalidateQueries({ queryKey: ['analytics', campaignId] });
-      toast.success('Pedido atualizado!');
+      queryClient.invalidateQueries({ queryKey: ["orders", campaignId] });
+      queryClient.invalidateQueries({ queryKey: ["analytics", campaignId] });
+      toast.success("Pedido atualizado!");
     },
-    onError: () => toast.error('Erro ao atualizar pedido')
+    onError: () => toast.error("Erro ao atualizar pedido"),
   });
 
   const cloneCampaignMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { name: string; description?: string } }) =>
-      campaignApi.clone(id, data),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: { name: string; description?: string };
+    }) => campaignApi.clone(id, data),
     onSuccess: (newCampaign) => {
-      queryClient.invalidateQueries({ queryKey: ['campaigns'] });
-      toast.success('Campanha clonada com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+      toast.success("Campanha clonada com sucesso!");
       setIsCloneModalOpen(false);
-      setCloneName('');
-      setCloneDescription('');
+      setCloneName("");
+      setCloneDescription("");
       // Navigate to the new campaign
       navigate(`/campaigns/${newCampaign.id}`);
     },
-    onError: () => toast.error('Erro ao clonar campanha')
+    onError: () => toast.error("Erro ao clonar campanha"),
   });
 
   // Handlers
@@ -357,7 +403,7 @@ export function useCampaignDetail() {
     if (!editingProduct) return;
     updateProductMutation.mutate({
       productId: editingProduct.id,
-      data: editProductForm
+      data: editProductForm,
     });
   };
 
@@ -367,13 +413,13 @@ export function useCampaignDetail() {
       name: product.name,
       price: product.price,
       weight: product.weight,
-      imageUrl: ''
+      imageUrl: "",
     });
     setIsEditProductModalOpen(true);
   };
 
   const handleDeleteProduct = (productId: string) => {
-    if (window.confirm('Tem certeza que deseja remover este produto?')) {
+    if (window.confirm("Tem certeza que deseja remover este produto?")) {
       deleteProductMutation.mutate(productId);
     }
   };
@@ -385,19 +431,19 @@ export function useCampaignDetail() {
 
   const handleCloseOrderModal = () => {
     setIsOrderModalOpen(false);
-    setOrderForm({ campaignId: campaignId || '', customerName: '', items: [] });
+    setOrderForm({ campaignId: campaignId || "", customerName: "", items: [] });
   };
 
   const loadExistingOrder = () => {
-    const existingOrder = orders?.find(o => o.userId === user?.id);
+    const existingOrder = orders?.find((o) => o.userId === user?.id);
     if (existingOrder) {
       setOrderForm({
-        campaignId: campaignId || '',
+        campaignId: campaignId || "",
         customerName: existingOrder.customerName || existingOrder.customer.name,
-        items: existingOrder.items.map(item => ({
+        items: existingOrder.items.map((item) => ({
           productId: item.productId,
-          quantity: item.quantity
-        }))
+          quantity: item.quantity,
+        })),
       });
     }
   };
@@ -408,26 +454,26 @@ export function useCampaignDetail() {
     updateOrderWithItemsMutation.mutate({
       orderId: editingOrder.id,
       data: {
-        items: editOrderForm.items
-      }
+        items: editOrderForm.items,
+      },
     });
   };
 
   const openEditOrderModal = (order: Order) => {
     setEditingOrder(order);
     setEditOrderForm({
-      campaignId: campaignId || '',
-      customerName: order.customerName || '',
-      items: order.items.map(item => ({
+      campaignId: campaignId || "",
+      customerName: order.customerName || "",
+      items: order.items.map((item) => ({
         productId: item.productId,
-        quantity: item.quantity
-      }))
+        quantity: item.quantity,
+      })),
     });
     setIsEditOrderModalOpen(true);
   };
 
   const handleDeleteOrder = (orderId: string) => {
-    if (window.confirm('Tem certeza que deseja remover este pedido?')) {
+    if (window.confirm("Tem certeza que deseja remover este pedido?")) {
       deleteOrderMutation.mutate(orderId);
     }
   };
@@ -442,11 +488,16 @@ export function useCampaignDetail() {
     updateDeadlineMutation.mutate(deadlineForm || null);
   };
 
-  const handleUpdateStatus = (status: 'ACTIVE' | 'CLOSED' | 'SENT' | 'ARCHIVED') => {
+  const handleUpdateStatus = (
+    status: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED"
+  ) => {
     updateStatusMutation.mutate(status);
   };
 
-  const handleUpdateCampaign = (data: { name?: string; description?: string }) => {
+  const handleUpdateCampaign = (data: {
+    name?: string;
+    description?: string;
+  }) => {
     updateCampaignMutation.mutate(data);
   };
 
@@ -466,20 +517,20 @@ export function useCampaignDetail() {
 
   const handleNameCancel = () => {
     setIsEditingName(false);
-    setEditedName('');
+    setEditedName("");
   };
 
   const handleNameKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleNameSave();
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       handleNameCancel();
     }
   };
 
   const handleDescriptionClick = () => {
     if (canEditCampaign && campaign) {
-      setEditedDescription(campaign.description || '');
+      setEditedDescription(campaign.description || "");
       setIsEditingDescription(true);
     }
   };
@@ -493,46 +544,53 @@ export function useCampaignDetail() {
 
   const handleDescriptionCancel = () => {
     setIsEditingDescription(false);
-    setEditedDescription('');
+    setEditedDescription("");
   };
 
   const handleDescriptionKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
+    if (e.key === "Escape") {
       handleDescriptionCancel();
     }
   };
 
   const handleSort = (field: SortField) => {
     if (orderSortField === field) {
-      setOrderSortDirection(orderSortDirection === 'asc' ? 'desc' : 'asc');
+      setOrderSortDirection(orderSortDirection === "asc" ? "desc" : "asc");
     } else {
       setOrderSortField(field);
-      setOrderSortDirection('asc');
+      setOrderSortDirection("asc");
     }
   };
 
   const handleProductSort = (field: ProductSortField) => {
     if (productSortField === field) {
-      setProductSortDirection(productSortDirection === 'asc' ? 'desc' : 'asc');
+      setProductSortDirection(productSortDirection === "asc" ? "desc" : "asc");
     } else {
       setProductSortField(field);
-      setProductSortDirection('asc');
+      setProductSortDirection("asc");
     }
   };
 
   const handleTogglePayment = (order: Order) => {
-    updateOrderMutation.mutate({ orderId: order.id, data: { isPaid: !order.isPaid } });
+    updateOrderMutation.mutate({
+      orderId: order.id,
+      data: { isPaid: !order.isPaid },
+    });
   };
 
   const handleAddToOrder = (product: Product) => {
-    const existingOrder = orders?.find(o => o.userId === user?.id);
+    const existingOrder = orders?.find((o) => o.userId === user?.id);
+
     if (existingOrder) {
-      const items = existingOrder.items.map(item => ({
+      // Se o usuário já tem um pedido, adiciona o produto
+      const items = existingOrder.items.map((item) => ({
         productId: item.productId,
-        quantity: item.quantity
+        quantity: item.quantity,
       }));
 
-      const existingItemIndex = items.findIndex(item => item.productId === product.id);
+      const existingItemIndex = items.findIndex(
+        (item) => item.productId === product.id
+      );
       if (existingItemIndex >= 0) {
         items[existingItemIndex].quantity++;
       } else {
@@ -541,7 +599,34 @@ export function useCampaignDetail() {
 
       updateOrderWithItemsMutation.mutate({
         orderId: existingOrder.id,
-        data: { items }
+        data: { items },
+      });
+    } else {
+      // Se o usuário NÃO tem pedido, abre o modal com o produto pré-selecionado
+      requireAuth(() => {
+        loadExistingOrder();
+
+        // Adiciona o produto ao formulário de pedido
+        setOrderForm((prev) => {
+          const items = prev.items || [];
+          const existingItemIndex = items.findIndex(
+            (item) => item.productId === product.id
+          );
+
+          if (existingItemIndex >= 0) {
+            const updatedItems = [...items];
+            updatedItems[existingItemIndex].quantity++;
+            return { ...prev, items: updatedItems };
+          } else {
+            return {
+              ...prev,
+              items: [...items, { productId: product.id, quantity: 1 }],
+            };
+          }
+        });
+
+        setIsOrderModalOpen(true);
+        toast.success("Produto adicionado! Complete seu pedido.");
       });
     }
   };
@@ -555,7 +640,7 @@ export function useCampaignDetail() {
 
   const handleReopenCampaign = () => {
     const hasOrders = orders && orders.length > 0;
-    const newStatus = hasOrders ? 'CLOSED' : 'ACTIVE';
+    const newStatus = hasOrders ? "CLOSED" : "ACTIVE";
     handleUpdateStatus(newStatus);
   };
 
@@ -564,14 +649,14 @@ export function useCampaignDetail() {
     if (campaign?.deadline) {
       const dt = new Date(campaign.deadline);
       const year = dt.getFullYear();
-      const month = (dt.getMonth() + 1).toString().padStart(2, '0');
-      const day = dt.getDate().toString().padStart(2, '0');
-      const hours = dt.getHours().toString().padStart(2, '0');
-      const minutes = dt.getMinutes().toString().padStart(2, '0');
-      const seconds = dt.getSeconds().toString().padStart(2, '0');
+      const month = (dt.getMonth() + 1).toString().padStart(2, "0");
+      const day = dt.getDate().toString().padStart(2, "0");
+      const hours = dt.getHours().toString().padStart(2, "0");
+      const minutes = dt.getMinutes().toString().padStart(2, "0");
+      const seconds = dt.getSeconds().toString().padStart(2, "0");
       setDeadlineForm(`${year}-${month}-${day}T${hours}:${minutes}:${seconds}`);
     } else {
-      setDeadlineForm('');
+      setDeadlineForm("");
     }
   };
 
@@ -579,7 +664,7 @@ export function useCampaignDetail() {
     requireAuth(() => {
       if (campaign) {
         setCloneName(`${campaign.name} (Cópia)`);
-        setCloneDescription(campaign.description || '');
+        setCloneDescription(campaign.description || "");
         setIsCloneModalOpen(true);
       }
     });
@@ -592,8 +677,8 @@ export function useCampaignDetail() {
       id: campaignId,
       data: {
         name: cloneName.trim(),
-        description: cloneDescription.trim() || undefined
-      }
+        description: cloneDescription.trim() || undefined,
+      },
     });
   };
 
