@@ -207,17 +207,15 @@ export function CampaignHeader({
 
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-2">
-          {canEditCampaign && (
-            <IconButton
-              size="sm"
-              variant="secondary"
-              icon={<Copy className="w-4 h-4" />}
-              onClick={onCloneCampaign}
-              className="text-xs sm:text-sm whitespace-nowrap"
-            >
-              Clonar Campanha
-            </IconButton>
-          )}
+          <IconButton
+            size="sm"
+            variant="secondary"
+            icon={<Copy className="w-4 h-4" />}
+            onClick={onCloneCampaign}
+            className="text-xs sm:text-sm whitespace-nowrap"
+          >
+            Clonar Campanha
+          </IconButton>
 
           {ordersCount > 0 && canEditCampaign && (
             <IconButton

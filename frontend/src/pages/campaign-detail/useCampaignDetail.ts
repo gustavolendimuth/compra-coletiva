@@ -25,7 +25,7 @@ type ProductSortField = 'name' | 'price' | 'weight';
 
 export function useCampaignDetail() {
   const { id: campaignId } = useParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user, requireAuth } = useAuth();
   const queryClient = useQueryClient();
 
   // Modal states
@@ -576,11 +576,13 @@ export function useCampaignDetail() {
   };
 
   const handleOpenCloneModal = () => {
-    if (campaign) {
-      setCloneName(`${campaign.name} (Cópia)`);
-      setCloneDescription(campaign.description || '');
-      setIsCloneModalOpen(true);
-    }
+    requireAuth(() => {
+      if (campaign) {
+        setCloneName(`${campaign.name} (Cópia)`);
+        setCloneDescription(campaign.description || '');
+        setIsCloneModalOpen(true);
+      }
+    });
   };
 
   const handleCloneCampaign = (e: React.FormEvent) => {
