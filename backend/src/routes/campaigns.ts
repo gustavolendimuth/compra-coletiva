@@ -64,6 +64,11 @@ const updateStatusSchema = z.object({
   status: z.enum(["ACTIVE", "CLOSED", "SENT", "ARCHIVED"]),
 });
 
+const cloneCampaignSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().optional(),
+});
+
 // Função auxiliar para buscar IDs de campanhas usando unaccent (busca sem acentos)
 async function searchCampaignIds(searchTerm: string): Promise<string[]> {
   const results = await prisma.$queryRaw<{ id: string }[]>`
@@ -393,6 +398,84 @@ router.post(
     });
 
     res.status(201).json(campaign);
+  })
+);
+
+// POST /api/campaigns/:id/clone - Clona uma campanha com todos os produtos
+router.post(
+  "/:id/clone",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const data = cloneCampaignSchema.parse(req.body);
+
+    // Buscar a campanha original com seus produtos
+    const originalCampaign = await prisma.campaign.findUnique({
+      where: { id },
+      include: {
+        products: true,
+      },
+    });
+
+    if (!originalCampaign) {
+      throw new AppError(404, "Campaign not found");
+    }
+
+    // Criar a nova campanha e seus produtos em uma transação
+    const newCampaign = await prisma.$transaction(async (tx) => {
+      // Upgrade user to CAMPAIGN_CREATOR if they're currently a CUSTOMER
+      if (req.user!.role === "CUSTOMER") {
+        await tx.user.update({
+          where: { id: req.user!.id },
+          data: { role: "CAMPAIGN_CREATOR" },
+        });
+      }
+
+      // Criar a nova campanha com status ACTIVE e sem deadline
+      const campaign = await tx.campaign.create({
+        data: {
+          name: data.name,
+          description: data.description || originalCampaign.description,
+          status: "ACTIVE",
+          shippingCost: 0, // Nova campanha começa com frete zerado
+          creatorId: req.user!.id,
+        },
+      });
+
+      // Clonar todos os produtos da campanha original
+      if (originalCampaign.products.length > 0) {
+        await tx.product.createMany({
+          data: originalCampaign.products.map((product) => ({
+            campaignId: campaign.id,
+            name: product.name,
+            price: product.price,
+            weight: product.weight,
+          })),
+        });
+      }
+
+      return campaign;
+    });
+
+    // Buscar a campanha criada com os produtos para retornar
+    const campaignWithProducts = await prisma.campaign.findUnique({
+      where: { id: newCampaign.id },
+      include: {
+        products: true,
+        orders: {
+          include: {
+            items: {
+              include: {
+                product: true,
+              },
+            },
+          },
+        },
+        _count: { select: { products: true, orders: true } },
+      },
+    });
+
+    res.status(201).json(campaignWithProducts);
   })
 );
 
