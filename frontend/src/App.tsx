@@ -15,7 +15,7 @@ function App() {
         <Route path="/" element={<Layout />}>
           <Route index element={<Navigate to="/campaigns" replace />} />
           <Route path="campaigns" element={<CampaignList />} />
-          <Route path="campaigns/:id" element={<CampaignDetail />} />
+          <Route path="campaigns/:slug" element={<CampaignDetail />} />
         </Route>
       </Routes>
     </AuthProvider>

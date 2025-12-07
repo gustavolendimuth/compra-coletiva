@@ -61,10 +61,7 @@ export default function CampaignDetail() {
           isActive={hook.isActive}
           canEditCampaign={hook.canEditCampaign}
           onAddProduct={() => hook.setIsProductModalOpen(true)}
-          onAddOrder={() => {
-            hook.loadExistingOrder();
-            hook.setIsOrderModalOpen(true);
-          }}
+          onAddOrder={hook.handleAddOrder}
           onViewOrder={(order) => {
             hook.setViewingOrder(order);
             hook.setIsViewOrderModalOpen(true);
@@ -99,10 +96,7 @@ export default function CampaignDetail() {
           orderSearch={hook.orderSearch}
           sortField={hook.orderSortField}
           sortDirection={hook.orderSortDirection}
-          onAddOrder={() => {
-            hook.loadExistingOrder();
-            hook.setIsOrderModalOpen(true);
-          }}
+          onAddOrder={hook.handleAddOrder}
           onViewOrder={(order) => {
             hook.setViewingOrder(order);
             hook.setIsViewOrderModalOpen(true);

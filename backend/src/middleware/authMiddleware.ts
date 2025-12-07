@@ -133,6 +133,7 @@ export const requireRole = (...roles: UserRole[]) => {
 
 /**
  * Middleware que verifica se o usuário é o criador da campanha ou admin
+ * Suporta busca por ID ou slug
  */
 export const requireCampaignOwnership = async (
   req: Request,
@@ -154,20 +155,29 @@ export const requireCampaignOwnership = async (
       return;
     }
 
-    const campaignId = req.params.id || req.body.campaignId;
+    const idOrSlug = req.params.id || req.params.idOrSlug || req.body.campaignId;
 
-    if (!campaignId) {
+    if (!idOrSlug) {
       res.status(400).json({
         error: 'BAD_REQUEST',
-        message: 'ID da campanha não fornecido',
+        message: 'ID ou slug da campanha não fornecido',
       });
       return;
     }
 
-    const campaign = await prisma.campaign.findUnique({
-      where: { id: campaignId },
+    // Try to find by slug first
+    let campaign = await prisma.campaign.findUnique({
+      where: { slug: idOrSlug },
       select: { creatorId: true },
     });
+
+    // If not found by slug, try by ID
+    if (!campaign) {
+      campaign = await prisma.campaign.findUnique({
+        where: { id: idOrSlug },
+        select: { creatorId: true },
+      });
+    }
 
     if (!campaign) {
       res.status(404).json({

@@ -36,7 +36,7 @@ type SortDirection = "asc" | "desc";
 type ProductSortField = "name" | "price" | "weight";
 
 export function useCampaignDetail() {
-  const { id: campaignId } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const { user, requireAuth } = useAuth();
   const queryClient = useQueryClient();
 
@@ -64,7 +64,7 @@ export function useCampaignDetail() {
 
   // Form states
   const [productForm, setProductForm] = useState<ProductForm>({
-    campaignId: campaignId || "",
+    campaignId: "",
     name: "",
     price: "",
     weight: "",
@@ -79,13 +79,13 @@ export function useCampaignDetail() {
   });
 
   const [orderForm, setOrderForm] = useState<OrderForm>({
-    campaignId: campaignId || "",
+    campaignId: "",
     customerName: "",
     items: [],
   });
 
   const [editOrderForm, setEditOrderForm] = useState<OrderForm>({
-    campaignId: campaignId || "",
+    campaignId: "",
     customerName: "",
     items: [],
   });
@@ -114,10 +114,13 @@ export function useCampaignDetail() {
 
   // Queries
   const { data: campaign } = useQuery({
-    queryKey: ["campaign", campaignId],
-    queryFn: () => campaignApi.getById(campaignId!),
-    enabled: !!campaignId,
+    queryKey: ["campaign", slug],
+    queryFn: () => campaignApi.getBySlug(slug!),
+    enabled: !!slug,
   });
+
+  // Get the actual campaign ID from the loaded campaign
+  const campaignId = campaign?.id;
 
   const { data: products } = useQuery({
     queryKey: ["products", campaignId],
@@ -330,9 +333,9 @@ export function useCampaignDetail() {
 
   const updateShippingMutation = useMutation({
     mutationFn: (cost: number) =>
-      campaignApi.update(campaignId!, { shippingCost: cost }),
+      campaignApi.update(slug!, { shippingCost: cost }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["campaign", campaignId] });
+      queryClient.invalidateQueries({ queryKey: ["campaign", slug] });
       queryClient.invalidateQueries({ queryKey: ["orders", campaignId] });
       queryClient.invalidateQueries({ queryKey: ["analytics", campaignId] });
       toast.success("Frete atualizado!");
@@ -343,9 +346,9 @@ export function useCampaignDetail() {
 
   const updateDeadlineMutation = useMutation({
     mutationFn: (deadline: string | null) =>
-      campaignApi.update(campaignId!, { deadline: deadline || undefined }),
+      campaignApi.update(slug!, { deadline: deadline || undefined }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["campaign", campaignId] });
+      queryClient.invalidateQueries({ queryKey: ["campaign", slug] });
       toast.success("Data limite atualizada!");
       setIsEditDeadlineModalOpen(false);
     },
@@ -354,9 +357,9 @@ export function useCampaignDetail() {
 
   const updateStatusMutation = useMutation({
     mutationFn: (status: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED") =>
-      campaignApi.updateStatus(campaignId!, status),
+      campaignApi.updateStatus(slug!, status),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["campaign", campaignId] });
+      queryClient.invalidateQueries({ queryKey: ["campaign", slug] });
       toast.success("Status atualizado!");
       setIsCloseConfirmOpen(false);
       setIsReopenConfirmOpen(false);
@@ -369,9 +372,15 @@ export function useCampaignDetail() {
 
   const updateCampaignMutation = useMutation({
     mutationFn: (data: { name?: string; description?: string }) =>
-      campaignApi.update(campaignId!, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["campaign", campaignId] });
+      campaignApi.update(slug!, data),
+    onSuccess: (updatedCampaign) => {
+      // If the name changed, the slug might have changed too
+      // Navigate to the new slug if different
+      if (updatedCampaign.slug !== slug) {
+        navigate(`/campaigns/${updatedCampaign.slug}`, { replace: true });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["campaign", slug] });
+      }
       toast.success("Campanha atualizada!");
     },
     onError: () => toast.error("Erro ao atualizar campanha"),
@@ -407,8 +416,8 @@ export function useCampaignDetail() {
       setIsCloneModalOpen(false);
       setCloneName("");
       setCloneDescription("");
-      // Navigate to the new campaign
-      navigate(`/campaigns/${newCampaign.id}`);
+      // Navigate to the new campaign using slug
+      navigate(`/campaigns/${newCampaign.slug}`);
     },
     onError: () => toast.error("Erro ao clonar campanha"),
   });
@@ -696,6 +705,13 @@ export function useCampaignDetail() {
     });
   };
 
+  const handleAddOrder = () => {
+    requireAuth(() => {
+      loadExistingOrder();
+      setIsOrderModalOpen(true);
+    });
+  };
+
   const handleEditOrderFromView = () => {
     if (viewingOrder) {
       setIsViewOrderModalOpen(false);
@@ -848,6 +864,7 @@ export function useCampaignDetail() {
     handleCreateOrder,
     handleCloseOrderModal,
     loadExistingOrder,
+    handleAddOrder,
     handleEditOrder,
     openEditOrderModal,
     handleDeleteOrder,

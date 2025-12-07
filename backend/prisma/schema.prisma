@@ -110,6 +110,7 @@ enum UserRole {
 
 model Campaign {
   id          String    @id @default(cuid())
+  slug        String    @unique // URL-friendly unique identifier
   name        String
   description String?
   status      CampaignStatus @default(ACTIVE)
@@ -117,6 +118,11 @@ model Campaign {
   shippingCost Float    @default(0)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  // Imagem da campanha
+  imageUrl         String?              // URL completa da imagem (S3 ou local)
+  imageKey         String?              // Chave do arquivo no S3 para gerenciamento
+  imageStorageType ImageStorageType?    // Tipo de armazenamento usado
 
   // Auth - NULLABLE durante migração
   creatorId   String?
@@ -129,6 +135,7 @@ model Campaign {
   @@map("campaigns")
   @@index([creatorId])
   @@index([status])
+  @@index([slug])
 }
 
 model Product {
@@ -227,6 +234,11 @@ enum CampaignStatus {
   CLOSED
   SENT
   ARCHIVED
+}
+
+enum ImageStorageType {
+  S3
+  LOCAL
 }
 
 // ========== FEEDBACK SYSTEM ==========

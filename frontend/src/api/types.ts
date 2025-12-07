@@ -45,6 +45,7 @@ export interface RefreshResponse {
 
 export interface Campaign {
   id: string;
+  slug: string;
   name: string;
   description?: string;
   status: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED";

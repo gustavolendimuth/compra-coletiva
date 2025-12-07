@@ -15,7 +15,7 @@ export function CampaignCard({
   productPreviewVariant = 'inline'
 }: CampaignCardProps) {
   return (
-    <Link to={`/campaigns/${campaign.id}`}>
+    <Link to={`/campaigns/${campaign.slug}`}>
       <article className="h-full bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md hover:border-primary-300 transition-all duration-200 cursor-pointer flex flex-col">
         {/* Header: Status + Nome + Criador */}
         <CampaignCardHeader campaign={campaign} />

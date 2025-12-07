@@ -11,6 +11,7 @@ import {
 import { z } from "zod";
 import { InvoiceGenerator } from "../services/invoiceGenerator";
 import { ShippingCalculator } from "../services/shippingCalculator";
+import { generateUniqueSlug } from "../utils/slugify";
 
 const router = Router();
 
@@ -334,14 +335,30 @@ router.get(
   })
 );
 
-// GET /api/campaigns/:id - Busca um grupo específico
-router.get(
-  "/:id",
-  asyncHandler(async (req, res) => {
-    const { id } = req.params;
+// Helper function to find campaign by ID or slug
+async function findCampaignByIdOrSlug(idOrSlug: string) {
+  // Try to find by slug first (most common case for URLs)
+  let campaign = await prisma.campaign.findUnique({
+    where: { slug: idOrSlug },
+    include: {
+      products: true,
+      orders: {
+        include: {
+          items: {
+            include: {
+              product: true,
+            },
+          },
+        },
+      },
+      _count: { select: { products: true, orders: true } },
+    },
+  });
 
-    const campaign = await prisma.campaign.findUnique({
-      where: { id },
+  // If not found by slug, try by ID (for backward compatibility)
+  if (!campaign) {
+    campaign = await prisma.campaign.findUnique({
+      where: { id: idOrSlug },
       include: {
         products: true,
         orders: {
@@ -356,6 +373,18 @@ router.get(
         _count: { select: { products: true, orders: true } },
       },
     });
+  }
+
+  return campaign;
+}
+
+// GET /api/campaigns/:idOrSlug - Busca um grupo específico por ID ou slug
+router.get(
+  "/:idOrSlug",
+  asyncHandler(async (req, res) => {
+    const { idOrSlug } = req.params;
+
+    const campaign = await findCampaignByIdOrSlug(idOrSlug);
 
     if (!campaign) {
       throw new AppError(404, "Campaign not found");
@@ -381,6 +410,9 @@ router.post(
     // Adiciona o creatorId do usuário autenticado
     prismaData.creatorId = req.user!.id;
 
+    // Generate unique slug from campaign name
+    prismaData.slug = await generateUniqueSlug(data.name);
+
     // Use transaction to upgrade role and create campaign atomically
     const campaign = await prisma.$transaction(async (tx) => {
       // Upgrade user to CAMPAIGN_CREATOR if they're currently a CUSTOMER
@@ -401,26 +433,34 @@ router.post(
   })
 );
 
-// POST /api/campaigns/:id/clone - Clona uma campanha com todos os produtos
+// POST /api/campaigns/:idOrSlug/clone - Clona uma campanha com todos os produtos
 router.post(
-  "/:id/clone",
+  "/:idOrSlug/clone",
   requireAuth,
   requireCampaignOwnership,
   asyncHandler(async (req, res) => {
-    const { id } = req.params;
+    const { idOrSlug } = req.params;
     const data = cloneCampaignSchema.parse(req.body);
 
-    // Buscar a campanha original com seus produtos
-    const originalCampaign = await prisma.campaign.findUnique({
-      where: { id },
-      include: {
-        products: true,
-      },
+    // Buscar a campanha original com seus produtos (por ID ou slug)
+    let originalCampaign = await prisma.campaign.findUnique({
+      where: { slug: idOrSlug },
+      include: { products: true },
     });
+
+    if (!originalCampaign) {
+      originalCampaign = await prisma.campaign.findUnique({
+        where: { id: idOrSlug },
+        include: { products: true },
+      });
+    }
 
     if (!originalCampaign) {
       throw new AppError(404, "Campaign not found");
     }
+
+    // Generate unique slug for new campaign
+    const newSlug = await generateUniqueSlug(data.name);
 
     // Criar a nova campanha e seus produtos em uma transação
     const newCampaign = await prisma.$transaction(async (tx) => {
@@ -436,7 +476,8 @@ router.post(
       const campaign = await tx.campaign.create({
         data: {
           name: data.name,
-          description: data.description || originalCampaign.description,
+          slug: newSlug,
+          description: data.description || originalCampaign!.description,
           status: "ACTIVE",
           shippingCost: 0, // Nova campanha começa com frete zerado
           creatorId: req.user!.id,
@@ -444,9 +485,9 @@ router.post(
       });
 
       // Clonar todos os produtos da campanha original
-      if (originalCampaign.products.length > 0) {
+      if (originalCampaign!.products.length > 0) {
         await tx.product.createMany({
-          data: originalCampaign.products.map((product) => ({
+          data: originalCampaign!.products.map((product) => ({
             campaignId: campaign.id,
             name: product.name,
             price: product.price,
@@ -480,15 +521,34 @@ router.post(
   })
 );
 
-// PATCH /api/campaigns/:id - Atualiza um grupo
+// PATCH /api/campaigns/:idOrSlug - Atualiza um grupo
 router.patch(
-  "/:id",
+  "/:idOrSlug",
   requireAuth,
   requireCampaignOwnership,
   asyncHandler(async (req, res) => {
-    const { id } = req.params;
+    const { idOrSlug } = req.params;
 
     const data = updateCampaignSchema.parse(req.body);
+
+    // Find campaign by slug or ID to get the actual ID
+    let campaign = await prisma.campaign.findUnique({
+      where: { slug: idOrSlug },
+      select: { id: true },
+    });
+
+    if (!campaign) {
+      campaign = await prisma.campaign.findUnique({
+        where: { id: idOrSlug },
+        select: { id: true },
+      });
+    }
+
+    if (!campaign) {
+      throw new AppError(404, "Campaign not found");
+    }
+
+    const campaignId = campaign.id;
 
     // Convert deadline string to Date object for Prisma
     const prismaData: any = { ...data };
@@ -496,72 +556,122 @@ router.patch(
       prismaData.deadline = data.deadline ? new Date(data.deadline) : null;
     }
 
-    const campaign = await prisma.campaign.update({
-      where: { id },
+    // If name is being updated, regenerate slug
+    if (data.name) {
+      prismaData.slug = await generateUniqueSlug(data.name, campaignId);
+    }
+
+    const updatedCampaign = await prisma.campaign.update({
+      where: { id: campaignId },
       data: prismaData,
     });
 
     // Se o shippingCost foi atualizado, redistribuir frete para todos os pedidos
     if (data.shippingCost !== undefined) {
-      await ShippingCalculator.distributeShipping(id);
+      await ShippingCalculator.distributeShipping(campaignId);
     }
 
-    res.json(campaign);
+    res.json(updatedCampaign);
   })
 );
 
-// PATCH /api/campaigns/:id/status - Atualiza apenas o status do grupo
+// PATCH /api/campaigns/:idOrSlug/status - Atualiza apenas o status do grupo
 router.patch(
-  "/:id/status",
+  "/:idOrSlug/status",
   requireAuth,
   requireCampaignOwnership,
   asyncHandler(async (req, res) => {
-    const { id } = req.params;
+    const { idOrSlug } = req.params;
     const { status } = updateStatusSchema.parse(req.body);
 
-    const campaign = await prisma.campaign.update({
-      where: { id },
+    // Find campaign by slug or ID to get the actual ID
+    let campaign = await prisma.campaign.findUnique({
+      where: { slug: idOrSlug },
+      select: { id: true },
+    });
+
+    if (!campaign) {
+      campaign = await prisma.campaign.findUnique({
+        where: { id: idOrSlug },
+        select: { id: true },
+      });
+    }
+
+    if (!campaign) {
+      throw new AppError(404, "Campaign not found");
+    }
+
+    const updatedCampaign = await prisma.campaign.update({
+      where: { id: campaign.id },
       data: { status },
     });
 
-    res.json(campaign);
+    res.json(updatedCampaign);
   })
 );
 
-// DELETE /api/campaigns/:id - Remove um grupo
+// DELETE /api/campaigns/:idOrSlug - Remove um grupo
 router.delete(
-  "/:id",
+  "/:idOrSlug",
   requireAuth,
   requireCampaignOwnership,
   asyncHandler(async (req, res) => {
-    const { id } = req.params;
+    const { idOrSlug } = req.params;
+
+    // Find campaign by slug or ID to get the actual ID
+    let campaign = await prisma.campaign.findUnique({
+      where: { slug: idOrSlug },
+      select: { id: true },
+    });
+
+    if (!campaign) {
+      campaign = await prisma.campaign.findUnique({
+        where: { id: idOrSlug },
+        select: { id: true },
+      });
+    }
+
+    if (!campaign) {
+      throw new AppError(404, "Campaign not found");
+    }
 
     await prisma.campaign.delete({
-      where: { id },
+      where: { id: campaign.id },
     });
 
     res.status(204).send();
   })
 );
 
-// GET /api/campaigns/:id/supplier-invoice - Gera fatura para fornecedor em PDF
+// GET /api/campaigns/:idOrSlug/supplier-invoice - Gera fatura para fornecedor em PDF
 router.get(
-  "/:id/supplier-invoice",
+  "/:idOrSlug/supplier-invoice",
   requireAuth,
   requireCampaignOwnership,
   asyncHandler(async (req, res) => {
-    const { id } = req.params;
+    const { idOrSlug } = req.params;
 
-    const pdfBuffer = await InvoiceGenerator.generateSupplierInvoice(id);
-
-    // Get campaign name for filename
-    const campaign = await prisma.campaign.findUnique({
-      where: { id },
-      select: { name: true },
+    // Find campaign by slug or ID to get the actual ID
+    let campaign = await prisma.campaign.findUnique({
+      where: { slug: idOrSlug },
+      select: { id: true, name: true },
     });
 
+    if (!campaign) {
+      campaign = await prisma.campaign.findUnique({
+        where: { id: idOrSlug },
+        select: { id: true, name: true },
+      });
+    }
+
+    if (!campaign) {
+      throw new AppError(404, "Campaign not found");
+    }
+
+    const pdfBuffer = await InvoiceGenerator.generateSupplierInvoice(campaign.id);
+
     const filename = `fatura-fornecedor-${
-      campaign?.name.replace(/[^a-z0-9]/gi, "-").toLowerCase() || id
+      campaign.name.replace(/[^a-z0-9]/gi, "-").toLowerCase() || campaign.id
     }.pdf`;
 
     res.setHeader("Content-Type", "application/pdf");

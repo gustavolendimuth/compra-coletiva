@@ -30,12 +30,20 @@ export const campaignService = {
     apiClient.get<CampaignListResponse>('/campaigns').then(res => res.data.data),
 
   /**
-   * Get campaign by ID
-   * @param id - Campaign ID
+   * Get campaign by ID or slug
+   * @param idOrSlug - Campaign ID or slug
    * @returns Campaign details
    */
-  getById: (id: string) =>
-    apiClient.get<Campaign>(`/campaigns/${id}`).then(res => res.data),
+  getById: (idOrSlug: string) =>
+    apiClient.get<Campaign>(`/campaigns/${idOrSlug}`).then(res => res.data),
+  
+  /**
+   * Get campaign by slug (alias for getById)
+   * @param slug - Campaign slug
+   * @returns Campaign details
+   */
+  getBySlug: (slug: string) =>
+    apiClient.get<Campaign>(`/campaigns/${slug}`).then(res => res.data),
 
   /**
    * Create a new campaign
@@ -47,36 +55,36 @@ export const campaignService = {
 
   /**
    * Update an existing campaign
-   * @param id - Campaign ID
+   * @param idOrSlug - Campaign ID or slug
    * @param data - Partial campaign data to update
    * @returns Updated campaign
    */
-  update: (id: string, data: UpdateCampaignDto) =>
-    apiClient.patch<Campaign>(`/campaigns/${id}`, data).then(res => res.data),
+  update: (idOrSlug: string, data: UpdateCampaignDto) =>
+    apiClient.patch<Campaign>(`/campaigns/${idOrSlug}`, data).then(res => res.data),
 
   /**
    * Update campaign status
-   * @param id - Campaign ID
+   * @param idOrSlug - Campaign ID or slug
    * @param status - New status (ACTIVE, CLOSED, SENT, ARCHIVED)
    * @returns Updated campaign
    */
-  updateStatus: (id: string, status: 'ACTIVE' | 'CLOSED' | 'SENT' | 'ARCHIVED') =>
-    apiClient.patch<Campaign>(`/campaigns/${id}/status`, { status }).then(res => res.data),
+  updateStatus: (idOrSlug: string, status: 'ACTIVE' | 'CLOSED' | 'SENT' | 'ARCHIVED') =>
+    apiClient.patch<Campaign>(`/campaigns/${idOrSlug}/status`, { status }).then(res => res.data),
 
   /**
    * Delete a campaign
-   * @param id - Campaign ID
+   * @param idOrSlug - Campaign ID or slug
    */
-  delete: (id: string) =>
-    apiClient.delete(`/campaigns/${id}`).then(res => res.data),
+  delete: (idOrSlug: string) =>
+    apiClient.delete(`/campaigns/${idOrSlug}`).then(res => res.data),
 
   /**
    * Download supplier invoice PDF
-   * @param id - Campaign ID
+   * @param idOrSlug - Campaign ID or slug
    * @returns Promise that triggers browser download
    */
-  downloadSupplierInvoice: async (id: string) => {
-    const response = await apiClient.get(`/campaigns/${id}/supplier-invoice`, {
+  downloadSupplierInvoice: async (idOrSlug: string) => {
+    const response = await apiClient.get(`/campaigns/${idOrSlug}/supplier-invoice`, {
       responseType: 'blob'
     });
 
@@ -87,7 +95,7 @@ export const campaignService = {
 
     // Extract filename from Content-Disposition header or use default
     const contentDisposition = response.headers['content-disposition'];
-    let filename = `fatura-fornecedor-${id}.pdf`;
+    let filename = `fatura-fornecedor-${idOrSlug}.pdf`;
     if (contentDisposition) {
       const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
       if (filenameMatch) {
@@ -104,10 +112,10 @@ export const campaignService = {
 
   /**
    * Clone a campaign with all its products
-   * @param id - Campaign ID to clone
+   * @param idOrSlug - Campaign ID or slug to clone
    * @param data - New campaign data (name and optional description)
    * @returns Created campaign
    */
-  clone: (id: string, data: CloneCampaignDto) =>
-    apiClient.post<Campaign>(`/campaigns/${id}/clone`, data).then(res => res.data)
+  clone: (idOrSlug: string, data: CloneCampaignDto) =>
+    apiClient.post<Campaign>(`/campaigns/${idOrSlug}/clone`, data).then(res => res.data)
 };
