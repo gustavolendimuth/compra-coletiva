@@ -8,6 +8,7 @@
 export { Button } from "./Button";
 export { Card, CardHeader, CardBody, CardFooter } from "./Card";
 export { Input } from "./Input";
+export { PhoneInput } from "./PhoneInput";
 export { CurrencyInput } from "./CurrencyInput";
 export { Textarea } from "./Textarea";
 export { Select } from "./Select";

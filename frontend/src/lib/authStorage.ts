@@ -3,12 +3,12 @@
  * Manages access and refresh tokens in localStorage
  */
 
-const ACCESS_TOKEN_KEY = 'accessToken';
-const REFRESH_TOKEN_KEY = 'refreshToken';
-const USER_KEY = 'user';
-const PENDING_ACTION_KEY = 'pendingAction';
-const RETURN_URL_KEY = 'returnUrl';
-const PENDING_ACTION_DATA_KEY = 'pendingActionData';
+const ACCESS_TOKEN_KEY = "accessToken";
+const REFRESH_TOKEN_KEY = "refreshToken";
+const USER_KEY = "user";
+const PENDING_ACTION_KEY = "pendingAction";
+const RETURN_URL_KEY = "returnUrl";
+const PENDING_ACTION_DATA_KEY = "pendingActionData";
 
 export interface PendingActionData {
   type: string;
@@ -19,7 +19,8 @@ export interface StoredUser {
   id: string;
   email: string;
   name: string;
-  role: 'ADMIN' | 'CAMPAIGN_CREATOR' | 'CUSTOMER';
+  phone?: string;
+  role: "ADMIN" | "CAMPAIGN_CREATOR" | "CUSTOMER";
   googleId?: string;
 }
 
@@ -78,11 +79,11 @@ export const authStorage = {
   // Pending action management (used for OAuth flow to persist actions across redirects)
   // Using localStorage instead of sessionStorage because OAuth redirects across domains
   setPendingActionFlag(): void {
-    localStorage.setItem(PENDING_ACTION_KEY, 'true');
+    localStorage.setItem(PENDING_ACTION_KEY, "true");
   },
 
   hasPendingAction(): boolean {
-    return localStorage.getItem(PENDING_ACTION_KEY) === 'true';
+    return localStorage.getItem(PENDING_ACTION_KEY) === "true";
   },
 
   clearPendingActionFlag(): void {

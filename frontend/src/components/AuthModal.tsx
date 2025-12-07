@@ -1,19 +1,23 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { authStorage } from '../lib/authStorage';
-import { API_URL } from '../lib/env';
-import { Modal } from './ui';
-import { LoginForm, RegisterForm, AuthTabs } from './auth';
+import { useState, useEffect } from "react";
+import { useAuth } from "../contexts/AuthContext";
+import { authStorage } from "../lib/authStorage";
+import { API_URL } from "../lib/env";
+import { Modal } from "./ui";
+import { LoginForm, RegisterForm, AuthTabs } from "./auth";
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  defaultTab?: 'login' | 'register';
+  defaultTab?: "login" | "register";
 }
 
-export const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }: AuthModalProps) => {
+export const AuthModal = ({
+  isOpen,
+  onClose,
+  defaultTab = "login",
+}: AuthModalProps) => {
   const { login, register, hasPendingAction } = useAuth();
-  const [activeTab, setActiveTab] = useState<'login' | 'register'>(defaultTab);
+  const [activeTab, setActiveTab] = useState<"login" | "register">(defaultTab);
   const [isLoading, setIsLoading] = useState(false);
 
   // Reset active tab when modal opens with new defaultTab
@@ -35,10 +39,15 @@ export const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
     }
   };
 
-  const handleRegister = async (name: string, email: string, password: string) => {
+  const handleRegister = async (
+    name: string,
+    email: string,
+    password: string,
+    phone: string
+  ) => {
     setIsLoading(true);
     try {
-      await register({ name, email, password });
+      await register({ name, email, password, phone });
       onClose();
     } catch (error) {
       // Error is handled by AuthContext with toast
@@ -57,7 +66,10 @@ export const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
 
     // Debug: verificar se returnUrl está salvo
     const savedReturnUrl = authStorage.getReturnUrl();
-    console.log('[AuthModal] handleGoogleLogin - returnUrl no storage:', savedReturnUrl);
+    console.log(
+      "[AuthModal] handleGoogleLogin - returnUrl no storage:",
+      savedReturnUrl
+    );
 
     window.location.href = `${API_URL}/api/auth/google`;
   };
@@ -76,7 +88,7 @@ export const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
         <AuthTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
         <div className="pt-6">
-          {activeTab === 'login' ? (
+          {activeTab === "login" ? (
             <LoginForm
               onSubmit={handleLogin}
               onGoogleLogin={handleGoogleLogin}
@@ -98,21 +110,30 @@ export const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
 // Component to listen for openAuthModal events
 export const AuthModalManager = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [defaultTab, setDefaultTab] = useState<'login' | 'register'>('login');
+  const [defaultTab, setDefaultTab] = useState<"login" | "register">("login");
 
   useEffect(() => {
     const handleOpenModal = (event: Event) => {
-      const customEvent = event as CustomEvent<{ tab?: 'login' | 'register' }>;
-      setDefaultTab(customEvent.detail?.tab || 'login');
+      const customEvent = event as CustomEvent<{ tab?: "login" | "register" }>;
+      setDefaultTab(customEvent.detail?.tab || "login");
       setIsOpen(true);
     };
 
-    window.addEventListener('openAuthModal', handleOpenModal as EventListener);
+    window.addEventListener("openAuthModal", handleOpenModal as EventListener);
 
     return () => {
-      window.removeEventListener('openAuthModal', handleOpenModal as EventListener);
+      window.removeEventListener(
+        "openAuthModal",
+        handleOpenModal as EventListener
+      );
     };
   }, []);
 
-  return <AuthModal isOpen={isOpen} onClose={() => setIsOpen(false)} defaultTab={defaultTab} />;
+  return (
+    <AuthModal
+      isOpen={isOpen}
+      onClose={() => setIsOpen(false)}
+      defaultTab={defaultTab}
+    />
+  );
 };

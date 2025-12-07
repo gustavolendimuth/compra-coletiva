@@ -17,10 +17,18 @@ const prisma = new PrismaClient();
 
 // ========== SCHEMAS DE VALIDAÇÃO ==========
 
+// Regex para validar telefone brasileiro (XX XXXXX-XXXX ou XXXXXXXXXXX)
+const phoneRegex = /^(\d{2}\s?\d{4,5}-?\d{4}|\d{10,11})$/;
+
 const registerSchema = z.object({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
   email: z.string().email("Email inválido"),
   password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
+  phone: z
+    .string()
+    .min(10, "Celular deve ter pelo menos 10 dígitos")
+    .max(15, "Celular deve ter no máximo 15 caracteres")
+    .regex(phoneRegex, "Formato de celular inválido. Use: XX XXXXX-XXXX"),
 });
 
 const loginSchema = z.object({
@@ -43,6 +51,12 @@ const resetPasswordSchema = z.object({
 
 const updateProfileSchema = z.object({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres").optional(),
+  phone: z
+    .string()
+    .min(10, "Celular deve ter pelo menos 10 dígitos")
+    .max(15, "Celular deve ter no máximo 15 caracteres")
+    .regex(phoneRegex, "Formato de celular inválido. Use: XX XXXXX-XXXX")
+    .optional(),
   currentPassword: z.string().optional(),
   newPassword: z
     .string()
@@ -70,7 +84,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const { name, email, password } = validationResult.data;
+    const { name, email, password, phone } = validationResult.data;
 
     // Valida email
     if (!AuthService.validateEmail(email)) {
@@ -130,6 +144,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
         name,
         email,
         password: hashedPassword,
+        phone,
         role: "CUSTOMER", // Default role
       },
     });
@@ -157,6 +172,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
         id: user.id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         role: user.role,
       },
       accessToken: tokens.accessToken,
@@ -252,6 +268,7 @@ router.post("/login", async (req: Request, res: Response): Promise<void> => {
         id: user.id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         role: user.role,
       },
       accessToken: tokens.accessToken,
@@ -336,6 +353,7 @@ router.post("/refresh", async (req: Request, res: Response): Promise<void> => {
         id: user.id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         role: user.role,
       },
     });
@@ -404,6 +422,7 @@ router.get(
           id: req.user.id,
           name: req.user.name,
           email: req.user.email,
+          phone: req.user.phone,
           role: req.user.role,
           createdAt: req.user.createdAt,
         },
@@ -655,11 +674,15 @@ router.patch(
   requireAuth,
   async (req: Request, res: Response): Promise<void> => {
     try {
-      const { name, currentPassword, newPassword } = updateProfileSchema.parse(
-        req.body
-      );
+      const { name, phone, currentPassword, newPassword } =
+        updateProfileSchema.parse(req.body);
 
       const updates: any = {};
+
+      // Atualiza telefone se fornecido
+      if (phone) {
+        updates.phone = phone;
+      }
 
       // Atualiza nome se fornecido
       if (name) {
@@ -746,6 +769,7 @@ router.patch(
           id: updatedUser.id,
           name: updatedUser.name,
           email: updatedUser.email,
+          phone: updatedUser.phone,
           role: updatedUser.role,
         },
       });

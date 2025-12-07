@@ -11,7 +11,8 @@ export interface StoredUser {
   id: string;
   email: string;
   name: string;
-  role: 'ADMIN' | 'CAMPAIGN_CREATOR' | 'CUSTOMER';
+  phone?: string;
+  role: "ADMIN" | "CAMPAIGN_CREATOR" | "CUSTOMER";
   googleId?: string;
 }
 
@@ -19,7 +20,8 @@ export interface RegisterRequest {
   name: string;
   email: string;
   password: string;
-  role?: 'CUSTOMER' | 'CAMPAIGN_CREATOR';
+  phone: string;
+  role?: "CUSTOMER" | "CAMPAIGN_CREATOR";
 }
 
 export interface LoginRequest {
@@ -45,7 +47,7 @@ export interface Campaign {
   id: string;
   name: string;
   description?: string;
-  status: 'ACTIVE' | 'CLOSED' | 'SENT' | 'ARCHIVED';
+  status: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED";
   deadline?: string;
   shippingCost: number;
   creatorId: string;
@@ -75,7 +77,7 @@ export interface CampaignListParams {
   cursor?: string;
   limit?: number;
   search?: string;
-  status?: 'ACTIVE' | 'CLOSED' | 'SENT' | 'ARCHIVED';
+  status?: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED";
   creatorId?: string;
   fromSellers?: boolean;
   similarProducts?: boolean;
@@ -101,7 +103,7 @@ export interface UpdateCampaignDto {
   description?: string;
   deadline?: string;
   shippingCost?: number;
-  status?: 'ACTIVE' | 'CLOSED' | 'SENT' | 'ARCHIVED';
+  status?: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED";
 }
 
 export interface CloneCampaignDto {
@@ -193,7 +195,7 @@ export interface OrderMessage {
   orderId: string;
   senderId: string;
   senderName: string;
-  senderType: 'ADMIN' | 'CUSTOMER';
+  senderType: "ADMIN" | "CUSTOMER";
   message: string;
   isRead: boolean;
   createdAt: string;
@@ -201,7 +203,7 @@ export interface OrderMessage {
   sender: {
     id: string;
     name: string;
-    role: 'ADMIN' | 'CAMPAIGN_CREATOR' | 'CUSTOMER';
+    role: "ADMIN" | "CAMPAIGN_CREATOR" | "CUSTOMER";
   };
 }
 
@@ -287,7 +289,11 @@ export interface CampaignMessageListParams {
 export interface Notification {
   id: string;
   userId: string;
-  type: 'CAMPAIGN_READY_TO_SEND' | 'CAMPAIGN_STATUS_CHANGED' | 'CAMPAIGN_ARCHIVED' | 'NEW_MESSAGE';
+  type:
+    | "CAMPAIGN_READY_TO_SEND"
+    | "CAMPAIGN_STATUS_CHANGED"
+    | "CAMPAIGN_ARCHIVED"
+    | "NEW_MESSAGE";
   title: string;
   message: string;
   isRead: boolean;
@@ -310,10 +316,10 @@ export interface Feedback {
   id: string;
   userId?: string;
   email?: string;
-  type: 'BUG' | 'SUGGESTION' | 'IMPROVEMENT' | 'OTHER';
+  type: "BUG" | "SUGGESTION" | "IMPROVEMENT" | "OTHER";
   title: string;
   description: string;
-  status: 'PENDING' | 'IN_PROGRESS' | 'RESOLVED' | 'DISMISSED';
+  status: "PENDING" | "IN_PROGRESS" | "RESOLVED" | "DISMISSED";
   adminNotes?: string;
   createdAt: string;
   updatedAt: string;
@@ -325,14 +331,14 @@ export interface Feedback {
 }
 
 export interface CreateFeedbackDto {
-  type: 'BUG' | 'SUGGESTION' | 'IMPROVEMENT' | 'OTHER';
+  type: "BUG" | "SUGGESTION" | "IMPROVEMENT" | "OTHER";
   title: string;
   description: string;
   email?: string;
 }
 
 export interface UpdateFeedbackDto {
-  status: 'PENDING' | 'IN_PROGRESS' | 'RESOLVED' | 'DISMISSED';
+  status: "PENDING" | "IN_PROGRESS" | "RESOLVED" | "DISMISSED";
   adminNotes?: string;
 }
 

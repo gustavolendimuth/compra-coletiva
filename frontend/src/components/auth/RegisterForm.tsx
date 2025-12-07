@@ -1,8 +1,13 @@
-import { FormEvent, useState } from 'react';
-import { Input, Button, Divider, GoogleButton } from '../ui';
+import { FormEvent, useState } from "react";
+import { Input, PhoneInput, Button, Divider, GoogleButton } from "../ui";
 
 interface RegisterFormProps {
-  onSubmit: (name: string, email: string, password: string) => Promise<void>;
+  onSubmit: (
+    name: string,
+    email: string,
+    password: string,
+    phone: string
+  ) => Promise<void>;
   onGoogleLogin: () => void;
   isLoading: boolean;
 }
@@ -10,18 +15,23 @@ interface RegisterFormProps {
 /**
  * RegisterForm Component
  *
- * Registration form with name/email/password and Google OAuth.
+ * Registration form with name/email/phone/password and Google OAuth.
  * Uses design system ui/ components.
  * Mobile-first with proper touch targets.
  */
-export const RegisterForm = ({ onSubmit, onGoogleLogin, isLoading }: RegisterFormProps) => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+export const RegisterForm = ({
+  onSubmit,
+  onGoogleLogin,
+  isLoading,
+}: RegisterFormProps) => {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    await onSubmit(name, email, password);
+    await onSubmit(name, email, password, phone);
   };
 
   return (
@@ -48,6 +58,17 @@ export const RegisterForm = ({ onSubmit, onGoogleLogin, isLoading }: RegisterFor
         autoComplete="email"
       />
 
+      <PhoneInput
+        id="register-phone"
+        label="Celular/WhatsApp"
+        value={phone}
+        onChange={setPhone}
+        required
+        disabled={isLoading}
+        autoComplete="tel"
+        helperText="Número para contato via WhatsApp"
+      />
+
       <Input
         id="register-password"
         type="password"
@@ -67,7 +88,7 @@ export const RegisterForm = ({ onSubmit, onGoogleLogin, isLoading }: RegisterFor
         disabled={isLoading}
         className="w-full"
       >
-        {isLoading ? 'Criando conta...' : 'Criar Conta'}
+        {isLoading ? "Criando conta..." : "Criar Conta"}
       </Button>
 
       <Divider text="Ou continue com" />
