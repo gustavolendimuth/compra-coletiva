@@ -24,6 +24,7 @@ echo "📦 Running database migrations..."
 echo "🔍 Resolving any failed migrations..."
 npx prisma migrate resolve --rolled-back "20251125200000_populate_legacy_user_data" 2>/dev/null || true
 npx prisma migrate resolve --rolled-back "20251125232754_add_unique_constraint_campaign_user" 2>/dev/null || true
+npx prisma migrate resolve --rolled-back "20251207000002_add_campaign_image" 2>/dev/null || true
 echo "✅ Failed migrations resolved (if any)"
 
 # Agora roda as migrations
