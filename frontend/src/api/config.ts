@@ -11,7 +11,10 @@
  * - Local domains (localhost, 127.0.0.1, 0.0.0.0) always use http://
  * - Remote domains use https:// in production, http:// in development
  */
-export function processEnvUrl(url: string | undefined, fallback: string): string {
+export function processEnvUrl(
+  url: string | undefined,
+  fallback: string
+): string {
   if (!url) {
     return fallback;
   }
@@ -19,14 +22,15 @@ export function processEnvUrl(url: string | undefined, fallback: string): string
   const trimmed = url.trim();
 
   // If protocol is already specified, use as-is
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
     return trimmed;
   }
 
   // Determine if domain is local
-  const isLocal = trimmed.includes('localhost') ||
-                 trimmed.includes('127.0.0.1') ||
-                 trimmed.includes('0.0.0.0');
+  const isLocal =
+    trimmed.includes("localhost") ||
+    trimmed.includes("127.0.0.1") ||
+    trimmed.includes("0.0.0.0");
 
   // Local domains always use http
   if (isLocal) {
@@ -34,7 +38,7 @@ export function processEnvUrl(url: string | undefined, fallback: string): string
   }
 
   // Remote domains: use https in production, http in development
-  const protocol = import.meta.env.PROD ? 'https' : 'http';
+  const protocol = import.meta.env.PROD ? "https" : "http";
   return `${protocol}://${trimmed}`;
 }
 
@@ -43,7 +47,7 @@ export function processEnvUrl(url: string | undefined, fallback: string): string
  */
 export const API_URL = processEnvUrl(
   import.meta.env.VITE_API_URL,
-  'http://localhost:3000'
+  "http://localhost:3000"
 );
 
 /**
@@ -53,6 +57,7 @@ export const apiConfig = {
   baseURL: `${API_URL}/api`,
   timeout: 30000,
   headers: {
-    'Content-Type': 'application/json'
-  }
+    "Content-Type": "application/json",
+  },
+  withCredentials: true, // Enable sending cookies with cross-origin requests
 };

@@ -1,4 +1,4 @@
-import { Modal, Button, Input, Textarea } from "@/components/ui";
+import { Modal, Button, Input, Textarea, CurrencyInput } from "@/components/ui";
 import DateTimeInput from "@/components/DateTimeInput";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { Campaign } from "@/api";
@@ -17,10 +17,10 @@ interface CloneModalProps {
 
 interface ShippingModalProps {
   isOpen: boolean;
-  shippingCost: number | "";
+  shippingCost: string;
   isPending: boolean;
   onClose: () => void;
-  onChange: (cost: number | "") => void;
+  onChange: (cost: string) => void;
   onSubmit: (e: React.FormEvent) => void;
 }
 
@@ -35,17 +35,12 @@ export function ShippingModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Editar Frete Total">
       <form onSubmit={onSubmit} className="space-y-4">
-        <Input
+        <CurrencyInput
           id="shipping-cost"
-          type="number"
-          step="0.01"
-          min="0"
           autoFocus
           value={shippingCost}
-          onChange={(e) =>
-            onChange(e.target.value === "" ? "" : parseFloat(e.target.value))
-          }
-          label="Valor do Frete Total (R$)"
+          onChange={onChange}
+          label="Valor do Frete Total"
           helperText="O frete será distribuído proporcionalmente ao peso de cada pedido."
         />
 

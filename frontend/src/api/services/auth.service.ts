@@ -3,14 +3,14 @@
  * Handles user registration, login, logout, and token management
  */
 
-import { authClient } from '../client';
+import { authClient } from "../client";
 import type {
   RegisterRequest,
   LoginRequest,
   AuthResponse,
   RefreshResponse,
-  StoredUser
-} from '../types';
+  StoredUser,
+} from "../types";
 
 export const authService = {
   /**
@@ -19,7 +19,9 @@ export const authService = {
    * @returns Authentication response with tokens and user data
    */
   register: (data: RegisterRequest) =>
-    authClient.post<AuthResponse>('/auth/register', data).then(res => res.data),
+    authClient
+      .post<AuthResponse>("/auth/register", data)
+      .then((res) => res.data),
 
   /**
    * Login with email and password
@@ -27,22 +29,33 @@ export const authService = {
    * @returns Authentication response with tokens and user data
    */
   login: (data: LoginRequest) =>
-    authClient.post<AuthResponse>('/auth/login', data).then(res => res.data),
+    authClient.post<AuthResponse>("/auth/login", data).then((res) => res.data),
 
   /**
    * Refresh access token using refresh token
-   * @param refreshToken - Current refresh token
+   * RefreshToken is automatically sent via HttpOnly cookie (withCredentials: true)
+   * Body param kept for backward compatibility
+   * @param refreshToken - Current refresh token (optional, cookie is preferred)
    * @returns New access token
    */
-  refresh: (refreshToken: string) =>
-    authClient.post<RefreshResponse>('/auth/refresh', { refreshToken }).then(res => res.data),
+  refresh: (refreshToken?: string) =>
+    authClient
+      .post<RefreshResponse>(
+        "/auth/refresh",
+        refreshToken ? { refreshToken } : {}
+      )
+      .then((res) => res.data),
 
   /**
    * Logout and invalidate refresh token
-   * @param refreshToken - Refresh token to invalidate
+   * RefreshToken is automatically read from HttpOnly cookie on the server
+   * Body param kept for backward compatibility
+   * @param refreshToken - Refresh token to invalidate (optional, cookie is preferred)
    */
-  logout: (refreshToken: string) =>
-    authClient.post<void>('/auth/logout', { refreshToken }).then(res => res.data),
+  logout: (refreshToken?: string) =>
+    authClient
+      .post<void>("/auth/logout", refreshToken ? { refreshToken } : {})
+      .then((res) => res.data),
 
   /**
    * Get current user information
@@ -50,7 +63,9 @@ export const authService = {
    * @returns User data
    */
   me: (accessToken: string) =>
-    authClient.get<{ user: StoredUser }>('/auth/me', {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    }).then(res => res.data.user)
+    authClient
+      .get<{ user: StoredUser }>("/auth/me", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+      .then((res) => res.data.user),
 };

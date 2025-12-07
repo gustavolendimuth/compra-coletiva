@@ -1,9 +1,9 @@
-import { Modal, Button, Input } from "@/components/ui";
+import { Modal, Button, Input, CurrencyInput } from "@/components/ui";
 
 interface ProductForm {
   name: string;
-  price: number | "";
-  weight: number | "";
+  price: string;
+  weight: string;
 }
 
 interface AddProductModalProps {
@@ -36,20 +36,12 @@ export function AddProductModal({
           label="Nome do Produto *"
         />
 
-        <Input
+        <CurrencyInput
           id="add-product-price"
-          type="number"
-          step="0.01"
-          min="0"
           required
           value={form.price}
-          onChange={(e) =>
-            onChange({
-              ...form,
-              price: e.target.value === "" ? "" : parseFloat(e.target.value),
-            })
-          }
-          label="Preço (R$) *"
+          onChange={(value) => onChange({ ...form, price: value })}
+          label="Preço *"
         />
 
         <Input
@@ -59,12 +51,7 @@ export function AddProductModal({
           min="0"
           required
           value={form.weight}
-          onChange={(e) =>
-            onChange({
-              ...form,
-              weight: e.target.value === "" ? "" : parseFloat(e.target.value),
-            })
-          }
+          onChange={(e) => onChange({ ...form, weight: e.target.value })}
           label="Peso (gramas) *"
         />
 
@@ -120,20 +107,12 @@ export function EditProductModal({
           label="Nome do Produto *"
         />
 
-        <Input
+        <CurrencyInput
           id="edit-product-price"
-          type="number"
-          step="0.01"
-          min="0"
           required
           value={form.price}
-          onChange={(e) =>
-            onChange({
-              ...form,
-              price: e.target.value === "" ? "" : parseFloat(e.target.value),
-            })
-          }
-          label="Preço (R$) *"
+          onChange={(value) => onChange({ ...form, price: value })}
+          label="Preço *"
         />
 
         <Input
@@ -143,12 +122,7 @@ export function EditProductModal({
           min="0"
           required
           value={form.weight}
-          onChange={(e) =>
-            onChange({
-              ...form,
-              weight: e.target.value === "" ? "" : parseFloat(e.target.value),
-            })
-          }
+          onChange={(e) => onChange({ ...form, weight: e.target.value })}
           label="Peso (gramas) *"
         />
 

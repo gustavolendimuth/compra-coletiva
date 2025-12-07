@@ -8,6 +8,7 @@
 export { Button } from "./Button";
 export { Card, CardHeader, CardBody, CardFooter } from "./Card";
 export { Input } from "./Input";
+export { CurrencyInput } from "./CurrencyInput";
 export { Textarea } from "./Textarea";
 export { Select } from "./Select";
 export { Badge, StatusBadge } from "./Badge";
@@ -20,6 +21,7 @@ export { NotificationItem } from "./NotificationItem";
 export { default as ButtonDefault } from "./Button";
 export { default as CardDefault } from "./Card";
 export { default as InputDefault } from "./Input";
+export { default as CurrencyInputDefault } from "./CurrencyInput";
 export { default as TextareaDefault } from "./Textarea";
 export { default as SelectDefault } from "./Select";
 export { default as BadgeDefault } from "./Badge";

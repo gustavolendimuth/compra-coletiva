@@ -15,8 +15,8 @@ import { useAuth } from "@/contexts/AuthContext";
 interface ProductForm {
   campaignId: string;
   name: string;
-  price: number;
-  weight: number;
+  price: string;
+  weight: string;
   imageUrl?: string;
 }
 
@@ -66,15 +66,15 @@ export function useCampaignDetail() {
   const [productForm, setProductForm] = useState<ProductForm>({
     campaignId: campaignId || "",
     name: "",
-    price: 0,
-    weight: 0,
+    price: "",
+    weight: "",
     imageUrl: "",
   });
 
   const [editProductForm, setEditProductForm] = useState({
     name: "",
-    price: 0,
-    weight: 0,
+    price: "",
+    weight: "",
     imageUrl: "",
   });
 
@@ -90,7 +90,7 @@ export function useCampaignDetail() {
     items: [],
   });
 
-  const [shippingCost, setShippingCost] = useState(0);
+  const [shippingCost, setShippingCost] = useState("");
   const [deadlineForm, setDeadlineForm] = useState("");
   const [cloneName, setCloneName] = useState("");
   const [cloneDescription, setCloneDescription] = useState("");
@@ -231,8 +231,8 @@ export function useCampaignDetail() {
       setProductForm({
         campaignId: campaignId || "",
         name: "",
-        price: 0,
-        weight: 0,
+        price: "",
+        weight: "",
         imageUrl: "",
       });
     },
@@ -416,7 +416,11 @@ export function useCampaignDetail() {
   // Handlers
   const handleCreateProduct = (e: React.FormEvent) => {
     e.preventDefault();
-    createProductMutation.mutate(productForm);
+    createProductMutation.mutate({
+      ...productForm,
+      price: parseFloat(productForm.price) || 0,
+      weight: parseFloat(productForm.weight) || 0,
+    });
   };
 
   const handleEditProduct = (e: React.FormEvent) => {
@@ -424,7 +428,11 @@ export function useCampaignDetail() {
     if (!editingProduct) return;
     updateProductMutation.mutate({
       productId: editingProduct.id,
-      data: editProductForm,
+      data: {
+        ...editProductForm,
+        price: parseFloat(editProductForm.price) || 0,
+        weight: parseFloat(editProductForm.weight) || 0,
+      },
     });
   };
 
@@ -432,8 +440,8 @@ export function useCampaignDetail() {
     setEditingProduct(product);
     setEditProductForm({
       name: product.name,
-      price: product.price,
-      weight: product.weight,
+      price: String(product.price),
+      weight: String(product.weight),
       imageUrl: "",
     });
     setIsEditProductModalOpen(true);
@@ -502,7 +510,7 @@ export function useCampaignDetail() {
 
   const handleUpdateShipping = (e: React.FormEvent) => {
     e.preventDefault();
-    updateShippingMutation.mutate(shippingCost);
+    updateShippingMutation.mutate(parseFloat(shippingCost) || 0);
   };
 
   const handleUpdateDeadline = (e: React.FormEvent) => {

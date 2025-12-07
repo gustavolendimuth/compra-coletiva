@@ -121,7 +121,7 @@ export default function CampaignDetail() {
           isActive={hook.isActive}
           canEditCampaign={hook.canEditCampaign}
           onEditShipping={() => {
-            hook.setShippingCost(hook.campaign!.shippingCost);
+            hook.setShippingCost(String(hook.campaign!.shippingCost));
             hook.setIsShippingModalOpen(true);
           }}
         />

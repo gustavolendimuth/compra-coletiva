@@ -3,10 +3,10 @@
  * Configured with authentication interceptors and token refresh logic
  */
 
-import axios, { AxiosInstance } from 'axios';
-import { apiConfig } from './config';
-import { authStorage } from '../lib/authStorage';
-import { RefreshResponse } from './types';
+import axios, { AxiosInstance } from "axios";
+import { apiConfig } from "./config";
+import { authStorage } from "../lib/authStorage";
+import { RefreshResponse } from "./types";
 
 /**
  * Main API client instance
@@ -90,17 +90,18 @@ apiClient.interceptors.response.use(
     if (!refreshToken) {
       // No refresh token, clear auth and reject
       authStorage.clearAuth();
-      processQueue(new Error('No refresh token'));
+      processQueue(new Error("No refresh token"));
       isRefreshing = false;
       return Promise.reject(error);
     }
 
     try {
       // Try to refresh the access token using authClient to avoid circular dependency
-      const response = await authClient.post<RefreshResponse>(
-        '/auth/refresh',
-        { refreshToken }
-      );
+      // RefreshToken is now sent via HttpOnly cookie automatically (withCredentials: true)
+      // But we also send in body for backward compatibility with older backend versions
+      const response = await authClient.post<RefreshResponse>("/auth/refresh", {
+        refreshToken,
+      });
 
       const { accessToken } = response.data;
       authStorage.setAccessToken(accessToken);
