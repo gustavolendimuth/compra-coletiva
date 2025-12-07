@@ -67,6 +67,24 @@ export function Footer({ onFeedbackClick }: FooterProps) {
                 </button>
               </li>
               <li>
+                <Link
+                  to="/privacy"
+                  className="text-sm text-gray-600 hover:text-primary-600 transition-colors inline-flex items-center gap-1 group"
+                >
+                  <span>Política de Privacidade</span>
+                  <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/terms"
+                  className="text-sm text-gray-600 hover:text-primary-600 transition-colors inline-flex items-center gap-1 group"
+                >
+                  <span>Termos de Serviço</span>
+                  <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </Link>
+              </li>
+              <li>
                 <a
                   href="https://github.com/gustavolendimuth/compra-coletiva"
                   target="_blank"
@@ -125,6 +143,21 @@ export function Footer({ onFeedbackClick }: FooterProps) {
 
         {/* Bottom Bar - With extra padding on mobile */}
         <div className="pt-4 md:pt-6 flex flex-col items-center gap-2 md:gap-4 text-xs md:text-sm text-gray-500">
+          <div className="flex flex-wrap items-center justify-center gap-2 md:gap-4">
+            <Link
+              to="/privacy"
+              className="text-xs md:text-sm text-gray-500 hover:text-primary-600 transition-colors"
+            >
+              Privacidade
+            </Link>
+            <span className="text-gray-300">•</span>
+            <Link
+              to="/terms"
+              className="text-xs md:text-sm text-gray-500 hover:text-primary-600 transition-colors"
+            >
+              Termos
+            </Link>
+          </div>
           <p className="text-center">
             © {new Date().getFullYear()} Compra Coletiva. Projeto open source.
           </p>

@@ -1,4 +1,5 @@
 import { FormEvent, useState } from "react";
+import { Link } from "react-router-dom";
 import { Input, PhoneInput, Button, Divider, GoogleButton } from "../ui";
 
 interface RegisterFormProps {
@@ -82,14 +83,38 @@ export const RegisterForm = ({
         autoComplete="new-password"
       />
 
-      <Button
-        type="submit"
-        variant="primary"
-        disabled={isLoading}
-        className="w-full"
-      >
-        {isLoading ? "Criando conta..." : "Criar Conta"}
-      </Button>
+      <div className="space-y-3">
+        <p className="text-xs text-gray-600 text-center">
+          Ao criar uma conta, você concorda com nossos{' '}
+          <Link
+            to="/terms"
+            className="text-blue-600 hover:text-blue-700 font-medium"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Termos de Serviço
+          </Link>
+          {' '}e{' '}
+          <Link
+            to="/privacy"
+            className="text-blue-600 hover:text-blue-700 font-medium"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Política de Privacidade
+          </Link>
+          .
+        </p>
+
+        <Button
+          type="submit"
+          variant="primary"
+          disabled={isLoading}
+          className="w-full"
+        >
+          {isLoading ? "Criando conta..." : "Criar Conta"}
+        </Button>
+      </div>
 
       <Divider text="Ou continue com" />
 

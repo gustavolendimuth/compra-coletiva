@@ -1,4 +1,5 @@
 import { FormEvent, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Input, Button, Divider, GoogleButton } from '../ui';
 
 interface LoginFormProps {
@@ -58,7 +59,31 @@ export const LoginForm = ({ onSubmit, onGoogleLogin, isLoading }: LoginFormProps
 
       <Divider text="Ou continue com" />
 
-      <GoogleButton onClick={onGoogleLogin} isLoading={isLoading} />
+      <div className="space-y-3">
+        <GoogleButton onClick={onGoogleLogin} isLoading={isLoading} />
+        
+        <p className="text-xs text-gray-600 text-center">
+          Ao usar o Google, você concorda com nossos{' '}
+          <Link
+            to="/terms"
+            className="text-blue-600 hover:text-blue-700 font-medium"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Termos
+          </Link>
+          {' '}e{' '}
+          <Link
+            to="/privacy"
+            className="text-blue-600 hover:text-blue-700 font-medium"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Privacidade
+          </Link>
+          .
+        </p>
+      </div>
     </form>
   );
 };
