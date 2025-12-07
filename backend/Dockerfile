@@ -54,7 +54,6 @@ COPY scripts ./scripts
 COPY start.sh ./start.sh
 RUN chmod +x start.sh
 
-
 EXPOSE 3000
 
 # Executa migrations e inicia o servidor

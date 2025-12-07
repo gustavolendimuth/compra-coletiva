@@ -2,24 +2,6 @@
 
 Sistema web profissional para gerenciamento de compras coletivas, desenvolvido com as melhores práticas de desenvolvimento.
 
-## 🚨 Migração de Usuários Legados
-
-**Se você está vendo pedidos agrupados sob "Sistema (Legado)" no Railway**, siga o guia rápido:
-
-📖 **[QUICK START - Migração de Usuários Legados](QUICK_START_LEGACY_MIGRATION.md)**
-
-```bash
-# Railway - Comandos Rápidos
-railway run --service backend npm run prisma:migrate:deploy
-railway run --service backend npm run fix:legacy-users
-```
-
-**Documentação Completa**:
-- [Guia Rápido (START HERE)](QUICK_START_LEGACY_MIGRATION.md)
-- [Guia Completo Detalhado](LEGACY_USERS_MIGRATION_GUIDE.md)
-- [Railway Específico](RAILWAY_LEGACY_MIGRATION.md)
-- [Sumário de Arquivos](MIGRATION_FILES_SUMMARY.md)
-
 ---
 
 ## Funcionalidades

@@ -7,7 +7,7 @@ import { ProductPreviewModal } from './ProductPreviewModal';
 interface ProductPreviewInlineProps {
   products: ProductPreviewType[];
   totalCount: number;
-  campaignId: string;
+  campaignSlug: string;
   campaignName: string;
   allProducts?: ProductPreviewType[]; // Todos os produtos para o modal (opcional)
 }
@@ -15,7 +15,7 @@ interface ProductPreviewInlineProps {
 export function ProductPreviewInline({
   products,
   totalCount,
-  campaignId,
+  campaignSlug,
   campaignName,
   allProducts
 }: ProductPreviewInlineProps) {
@@ -74,7 +74,7 @@ export function ProductPreviewInline({
       <ProductPreviewModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        campaignId={campaignId}
+        campaignSlug={campaignSlug}
         campaignName={campaignName}
         products={productsForModal}
         totalCount={totalCount}

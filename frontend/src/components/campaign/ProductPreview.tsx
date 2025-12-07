@@ -6,7 +6,7 @@ export type ProductPreviewVariant = 'inline' | 'expandable';
 interface ProductPreviewProps {
   products: ProductPreviewType[];
   totalCount: number;
-  campaignId: string;
+  campaignSlug: string;
   campaignName: string;
   allProducts?: ProductPreviewType[];
   variant?: ProductPreviewVariant;
@@ -21,7 +21,7 @@ interface ProductPreviewProps {
 export function ProductPreview({
   products,
   totalCount,
-  campaignId,
+  campaignSlug,
   campaignName,
   allProducts
 }: ProductPreviewProps) {
@@ -35,7 +35,7 @@ export function ProductPreview({
     <ProductPreviewInline
       products={products}
       totalCount={totalCount}
-      campaignId={campaignId}
+      campaignSlug={campaignSlug}
       campaignName={campaignName}
       allProducts={allProducts}
     />

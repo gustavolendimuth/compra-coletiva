@@ -7,7 +7,7 @@ import { formatCurrency } from '@/lib/utils';
 interface ProductPreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
-  campaignId: string;
+  campaignSlug: string;
   campaignName: string;
   products: ProductPreviewType[];
   totalCount: number;
@@ -16,7 +16,7 @@ interface ProductPreviewModalProps {
 export function ProductPreviewModal({
   isOpen,
   onClose,
-  campaignId,
+  campaignSlug,
   campaignName,
   products,
   totalCount
@@ -120,7 +120,7 @@ export function ProductPreviewModal({
         {/* Footer with link to campaign */}
         <div className="sticky bottom-0 bg-gray-50 border-t border-gray-100 px-6 py-4">
           <Link
-            to={`/campaigns/${campaignId}`}
+            to={`/campaigns/${campaignSlug}`}
             className="flex items-center justify-center gap-2 w-full py-3 bg-primary-600 text-white font-medium rounded-xl hover:bg-primary-700 transition-colors"
             onClick={(e) => e.stopPropagation()}
           >

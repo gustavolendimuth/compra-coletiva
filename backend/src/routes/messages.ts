@@ -64,6 +64,7 @@ router.post('/', requireAuth, requireMessageAccess, asyncHandler(async (req, res
       campaign: {
         select: {
           creatorId: true,
+          slug: true,
           name: true
         }
       }
@@ -116,6 +117,7 @@ router.post('/', requireAuth, requireMessageAccess, asyncHandler(async (req, res
         {
           orderId: order.id,
           campaignId: order.campaignId,
+          campaignSlug: order.campaign.slug,
           campaignName: order.campaign.name,
           messageId: message.id
         }

@@ -39,6 +39,12 @@ fi
 
 echo "✅ Migrations completed successfully"
 
+# Gera slugs para campanhas sem slug (seguro para execução repetida)
+echo "🔖 Generating slugs for campaigns..."
+npx tsx scripts/generate-slugs-standalone.ts || echo "⚠️  Slug generation failed (non-critical)"
+
+echo "✅ Slug generation completed"
+
 # Inicia o servidor
 echo "🚀 Starting Node.js server..."
 node dist/index.js

@@ -30,7 +30,7 @@ export function CampaignCard({
           <ProductPreview
             products={campaign.products || []}
             totalCount={campaign._count?.products || 0}
-            campaignId={campaign.id}
+            campaignSlug={campaign.slug}
             campaignName={campaign.name}
             variant={productPreviewVariant}
           />

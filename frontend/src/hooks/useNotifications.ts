@@ -101,7 +101,8 @@ export function useNotifications() {
     }
 
     // Navigate based on notification type
-    const campaignId = notification.metadata?.campaignId;
+    // Prefer campaignSlug, fallback to campaignId for backward compatibility
+    const campaignSlug = notification.metadata?.campaignSlug || notification.metadata?.campaignId;
     const orderId = notification.metadata?.orderId;
     const isQuestion = notification.metadata?.isQuestion;
 
@@ -109,20 +110,20 @@ export function useNotifications() {
       case 'CAMPAIGN_READY_TO_SEND':
       case 'CAMPAIGN_STATUS_CHANGED':
       case 'CAMPAIGN_ARCHIVED':
-        if (campaignId) {
-          navigate(`/campaigns/${campaignId}`);
+        if (campaignSlug) {
+          navigate(`/campaigns/${campaignSlug}`);
         }
         break;
       case 'NEW_MESSAGE':
-        if (campaignId) {
+        if (campaignSlug) {
           if (isQuestion) {
             // Navigate to campaign questions tab
-            navigate(`/campaigns/${campaignId}`, {
+            navigate(`/campaigns/${campaignSlug}`, {
               state: { openQuestionsTab: true }
             });
           } else {
             // Navigate to campaign detail page with order chat
-            navigate(`/campaigns/${campaignId}`, {
+            navigate(`/campaigns/${campaignSlug}`, {
               state: { openOrderChat: true, orderId }
             });
           }

@@ -50,7 +50,9 @@ O backend usa:
 - [railway.json](railway.json) na raiz (compartilhado com frontend)
 - [backend/Dockerfile](backend/Dockerfile) que:
   - Faz build da aplicação TypeScript
-  - Executa [backend/start.sh](backend/start.sh) que roda `npx prisma migrate deploy` automaticamente
+  - Executa [backend/start.sh](backend/start.sh) que:
+    - Roda `npx prisma migrate deploy` automaticamente
+    - Gera slugs para campanhas existentes (se necessário)
   - Inicia o servidor com `node dist/index.js`
 
 ### 4. Configurar Frontend
@@ -128,6 +130,13 @@ Acesse `https://seu-frontend.up.railway.app`
 - As migrations são executadas apenas no **backend**
 - Verifique os logs do backend no Railway
 - Se necessário, execute manualmente: acesse o backend no Railway CLI
+
+### Slugs não gerados
+- Os slugs são gerados automaticamente após as migrations
+- Se necessário, execute manualmente via Railway CLI:
+  ```bash
+  railway run --service backend npx tsx scripts/generate-slugs-standalone.ts
+  ```
 
 ## Estrutura de Arquivos
 

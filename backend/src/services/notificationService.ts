@@ -4,6 +4,7 @@ import { emitNotificationCreated } from './socketService';
 
 export interface NotificationMetadata {
   campaignId?: string;
+  campaignSlug?: string;
   campaignName?: string;
   [key: string]: any;
 }
@@ -50,7 +51,12 @@ export class NotificationService {
     try {
       const campaign = await prisma.campaign.findUnique({
         where: { id: campaignId },
-        include: {
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          status: true,
+          creatorId: true,
           orders: {
             select: {
               id: true,
@@ -102,6 +108,7 @@ export class NotificationService {
           `Todos os pedidos do grupo "${campaign.name}" foram pagos. Você pode alterar o status para ENVIADO quando fizer o pedido ao fornecedor.`,
           {
             campaignId: campaign.id,
+            campaignSlug: campaign.slug,
             campaignName: campaign.name
           }
         );

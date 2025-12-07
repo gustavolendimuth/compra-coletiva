@@ -113,7 +113,7 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
   // Verificar se a campanha existe
   const campaign = await prisma.campaign.findUnique({
     where: { id: data.campaignId },
-    select: { id: true, creatorId: true, name: true }
+    select: { id: true, slug: true, creatorId: true, name: true }
   });
 
   if (!campaign) {
@@ -191,6 +191,7 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
         `${message.sender.name} perguntou: "${data.question.substring(0, 50)}${data.question.length > 50 ? '...' : ''}"`,
         {
           campaignId: campaign.id,
+          campaignSlug: campaign.slug,
           campaignName: campaign.name,
           messageId: message.id,
           isQuestion: true
