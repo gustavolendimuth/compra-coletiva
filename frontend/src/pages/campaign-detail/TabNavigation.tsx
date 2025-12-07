@@ -1,6 +1,12 @@
-import { TrendingUp, ShoppingBag, Package, Truck, MessagesSquare } from 'lucide-react';
+import {
+  LayoutDashboard,
+  ShoppingBag,
+  Package,
+  Truck,
+  MessagesSquare,
+} from "lucide-react";
 
-type TabType = 'overview' | 'products' | 'orders' | 'shipping' | 'questions';
+type TabType = "overview" | "products" | "orders" | "shipping" | "questions";
 
 interface TabNavigationProps {
   activeTab: TabType;
@@ -8,16 +14,45 @@ interface TabNavigationProps {
   canEditCampaign: boolean;
 }
 
-export function TabNavigation({ activeTab, onTabChange, canEditCampaign }: TabNavigationProps) {
-  const tabs: Array<{ id: TabType; label: string; shortLabel: string; icon: any }> = [
-    { id: 'overview', label: 'Visão Geral', shortLabel: 'Geral', icon: TrendingUp },
-    { id: 'orders', label: 'Pedidos', shortLabel: 'Pedidos', icon: ShoppingBag },
-    { id: 'products', label: 'Produtos', shortLabel: 'Produtos', icon: Package },
-    { id: 'shipping', label: 'Frete', shortLabel: 'Frete', icon: Truck },
+export function TabNavigation({
+  activeTab,
+  onTabChange,
+  canEditCampaign,
+}: TabNavigationProps) {
+  const tabs: Array<{
+    id: TabType;
+    label: string;
+    shortLabel: string;
+    icon: any;
+  }> = [
+    {
+      id: "overview",
+      label: "Visão Geral",
+      shortLabel: "Geral",
+      icon: LayoutDashboard,
+    },
+    {
+      id: "orders",
+      label: "Pedidos",
+      shortLabel: "Pedidos",
+      icon: ShoppingBag,
+    },
+    {
+      id: "products",
+      label: "Produtos",
+      shortLabel: "Produtos",
+      icon: Package,
+    },
+    { id: "shipping", label: "Frete", shortLabel: "Frete", icon: Truck },
   ];
 
   if (canEditCampaign) {
-    tabs.push({ id: 'questions', label: 'Moderar', shortLabel: 'Moderar', icon: MessagesSquare });
+    tabs.push({
+      id: "questions",
+      label: "Moderar",
+      shortLabel: "Moderar",
+      icon: MessagesSquare,
+    });
   }
 
   return (
@@ -30,8 +65,8 @@ export function TabNavigation({ activeTab, onTabChange, canEditCampaign }: TabNa
             onClick={() => onTabChange(id)}
             className={`flex items-center justify-center gap-2 px-3 py-2 font-medium transition-colors flex-1 md:flex-initial rounded-t-lg ${
               activeTab === id
-                ? 'text-primary-600 border-b-2 border-primary-600 bg-primary-50'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-b-2 border-transparent'
+                ? "text-primary-600 border-b-2 border-primary-600 bg-primary-50"
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-b-2 border-transparent"
             }`}
           >
             <Icon className="w-4 h-4 flex-shrink-0" />
@@ -49,8 +84,8 @@ export function TabNavigation({ activeTab, onTabChange, canEditCampaign }: TabNa
               onClick={() => onTabChange(id)}
               className={`flex flex-col items-center justify-center flex-1 py-2 px-1 transition-colors ${
                 activeTab === id
-                  ? 'text-yellow-300 font-bold border-b-4 border-yellow-300'
-                  : 'text-white hover:text-yellow-200'
+                  ? "text-yellow-300 font-bold border-b-4 border-yellow-300"
+                  : "text-white hover:text-yellow-200"
               }`}
             >
               <Icon className="w-5 h-5 flex-shrink-0 mb-0.5" />

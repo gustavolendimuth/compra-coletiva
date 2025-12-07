@@ -1,9 +1,10 @@
-import { User, Clock, AlertTriangle, Send, Trash2 } from 'lucide-react';
-import { CampaignMessage } from '@/api';
-import { sanitizeText } from '@/lib/sanitize';
-import { formatTimeAgo } from './chatUtils';
-import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
+import { User, Clock, AlertTriangle, Send, Trash2 } from "lucide-react";
+import { CampaignMessage } from "@/api";
+import { sanitizeText } from "@/lib/sanitize";
+import { formatTimeAgo } from "./chatUtils";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { Textarea } from "@/components/ui/Textarea";
 
 interface UnansweredQuestionItemProps {
   message: CampaignMessage;
@@ -26,14 +27,14 @@ export const UnansweredQuestionItem = ({
   onAnswer,
   onDelete,
   isAnswering,
-  isDeleting
+  isDeleting,
 }: UnansweredQuestionItemProps) => {
   const isHighSpam = message.spamScore > 50;
 
   return (
     <div
       className={`border rounded-lg p-3 md:p-4 ${
-        isHighSpam ? 'border-red-300 bg-red-50' : 'bg-white'
+        isHighSpam ? "border-red-300 bg-red-50" : "bg-white"
       }`}
     >
       {/* User Info Header */}
@@ -42,10 +43,18 @@ export const UnansweredQuestionItem = ({
           <div className="flex flex-wrap items-center gap-2 mb-2">
             <div className="flex items-center gap-2 min-w-0">
               <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
-              <span className="font-medium text-gray-900 truncate">{message.sender.name}</span>
+              <span className="font-medium text-gray-900 truncate">
+                {message.sender.name}
+              </span>
             </div>
             <Badge
-              variant={message.spamScore < 30 ? 'success' : message.spamScore < 60 ? 'warning' : 'danger'}
+              variant={
+                message.spamScore < 30
+                  ? "success"
+                  : message.spamScore < 60
+                  ? "warning"
+                  : "danger"
+              }
               size="sm"
             >
               Spam: {message.spamScore.toFixed(0)}
@@ -98,11 +107,11 @@ export const UnansweredQuestionItem = ({
 
       {/* Answer Form */}
       <div className="space-y-3">
-        <textarea
+        <Textarea
           value={answerText}
           onChange={(e) => onAnswerChange(e.target.value)}
           placeholder="Digite sua resposta..."
-          className="w-full px-3 md:px-4 py-2 md:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm md:text-base"
+          className="px-3 md:px-4 py-2 md:py-3 text-sm md:text-base"
           rows={4}
           maxLength={2000}
         />

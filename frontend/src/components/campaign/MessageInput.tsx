@@ -1,4 +1,5 @@
-import { Button } from '@/components/ui/Button';
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 
 interface MessageInputProps {
   message: string;
@@ -17,21 +18,24 @@ export const MessageInput = ({
   onMessageChange,
   onSubmit,
   isAuthenticated,
-  isSubmitting
+  isSubmitting,
 }: MessageInputProps) => {
   return (
-    <form onSubmit={onSubmit} className="p-3 md:p-4 border-t bg-white rounded-b-lg">
+    <form
+      onSubmit={onSubmit}
+      className="p-3 md:p-4 border-t bg-white rounded-b-lg"
+    >
       <div className="flex flex-col sm:flex-row gap-2">
-        <input
+        <Input
           type="text"
           value={message}
           onChange={(e) => onMessageChange(e.target.value)}
           placeholder={
             isAuthenticated
-              ? 'Digite sua mensagem...'
-              : 'Faça login para enviar mensagens'
+              ? "Digite sua mensagem..."
+              : "Faça login para enviar mensagens"
           }
-          className="flex-1 px-3 md:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed text-sm md:text-base"
+          className="flex-1 px-3 md:px-4 py-2 text-sm md:text-base"
           disabled={!isAuthenticated || isSubmitting}
         />
         <Button
@@ -41,7 +45,7 @@ export const MessageInput = ({
           disabled={!isAuthenticated || !message.trim() || isSubmitting}
           className="w-full sm:w-auto"
         >
-          {isSubmitting ? 'Enviando...' : 'Enviar'}
+          {isSubmitting ? "Enviando..." : "Enviar"}
         </Button>
       </div>
     </form>

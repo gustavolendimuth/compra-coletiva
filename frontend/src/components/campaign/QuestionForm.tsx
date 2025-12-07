@@ -1,5 +1,6 @@
-import { Send } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+import { Send } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Textarea } from "@/components/ui/Textarea";
 
 interface QuestionFormProps {
   question: string;
@@ -18,21 +19,21 @@ export const QuestionForm = ({
   onQuestionChange,
   onSubmit,
   isAuthenticated,
-  isSubmitting
+  isSubmitting,
 }: QuestionFormProps) => {
   return (
     <form onSubmit={onSubmit} className="p-3 md:p-4 border-t bg-gray-50">
       <div className="space-y-2">
-        <textarea
+        <Textarea
           value={question}
           onChange={(e) => onQuestionChange(e.target.value)}
           placeholder={
             isAuthenticated
-              ? 'Digite sua pergunta...'
-              : 'Faça login para fazer uma pergunta'
+              ? "Digite sua pergunta..."
+              : "Faça login para fazer uma pergunta"
           }
           disabled={!isAuthenticated || isSubmitting}
-          className="w-full px-3 md:px-4 py-2 md:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed resize-none text-sm md:text-base"
+          className="px-3 md:px-4 py-2 md:py-3 text-sm md:text-base"
           rows={3}
           maxLength={1000}
         />
@@ -48,7 +49,7 @@ export const QuestionForm = ({
             className="w-full sm:w-auto"
           >
             <Send className="w-4 h-4 mr-2" />
-            {isSubmitting ? 'Enviando...' : 'Enviar Pergunta'}
+            {isSubmitting ? "Enviando..." : "Enviar Pergunta"}
           </Button>
         </div>
       </div>

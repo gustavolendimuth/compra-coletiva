@@ -1,19 +1,19 @@
-import { useState } from 'react';
-import { useInfiniteQuery } from '@tanstack/react-query';
-import { Package, RefreshCw, Lightbulb } from 'lucide-react';
-import { campaignApi } from '@/api';
-import { useDebounce } from '@/hooks/useDebounce';
-import { useIntersectionObserver } from '@/hooks/useIntersectionObserver';
+import { useState } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { Package, RefreshCw, Lightbulb, Megaphone } from "lucide-react";
+import { campaignApi } from "@/api";
+import { useDebounce } from "@/hooks/useDebounce";
+import { useIntersectionObserver } from "@/hooks/useIntersectionObserver";
 import {
   CampaignCard,
   CampaignFilters,
   CampaignFiltersState,
-  CampaignGridSkeleton
-} from '@/components/campaign';
-import { Card } from '@/components/ui';
+  CampaignGridSkeleton,
+} from "@/components/campaign";
+import { Card } from "@/components/ui";
 
 export default function CampaignList() {
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<CampaignFiltersState>({});
   const debouncedSearch = useDebounce(search, 300);
 
@@ -26,9 +26,9 @@ export default function CampaignList() {
     isLoading,
     isError,
     error,
-    refetch
+    refetch,
   } = useInfiniteQuery({
-    queryKey: ['campaigns', debouncedSearch, filters],
+    queryKey: ["campaigns", debouncedSearch, filters],
     queryFn: ({ pageParam }) =>
       campaignApi.list({
         cursor: pageParam,
@@ -37,10 +37,10 @@ export default function CampaignList() {
         status: filters.status,
         creatorId: filters.creatorId,
         fromSellers: filters.fromSellers,
-        similarProducts: filters.similarProducts
+        similarProducts: filters.similarProducts,
       }),
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-    initialPageParam: undefined as string | undefined
+    initialPageParam: undefined as string | undefined,
   });
 
   // Ref para trigger do infinite scroll
@@ -62,7 +62,10 @@ export default function CampaignList() {
   if (isError) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold text-gray-900">Campanhas</h1>
+        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+          <Megaphone className="w-8 h-8 text-primary-600" />
+          Campanhas
+        </h1>
         <Card>
           <div className="text-center py-12">
             <Package className="w-16 h-16 mx-auto text-red-400 mb-4" />
@@ -70,7 +73,9 @@ export default function CampaignList() {
               Erro ao carregar campanhas
             </h3>
             <p className="text-gray-500 mb-4">
-              {error instanceof Error ? error.message : 'Tente novamente mais tarde'}
+              {error instanceof Error
+                ? error.message
+                : "Tente novamente mais tarde"}
             </p>
             <button
               onClick={() => refetch()}
@@ -89,7 +94,10 @@ export default function CampaignList() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-3xl font-bold text-gray-900">Campanhas</h1>
+        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+          <Megaphone className="w-8 h-8 text-primary-600" />
+          Campanhas
+        </h1>
       </div>
 
       {/* Filtros */}
@@ -111,12 +119,12 @@ export default function CampaignList() {
             <Package className="w-16 h-16 mx-auto text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
               {debouncedSearch || Object.keys(filters).length > 0
-                ? 'Nenhuma campanha encontrada'
-                : 'Nenhuma campanha criada'}
+                ? "Nenhuma campanha encontrada"
+                : "Nenhuma campanha criada"}
             </h3>
             <p className="text-gray-500">
               {debouncedSearch || Object.keys(filters).length > 0
-                ? 'Tente ajustar os filtros ou termos de busca'
+                ? "Tente ajustar os filtros ou termos de busca"
                 : 'Use o botão "Nova Campanha" na barra superior para criar sua primeira campanha de compra coletiva'}
             </p>
           </div>
@@ -143,11 +151,13 @@ export default function CampaignList() {
                     <span>Carregando mais campanhas...</span>
                   </div>
                 )}
-                {!hasNextPage && campaigns.length > 0 && !suggestions.length && (
-                  <p className="text-sm text-gray-400">
-                    Todas as campanhas foram carregadas
-                  </p>
-                )}
+                {!hasNextPage &&
+                  campaigns.length > 0 &&
+                  !suggestions.length && (
+                    <p className="text-sm text-gray-400">
+                      Todas as campanhas foram carregadas
+                    </p>
+                  )}
               </div>
             </>
           )}
@@ -162,8 +172,8 @@ export default function CampaignList() {
                   <Lightbulb className="w-5 h-5" />
                   <span className="font-medium">
                     {campaigns.length === 0
-                      ? 'Você pode gostar destas campanhas'
-                      : 'Campanhas relacionadas'}
+                      ? "Você pode gostar destas campanhas"
+                      : "Campanhas relacionadas"}
                   </span>
                 </div>
                 <div className="flex-1 border-t border-gray-200"></div>
@@ -179,7 +189,8 @@ export default function CampaignList() {
               {/* Mensagem após sugestões */}
               {campaigns.length === 0 && (
                 <p className="text-center text-sm text-gray-400 mt-6">
-                  Não encontrou o que procurava? Tente ajustar os termos de busca
+                  Não encontrou o que procurava? Tente ajustar os termos de
+                  busca
                 </p>
               )}
             </div>

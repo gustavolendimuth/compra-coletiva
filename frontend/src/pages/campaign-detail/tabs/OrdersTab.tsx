@@ -1,10 +1,21 @@
-import { ShoppingBag, Search, X, Eye, CircleDollarSign, Edit, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
-import { Card } from '@/components/ui';
-import IconButton from '@/components/IconButton';
-import OrderCard from '@/components/campaign/OrderCard';
-import { formatCurrency } from '@/lib/utils';
-import { Order } from '@/api';
-import { getCustomerDisplayName } from '../utils';
+import {
+  ShoppingBag,
+  Search,
+  X,
+  Eye,
+  CircleDollarSign,
+  Edit,
+  Trash2,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+} from "lucide-react";
+import { Card, Input } from "@/components/ui";
+import IconButton from "@/components/IconButton";
+import OrderCard from "@/components/campaign/OrderCard";
+import { formatCurrency } from "@/lib/utils";
+import { Order } from "@/api";
+import { getCustomerDisplayName } from "../utils";
 
 interface OrdersTabProps {
   orders: Order[];
@@ -13,15 +24,17 @@ interface OrdersTabProps {
   canEditCampaign: boolean;
   currentUserId?: string;
   orderSearch: string;
-  sortField: 'customerName' | 'subtotal' | 'shippingFee' | 'total' | 'isPaid';
-  sortDirection: 'asc' | 'desc';
+  sortField: "customerName" | "subtotal" | "shippingFee" | "total" | "isPaid";
+  sortDirection: "asc" | "desc";
   onAddOrder: () => void;
   onViewOrder: (order: Order) => void;
   onTogglePayment: (order: Order) => void;
   onEditOrder: (order: Order) => void;
   onDeleteOrder: (orderId: string) => void;
   onSearchChange: (value: string) => void;
-  onSort: (field: 'customerName' | 'subtotal' | 'shippingFee' | 'total' | 'isPaid') => void;
+  onSort: (
+    field: "customerName" | "subtotal" | "shippingFee" | "total" | "isPaid"
+  ) => void;
 }
 
 export function OrdersTab({
@@ -45,16 +58,21 @@ export function OrdersTab({
     if (sortField !== field) {
       return <ArrowUpDown className="w-4 h-4 text-gray-400" />;
     }
-    return sortDirection === 'asc'
-      ? <ArrowUp className="w-4 h-4 text-primary-600" />
-      : <ArrowDown className="w-4 h-4 text-primary-600" />;
+    return sortDirection === "asc" ? (
+      <ArrowUp className="w-4 h-4 text-primary-600" />
+    ) : (
+      <ArrowDown className="w-4 h-4 text-primary-600" />
+    );
   };
 
   return (
     <div className="pb-20 md:pb-0">
       <div className="mb-4 space-y-3">
         <div className="flex justify-between items-center gap-2">
-          <h2 className="text-2xl font-bold">Pedidos</h2>
+          <h2 className="text-2xl font-bold flex items-center gap-2">
+            <ShoppingBag className="w-6 h-6 text-primary-600" />
+            Pedidos
+          </h2>
           {isActive && (
             <IconButton
               size="sm"
@@ -68,19 +86,19 @@ export function OrdersTab({
           )}
         </div>
         <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <input
+          <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-10" />
+          <Input
             type="text"
             placeholder="Buscar por pessoa..."
             value={orderSearch}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+            className="pl-10 pr-10 py-2 text-sm"
           />
           {orderSearch && (
             <button
               type="button"
-              onClick={() => onSearchChange('')}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              onClick={() => onSearchChange("")}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors z-10"
               title="Limpar busca"
             >
               <X className="w-4 h-4" />
@@ -93,7 +111,9 @@ export function OrdersTab({
         <Card>
           <div className="text-center py-8">
             <p className="text-gray-500">
-              {orderSearch ? 'Nenhum pedido encontrado' : 'Nenhum pedido criado'}
+              {orderSearch
+                ? "Nenhum pedido encontrado"
+                : "Nenhum pedido criado"}
             </p>
           </div>
         </Card>
@@ -103,37 +123,37 @@ export function OrdersTab({
           <div className="md:hidden mb-3">
             <div className="flex gap-2 overflow-x-auto pb-2">
               <button
-                onClick={() => onSort('customerName')}
+                onClick={() => onSort("customerName")}
                 className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                  sortField === 'customerName'
-                    ? 'bg-primary-100 text-primary-700'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  sortField === "customerName"
+                    ? "bg-primary-100 text-primary-700"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
                 <span>Pessoa</span>
-                {renderSortIcon('customerName')}
+                {renderSortIcon("customerName")}
               </button>
               <button
-                onClick={() => onSort('total')}
+                onClick={() => onSort("total")}
                 className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                  sortField === 'total'
-                    ? 'bg-primary-100 text-primary-700'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  sortField === "total"
+                    ? "bg-primary-100 text-primary-700"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
                 <span>Total</span>
-                {renderSortIcon('total')}
+                {renderSortIcon("total")}
               </button>
               <button
-                onClick={() => onSort('isPaid')}
+                onClick={() => onSort("isPaid")}
                 className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                  sortField === 'isPaid'
-                    ? 'bg-primary-100 text-primary-700'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  sortField === "isPaid"
+                    ? "bg-primary-100 text-primary-700"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
                 <span>Status</span>
-                {renderSortIcon('isPaid')}
+                {renderSortIcon("isPaid")}
               </button>
             </div>
           </div>
@@ -152,7 +172,7 @@ export function OrdersTab({
                 onTogglePayment={() => onTogglePayment(order)}
                 onEdit={() => onEditOrder(order)}
                 onDelete={() => {
-                  if (confirm('Tem certeza que deseja remover este pedido?')) {
+                  if (confirm("Tem certeza que deseja remover este pedido?")) {
                     onDeleteOrder(order.id);
                   }
                 }}
@@ -168,70 +188,100 @@ export function OrdersTab({
                   <tr>
                     <th
                       className="px-4 py-3 text-left text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-50 transition-colors"
-                      onClick={() => onSort('isPaid')}
+                      onClick={() => onSort("isPaid")}
                     >
                       <div className="flex items-center gap-2">
                         <span>Status</span>
-                        {renderSortIcon('isPaid')}
+                        {renderSortIcon("isPaid")}
                       </div>
                     </th>
                     <th
                       className="px-4 py-3 text-left text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-50 transition-colors"
-                      onClick={() => onSort('customerName')}
+                      onClick={() => onSort("customerName")}
                     >
                       <div className="flex items-center gap-2">
                         <span>Pessoa</span>
-                        {renderSortIcon('customerName')}
+                        {renderSortIcon("customerName")}
                       </div>
                     </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Produtos</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-900 min-w-[200px]">
+                      Produtos
+                    </th>
                     <th
                       className="px-4 py-3 text-right text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-50 transition-colors"
-                      onClick={() => onSort('subtotal')}
+                      onClick={() => onSort("subtotal")}
                     >
                       <div className="flex items-center justify-end gap-2">
                         <span>Subtotal</span>
-                        {renderSortIcon('subtotal')}
+                        {renderSortIcon("subtotal")}
                       </div>
                     </th>
                     <th
                       className="px-4 py-3 text-right text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-50 transition-colors"
-                      onClick={() => onSort('shippingFee')}
+                      onClick={() => onSort("shippingFee")}
                     >
                       <div className="flex items-center justify-end gap-2">
                         <span>Frete</span>
-                        {renderSortIcon('shippingFee')}
+                        {renderSortIcon("shippingFee")}
                       </div>
                     </th>
                     <th
                       className="px-4 py-3 text-right text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-50 transition-colors"
-                      onClick={() => onSort('total')}
+                      onClick={() => onSort("total")}
                     >
                       <div className="flex items-center justify-end gap-2">
                         <span>Total</span>
-                        {renderSortIcon('total')}
+                        {renderSortIcon("total")}
                       </div>
                     </th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">Ações</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">
+                      Ações
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
                   {filteredOrders?.map((order) => (
                     <tr key={order.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm">
-                        <span className={`px-2 py-1 text-xs rounded-full whitespace-nowrap ${
-                          order.isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                        }`}>
-                          {order.isPaid ? 'Pago' : 'Pendente'}
+                        <span
+                          className={`px-2 py-1 text-xs rounded-full whitespace-nowrap ${
+                            order.isPaid
+                              ? "bg-green-100 text-green-700"
+                              : "bg-red-100 text-red-700"
+                          }`}
+                        >
+                          {order.isPaid ? "Pago" : "Pendente"}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-900">{getCustomerDisplayName(order)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {order.items.map(item => `${item.quantity}x ${item.product.name}`).join(', ')}
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {getCustomerDisplayName(order)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-900 text-right">{formatCurrency(order.subtotal)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900 text-right">{formatCurrency(order.shippingFee)}</td>
-                      <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">{formatCurrency(order.total)}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <div className="flex flex-col gap-1 max-w-xs">
+                          {order.items.map((item, idx) => (
+                            <div key={idx} className="flex items-center gap-2">
+                              <span className="inline-flex items-center justify-center min-w-[24px] h-5 px-1.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">
+                                {item.quantity}x
+                              </span>
+                              <span
+                                className="text-gray-700 truncate"
+                                title={item.product.name}
+                              >
+                                {item.product.name}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                        {formatCurrency(order.subtotal)}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                        {formatCurrency(order.shippingFee)}
+                      </td>
+                      <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">
+                        {formatCurrency(order.total)}
+                      </td>
                       <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
                         <div className="flex gap-1 justify-end">
                           <IconButton
@@ -244,28 +294,38 @@ export function OrdersTab({
                           {canEditCampaign && (
                             <IconButton
                               size="sm"
-                              variant={order.isPaid ? 'success' : 'secondary'}
+                              variant={order.isPaid ? "success" : "secondary"}
                               icon={<CircleDollarSign className="w-5 h-5" />}
                               onClick={() => onTogglePayment(order)}
-                              title={order.isPaid ? 'Marcar como não pago' : 'Marcar como pago'}
+                              title={
+                                order.isPaid
+                                  ? "Marcar como não pago"
+                                  : "Marcar como pago"
+                              }
                             />
                           )}
-                          {isActive && (currentUserId === order.userId || canEditCampaign) && (
-                            <IconButton
-                              size="sm"
-                              variant="secondary"
-                              icon={<Edit className="w-4 h-4" />}
-                              onClick={() => onEditOrder(order)}
-                              title="Editar pedido"
-                            />
-                          )}
+                          {isActive &&
+                            (currentUserId === order.userId ||
+                              canEditCampaign) && (
+                              <IconButton
+                                size="sm"
+                                variant="secondary"
+                                icon={<Edit className="w-4 h-4" />}
+                                onClick={() => onEditOrder(order)}
+                                title="Editar pedido"
+                              />
+                            )}
                           {isActive && canEditCampaign && (
                             <IconButton
                               size="sm"
                               variant="danger"
                               icon={<Trash2 className="w-4 h-4" />}
                               onClick={() => {
-                                if (confirm('Tem certeza que deseja remover este pedido?')) {
+                                if (
+                                  confirm(
+                                    "Tem certeza que deseja remover este pedido?"
+                                  )
+                                ) {
                                   onDeleteOrder(order.id);
                                 }
                               }}

@@ -1,8 +1,9 @@
-import { Edit2 } from 'lucide-react';
-import { CampaignMessage } from '@/api';
-import { sanitizeText } from '@/lib/sanitize';
-import { formatTimeAgo } from './chatUtils';
-import { Button } from '@/components/ui/Button';
+import { Edit2 } from "lucide-react";
+import { CampaignMessage } from "@/api";
+import { sanitizeText } from "@/lib/sanitize";
+import { formatTimeAgo } from "./chatUtils";
+import { Button } from "@/components/ui/Button";
+import { Textarea } from "@/components/ui/Textarea";
 
 interface EditableQuestionProps {
   message: CampaignMessage;
@@ -29,15 +30,15 @@ export const EditableQuestion = ({
   onEditChange,
   onEditSave,
   onEditCancel,
-  isSaving
+  isSaving,
 }: EditableQuestionProps) => {
   if (isEditing) {
     return (
       <div className="bg-white rounded p-3 border border-yellow-300">
-        <textarea
+        <Textarea
           value={editText}
           onChange={(e) => onEditChange(e.target.value)}
-          className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm md:text-base"
+          className="px-3 py-2 text-sm md:text-base"
           rows={3}
           maxLength={1000}
         />
@@ -50,11 +51,7 @@ export const EditableQuestion = ({
           >
             Salvar
           </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={onEditCancel}
-          >
+          <Button variant="secondary" size="sm" onClick={onEditCancel}>
             Cancelar
           </Button>
         </div>
@@ -71,7 +68,7 @@ export const EditableQuestion = ({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mt-2">
         <span className="text-xs text-gray-500">
           Enviada {formatTimeAgo(message.createdAt)}
-          {message.isEdited && ' (editada)'}
+          {message.isEdited && " (editada)"}
         </span>
         {canEdit && (
           <button
