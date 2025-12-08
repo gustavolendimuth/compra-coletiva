@@ -52,6 +52,7 @@ export function useCampaignDetail() {
   const [isReopenConfirmOpen, setIsReopenConfirmOpen] = useState(false);
   const [isSentConfirmOpen, setIsSentConfirmOpen] = useState(false);
   const [isCloneModalOpen, setIsCloneModalOpen] = useState(false);
+  const [isImageUploadModalOpen, setIsImageUploadModalOpen] = useState(false);
 
   // Editing states
   const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
@@ -837,6 +838,10 @@ export function useCampaignDetail() {
     setCloneName,
     cloneDescription,
     setCloneDescription,
+
+    // Image Upload Modal State
+    isImageUploadModalOpen,
+    setIsImageUploadModalOpen,
 
     // Campaign Inline Edit State
     isEditingName,

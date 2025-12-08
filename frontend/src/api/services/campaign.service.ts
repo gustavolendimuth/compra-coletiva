@@ -117,5 +117,33 @@ export const campaignService = {
    * @returns Created campaign
    */
   clone: (idOrSlug: string, data: CloneCampaignDto) =>
-    apiClient.post<Campaign>(`/campaigns/${idOrSlug}/clone`, data).then(res => res.data)
+    apiClient.post<Campaign>(`/campaigns/${idOrSlug}/clone`, data).then(res => res.data),
+
+  /**
+   * Upload campaign image
+   * @param idOrSlug - Campaign ID or slug
+   * @param file - Image file to upload
+   * @returns Upload response with image URL
+   */
+  uploadImage: async (idOrSlug: string, file: File) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    
+    return apiClient.post<{ message: string; imageUrl: string; storageType: 'S3' | 'LOCAL' }>(
+      `/campaigns/${idOrSlug}/image`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    ).then(res => res.data);
+  },
+
+  /**
+   * Delete campaign image
+   * @param idOrSlug - Campaign ID or slug
+   */
+  deleteImage: (idOrSlug: string) =>
+    apiClient.delete(`/campaigns/${idOrSlug}/image`).then(res => res.data),
 };

@@ -43,6 +43,7 @@ export default function CampaignDetail() {
           onMarkAsSent={() => hook.setIsSentConfirmOpen(true)}
           onUpdateCampaign={hook.handleUpdateCampaign}
           onCloneCampaign={hook.handleOpenCloneModal}
+          onImageUpload={() => hook.setIsImageUploadModalOpen(true)}
         />
       </div>
 

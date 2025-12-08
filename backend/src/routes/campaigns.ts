@@ -12,6 +12,8 @@ import { z } from "zod";
 import { InvoiceGenerator } from "../services/invoiceGenerator";
 import { ShippingCalculator } from "../services/shippingCalculator";
 import { generateUniqueSlug } from "../utils/slugify";
+import { uploadCampaignImage } from "../middleware/uploadMiddleware";
+import { ImageUploadService } from "../services/imageUploadService";
 
 const router = Router();
 
@@ -677,6 +679,113 @@ router.get(
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     res.send(pdfBuffer);
+  })
+);
+
+// POST /api/campaigns/:idOrSlug/image - Upload de imagem da campanha
+router.post(
+  "/:idOrSlug/image",
+  requireAuth,
+  requireCampaignOwnership,
+  asyncHandler(async (req, res) => {
+    uploadCampaignImage(req, res, async (err) => {
+      if (err) {
+        throw new AppError(400, err.message || "Erro ao fazer upload da imagem");
+      }
+
+      if (!req.file) {
+        throw new AppError(400, "Nenhuma imagem foi enviada");
+      }
+
+      const { idOrSlug } = req.params;
+
+      // Find campaign by slug or ID
+      let campaign = await prisma.campaign.findUnique({
+        where: { slug: idOrSlug },
+        select: { id: true, imageKey: true, imageStorageType: true },
+      });
+
+      if (!campaign) {
+        campaign = await prisma.campaign.findUnique({
+          where: { id: idOrSlug },
+          select: { id: true, imageKey: true, imageStorageType: true },
+        });
+      }
+
+      if (!campaign) {
+        throw new AppError(404, "Campaign not found");
+      }
+
+      // Upload new image
+      const uploadResult = await ImageUploadService.uploadImage(req.file, "campaigns");
+
+      // Delete old image if exists
+      if (campaign.imageKey && campaign.imageStorageType) {
+        await ImageUploadService.deleteImage(campaign.imageKey, campaign.imageStorageType);
+      }
+
+      // Update campaign with new image
+      const updatedCampaign = await prisma.campaign.update({
+        where: { id: campaign.id },
+        data: {
+          imageUrl: uploadResult.imageUrl,
+          imageKey: uploadResult.imageKey,
+          imageStorageType: uploadResult.storageType,
+        },
+      });
+
+      res.json({
+        message: "Imagem enviada com sucesso",
+        imageUrl: updatedCampaign.imageUrl,
+        storageType: uploadResult.storageType,
+      });
+    });
+  })
+);
+
+// DELETE /api/campaigns/:idOrSlug/image - Remove imagem da campanha
+router.delete(
+  "/:idOrSlug/image",
+  requireAuth,
+  requireCampaignOwnership,
+  asyncHandler(async (req, res) => {
+    const { idOrSlug } = req.params;
+
+    // Find campaign by slug or ID
+    let campaign = await prisma.campaign.findUnique({
+      where: { slug: idOrSlug },
+      select: { id: true, imageKey: true, imageStorageType: true },
+    });
+
+    if (!campaign) {
+      campaign = await prisma.campaign.findUnique({
+        where: { id: idOrSlug },
+        select: { id: true, imageKey: true, imageStorageType: true },
+      });
+    }
+
+    if (!campaign) {
+      throw new AppError(404, "Campaign not found");
+    }
+
+    if (!campaign.imageKey || !campaign.imageStorageType) {
+      throw new AppError(400, "Campanha não possui imagem");
+    }
+
+    // Delete image from storage
+    await ImageUploadService.deleteImage(campaign.imageKey, campaign.imageStorageType);
+
+    // Update campaign to remove image
+    await prisma.campaign.update({
+      where: { id: campaign.id },
+      data: {
+        imageUrl: null,
+        imageKey: null,
+        imageStorageType: null,
+      },
+    });
+
+    res.json({ message: "Imagem removida com sucesso" });
   })
 );
 

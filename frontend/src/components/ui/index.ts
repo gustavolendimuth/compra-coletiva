@@ -17,6 +17,7 @@ export { Modal } from "./Modal";
 export { Divider } from "./Divider";
 export { GoogleButton } from "./GoogleButton";
 export { NotificationItem } from "./NotificationItem";
+export { ImageUpload } from "./ImageUpload";
 
 // Re-export default for backward compatibility
 export { default as ButtonDefault } from "./Button";

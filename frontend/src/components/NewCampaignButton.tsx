@@ -2,9 +2,9 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import toast from "react-hot-toast";
-import { campaignApi } from "@/api";
+import { campaignApi, campaignService } from "@/api";
 import { useAuth } from "@/contexts/AuthContext";
-import { Button, Modal, Input, Textarea } from "@/components/ui";
+import { Button, Modal, Input, Textarea, ImageUpload } from "@/components/ui";
 import DateTimeInput from "@/components/DateTimeInput";
 
 interface NewCampaignButtonProps {
@@ -16,6 +16,7 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
 }) => {
   const { requireAuth, refreshUser } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [formData, setFormData] = useState<{
     name: string;
     description: string;
@@ -32,7 +33,16 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
 
   const createMutation = useMutation({
     mutationFn: campaignApi.create,
-    onSuccess: async () => {
+    onSuccess: async (createdCampaign) => {
+      // Upload image if selected
+      if (selectedImage) {
+        try {
+          await campaignService.uploadImage(createdCampaign.slug, selectedImage);
+        } catch (error) {
+          toast.error("Campanha criada, mas erro ao enviar imagem");
+        }
+      }
+      
       queryClient.invalidateQueries({ queryKey: ["campaigns"] });
       await refreshUser(); // Refresh user to get updated role
       toast.success("Campanha criada com sucesso!");
@@ -43,6 +53,7 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
         deadline: "",
         shippingCost: "",
       });
+      setSelectedImage(null);
     },
     onError: () => {
       toast.error("Erro ao criar campanha");
@@ -86,6 +97,17 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
         title="Nova Campanha"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Imagem da Campanha (opcional)
+            </label>
+            <ImageUpload
+              onImageSelect={setSelectedImage}
+              onImageRemove={() => setSelectedImage(null)}
+              disabled={createMutation.isPending}
+            />
+          </div>
+
           <Input
             type="text"
             required

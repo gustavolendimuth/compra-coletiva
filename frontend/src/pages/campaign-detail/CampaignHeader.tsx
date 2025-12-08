@@ -11,6 +11,7 @@ import {
   Clock,
   FileText,
   Copy,
+  Image as ImageIcon,
 } from "lucide-react";
 import IconButton from "@/components/IconButton";
 import { Input, Textarea } from "@/components/ui";
@@ -27,6 +28,7 @@ interface CampaignHeaderProps {
   onMarkAsSent: () => void;
   onUpdateCampaign: (data: { name?: string; description?: string }) => void;
   onCloneCampaign: () => void;
+  onImageUpload: () => void;
 }
 
 export function CampaignHeader({
@@ -39,6 +41,7 @@ export function CampaignHeader({
   onMarkAsSent,
   onUpdateCampaign,
   onCloneCampaign,
+  onImageUpload,
 }: CampaignHeaderProps) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
@@ -48,6 +51,17 @@ export function CampaignHeader({
   const isActive = campaign.status === "ACTIVE";
   const isClosed = campaign.status === "CLOSED";
   const isSent = campaign.status === "SENT";
+
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+  
+  // Build full image URL (handle local storage paths)
+  const getImageUrl = (imageUrl?: string) => {
+    if (!imageUrl) return null;
+    if (imageUrl.startsWith('http')) return imageUrl; // S3 URL
+    return `${apiUrl.replace(/\/api$/, '')}${imageUrl}`; // Local storage
+  };
+
+  const imageUrl = getImageUrl(campaign.imageUrl);
 
   const handleNameClick = () => {
     if (!canEditCampaign) {
@@ -90,6 +104,47 @@ export function CampaignHeader({
         <ArrowLeft className="w-4 h-4 mr-2" />
         Voltar
       </Link>
+
+      {/* Imagem da Campanha */}
+      {imageUrl && (
+        <div className="mb-4 md:mb-6 relative">
+          <div className="w-full aspect-video md:aspect-[3/1] rounded-xl overflow-hidden bg-gray-100">
+            <img
+              src={imageUrl}
+              alt={campaign.name}
+              className="w-full h-full object-cover"
+            />
+          </div>
+          {canEditCampaign && (
+            <button
+              onClick={onImageUpload}
+              className="absolute top-4 right-4 p-2 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg hover:bg-white transition-colors"
+              title="Alterar imagem"
+            >
+              <Edit className="w-4 h-4 text-gray-700" />
+            </button>
+          )}
+        </div>
+      )}
+
+      {!imageUrl && canEditCampaign && (
+        <button
+          onClick={onImageUpload}
+          className="w-full mb-4 md:mb-6 aspect-video md:aspect-[3/1] border-2 border-dashed border-gray-300 rounded-xl hover:border-primary-500 hover:bg-primary-50 transition-all duration-200 flex flex-col items-center justify-center gap-3 bg-gray-50"
+        >
+          <div className="p-3 bg-white rounded-full border-2 border-gray-300">
+            <ImageIcon className="w-6 h-6 md:w-8 md:h-8 text-gray-400" />
+          </div>
+          <div className="text-center px-4">
+            <p className="text-sm md:text-base font-medium text-gray-700 mb-1">
+              Adicionar imagem da campanha
+            </p>
+            <p className="text-xs md:text-sm text-gray-500">
+              Clique para fazer upload
+            </p>
+          </div>
+        </button>
+      )}
 
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
         <div className="flex-1">

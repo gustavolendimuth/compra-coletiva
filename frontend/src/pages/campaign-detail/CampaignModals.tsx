@@ -9,6 +9,7 @@ import {
   SentConfirmDialog,
   CloneModal,
 } from './modals/CampaignModals';
+import { ImageUploadModal } from './modals/ImageUploadModal';
 
 interface CampaignModalsProps {
   hook: any;
@@ -121,6 +122,13 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
         onChangeName={hook.setCloneName}
         onChangeDescription={hook.setCloneDescription}
         onSubmit={hook.handleCloneCampaign}
+      />
+
+      <ImageUploadModal
+        isOpen={hook.isImageUploadModalOpen}
+        onClose={() => hook.setIsImageUploadModalOpen(false)}
+        campaignSlug={hook.campaign?.slug || ''}
+        currentImageUrl={hook.campaign?.imageUrl}
       />
     </>
   );

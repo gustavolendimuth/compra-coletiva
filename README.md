@@ -326,6 +326,21 @@ npm run test:coverage --workspace=backend
 
 MIT
 
+## 📚 Documentação Adicional
+
+### Deploy & Troubleshooting
+- **[RAILWAY_DEPLOY.md](RAILWAY_DEPLOY.md)** - Guia completo de deploy no Railway
+- **[RAILWAY_QUICK_FIX.md](RAILWAY_QUICK_FIX.md)** - Solução rápida para erro CORS 502
+- **[TROUBLESHOOT_RAILWAY.md](TROUBLESHOOT_RAILWAY.md)** - Troubleshooting detalhado Railway
+
+### Configuração
+- **[GOOGLE_OAUTH_RAILWAY.md](GOOGLE_OAUTH_RAILWAY.md)** - Configurar Google OAuth no Railway
+- **[LEGAL_PAGES.md](LEGAL_PAGES.md)** - Documentação Política de Privacidade e Termos
+
+### Desenvolvimento
+- **[CLAUDE.md](CLAUDE.md)** - Guia completo para desenvolvimento (arquitetura, padrões, comandos)
+- **[DEVELOPMENT.md](DEVELOPMENT.md)** - Guia de desenvolvimento detalhado
+
 ## Suporte
 
 Para reportar bugs ou solicitar features, abra uma issue no repositório.

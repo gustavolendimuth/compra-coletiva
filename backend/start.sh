@@ -3,6 +3,8 @@
 # Script de inicialização do backend em produção
 
 echo "🚀 Starting backend..."
+echo "📊 Environment: $NODE_ENV"
+echo "🔌 Port: $PORT"
 
 # Verifica se DATABASE_URL está configurada
 if [ -z "$DATABASE_URL" ]; then
@@ -10,7 +12,14 @@ if [ -z "$DATABASE_URL" ]; then
   exit 1
 fi
 
-echo "📊 Database URL is configured"
+echo "✅ Database URL is configured"
+
+# Verifica variável CORS_ORIGIN
+if [ -z "$CORS_ORIGIN" ]; then
+  echo "⚠️  WARNING: CORS_ORIGIN is not set! API may block frontend requests."
+else
+  echo "✅ CORS_ORIGIN is configured: $CORS_ORIGIN"
+fi
 
 # Lista arquivos para debug
 echo "📁 Checking prisma directory..."

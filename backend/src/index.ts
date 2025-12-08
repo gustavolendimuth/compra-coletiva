@@ -3,6 +3,7 @@ import { createServer } from "http";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import passport from "passport";
+import path from "path";
 import { PrismaClient } from "@prisma/client";
 import { configurePassport } from "./config/passport";
 import authRoutes from "./routes/auth";
@@ -65,6 +66,9 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 app.use(passport.initialize());
+
+// Serve static files (for local image storage fallback)
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 // Health check
 app.get("/health", (req, res) => {

@@ -52,6 +52,9 @@ export interface Campaign {
   deadline?: string;
   shippingCost: number;
   creatorId: string;
+  imageUrl?: string;
+  imageKey?: string;
+  imageStorageType?: "S3" | "LOCAL";
   createdAt: string;
   updatedAt: string;
   _count?: {
