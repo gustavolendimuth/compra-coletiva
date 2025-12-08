@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Image as ImageIcon } from 'lucide-react';
 import { CampaignWithProducts } from '@/api';
+import { getImageUrl } from '@/lib/imageUrl';
 import { CampaignCardHeader } from './CampaignCardHeader';
 import { CampaignCardBody } from './CampaignCardBody';
 import { CampaignCardFooter } from './CampaignCardFooter';
@@ -15,15 +16,6 @@ export function CampaignCard({
   campaign,
   productPreviewVariant = 'inline'
 }: CampaignCardProps) {
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-  
-  // Build full image URL (handle local storage paths)
-  const getImageUrl = (imageUrl?: string) => {
-    if (!imageUrl) return null;
-    if (imageUrl.startsWith('http')) return imageUrl; // S3 URL
-    return `${apiUrl.replace(/\/api$/, '')}${imageUrl}`; // Local storage
-  };
-
   const imageUrl = getImageUrl(campaign.imageUrl);
 
   return (

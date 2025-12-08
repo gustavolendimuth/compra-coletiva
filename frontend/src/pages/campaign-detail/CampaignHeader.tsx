@@ -16,6 +16,7 @@ import {
 import IconButton from "@/components/IconButton";
 import { Input, Textarea } from "@/components/ui";
 import { Campaign, campaignApi } from "@/api";
+import { getImageUrl } from "@/lib/imageUrl";
 import toast from "react-hot-toast";
 
 interface CampaignHeaderProps {
@@ -51,15 +52,6 @@ export function CampaignHeader({
   const isActive = campaign.status === "ACTIVE";
   const isClosed = campaign.status === "CLOSED";
   const isSent = campaign.status === "SENT";
-
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-  
-  // Build full image URL (handle local storage paths)
-  const getImageUrl = (imageUrl?: string) => {
-    if (!imageUrl) return null;
-    if (imageUrl.startsWith('http')) return imageUrl; // S3 URL
-    return `${apiUrl.replace(/\/api$/, '')}${imageUrl}`; // Local storage
-  };
 
   const imageUrl = getImageUrl(campaign.imageUrl);
 
@@ -105,49 +97,41 @@ export function CampaignHeader({
         Voltar
       </Link>
 
-      {/* Imagem da Campanha */}
-      {imageUrl && (
-        <div className="mb-4 md:mb-6 relative">
-          <div className="w-full aspect-video md:aspect-[3/1] rounded-xl overflow-hidden bg-gray-100">
-            <img
-              src={imageUrl}
-              alt={campaign.name}
-              className="w-full h-full object-cover"
-            />
+      {/* Layout: Imagem à esquerda + Título/Descrição à direita */}
+      <div className="flex flex-col md:flex-row gap-4 mb-4">
+        {/* Imagem da Campanha - Quadrado à esquerda */}
+        {imageUrl ? (
+          <div className="relative flex-shrink-0">
+            <div className="w-24 h-24 md:w-32 md:h-32 rounded-lg overflow-hidden bg-gray-100 shadow-sm">
+              <img
+                src={imageUrl}
+                alt={campaign.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            {canEditCampaign && (
+              <button
+                onClick={onImageUpload}
+                className="absolute -top-1 -right-1 p-1 bg-white rounded-full shadow-md hover:bg-gray-50 transition-colors border border-gray-200"
+                title="Alterar imagem"
+              >
+                <Edit className="w-3 h-3 text-gray-700" />
+              </button>
+            )}
           </div>
-          {canEditCampaign && (
-            <button
-              onClick={onImageUpload}
-              className="absolute top-4 right-4 p-2 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg hover:bg-white transition-colors"
-              title="Alterar imagem"
-            >
-              <Edit className="w-4 h-4 text-gray-700" />
-            </button>
-          )}
-        </div>
-      )}
-
-      {!imageUrl && canEditCampaign && (
-        <button
-          onClick={onImageUpload}
-          className="w-full mb-4 md:mb-6 aspect-video md:aspect-[3/1] border-2 border-dashed border-gray-300 rounded-xl hover:border-primary-500 hover:bg-primary-50 transition-all duration-200 flex flex-col items-center justify-center gap-3 bg-gray-50"
-        >
-          <div className="p-3 bg-white rounded-full border-2 border-gray-300">
+        ) : canEditCampaign ? (
+          <button
+            onClick={onImageUpload}
+            className="flex-shrink-0 w-24 h-24 md:w-32 md:h-32 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-all duration-200 flex flex-col items-center justify-center gap-1 bg-gray-50"
+            title="Adicionar imagem da campanha"
+          >
             <ImageIcon className="w-6 h-6 md:w-8 md:h-8 text-gray-400" />
-          </div>
-          <div className="text-center px-4">
-            <p className="text-sm md:text-base font-medium text-gray-700 mb-1">
-              Adicionar imagem da campanha
-            </p>
-            <p className="text-xs md:text-sm text-gray-500">
-              Clique para fazer upload
-            </p>
-          </div>
-        </button>
-      )}
+            <span className="text-xs text-gray-500 hidden md:block">Adicionar</span>
+          </button>
+        ) : null}
 
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-        <div className="flex-1">
+        {/* Conteúdo: Nome e Descrição */}
+        <div className="flex-1 min-w-0">
           {/* Nome */}
           {isEditingName ? (
             <div className="mb-2">
@@ -165,7 +149,7 @@ export function CampaignHeader({
                   }
                 }}
                 autoFocus
-                className="text-3xl font-bold text-gray-900 px-2 py-1 border-2 border-primary-500"
+                className="text-2xl md:text-3xl font-bold text-gray-900 px-2 py-1 border-2 border-primary-500"
               />
               <p className="text-xs text-gray-500 mt-1">
                 Pressione Enter para salvar, Esc para cancelar
@@ -173,7 +157,7 @@ export function CampaignHeader({
             </div>
           ) : (
             <h1
-              className="text-3xl font-bold text-gray-900 mb-2 cursor-pointer hover:text-primary-600 transition-colors inline-block"
+              className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 cursor-pointer hover:text-primary-600 transition-colors"
               onClick={handleNameClick}
               title="Clique para editar"
             >
@@ -230,7 +214,7 @@ export function CampaignHeader({
           {/* Deadline */}
           {campaign.deadline && (
             <div
-              className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium mt-4 ${
+              className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium mt-2 ${
                 new Date(campaign.deadline) < new Date()
                   ? "bg-red-100 text-red-800 border border-red-300"
                   : new Date(campaign.deadline).getTime() -
@@ -273,15 +257,16 @@ export function CampaignHeader({
               variant="secondary"
               icon={<Calendar className="w-4 h-4" />}
               onClick={onEditDeadline}
-              className="mt-4"
+              className="mt-2"
             >
               Adicionar data limite
             </IconButton>
           )}
         </div>
+      </div>
 
-        {/* Action Buttons */}
-        <div className="flex flex-wrap gap-2">
+      {/* Action Buttons */}
+      <div className="flex flex-wrap gap-2 mb-4">
           <IconButton
             size="sm"
             variant="secondary"
@@ -356,7 +341,6 @@ export function CampaignHeader({
               Reabrir Campanha
             </IconButton>
           )}
-        </div>
       </div>
 
       {/* Alert Banner */}

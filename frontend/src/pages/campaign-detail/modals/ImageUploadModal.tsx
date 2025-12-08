@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { Modal, ImageUpload, Button } from '@/components/ui';
 import { campaignService } from '@/api';
+import { getImageUrlOrUndefined } from '@/lib/imageUrl';
 
 interface ImageUploadModalProps {
   isOpen: boolean;
@@ -20,15 +21,7 @@ export function ImageUploadModal({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const queryClient = useQueryClient();
 
-  // Build full image URL (handle local storage paths)
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-  const getImageUrl = (imageUrl?: string) => {
-    if (!imageUrl) return undefined;
-    if (imageUrl.startsWith('http')) return imageUrl; // S3 URL
-    return `${apiUrl.replace(/\/api$/, '')}${imageUrl}`; // Local storage
-  };
-
-  const fullImageUrl = getImageUrl(currentImageUrl);
+  const fullImageUrl = getImageUrlOrUndefined(currentImageUrl);
 
   const uploadMutation = useMutation({
     mutationFn: (file: File) => campaignService.uploadImage(campaignSlug, file),
