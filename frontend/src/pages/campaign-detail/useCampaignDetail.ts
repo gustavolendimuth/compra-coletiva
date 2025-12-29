@@ -69,6 +69,10 @@ export function useCampaignDetail() {
   // Ref para o timer de debounce do autosave
   const autosaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Ref para indicar se está fazendo autosave
+  // Quando true, não fecha o modal e não mostra toast
+  const isAutosavingRef = useRef(false);
+
   // Form states
   const [productForm, setProductForm] = useState<ProductForm>({
     campaignId: "",
@@ -177,6 +181,9 @@ export function useCampaignDetail() {
       );
 
       if (hasValidItems && !isAddingFromButtonRef.current) {
+        // Define flag de autosave para não fechar o modal
+        isAutosavingRef.current = true;
+
         // Faz a mutação em background sem fechar o modal
         updateOrderWithItemsMutation.mutate({
           orderId: editingOrder.id,
@@ -366,6 +373,12 @@ export function useCampaignDetail() {
         queryKey: ["analytics", campaignId],
       });
 
+      // Se for autosave, não fecha o modal e não mostra toast
+      if (isAutosavingRef.current) {
+        isAutosavingRef.current = false;
+        return;
+      }
+
       // Só fecha o modal se foi uma edição manual (não veio do botão "Pedir")
       if (isEditOrderModalOpen && !isAddingFromButtonRef.current) {
         toast.success("Pedido atualizado!");
@@ -379,6 +392,7 @@ export function useCampaignDetail() {
     onError: () => {
       toast.error("Erro ao atualizar pedido");
       isAddingFromButtonRef.current = false;
+      isAutosavingRef.current = false;
     },
   });
 
