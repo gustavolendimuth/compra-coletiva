@@ -63,6 +63,12 @@ export function useCampaignDetail() {
   // Quando true, não fecha o modal automaticamente
   const isAddingFromButtonRef = useRef(false);
 
+  // Ref para rastrear a primeira renderização do modal de edição
+  const isFirstEditRenderRef = useRef(true);
+
+  // Ref para o timer de debounce do autosave
+  const autosaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   // Form states
   const [productForm, setProductForm] = useState<ProductForm>({
     campaignId: "",
@@ -144,6 +150,60 @@ export function useCampaignDetail() {
   // Handle navigation from notifications
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Autosave effect for edit order form
+  useEffect(() => {
+    // Não faz autosave se:
+    // 1. Modal de edição não está aberto
+    // 2. Não há pedido sendo editado
+    // 3. É a primeira renderização (quando o modal abre)
+    if (!isEditOrderModalOpen || !editingOrder || isFirstEditRenderRef.current) {
+      if (isEditOrderModalOpen && editingOrder) {
+        isFirstEditRenderRef.current = false;
+      }
+      return;
+    }
+
+    // Limpa o timer anterior se existir
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+    }
+
+    // Configura novo timer para autosave com debounce de 500ms
+    autosaveTimerRef.current = setTimeout(() => {
+      // Verifica se há itens válidos para salvar
+      const hasValidItems = editOrderForm.items.some(
+        item => item.productId && item.quantity > 0
+      );
+
+      if (hasValidItems && !isAddingFromButtonRef.current) {
+        // Faz a mutação em background sem fechar o modal
+        updateOrderWithItemsMutation.mutate({
+          orderId: editingOrder.id,
+          data: {
+            items: editOrderForm.items.filter(
+              item => item.productId && item.quantity > 0
+            ),
+          },
+        });
+      }
+    }, 500);
+
+    // Cleanup: limpa o timer quando o componente desmonta ou as dependências mudam
+    return () => {
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editOrderForm.items, isEditOrderModalOpen, editingOrder?.id]);
+
+  // Reset first render flag when modal closes
+  useEffect(() => {
+    if (!isEditOrderModalOpen) {
+      isFirstEditRenderRef.current = true;
+    }
+  }, [isEditOrderModalOpen]);
 
   // State for handling navigation from notifications
   const [shouldOpenQuestionsTab, setShouldOpenQuestionsTab] = useState(false);
