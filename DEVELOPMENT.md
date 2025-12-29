@@ -447,20 +447,21 @@ Status disponíveis: `PENDING`, `IN_PROGRESS`, `RESOLVED`, `DISMISSED`
 - Mock data factories em `frontend/src/__tests__/mock-data.ts`
 
 **Cobertura Atual**:
-- 164 testes passando (2 skipped)
-- 8 arquivos de teste
-- Tempo de execução: ~3.7 segundos
+- 607 testes passando (100% success)
+- 50+ arquivos de teste
+- Tempo de execução: ~13 segundos
 - Campaign listing: 100% coberto
+- Campaign Detail: 98% coberto
+- Notifications: 100% coberto
 
-**Arquivos de Teste**:
+**Principais Arquivos de Teste**:
 1. `src/__tests__/mock-data.ts` - Factories para dados mock
-2. `src/pages/__tests__/CampaignList.test.tsx` - 19 testes
-3. `src/components/campaign/__tests__/CampaignFilters.test.tsx` - 28 testes
-4. `src/components/campaign/__tests__/CampaignCard.test.tsx` - 22 testes
-5. `src/components/campaign/__tests__/CampaignCardHeader.test.tsx` - 14 testes
-6. `src/components/campaign/__tests__/CampaignCardBody.test.tsx` - 17 testes
-7. `src/components/campaign/__tests__/CampaignCardFooter.test.tsx` - 24 testes
-8. `src/components/campaign/__tests__/CampaignCardSkeleton.test.tsx` - 30 testes
+2. Campaign listing (8 arquivos) - 164 testes
+3. Campaign Detail (15+ arquivos) - 400+ testes
+4. Notifications (2 arquivos) - 42 testes
+   - `src/components/__tests__/NotificationIcon.test.tsx` - 15 testes
+   - `src/components/__tests__/NotificationDropdown.test.tsx` - 27 testes
+5. UI Components - 50+ testes
 
 **Comandos**:
 ```bash
@@ -500,10 +501,10 @@ npm run test:coverage --workspace=backend # Relatório de cobertura
 
 ### Estatísticas Totais
 
-- **195 testes passando** (164 frontend + 31 backend)
-- **9 arquivos de teste**
+- **638 testes passando** (607 frontend + 31 backend)
+- **50+ arquivos de teste**
 - **100% taxa de sucesso**
-- **~4.7 segundos** tempo total de execução
+- **~13 segundos** tempo total de execução
 
 ### Padrões de Teste Estabelecidos
 

@@ -4,7 +4,7 @@
  * Toggles NotificationDropdown on click
  */
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Bell } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../hooks/useNotifications';
@@ -14,6 +14,7 @@ export function NotificationIcon() {
   const { isAuthenticated } = useAuth();
   const { unreadCount } = useNotifications();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   if (!isAuthenticated) {
     return null;
@@ -26,6 +27,7 @@ export function NotificationIcon() {
   return (
     <div className="relative">
       <button
+        ref={buttonRef}
         onClick={toggleDropdown}
         className="relative p-2 rounded-md hover:bg-gray-100 transition-colors flex items-center justify-center"
         title="Notificações"
@@ -43,6 +45,7 @@ export function NotificationIcon() {
       <NotificationDropdown
         isOpen={isDropdownOpen}
         onClose={() => setIsDropdownOpen(false)}
+        buttonRef={buttonRef}
       />
     </div>
   );

@@ -71,7 +71,7 @@ Sistema web profissional para gerenciamento de compras coletivas, desenvolvido c
 - **Axios**: HTTP client
 - **Lucide React**: Ícones modernos
 - **React Hot Toast**: Notificações de UI
-- **Vitest** + **React Testing Library**: Testing (565 tests, 98.8% success)
+- **Vitest** + **React Testing Library**: Testing (607 tests, 100% success)
 
 ### DevOps
 - **Docker** + **Docker Compose**: Containerização
@@ -292,14 +292,14 @@ npm run test:coverage --workspace=backend
 ```
 
 **Estatísticas de Testes**:
-- **Total**: 596 testes passando (565 frontend + 31 backend), 5 failing
-- **Taxa de sucesso**: 98.8% (87% improvement!)
+- **Total**: 638 testes passando (607 frontend + 31 backend)
+- **Taxa de sucesso**: 100%
 - **Tempo de execução**: ~13 segundos
-- **Coverage**: Campaign listing + Campaign Detail + UI components + Hooks
-- **Melhoria Recente** (Dez 2025):
-  - Before: 39 failing tests (93.1% success)
-  - After: 5 failing tests (98.8% success)
-  - Fixed: 34 tests across 9 components
+- **Coverage**: Campaign listing + Campaign Detail + UI components + Hooks + Notifications
+- **Melhorias Recentes** (Dez 2025):
+  - Dec 29: Added 42 notification tests (NotificationIcon + NotificationDropdown)
+  - Dec 6: Fixed 34 failing tests (87% improvement in reliability)
+  - Progression: 93.1% → 98.8% → 100% success rate
 
 ## Funcionalidades Futuras (Roadmap)
 

@@ -11,6 +11,8 @@ import {
   OrderItem,
   Analytics,
   Campaign,
+  Notification,
+  NotificationListResponse,
 } from '@/api';
 
 // Mock Product Factory
@@ -262,4 +264,59 @@ export const createMockCampaignFull = (
     orders: 10,
   },
   ...overrides,
+});
+
+// Notification Factory
+export const createMockNotification = (
+  overrides: Partial<Notification> = {}
+): Notification => ({
+  id: `notification-${Math.random().toString(36).substring(7)}`,
+  userId: 'user-1',
+  type: 'CAMPAIGN_READY_TO_SEND',
+  title: 'Test Notification',
+  message: 'This is a test notification message',
+  isRead: false,
+  metadata: {},
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  ...overrides,
+});
+
+// Notification List Response Factory
+export const createMockNotificationListResponse = (
+  notifications: Notification[] = [],
+  overrides: Partial<NotificationListResponse> = {}
+): NotificationListResponse => ({
+  notifications,
+  total: notifications.length,
+  unreadCount: notifications.filter((n) => !n.isRead).length,
+  ...overrides,
+});
+
+// Predefined mock notifications
+export const mockUnreadNotification = createMockNotification({
+  id: 'notification-unread',
+  title: 'Campanha pronta para envio',
+  message: 'A campanha "Test Campaign" atingiu a meta e está pronta para ser enviada!',
+  type: 'CAMPAIGN_READY_TO_SEND',
+  isRead: false,
+  metadata: { campaignSlug: 'test-campaign' },
+});
+
+export const mockReadNotification = createMockNotification({
+  id: 'notification-read',
+  title: 'Campanha arquivada',
+  message: 'A campanha "Old Campaign" foi arquivada',
+  type: 'CAMPAIGN_ARCHIVED',
+  isRead: true,
+  metadata: { campaignSlug: 'old-campaign' },
+});
+
+export const mockMessageNotification = createMockNotification({
+  id: 'notification-message',
+  title: 'Nova mensagem',
+  message: 'Você recebeu uma nova mensagem em "Test Campaign"',
+  type: 'NEW_MESSAGE',
+  isRead: false,
+  metadata: { campaignSlug: 'test-campaign', orderId: 'order-1', isQuestion: false },
 });
