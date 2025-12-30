@@ -329,6 +329,12 @@ describe('NotificationDropdown', () => {
 
   describe('Fixed Positioning (buttonRef)', () => {
     it('calculates position when buttonRef is provided', () => {
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 375, // Mobile width
+      });
+
       const buttonRef = createMockButtonRef();
 
       render(
@@ -345,6 +351,10 @@ describe('NotificationDropdown', () => {
 
       // Dropdown should have inline styles for positioning (fixed positioning)
       expect(dropdown).toHaveStyle({ top: '108px' }); // bottom (100) + 8px spacing
+
+      // On mobile with button at rect.right=200, dropdown width=320
+      // left = 200 - 320 = -120, clamped to spacing=8
+      expect(dropdown).toHaveStyle({ left: '8px' });
     });
 
     it('applies inline positioning for both mobile and desktop', () => {
@@ -370,6 +380,51 @@ describe('NotificationDropdown', () => {
 
       // Now uses fixed positioning for both mobile and desktop
       expect(dropdown).toHaveStyle({ top: '108px' }); // bottom (100) + 8px spacing
+
+      // On desktop with button at rect.right=200, dropdown width=384
+      // left = 200 - 384 = -184, clamped to spacing=8
+      expect(dropdown).toHaveStyle({ left: '8px' });
+    });
+
+    it('prevents overflow on the right edge', () => {
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 400, // Small viewport
+      });
+
+      // Create a button positioned near the right edge
+      const button = document.createElement('button');
+      button.getBoundingClientRect = vi.fn(() => ({
+        bottom: 100,
+        right: 395, // 5px from right edge
+        top: 60,
+        left: 355,
+        width: 40,
+        height: 40,
+        x: 355,
+        y: 60,
+        toJSON: () => {},
+      }));
+      document.body.appendChild(button);
+      const buttonRef = { current: button } as React.RefObject<HTMLButtonElement>;
+
+      render(
+        <NotificationDropdown
+          isOpen={true}
+          onClose={mockOnClose}
+          buttonRef={buttonRef}
+        />
+      );
+
+      const dropdown = document.querySelector('[class*="fixed"]');
+      expect(dropdown).toBeInTheDocument();
+
+      // Dropdown width = 320 (mobile), viewport = 400
+      // Ideal left = 395 - 320 = 75
+      // Max allowed = 400 - 320 - 8 = 72
+      // So left should be clamped to 72
+      expect(dropdown).toHaveStyle({ left: '72px' });
     });
   });
 
@@ -389,6 +444,12 @@ describe('NotificationDropdown', () => {
     });
 
     it('uses fixed positioning with inline styles', () => {
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 1024, // Desktop width
+      });
+
       const buttonRef = createMockButtonRef();
 
       render(
@@ -402,7 +463,7 @@ describe('NotificationDropdown', () => {
       const dropdown = document.querySelector('[class*="fixed"]');
       expect(dropdown).toHaveClass('fixed');
       // Position is set via inline styles, not classes
-      expect(dropdown).toHaveStyle({ top: '108px' });
+      expect(dropdown).toHaveStyle({ top: '108px', left: '8px' });
     });
 
     it('applies correct z-index for overlay', () => {
