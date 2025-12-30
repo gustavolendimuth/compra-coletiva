@@ -18,6 +18,7 @@ export { Divider } from "./Divider";
 export { GoogleButton } from "./GoogleButton";
 export { NotificationItem } from "./NotificationItem";
 export { ImageUpload } from "./ImageUpload";
+export { Portal } from "./Portal";
 
 // Re-export default for backward compatibility
 export { default as ButtonDefault } from "./Button";
