@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { NotificationItem } from './ui/NotificationItem';
 import { useNotifications } from '../hooks/useNotifications';
 import { Loader2 } from 'lucide-react';
+import { Portal } from './ui/Portal';
 
 interface NotificationDropdownProps {
   isOpen: boolean;
@@ -28,18 +29,14 @@ export function NotificationDropdown({
     deleteNotification,
   } = useNotifications();
 
-  // Calculate position for mobile (fixed positioning)
+  // Calculate position (fixed positioning for both mobile and desktop)
   useEffect(() => {
     if (isOpen && buttonRef?.current) {
       const rect = buttonRef.current.getBoundingClientRect();
-      const isMobile = window.innerWidth < 768; // md breakpoint
-
-      if (isMobile) {
-        setPosition({
-          top: rect.bottom + 8, // 8px spacing (mt-2)
-          right: window.innerWidth - rect.right,
-        });
-      }
+      setPosition({
+        top: rect.bottom + 8, // 8px spacing (mt-2)
+        right: window.innerWidth - rect.right,
+      });
     }
   }, [isOpen, buttonRef]);
 
@@ -90,14 +87,15 @@ export function NotificationDropdown({
   };
 
   return (
-    <div
-      ref={dropdownRef}
-      className="fixed md:absolute md:top-full md:right-0 md:mt-2 w-80 md:w-96 bg-white border border-gray-200 rounded-lg shadow-lg max-h-[80vh] overflow-hidden flex flex-col z-[100]"
-      style={{
-        top: window.innerWidth < 768 ? `${position.top}px` : undefined,
-        right: window.innerWidth < 768 ? `${position.right}px` : undefined,
-      }}
-    >
+    <Portal>
+      <div
+        ref={dropdownRef}
+        className="fixed w-80 md:w-96 bg-white border border-gray-200 rounded-lg shadow-lg max-h-[80vh] overflow-hidden flex flex-col z-[100]"
+        style={{
+          top: `${position.top}px`,
+          right: `${position.right}px`,
+        }}
+      >
       {/* Header */}
       <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
         <h3 className="text-base md:text-lg font-semibold text-gray-900">
@@ -148,6 +146,7 @@ export function NotificationDropdown({
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </Portal>
   );
 }

@@ -66,16 +66,21 @@ describe('NotificationDropdown', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
-    // Clean up any buttons added to body
-    document.body.innerHTML = '';
+    // Clean up any buttons added to body (only buttons, not React portals)
+    const buttons = document.body.querySelectorAll('button');
+    buttons.forEach(button => {
+      if (button.parentElement === document.body) {
+        button.remove();
+      }
+    });
   });
 
   describe('Rendering', () => {
     it('does not render when isOpen is false', () => {
-      const { container } = render(
+      render(
         <NotificationDropdown isOpen={false} onClose={mockOnClose} />
       );
-      expect(container).toBeEmptyDOMElement();
+      expect(screen.queryByText('Notificações')).not.toBeInTheDocument();
     });
 
     it('renders when isOpen is true', () => {
@@ -101,8 +106,8 @@ describe('NotificationDropdown', () => {
         handleNotificationClick: mockHandleNotificationClick,
       });
 
-      const { container } = render(<NotificationDropdown isOpen={true} onClose={mockOnClose} />);
-      const spinner = container.querySelector('.animate-spin');
+      render(<NotificationDropdown isOpen={true} onClose={mockOnClose} />);
+      const spinner = document.querySelector('.animate-spin');
       expect(spinner).toBeInTheDocument();
     });
 
@@ -147,9 +152,9 @@ describe('NotificationDropdown', () => {
         handleNotificationClick: mockHandleNotificationClick,
       });
 
-      const { container } = render(<NotificationDropdown isOpen={true} onClose={mockOnClose} />);
+      render(<NotificationDropdown isOpen={true} onClose={mockOnClose} />);
       // Check for the SVG icon by looking for the path element
-      const bellIcon = container.querySelector('svg path');
+      const bellIcon = document.querySelector('svg path');
       expect(bellIcon).toBeInTheDocument();
     });
   });
@@ -322,17 +327,11 @@ describe('NotificationDropdown', () => {
     });
   });
 
-  describe('Mobile Positioning (buttonRef)', () => {
-    it('calculates position on mobile when buttonRef is provided', () => {
-      Object.defineProperty(window, 'innerWidth', {
-        writable: true,
-        configurable: true,
-        value: 375, // Mobile width
-      });
-
+  describe('Fixed Positioning (buttonRef)', () => {
+    it('calculates position when buttonRef is provided', () => {
       const buttonRef = createMockButtonRef();
 
-      const { container } = render(
+      render(
         <NotificationDropdown
           isOpen={true}
           onClose={mockOnClose}
@@ -340,14 +339,15 @@ describe('NotificationDropdown', () => {
         />
       );
 
-      const dropdown = container.querySelector('div');
+      // Since Portal renders to document.body, query from document
+      const dropdown = document.querySelector('[class*="fixed"]');
       expect(dropdown).toBeInTheDocument();
 
-      // On mobile, the dropdown should have inline styles for positioning
+      // Dropdown should have inline styles for positioning (fixed positioning)
       expect(dropdown).toHaveStyle({ top: '108px' }); // bottom (100) + 8px spacing
     });
 
-    it('does not apply inline positioning on desktop', () => {
+    it('applies inline positioning for both mobile and desktop', () => {
       Object.defineProperty(window, 'innerWidth', {
         writable: true,
         configurable: true,
@@ -356,7 +356,7 @@ describe('NotificationDropdown', () => {
 
       const buttonRef = createMockButtonRef();
 
-      const { container } = render(
+      render(
         <NotificationDropdown
           isOpen={true}
           onClose={mockOnClose}
@@ -364,47 +364,54 @@ describe('NotificationDropdown', () => {
         />
       );
 
-      const dropdown = container.querySelector('div');
+      // Since Portal renders to document.body, query from document
+      const dropdown = document.querySelector('[class*="fixed"]');
       expect(dropdown).toBeInTheDocument();
 
-      // On desktop, positioning is handled by CSS classes, not inline styles
-      expect(dropdown?.style.top).toBe('');
-      expect(dropdown?.style.right).toBe('');
+      // Now uses fixed positioning for both mobile and desktop
+      expect(dropdown).toHaveStyle({ top: '108px' }); // bottom (100) + 8px spacing
     });
   });
 
   describe('Responsive Styling', () => {
     it('applies mobile-first responsive classes', () => {
-      const { container } = render(
+      render(
         <NotificationDropdown isOpen={true} onClose={mockOnClose} />
       );
 
-      const dropdown = container.querySelector('div');
+      const dropdown = document.querySelector('[class*="fixed"]');
       expect(dropdown).toHaveClass(
         'fixed',
-        'md:absolute',
         'w-80',
         'md:w-96',
         'z-[100]'
       );
     });
 
-    it('has correct positioning classes', () => {
-      const { container } = render(
-        <NotificationDropdown isOpen={true} onClose={mockOnClose} />
+    it('uses fixed positioning with inline styles', () => {
+      const buttonRef = createMockButtonRef();
+
+      render(
+        <NotificationDropdown
+          isOpen={true}
+          onClose={mockOnClose}
+          buttonRef={buttonRef}
+        />
       );
 
-      const dropdown = container.querySelector('div');
-      expect(dropdown).toHaveClass('md:top-full', 'md:right-0', 'md:mt-2');
+      const dropdown = document.querySelector('[class*="fixed"]');
+      expect(dropdown).toHaveClass('fixed');
+      // Position is set via inline styles, not classes
+      expect(dropdown).toHaveStyle({ top: '108px' });
     });
 
-    it('applies correct z-index for mobile overlay', () => {
-      const { container } = render(
+    it('applies correct z-index for overlay', () => {
+      render(
         <NotificationDropdown isOpen={true} onClose={mockOnClose} />
       );
 
-      const dropdown = container.querySelector('div');
-      // Changed from z-50 to z-[100]
+      const dropdown = document.querySelector('[class*="fixed"]');
+      // Uses z-[100] to appear above MobileMenu (z-[70])
       expect(dropdown).toHaveClass('z-[100]');
     });
   });
@@ -418,21 +425,21 @@ describe('NotificationDropdown', () => {
     });
 
     it('has scrollable content area', () => {
-      const { container } = render(
+      render(
         <NotificationDropdown isOpen={true} onClose={mockOnClose} />
       );
 
-      const contentArea = container.querySelector('.overflow-y-auto');
+      const contentArea = document.querySelector('.overflow-y-auto');
       expect(contentArea).toBeInTheDocument();
       expect(contentArea).toHaveClass('flex-1', 'overflow-y-auto');
     });
 
     it('has max height constraint', () => {
-      const { container } = render(
+      render(
         <NotificationDropdown isOpen={true} onClose={mockOnClose} />
       );
 
-      const dropdown = container.querySelector('div');
+      const dropdown = document.querySelector('[class*="max-h-"]');
       expect(dropdown).toHaveClass('max-h-[80vh]');
     });
   });
