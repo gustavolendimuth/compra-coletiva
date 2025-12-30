@@ -71,12 +71,13 @@ describe('ProductModals', () => {
         render(
           <AddProductModal
             {...defaultProps}
-            form={{ name: 'Test Product', price: 99.99, weight: 500 }}
+            form={{ name: 'Test Product', price: '99.99', weight: '500' }}
           />
         );
 
         expect(screen.getByDisplayValue('Test Product')).toBeInTheDocument();
-        expect(screen.getByDisplayValue('99.99')).toBeInTheDocument();
+        // CurrencyInput formats with Brazilian locale (comma decimal separator)
+        expect(screen.getByDisplayValue('99,99')).toBeInTheDocument();
         expect(screen.getByDisplayValue('500')).toBeInTheDocument();
       });
 
@@ -236,9 +237,9 @@ describe('ProductModals', () => {
         render(<AddProductModal {...defaultProps} />);
 
         const priceInput = screen.getByLabelText(/preço/i);
-        expect(priceInput).toHaveAttribute('type', 'number');
-        expect(priceInput).toHaveAttribute('step', '0.01');
-        expect(priceInput).toHaveAttribute('min', '0');
+        // CurrencyInput uses type="text" with inputMode="decimal" for better formatting
+        expect(priceInput).toHaveAttribute('type', 'text');
+        expect(priceInput).toHaveAttribute('inputMode', 'decimal');
       });
 
       it('should have correct input type for weight', () => {

@@ -171,9 +171,9 @@ describe('CampaignModals', () => {
         render(<ShippingModal {...defaultProps} />);
 
         const input = screen.getByLabelText(/valor do frete total/i);
-        expect(input).toHaveAttribute('type', 'number');
-        expect(input).toHaveAttribute('step', '0.01');
-        expect(input).toHaveAttribute('min', '0');
+        // CurrencyInput uses type="text" with inputMode="decimal" for better formatting
+        expect(input).toHaveAttribute('type', 'text');
+        expect(input).toHaveAttribute('inputMode', 'decimal');
       });
 
       it('should autofocus input', () => {

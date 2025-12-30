@@ -16,16 +16,17 @@ interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
  * Uses [color-scheme:light] to prevent browser dark mode from overriding styles.
  */
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ label, error, helperText, className, ...props }, ref) => {
+  ({ label, error, helperText, className, id, ...props }, ref) => {
     return (
       <div className="w-full">
         {label && (
-          <label className="block mb-2 text-sm font-medium text-gray-700">
+          <label htmlFor={id} className="block mb-2 text-sm font-medium text-gray-700">
             {label}
           </label>
         )}
         <textarea
           ref={ref}
+          id={id}
           className={cn(
             "w-full px-4 py-2",
             "bg-white text-gray-900 placeholder:text-gray-400",

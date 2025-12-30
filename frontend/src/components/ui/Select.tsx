@@ -16,16 +16,17 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
  * Uses [color-scheme:light] to prevent browser dark mode from overriding styles.
  */
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ label, error, helperText, className, children, ...props }, ref) => {
+  ({ label, error, helperText, className, children, id, ...props }, ref) => {
     return (
       <div className="w-full">
         {label && (
-          <label className="block mb-2 text-sm font-medium text-gray-700">
+          <label htmlFor={id} className="block mb-2 text-sm font-medium text-gray-700">
             {label}
           </label>
         )}
         <select
           ref={ref}
+          id={id}
           className={cn(
             "w-full px-4 py-2",
             "bg-white text-gray-900",

@@ -28,31 +28,37 @@ export const createMockProduct = (
 // Mock Campaign Factory
 export const createMockCampaign = (
   overrides: Partial<CampaignWithProducts> = {}
-): CampaignWithProducts => ({
-  id: `campaign-${Math.random().toString(36).substring(7)}`,
-  name: 'Test Campaign',
-  description: 'This is a test campaign description',
-  status: 'ACTIVE',
-  deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-  shippingCost: 50.0,
-  creatorId: 'user-1',
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  _count: {
-    products: 5,
-    orders: 10,
-  },
-  creator: {
-    id: 'user-1',
-    name: 'Test Creator',
-  },
-  products: [
-    createMockProduct({ id: 'product-1', name: 'Product 1', price: 50.0 }),
-    createMockProduct({ id: 'product-2', name: 'Product 2', price: 75.0 }),
-    createMockProduct({ id: 'product-3', name: 'Product 3', price: 100.0 }),
-  ],
-  ...overrides,
-});
+): CampaignWithProducts => {
+  const id = overrides.id || `campaign-${Math.random().toString(36).substring(7)}`;
+  const slug = overrides.slug || id;
+
+  return {
+    id,
+    slug,
+    name: 'Test Campaign',
+    description: 'This is a test campaign description',
+    status: 'ACTIVE',
+    deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    shippingCost: 50.0,
+    creatorId: 'user-1',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    _count: {
+      products: 5,
+      orders: 10,
+    },
+    creator: {
+      id: 'user-1',
+      name: 'Test Creator',
+    },
+    products: [
+      createMockProduct({ id: 'product-1', name: 'Product 1', price: 50.0 }),
+      createMockProduct({ id: 'product-2', name: 'Product 2', price: 75.0 }),
+      createMockProduct({ id: 'product-3', name: 'Product 3', price: 100.0 }),
+    ],
+    ...overrides,
+  };
+};
 
 // Mock Campaign List Response Factory
 export const createMockCampaignListResponse = (
