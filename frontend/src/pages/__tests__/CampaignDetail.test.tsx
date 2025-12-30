@@ -18,6 +18,7 @@ vi.mock("@/api", async () => {
     ...actual,
     campaignApi: {
       getById: vi.fn(),
+      getBySlug: vi.fn(),
       update: vi.fn(),
       updateStatus: vi.fn(),
       downloadSupplierInvoice: vi.fn(),
@@ -41,12 +42,12 @@ vi.mock("@/api", async () => {
   };
 });
 
-// Mock useParams to provide campaign ID
+// Mock useParams to provide campaign slug
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
   return {
     ...actual,
-    useParams: () => ({ id: "campaign-1" }),
+    useParams: () => ({ slug: "campaign-1" }),
     useLocation: () => ({ pathname: "/campaigns/campaign-1", state: null }),
     useNavigate: () => vi.fn(),
   };
@@ -103,7 +104,7 @@ describe("CampaignDetail", () => {
     vi.clearAllMocks();
 
     // Default successful API responses
-    vi.mocked(campaignApi.getById).mockResolvedValue(mockCampaign);
+    vi.mocked(campaignApi.getBySlug).mockResolvedValue(mockCampaign);
     vi.mocked(productApi.getByCampaign).mockResolvedValue(mockProducts);
     vi.mocked(orderApi.getByCampaign).mockResolvedValue(mockOrders);
     vi.mocked(analyticsApi.getByCampaign).mockResolvedValue(mockAnalytics);
@@ -111,7 +112,7 @@ describe("CampaignDetail", () => {
 
   describe("Loading State", () => {
     it("should display loading skeleton while fetching data", async () => {
-      vi.mocked(campaignApi.getById).mockImplementation(
+      vi.mocked(campaignApi.getBySlug).mockImplementation(
         () => new Promise(() => {}) // Never resolves
       );
 
@@ -186,7 +187,7 @@ describe("CampaignDetail", () => {
         ...mockCampaign,
         deadline: new Date("2025-12-31T23:59:59").toISOString(),
       });
-      vi.mocked(campaignApi.getById).mockResolvedValue(campaignWithDeadline);
+      vi.mocked(campaignApi.getBySlug).mockResolvedValue(campaignWithDeadline);
 
       renderWithProviders(<CampaignDetail />, {
         authContext: mockAuthContext,
@@ -525,7 +526,7 @@ describe("CampaignDetail", () => {
         ...mockCampaign,
         status: "CLOSED",
       });
-      vi.mocked(campaignApi.getById).mockResolvedValue(closedCampaign);
+      vi.mocked(campaignApi.getBySlug).mockResolvedValue(closedCampaign);
 
       renderWithProviders(<CampaignDetail />, {
         authContext: mockAuthContext,
@@ -546,7 +547,7 @@ describe("CampaignDetail", () => {
         ...mockCampaign,
         status: "SENT",
       });
-      vi.mocked(campaignApi.getById).mockResolvedValue(sentCampaign);
+      vi.mocked(campaignApi.getBySlug).mockResolvedValue(sentCampaign);
 
       renderWithProviders(<CampaignDetail />, {
         authContext: mockAuthContext,
@@ -622,7 +623,7 @@ describe("CampaignDetail", () => {
 
   describe("Error Handling", () => {
     it("should handle campaign fetch error gracefully", async () => {
-      vi.mocked(campaignApi.getById).mockRejectedValue(
+      vi.mocked(campaignApi.getBySlug).mockRejectedValue(
         new Error("Campaign not found")
       );
 

@@ -11,6 +11,8 @@ import {
   OrderItem,
   Analytics,
   Campaign,
+  Notification,
+  NotificationListResponse,
 } from '@/api';
 
 // Mock Product Factory
@@ -26,31 +28,37 @@ export const createMockProduct = (
 // Mock Campaign Factory
 export const createMockCampaign = (
   overrides: Partial<CampaignWithProducts> = {}
-): CampaignWithProducts => ({
-  id: `campaign-${Math.random().toString(36).substring(7)}`,
-  name: 'Test Campaign',
-  description: 'This is a test campaign description',
-  status: 'ACTIVE',
-  deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-  shippingCost: 50.0,
-  creatorId: 'user-1',
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  _count: {
-    products: 5,
-    orders: 10,
-  },
-  creator: {
-    id: 'user-1',
-    name: 'Test Creator',
-  },
-  products: [
-    createMockProduct({ id: 'product-1', name: 'Product 1', price: 50.0 }),
-    createMockProduct({ id: 'product-2', name: 'Product 2', price: 75.0 }),
-    createMockProduct({ id: 'product-3', name: 'Product 3', price: 100.0 }),
-  ],
-  ...overrides,
-});
+): CampaignWithProducts => {
+  const id = overrides.id || `campaign-${Math.random().toString(36).substring(7)}`;
+  const slug = overrides.slug || id;
+
+  return {
+    id,
+    slug,
+    name: 'Test Campaign',
+    description: 'This is a test campaign description',
+    status: 'ACTIVE',
+    deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    shippingCost: 50.0,
+    creatorId: 'user-1',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    _count: {
+      products: 5,
+      orders: 10,
+    },
+    creator: {
+      id: 'user-1',
+      name: 'Test Creator',
+    },
+    products: [
+      createMockProduct({ id: 'product-1', name: 'Product 1', price: 50.0 }),
+      createMockProduct({ id: 'product-2', name: 'Product 2', price: 75.0 }),
+      createMockProduct({ id: 'product-3', name: 'Product 3', price: 100.0 }),
+    ],
+    ...overrides,
+  };
+};
 
 // Mock Campaign List Response Factory
 export const createMockCampaignListResponse = (
@@ -262,4 +270,59 @@ export const createMockCampaignFull = (
     orders: 10,
   },
   ...overrides,
+});
+
+// Notification Factory
+export const createMockNotification = (
+  overrides: Partial<Notification> = {}
+): Notification => ({
+  id: `notification-${Math.random().toString(36).substring(7)}`,
+  userId: 'user-1',
+  type: 'CAMPAIGN_READY_TO_SEND',
+  title: 'Test Notification',
+  message: 'This is a test notification message',
+  isRead: false,
+  metadata: {},
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  ...overrides,
+});
+
+// Notification List Response Factory
+export const createMockNotificationListResponse = (
+  notifications: Notification[] = [],
+  overrides: Partial<NotificationListResponse> = {}
+): NotificationListResponse => ({
+  notifications,
+  total: notifications.length,
+  unreadCount: notifications.filter((n) => !n.isRead).length,
+  ...overrides,
+});
+
+// Predefined mock notifications
+export const mockUnreadNotification = createMockNotification({
+  id: 'notification-unread',
+  title: 'Campanha pronta para envio',
+  message: 'A campanha "Test Campaign" atingiu a meta e está pronta para ser enviada!',
+  type: 'CAMPAIGN_READY_TO_SEND',
+  isRead: false,
+  metadata: { campaignSlug: 'test-campaign' },
+});
+
+export const mockReadNotification = createMockNotification({
+  id: 'notification-read',
+  title: 'Campanha arquivada',
+  message: 'A campanha "Old Campaign" foi arquivada',
+  type: 'CAMPAIGN_ARCHIVED',
+  isRead: true,
+  metadata: { campaignSlug: 'old-campaign' },
+});
+
+export const mockMessageNotification = createMockNotification({
+  id: 'notification-message',
+  title: 'Nova mensagem',
+  message: 'Você recebeu uma nova mensagem em "Test Campaign"',
+  type: 'NEW_MESSAGE',
+  isRead: false,
+  metadata: { campaignSlug: 'test-campaign', orderId: 'order-1', isQuestion: false },
 });

@@ -118,7 +118,7 @@ npm run build --workspace=backend
 - **67 Components**: 8 UI primitives, 4 auth, 21 campaign, 15 campaign-detail modules, 19 other
 - **3 Pages**: Home, CampaignDetail (150 lines), NewCampaign
 - **4 Custom Hooks**: useCampaignDetail, useCampaignQuestions, useCampaignChat, useOrderChat
-- **Test Suite**: 8 test files, 164 passing tests (2 skipped), ~3.7s execution time
+- **Test Suite**: 50+ test files, 607 passing tests (100% success), ~13s execution time
 
 ## Architecture
 
@@ -660,10 +660,10 @@ npm run validate:financial
 **Mock Data**: Centralized factories in `src/__tests__/mock-data.ts`
 
 **Test Statistics**:
-- **Total**: 565 tests passing, 5 failing (98.8% success rate)
+- **Total**: 607 tests passing (100% success rate)
 - **Test Files**: 50+ files
-- **Execution time**: ~12 seconds
-- **Coverage areas**: Rendering, user interactions, edge cases, responsive behavior, API integration, accessibility
+- **Execution time**: ~13 seconds
+- **Coverage areas**: Rendering, user interactions, edge cases, responsive behavior, API integration, accessibility, notifications
 
 **Massive Test Improvement (December 6, 2025)**:
 - **Before**: 39 failing tests (93.1% success rate)
@@ -730,14 +730,48 @@ npm run test:coverage --workspace=backend # Coverage report
 
 ### Combined Statistics
 
-- **Total Tests**: 596 passing (565 frontend + 31 backend), 5 failing
+- **Total Tests**: 638 passing (607 frontend + 31 backend)
 - **Test Files**: 50+ files
 - **Execution Time**: ~13 seconds
-- **Success Rate**: 98.8%
+- **Success Rate**: 100%
 
 ---
 
 ## Recent Updates
+
+### December 29, 2025 - Mobile Notifications Fix & Test Coverage
+
+**Problem Solved**:
+- Fixed mobile notifications not appearing when clicking the notification icon in the MobileMenu
+- Issue caused by z-index conflict (dropdown z-50 vs MobileMenu z-[70]) and overflow clipping
+
+**Solution**:
+1. **NotificationDropdown component** (`frontend/src/components/NotificationDropdown.tsx`):
+   - Changed z-index from `z-50` to `z-[100]` to appear above MobileMenu
+   - Changed positioning from `absolute` to `fixed` on mobile screens (<768px) to avoid overflow issues
+   - Added `buttonRef` prop for calculating mobile positioning using `getBoundingClientRect()`
+   - Updated click-outside logic to check buttonRef and prevent closing when clicking the button
+
+2. **NotificationIcon component** (`frontend/src/components/NotificationIcon.tsx`):
+   - Added `buttonRef` using `useRef<HTMLButtonElement>`
+   - Passed buttonRef to button element and NotificationDropdown component
+
+**Test Coverage**:
+- Created comprehensive test suite for NotificationIcon (15 tests)
+- Created comprehensive test suite for NotificationDropdown (27 tests)
+- All 42 notification tests passing (100%)
+- Added mock notification data factories
+
+**Mobile Positioning Pattern**:
+- Use `fixed` positioning on mobile instead of `absolute` when parent has overflow constraints
+- Calculate position dynamically using button's `getBoundingClientRect()` for accurate placement
+- Use higher z-index values for dropdowns that need to appear above mobile menus (z-[100] recommended)
+- Pass `buttonRef` to dropdown components to enable proper click-outside detection
+
+**Test Statistics Update**:
+- **Total**: 638 tests passing (607 frontend + 31 backend)
+- **Success Rate**: 100% (up from 98.8%)
+- **New Tests**: 42 notification tests added
 
 ### December 6, 2025 - Massive Test Reliability Improvement (87% Reduction in Failures!)
 

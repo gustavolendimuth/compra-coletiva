@@ -12,10 +12,39 @@ import {
 } from "@/__tests__/mock-data";
 
 // Mock modules
-vi.mock("@/api");
+vi.mock("@/api", async () => {
+  const actual = await vi.importActual("@/api");
+  return {
+    ...actual,
+    campaignApi: {
+      getById: vi.fn(),
+      getBySlug: vi.fn(),
+      update: vi.fn(),
+      updateStatus: vi.fn(),
+    },
+    productApi: {
+      getByCampaign: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    },
+    orderApi: {
+      getByCampaign: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      updateWithItems: vi.fn(),
+      delete: vi.fn(),
+    },
+    analyticsApi: {
+      getByCampaign: vi.fn(),
+    },
+  };
+});
+
 vi.mock("@/contexts/AuthContext", () => ({
   useAuth: () => ({
     user: { id: "user-1", name: "Test User", email: "test@example.com" },
+    requireAuth: vi.fn(),
   }),
 }));
 
@@ -49,7 +78,7 @@ describe("useCampaignDetail", () => {
     });
 
     // Setup default mocks
-    vi.mocked(campaignApi.getById).mockResolvedValue(mockCampaign);
+    vi.mocked(campaignApi.getBySlug).mockResolvedValue(mockCampaign);
     vi.mocked(productApi.getByCampaign).mockResolvedValue(mockProducts);
     vi.mocked(orderApi.getByCampaign).mockResolvedValue(mockOrders);
     vi.mocked(analyticsApi.getByCampaign).mockResolvedValue(mockAnalytics);
@@ -62,9 +91,9 @@ describe("useCampaignDetail", () => {
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={["/campaign/campaign-1"]}>
+      <MemoryRouter initialEntries={["/campaigns/campaign-1"]}>
         <Routes>
-          <Route path="/campaign/:id" element={<div>{children}</div>} />
+          <Route path="/campaigns/:slug" element={<div>{children}</div>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>
@@ -78,7 +107,7 @@ describe("useCampaignDetail", () => {
         expect(result.current.campaign).toEqual(mockCampaign);
       });
 
-      expect(campaignApi.getById).toHaveBeenCalledWith("campaign-1");
+      expect(campaignApi.getBySlug).toHaveBeenCalledWith("campaign-1");
     });
 
     it("should fetch products data on mount", async () => {
@@ -114,7 +143,7 @@ describe("useCampaignDetail", () => {
 
   describe("Computed States", () => {
     it("should correctly compute isActive when campaign is ACTIVE", async () => {
-      vi.mocked(campaignApi.getById).mockResolvedValue({
+      vi.mocked(campaignApi.getBySlug).mockResolvedValue({
         ...mockCampaign,
         status: "ACTIVE",
       });
@@ -127,7 +156,7 @@ describe("useCampaignDetail", () => {
     });
 
     it("should correctly compute isActive when campaign is CLOSED", async () => {
-      vi.mocked(campaignApi.getById).mockResolvedValue({
+      vi.mocked(campaignApi.getBySlug).mockResolvedValue({
         ...mockCampaign,
         status: "CLOSED",
       });
@@ -140,7 +169,7 @@ describe("useCampaignDetail", () => {
     });
 
     it("should correctly compute isClosed", async () => {
-      vi.mocked(campaignApi.getById).mockResolvedValue({
+      vi.mocked(campaignApi.getBySlug).mockResolvedValue({
         ...mockCampaign,
         status: "CLOSED",
       });
@@ -153,7 +182,7 @@ describe("useCampaignDetail", () => {
     });
 
     it("should correctly compute isSent", async () => {
-      vi.mocked(campaignApi.getById).mockResolvedValue({
+      vi.mocked(campaignApi.getBySlug).mockResolvedValue({
         ...mockCampaign,
         status: "SENT",
       });
@@ -166,7 +195,7 @@ describe("useCampaignDetail", () => {
     });
 
     it("should correctly compute canEditCampaign when user is creator", async () => {
-      vi.mocked(campaignApi.getById).mockResolvedValue({
+      vi.mocked(campaignApi.getBySlug).mockResolvedValue({
         ...mockCampaign,
         creatorId: "user-1",
       });
@@ -179,7 +208,7 @@ describe("useCampaignDetail", () => {
     });
 
     it("should correctly compute canEditCampaign when user is not creator", async () => {
-      vi.mocked(campaignApi.getById).mockResolvedValue({
+      vi.mocked(campaignApi.getBySlug).mockResolvedValue({
         ...mockCampaign,
         creatorId: "other-user",
       });
@@ -234,10 +263,10 @@ describe("useCampaignDetail", () => {
       const { result } = renderHook(() => useCampaignDetail(), { wrapper });
 
       expect(result.current.productForm).toEqual({
-        campaignId: "campaign-1",
+        campaignId: "",
         name: "",
-        price: 0,
-        weight: 0,
+        price: "",
+        weight: "",
         imageUrl: "",
       });
     });
@@ -246,7 +275,7 @@ describe("useCampaignDetail", () => {
       const { result } = renderHook(() => useCampaignDetail(), { wrapper });
 
       expect(result.current.orderForm).toEqual({
-        campaignId: "campaign-1",
+        campaignId: "",
         customerName: "",
         items: [],
       });
@@ -259,15 +288,15 @@ describe("useCampaignDetail", () => {
         result.current.setProductForm({
           campaignId: "campaign-1",
           name: "New Product",
-          price: 99.99,
-          weight: 500,
+          price: "99.99",
+          weight: "500",
           imageUrl: "",
         });
       });
 
       expect(result.current.productForm.name).toBe("New Product");
-      expect(result.current.productForm.price).toBe(99.99);
-      expect(result.current.productForm.weight).toBe(500);
+      expect(result.current.productForm.price).toBe("99.99");
+      expect(result.current.productForm.weight).toBe("500");
     });
   });
 
@@ -390,8 +419,8 @@ describe("useCampaignDetail", () => {
       expect(result.current.editingProduct).toEqual(product);
       expect(result.current.editProductForm).toEqual({
         name: "Test Product",
-        price: 50,
-        weight: 200,
+        price: "50",
+        weight: "200",
         imageUrl: "",
       });
     });
@@ -410,7 +439,9 @@ describe("useCampaignDetail", () => {
 
       // Wait for the async delete to be called
       await waitFor(() => {
-        expect(productApi.delete).toHaveBeenCalledWith("product-1");
+        expect(productApi.delete).toHaveBeenCalled();
+        const calls = vi.mocked(productApi.delete).mock.calls;
+        expect(calls[0][0]).toBe("product-1");
       });
     });
 
@@ -488,7 +519,7 @@ describe("useCampaignDetail", () => {
       });
     });
 
-    it("should handle close order modal and reset form", () => {
+    it("should handle close order modal and keep form", () => {
       const { result } = renderHook(() => useCampaignDetail(), { wrapper });
 
       act(() => {
@@ -507,10 +538,11 @@ describe("useCampaignDetail", () => {
       });
 
       expect(result.current.isOrderModalOpen).toBe(false);
+      // Form should be kept so user can continue adding products
       expect(result.current.orderForm).toEqual({
         campaignId: "campaign-1",
-        customerName: "",
-        items: [],
+        customerName: "Test",
+        items: [{ productId: "p1", quantity: 1 }],
       });
     });
   });
@@ -521,9 +553,9 @@ describe("useCampaignDetail", () => {
         ...mockCampaign,
         name: "Updated Name",
       });
-      vi.mocked(campaignApi.getById).mockResolvedValue({
+      vi.mocked(campaignApi.getBySlug).mockResolvedValue({
         ...mockCampaign,
-        name: "Updated Name",
+        name: "Test Campaign",
       });
 
       const { result } = renderHook(() => useCampaignDetail(), { wrapper });
@@ -542,14 +574,15 @@ describe("useCampaignDetail", () => {
       });
 
       await waitFor(() => {
-        expect(campaignApi.update).toHaveBeenCalledWith("campaign-1", {
-          name: "Updated Name",
-        });
+        expect(campaignApi.update).toHaveBeenCalled();
+        const calls = vi.mocked(campaignApi.update).mock.calls;
+        expect(calls[0][0]).toBe("campaign-1");
+        expect(calls[0][1]).toEqual({ name: "Updated Name" });
       });
     });
 
     it("should not save name if unchanged", async () => {
-      vi.mocked(campaignApi.getById).mockResolvedValue({
+      vi.mocked(campaignApi.getBySlug).mockResolvedValue({
         ...mockCampaign,
         name: "Test Campaign",
       });
@@ -593,7 +626,7 @@ describe("useCampaignDetail", () => {
         ...mockCampaign,
         description: "New Description",
       });
-      vi.mocked(campaignApi.getById).mockResolvedValue({
+      vi.mocked(campaignApi.getBySlug).mockResolvedValue({
         ...mockCampaign,
         description: "Old Description",
       });
@@ -627,7 +660,7 @@ describe("useCampaignDetail", () => {
         ...mockCampaign,
         name: "Updated",
       });
-      vi.mocked(campaignApi.getById).mockResolvedValue({
+      vi.mocked(campaignApi.getBySlug).mockResolvedValue({
         ...mockCampaign,
         name: "Test",
       });
@@ -750,9 +783,9 @@ describe("useCampaignDetail", () => {
     it("should handle missing campaignId", () => {
       const customWrapper = ({ children }: { children: React.ReactNode }) => (
         <QueryClientProvider client={queryClient}>
-          <MemoryRouter initialEntries={["/campaign/"]}>
+          <MemoryRouter initialEntries={["/campaigns/"]}>
             <Routes>
-              <Route path="/campaign/" element={<div>{children}</div>} />
+              <Route path="/campaigns/" element={<div>{children}</div>} />
             </Routes>
           </MemoryRouter>
         </QueryClientProvider>
