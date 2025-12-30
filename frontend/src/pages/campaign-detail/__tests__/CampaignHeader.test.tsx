@@ -13,11 +13,12 @@ vi.mock('react-hot-toast', () => ({
   },
 }));
 
-// Mock campaignApi
+// Mock campaignApi and API_URL
 vi.mock('@/api', () => ({
   campaignApi: {
     downloadSupplierInvoice: vi.fn(),
   },
+  API_URL: 'http://localhost:3000',
 }));
 
 describe('CampaignHeader', () => {
@@ -26,6 +27,8 @@ describe('CampaignHeader', () => {
   const mockOnReopenCampaign = vi.fn();
   const mockOnMarkAsSent = vi.fn();
   const mockOnUpdateCampaign = vi.fn();
+  const mockOnCloneCampaign = vi.fn();
+  const mockOnImageUpload = vi.fn();
 
   const mockCampaign = createMockCampaignFull({
     id: 'campaign-1',
@@ -44,6 +47,8 @@ describe('CampaignHeader', () => {
     onReopenCampaign: mockOnReopenCampaign,
     onMarkAsSent: mockOnMarkAsSent,
     onUpdateCampaign: mockOnUpdateCampaign,
+    onCloneCampaign: mockOnCloneCampaign,
+    onImageUpload: mockOnImageUpload,
   };
 
   const renderComponent = (props = {}) => {
@@ -412,6 +417,104 @@ describe('CampaignHeader', () => {
 
       const button = screen.getByRole('button', { name: /fechar campanha/i });
       expect(button).toHaveClass('text-xs', 'sm:text-sm', 'whitespace-nowrap');
+    });
+  });
+
+  describe('Campaign Image', () => {
+    it('should display campaign image when imageUrl is present (S3 URL)', () => {
+      const campaignWithImage = {
+        ...mockCampaign,
+        imageUrl: 'https://s3.amazonaws.com/bucket/image.jpg',
+      };
+      renderComponent({ campaign: campaignWithImage });
+
+      const image = screen.getByAltText('Test Campaign');
+      expect(image).toBeInTheDocument();
+      expect(image).toHaveAttribute('src', 'https://s3.amazonaws.com/bucket/image.jpg');
+    });
+
+    it('should display campaign image when imageUrl is present (local storage)', () => {
+      const campaignWithImage = {
+        ...mockCampaign,
+        imageUrl: '/uploads/campaigns/image.jpg',
+      };
+      renderComponent({ campaign: campaignWithImage });
+
+      const image = screen.getByAltText('Test Campaign');
+      expect(image).toBeInTheDocument();
+      expect(image).toHaveAttribute('src', 'http://localhost:3000/uploads/campaigns/image.jpg');
+    });
+
+    it('should show edit button on image when user can edit', () => {
+      const campaignWithImage = {
+        ...mockCampaign,
+        imageUrl: '/uploads/campaigns/image.jpg',
+      };
+      renderComponent({ campaign: campaignWithImage });
+
+      const editButton = screen.getByTitle(/alterar imagem/i);
+      expect(editButton).toBeInTheDocument();
+    });
+
+    it('should call onImageUpload when edit button is clicked', async () => {
+      const user = userEvent.setup();
+      const campaignWithImage = {
+        ...mockCampaign,
+        imageUrl: '/uploads/campaigns/image.jpg',
+      };
+      renderComponent({ campaign: campaignWithImage });
+
+      const editButton = screen.getByTitle(/alterar imagem/i);
+      await user.click(editButton);
+
+      expect(mockOnImageUpload).toHaveBeenCalled();
+    });
+
+    it('should not show edit button on image when user cannot edit', () => {
+      const campaignWithImage = {
+        ...mockCampaign,
+        imageUrl: '/uploads/campaigns/image.jpg',
+      };
+      renderComponent({ campaign: campaignWithImage, canEditCampaign: false });
+
+      expect(screen.queryByTitle(/alterar imagem/i)).not.toBeInTheDocument();
+    });
+
+    it('should show upload placeholder when no image and user can edit', () => {
+      const campaignWithoutImage = { ...mockCampaign, imageUrl: undefined };
+      renderComponent({ campaign: campaignWithoutImage });
+
+      const uploadButton = screen.getByTitle(/adicionar imagem da campanha/i);
+      expect(uploadButton).toBeInTheDocument();
+    });
+
+    it('should call onImageUpload when placeholder is clicked', async () => {
+      const user = userEvent.setup();
+      const campaignWithoutImage = { ...mockCampaign, imageUrl: undefined };
+      renderComponent({ campaign: campaignWithoutImage });
+
+      const uploadButton = screen.getByTitle(/adicionar imagem da campanha/i);
+      await user.click(uploadButton);
+
+      expect(mockOnImageUpload).toHaveBeenCalled();
+    });
+
+    it('should not show upload placeholder when no image and user cannot edit', () => {
+      const campaignWithoutImage = { ...mockCampaign, imageUrl: undefined };
+      renderComponent({ campaign: campaignWithoutImage, canEditCampaign: false });
+
+      expect(screen.queryByTitle(/adicionar imagem da campanha/i)).not.toBeInTheDocument();
+    });
+
+    it('should render image with correct responsive classes', () => {
+      const campaignWithImage = {
+        ...mockCampaign,
+        imageUrl: '/uploads/campaigns/image.jpg',
+      };
+      renderComponent({ campaign: campaignWithImage });
+
+      const imageContainer = screen.getByAltText('Test Campaign').parentElement;
+      expect(imageContainer).toHaveClass('w-24', 'h-24', 'md:w-32', 'md:h-32');
     });
   });
 });
