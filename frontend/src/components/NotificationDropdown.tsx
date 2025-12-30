@@ -21,7 +21,7 @@ export function NotificationDropdown({
   buttonRef,
 }: NotificationDropdownProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState({ top: 0, right: 0 });
+  const [position, setPosition] = useState({ top: 0, left: 0 });
   const {
     notifications,
     isLoading,
@@ -33,9 +33,27 @@ export function NotificationDropdown({
   useEffect(() => {
     if (isOpen && buttonRef?.current) {
       const rect = buttonRef.current.getBoundingClientRect();
+      const isMobile = window.innerWidth < 768; // md breakpoint
+      const dropdownWidth = isMobile ? 320 : 384; // w-80 = 320px, md:w-96 = 384px
+      const spacing = 8; // 8px spacing
+
+      // Align dropdown's right edge with button's right edge
+      // but ensure it doesn't go off-screen on either side
+      let left = rect.right - dropdownWidth;
+
+      // Prevent overflow on the left
+      if (left < spacing) {
+        left = spacing;
+      }
+
+      // Prevent overflow on the right
+      if (left + dropdownWidth > window.innerWidth - spacing) {
+        left = window.innerWidth - dropdownWidth - spacing;
+      }
+
       setPosition({
-        top: rect.bottom + 8, // 8px spacing (mt-2)
-        right: window.innerWidth - rect.right,
+        top: rect.bottom + spacing,
+        left: left,
       });
     }
   }, [isOpen, buttonRef]);
@@ -93,7 +111,7 @@ export function NotificationDropdown({
         className="fixed w-80 md:w-96 bg-white border border-gray-200 rounded-lg shadow-lg max-h-[80vh] overflow-hidden flex flex-col z-[100]"
         style={{
           top: `${position.top}px`,
-          right: `${position.right}px`,
+          left: `${position.left}px`,
         }}
       >
       {/* Header */}
