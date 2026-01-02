@@ -111,25 +111,39 @@ Se ver:
 
 Então as variáveis de ambiente não estão corretas!
 
-## 🔧 Solução Alternativa (NÃO RECOMENDADA)
+## 🔧 Solução Alternativa: Railway Volumes
 
-### Railway Volumes (Experimental)
+### Volumes Persistentes (Boa para Apps Pequenos/Médios)
 
-Railway suporta volumes persistentes, mas é **experimental** e pode ter limitações:
+Railway suporta volumes persistentes, que são uma **alternativa válida** ao S3 para apps que não precisam escalar horizontalmente.
 
+**Guia Completo**: Ver [RAILWAY_VOLUME_SETUP.md](RAILWAY_VOLUME_SETUP.md)
+
+**Quick Start**:
 1. No dashboard do Railway, vá para seu serviço backend
 2. Vá para **Settings** → **Volumes**
 3. Adicione um volume:
-   - **Mount path**: `/app/uploads`
-   - **Size**: 1GB (ou conforme necessário)
+   - **Mount path**: `/app/data`
+   - **Size**: `1 GB` (ou conforme necessário)
+4. Adicione variável de ambiente:
+   - `UPLOAD_DIR=/app/data`
+5. Redeploy
+
+**Vantagens**:
+- ✅ Setup rápido (5 minutos)
+- ✅ Sem custos adicionais
+- ✅ Funciona bem para apps single-instance
+- ✅ Persistência garantida
 
 **Limitações**:
-- ❌ Volumes não escalam horizontalmente
-- ❌ Backups manuais necessários
-- ❌ Pode ter problemas de performance
-- ❌ Não recomendado para produção
+- ⚠️ Não escala horizontalmente (limitado a 1 instância)
+- ⚠️ Backups manuais necessários
+- ⚠️ Sem CDN global (pode ter latência maior)
+- ⚠️ Performance inferior ao S3 + CDN
 
-**Recomendação**: Use S3 ao invés de volumes.
+**Recomendação**:
+- **Use Volumes** para protótipos, apps pequenos/médios com baixo tráfego
+- **Use S3** para apps em produção com alto tráfego ou múltiplas regiões
 
 ## 📋 Checklist de Resolução
 

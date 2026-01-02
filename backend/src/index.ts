@@ -19,6 +19,7 @@ import notificationRoutes from "./routes/notifications";
 import { errorHandler } from "./middleware/errorHandler";
 import { startCampaignScheduler } from "./services/campaignScheduler";
 import { initializeSocket } from "./services/socketService";
+import { ImageUploadService } from "./services/imageUploadService";
 
 const app = express();
 const httpServer = createServer(app);
@@ -68,7 +69,10 @@ app.use(cookieParser());
 app.use(passport.initialize());
 
 // Serve static files (for local image storage fallback)
-app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+// Uses UPLOAD_DIR env var if set (Railway volume), otherwise defaults to ./uploads
+const uploadBaseDir = ImageUploadService.getUploadBaseDir();
+app.use("/uploads", express.static(uploadBaseDir));
+console.log(`📁 Serving uploads from: ${uploadBaseDir}`);
 
 // Health check
 app.get("/health", (req, res) => {
@@ -105,20 +109,26 @@ httpServer.listen(PORT, () => {
   console.log(`🌐 CORS enabled for: ${corsOrigins.join(", ")}`);
   console.log(`🔌 WebSocket ready for real-time updates`);
 
-  // Check S3 configuration in production
+  // Check storage configuration in production
   if (process.env.NODE_ENV === 'production') {
     const hasS3 = !!(
       process.env.AWS_ACCESS_KEY_ID &&
       process.env.AWS_SECRET_ACCESS_KEY &&
       process.env.AWS_S3_BUCKET
     );
+    const hasVolume = !!process.env.UPLOAD_DIR;
 
-    if (!hasS3) {
-      console.warn('⚠️  WARNING: S3 not configured in production!');
-      console.warn('⚠️  Images will be saved locally and LOST on each deploy.');
-      console.warn('⚠️  See RAILWAY_IMAGE_STORAGE_FIX.md for setup instructions.');
-    } else {
+    if (hasS3) {
       console.log('✅ S3 storage configured and ready');
+    } else if (hasVolume) {
+      console.log(`✅ Persistent volume configured: ${process.env.UPLOAD_DIR}`);
+      console.log('💡 Tip: Consider S3 for better scalability and CDN benefits');
+    } else {
+      console.warn('⚠️  WARNING: No persistent storage configured!');
+      console.warn('⚠️  Images will be saved locally and LOST on each deploy.');
+      console.warn('⚠️  Options:');
+      console.warn('⚠️    1. Configure S3 (recommended) - see RAILWAY_IMAGE_STORAGE_FIX.md');
+      console.warn('⚠️    2. Configure Railway Volume - see RAILWAY_VOLUME_SETUP.md');
     }
   }
 
