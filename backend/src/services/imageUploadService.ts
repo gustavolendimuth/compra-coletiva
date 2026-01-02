@@ -22,10 +22,16 @@ const USE_S3 = !!(
   S3_BUCKET
 );
 
+// Local storage configuration
+// UPLOAD_DIR can be set to a Railway volume path (e.g., /app/data)
+// Defaults to ./uploads for development
+const UPLOAD_BASE_DIR = process.env.UPLOAD_DIR || path.join(process.cwd(), "uploads");
+const uploadsDir = path.join(UPLOAD_BASE_DIR, "campaigns");
+
 // Ensure local uploads directory exists
-const uploadsDir = path.join(process.cwd(), "uploads", "campaigns");
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
+  console.log(`📁 Created uploads directory: ${uploadsDir}`);
 }
 
 interface UploadResult {
@@ -149,7 +155,16 @@ export class ImageUploadService {
       bucket: S3_BUCKET,
       region: process.env.AWS_S3_REGION || "us-east-1",
       hasCredentials: !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY),
+      uploadDir: UPLOAD_BASE_DIR,
+      uploadsDir: uploadsDir,
     };
+  }
+
+  /**
+   * Get the base upload directory path
+   */
+  static getUploadBaseDir(): string {
+    return UPLOAD_BASE_DIR;
   }
 }
 
