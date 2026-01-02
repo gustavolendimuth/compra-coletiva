@@ -69,15 +69,13 @@ Certifique-se de que:
 
 Após analisar seu código, identifiquei:
 
-- ✅ **Container**: Alpine Linux (`node:20-alpine`)
+- ✅ **Container**: ~~Alpine Linux~~ → **Debian Slim** (`node:20-slim`) - **ATUALIZADO!**
 - ✅ **Migrations**: Executadas no `start.sh` durante startup
 - ✅ **Scripts**: `generate-slugs-standalone.ts` também acessa o DB
 
-**Conclusão**: A URL `postgres.railway.internal` não é adequada para este projeto porque:
+**Mudança Realizada**: O Dockerfile foi atualizado de `node:20-alpine` para `node:20-slim` (Debian-based), eliminando problemas de compatibilidade com Railway private networking.
 
-1. Alpine containers têm problemas conhecidos com private networking
-2. Migrations no startup podem falhar com URLs internas
-3. Scripts de manutenção também precisam de acesso confiável ao DB
+**Conclusão**: Com a mudança para Debian Slim, o container agora é totalmente compatível com Railway. Você pode usar tanto a URL pública quanto a privada, mas **recomendamos usar a URL pública** para máxima confiabilidade.
 
 ## 📋 Checklist de Resolução
 

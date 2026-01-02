@@ -1,8 +1,8 @@
 # Multi-stage build para produção do backend
 
 # Stage 1: Build
-FROM node:20-alpine AS builder
-RUN apk add --no-cache openssl libc6-compat postgresql-client
+FROM node:20-slim AS builder
+RUN apt-get update && apt-get install -y openssl postgresql-client && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -25,8 +25,8 @@ COPY start.sh ./
 RUN npm run build
 
 # Stage 2: Production
-FROM node:20-alpine
-RUN apk add --no-cache openssl libc6-compat postgresql-client
+FROM node:20-slim
+RUN apt-get update && apt-get install -y openssl postgresql-client && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
