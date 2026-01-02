@@ -105,6 +105,23 @@ httpServer.listen(PORT, () => {
   console.log(`🌐 CORS enabled for: ${corsOrigins.join(", ")}`);
   console.log(`🔌 WebSocket ready for real-time updates`);
 
+  // Check S3 configuration in production
+  if (process.env.NODE_ENV === 'production') {
+    const hasS3 = !!(
+      process.env.AWS_ACCESS_KEY_ID &&
+      process.env.AWS_SECRET_ACCESS_KEY &&
+      process.env.AWS_S3_BUCKET
+    );
+
+    if (!hasS3) {
+      console.warn('⚠️  WARNING: S3 not configured in production!');
+      console.warn('⚠️  Images will be saved locally and LOST on each deploy.');
+      console.warn('⚠️  See RAILWAY_IMAGE_STORAGE_FIX.md for setup instructions.');
+    } else {
+      console.log('✅ S3 storage configured and ready');
+    }
+  }
+
   // Start campaign scheduler to auto-close expired campaigns
   startCampaignScheduler();
 });

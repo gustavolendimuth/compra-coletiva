@@ -331,6 +331,8 @@ MIT
 ### Deploy & Troubleshooting
 - **[RAILWAY_DEPLOY.md](RAILWAY_DEPLOY.md)** - Guia completo de deploy no Railway
 - **[RAILWAY_QUICK_FIX.md](RAILWAY_QUICK_FIX.md)** - Solução rápida para erro CORS 502
+- **[RAILWAY_DATABASE_FIX.md](RAILWAY_DATABASE_FIX.md)** - Fix para problemas de conexão com banco de dados
+- **[RAILWAY_IMAGE_STORAGE_FIX.md](RAILWAY_IMAGE_STORAGE_FIX.md)** - Configurar S3 para imagens (imagens quebradas no Railway)
 - **[TROUBLESHOOT_RAILWAY.md](TROUBLESHOOT_RAILWAY.md)** - Troubleshooting detalhado Railway
 
 ### Configuração
