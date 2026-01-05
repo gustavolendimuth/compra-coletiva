@@ -21,6 +21,7 @@ export const useCampaignChat = (campaignId: string, userId?: string) => {
   const location = useLocation();
   const previousMessagesLength = useRef<number | null>(null);
   const hasScrolledToHash = useRef(false);
+  const isInitialLoad = useRef(true);
 
   // Fetch public messages
   const { data: publicMessages = { messages: [], total: 0, hasMore: false }, isLoading } = useQuery({
@@ -99,8 +100,9 @@ export const useCampaignChat = (campaignId: string, userId?: string) => {
     const shouldScrollFromHash = location.hash === '#chat' && !hasScrolledToHash.current;
 
     // Check if new message published (but NOT on initial load)
-    // previousMessagesLength starts as null, so first load won't trigger scroll
+    // Skip scroll on initial data fetch - only scroll when new messages arrive after
     const hasNewMessage =
+      !isInitialLoad.current &&
       previousMessagesLength.current !== null &&
       currentLength > 0 &&
       currentLength > previousMessagesLength.current;
@@ -113,9 +115,15 @@ export const useCampaignChat = (campaignId: string, userId?: string) => {
       }
     }
 
-    // Update previous length (after first check, will be a number)
+    // After first data load (when loading completes), mark initial load as complete
+    // This handles both cases: campaigns with and without messages
+    if (isInitialLoad.current && !isLoading) {
+      isInitialLoad.current = false;
+    }
+
+    // Update previous length
     previousMessagesLength.current = currentLength;
-  }, [publicMessages.messages, location.hash]);
+  }, [publicMessages.messages, location.hash, isLoading]);
 
   // Typing indicator
   const handleTyping = () => {
