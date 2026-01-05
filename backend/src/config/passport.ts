@@ -1,6 +1,7 @@
 import passport from 'passport';
 import { Strategy as GoogleStrategy, Profile } from 'passport-google-oauth20';
 import { prisma } from '../index';
+import { capitalizeName } from '../utils/nameFormatter';
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
@@ -45,7 +46,7 @@ export const configurePassport = () => {
               user = await prisma.user.create({
                 data: {
                   email,
-                  name: profile.displayName || email.split('@')[0],
+                  name: capitalizeName(profile.displayName || email.split('@')[0]),
                   googleId: profile.id,
                   password: null, // No password for Google OAuth users
                   role: 'CUSTOMER', // Default role
