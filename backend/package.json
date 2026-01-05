@@ -17,6 +17,7 @@
     "backup": "tsx scripts/backup-db.ts",
     "restore": "tsx scripts/restore-db.ts",
     "seed:migrate": "tsx prisma/seed-migration.ts",
+    "capitalize:names": "node scripts/capitalize-user-names.js",
     "clean": "rm -rf dist node_modules"
   },
   "dependencies": {

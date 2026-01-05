@@ -11,6 +11,7 @@ import {
   getRefreshTokenCookieOptions,
   getClearCookieOptions,
 } from "../utils/cookieConfig";
+import { capitalizeName } from "../utils/nameFormatter";
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -141,7 +142,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
     // Cria usuário
     const user = await prisma.user.create({
       data: {
-        name,
+        name: capitalizeName(name),
         email,
         password: hashedPassword,
         phone,
@@ -703,7 +704,7 @@ router.patch(
           return;
         }
 
-        updates.name = name;
+        updates.name = capitalizeName(name);
       }
 
       // Atualiza senha se fornecida
