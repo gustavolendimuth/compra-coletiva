@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Package,
   Edit,
@@ -6,7 +7,7 @@ import {
   ArrowUp,
   ArrowDown,
 } from "lucide-react";
-import { Card } from "@/components/ui";
+import { Card, ConfirmModal } from "@/components/ui";
 import IconButton from "@/components/IconButton";
 import { formatCurrency } from "@/lib/utils";
 import { Product } from "@/api";
@@ -36,6 +37,19 @@ export function ProductsTab({
   onDeleteProduct,
   onSort,
 }: ProductsTabProps) {
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+
+  const handleDeleteClick = (product: Product) => {
+    setProductToDelete(product);
+  };
+
+  const handleConfirmDelete = () => {
+    if (productToDelete) {
+      onDeleteProduct(productToDelete.id);
+      setProductToDelete(null);
+    }
+  };
+
   const renderSortIcon = (field: typeof sortField) => {
     if (sortField !== field) {
       return <ArrowUpDown className="w-4 h-4 text-gray-400" />;
@@ -135,15 +149,7 @@ export function ProductsTab({
                           size="sm"
                           variant="danger"
                           icon={<Trash2 className="w-4 h-4" />}
-                          onClick={() => {
-                            if (
-                              confirm(
-                                "Tem certeza que deseja remover este produto?"
-                              )
-                            ) {
-                              onDeleteProduct(product.id);
-                            }
-                          }}
+                          onClick={() => handleDeleteClick(product)}
                           title="Remover produto"
                         />
                       </div>
@@ -234,15 +240,7 @@ export function ProductsTab({
                               size="sm"
                               variant="danger"
                               icon={<Trash2 className="w-4 h-4" />}
-                              onClick={() => {
-                                if (
-                                  confirm(
-                                    "Tem certeza que deseja remover este produto?"
-                                  )
-                                ) {
-                                  onDeleteProduct(product.id);
-                                }
-                              }}
+                              onClick={() => handleDeleteClick(product)}
                               title="Remover produto"
                             />
                           </div>
@@ -256,6 +254,27 @@ export function ProductsTab({
           </Card>
         </>
       )}
+
+      {/* Confirm Delete Modal */}
+      <ConfirmModal
+        isOpen={!!productToDelete}
+        onClose={() => setProductToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        title="Remover Produto"
+        message={
+          productToDelete ? (
+            <>
+              <p>Tem certeza que deseja remover o produto <strong>{productToDelete.name}</strong>?</p>
+              <p className="mt-2 text-sm text-gray-600">Esta ação não pode ser desfeita.</p>
+            </>
+          ) : (
+            ""
+          )
+        }
+        confirmText="Remover"
+        cancelText="Cancelar"
+        variant="danger"
+      />
     </div>
   );
 }

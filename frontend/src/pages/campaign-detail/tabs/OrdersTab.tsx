@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   ShoppingBag,
   Search,
@@ -10,7 +11,7 @@ import {
   ArrowUp,
   ArrowDown,
 } from "lucide-react";
-import { Card, Input } from "@/components/ui";
+import { Card, Input, ConfirmModal } from "@/components/ui";
 import IconButton from "@/components/IconButton";
 import OrderCard from "@/components/campaign/OrderCard";
 import { formatCurrency } from "@/lib/utils";
@@ -54,6 +55,19 @@ export function OrdersTab({
   onSearchChange,
   onSort,
 }: OrdersTabProps) {
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+
+  const handleDeleteClick = (order: Order) => {
+    setOrderToDelete(order);
+  };
+
+  const handleConfirmDelete = () => {
+    if (orderToDelete) {
+      onDeleteOrder(orderToDelete.id);
+      setOrderToDelete(null);
+    }
+  };
+
   const renderSortIcon = (field: typeof sortField) => {
     if (sortField !== field) {
       return <ArrowUpDown className="w-4 h-4 text-gray-400" />;
@@ -171,11 +185,7 @@ export function OrdersTab({
                 onView={() => onViewOrder(order)}
                 onTogglePayment={() => onTogglePayment(order)}
                 onEdit={() => onEditOrder(order)}
-                onDelete={() => {
-                  if (confirm("Tem certeza que deseja remover este pedido?")) {
-                    onDeleteOrder(order.id);
-                  }
-                }}
+                onDelete={() => handleDeleteClick(order)}
               />
             ))}
           </div>
@@ -320,15 +330,7 @@ export function OrdersTab({
                               size="sm"
                               variant="danger"
                               icon={<Trash2 className="w-4 h-4" />}
-                              onClick={() => {
-                                if (
-                                  confirm(
-                                    "Tem certeza que deseja remover este pedido?"
-                                  )
-                                ) {
-                                  onDeleteOrder(order.id);
-                                }
-                              }}
+                              onClick={() => handleDeleteClick(order)}
                               title="Remover pedido"
                             />
                           )}
@@ -342,6 +344,27 @@ export function OrdersTab({
           </Card>
         </>
       )}
+
+      {/* Confirm Delete Modal */}
+      <ConfirmModal
+        isOpen={!!orderToDelete}
+        onClose={() => setOrderToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        title="Remover Pedido"
+        message={
+          orderToDelete ? (
+            <>
+              <p>Tem certeza que deseja remover o pedido de <strong>{getCustomerDisplayName(orderToDelete)}</strong>?</p>
+              <p className="mt-2 text-sm text-gray-600">Esta ação não pode ser desfeita.</p>
+            </>
+          ) : (
+            ""
+          )
+        }
+        confirmText="Remover"
+        cancelText="Cancelar"
+        variant="danger"
+      />
     </div>
   );
 }

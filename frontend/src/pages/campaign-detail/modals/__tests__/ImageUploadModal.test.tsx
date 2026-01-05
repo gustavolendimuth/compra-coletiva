@@ -235,10 +235,7 @@ describe('ImageUploadModal', () => {
     it('should call deleteImage mutation when remove button is clicked', async () => {
       const user = userEvent.setup();
       mockDeleteImage.mockResolvedValue({});
-      
-      // Mock window.confirm
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
-      
+
       renderComponent({
         currentImageUrl: '/uploads/campaigns/image.jpg',
       });
@@ -246,9 +243,16 @@ describe('ImageUploadModal', () => {
       // Get the main "Remover Imagem" button (not the X button in the image preview)
       const removeButtons = screen.getAllByRole('button', { name: /remover imagem/i });
       const mainRemoveButton = removeButtons.find(btn => btn.textContent === 'Remover Imagem');
-      
+
       if (mainRemoveButton) {
         await user.click(mainRemoveButton);
+
+        // Modal should appear (check by looking for the confirmation message, not the title)
+        expect(screen.getByText(/tem certeza que deseja remover a imagem atual da campanha/i)).toBeInTheDocument();
+
+        // Click confirm button in modal
+        const confirmButton = screen.getByRole('button', { name: /^remover$/i });
+        await user.click(confirmButton);
 
         await waitFor(() => {
           expect(mockDeleteImage).toHaveBeenCalledWith('test-campaign');
@@ -258,21 +262,26 @@ describe('ImageUploadModal', () => {
 
     it('should show confirmation dialog before deleting', async () => {
       const user = userEvent.setup();
-      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
-      
+
       renderComponent({
         currentImageUrl: '/uploads/campaigns/image.jpg',
       });
 
       const removeButtons = screen.getAllByRole('button', { name: /remover imagem/i });
       const mainRemoveButton = removeButtons.find(btn => btn.textContent === 'Remover Imagem');
-      
+
       if (mainRemoveButton) {
         await user.click(mainRemoveButton);
 
-        expect(confirmSpy).toHaveBeenCalledWith(
-          'Tem certeza que deseja remover a imagem atual da campanha?'
-        );
+        // Modal should appear with confirmation message
+        expect(screen.getByText(/tem certeza que deseja remover a imagem atual da campanha/i)).toBeInTheDocument();
+
+        // Click cancel button (get all and pick the last one - from ConfirmModal)
+        const cancelButtons = screen.getAllByRole('button', { name: /cancelar/i });
+        const confirmModalCancelButton = cancelButtons[cancelButtons.length - 1];
+        await user.click(confirmModalCancelButton);
+
+        // deleteImage should NOT be called
         expect(mockDeleteImage).not.toHaveBeenCalled();
       }
     });
@@ -280,17 +289,20 @@ describe('ImageUploadModal', () => {
     it('should show success toast on successful deletion', async () => {
       const user = userEvent.setup();
       mockDeleteImage.mockResolvedValue({});
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
-      
+
       renderComponent({
         currentImageUrl: '/uploads/campaigns/image.jpg',
       });
 
       const removeButtons = screen.getAllByRole('button', { name: /remover imagem/i });
       const mainRemoveButton = removeButtons.find(btn => btn.textContent === 'Remover Imagem');
-      
+
       if (mainRemoveButton) {
         await user.click(mainRemoveButton);
+
+        // Click confirm button in modal
+        const confirmButton = screen.getByRole('button', { name: /^remover$/i });
+        await user.click(confirmButton);
 
         await waitFor(() => {
           expect(toast.success).toHaveBeenCalledWith('Imagem removida com sucesso!');
@@ -303,8 +315,7 @@ describe('ImageUploadModal', () => {
       mockDeleteImage.mockRejectedValue({
         response: { data: { message: 'Erro ao remover' } },
       });
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
-      
+
       renderComponent({
         currentImageUrl: '/uploads/campaigns/image.jpg',
       });
@@ -314,6 +325,10 @@ describe('ImageUploadModal', () => {
       
       if (mainRemoveButton) {
         await user.click(mainRemoveButton);
+
+        // Click confirm button in modal
+        const confirmButton = screen.getByRole('button', { name: /^remover$/i });
+        await user.click(confirmButton);
 
         await waitFor(() => {
           expect(toast.error).toHaveBeenCalledWith('Erro ao remover');

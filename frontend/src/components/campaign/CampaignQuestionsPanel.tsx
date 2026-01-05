@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { CampaignMessage } from '@/api';
+import { ConfirmModal } from '@/components/ui';
 import { QuestionsPanelTabs } from './QuestionsPanelTabs';
 import { UnansweredQuestionItem } from './UnansweredQuestionItem';
 import { AnsweredQuestionItem } from './AnsweredQuestionItem';
@@ -15,6 +17,8 @@ interface CampaignQuestionsPanelProps {
  * Refactored with custom hook for business logic
  */
 export default function CampaignQuestionsPanel({ campaignId }: CampaignQuestionsPanelProps) {
+  const [messageToDelete, setMessageToDelete] = useState<{ id: string; question: string } | null>(null);
+
   const {
     activeTab,
     setActiveTab,
@@ -37,9 +41,14 @@ export default function CampaignQuestionsPanel({ campaignId }: CampaignQuestions
     answerMutation.mutate({ id, answer });
   };
 
-  const handleDelete = (id: string, question: string) => {
-    if (confirm(`Deletar esta pergunta?\n\n"${question.substring(0, 100)}..."`)) {
-      deleteMutation.mutate(id);
+  const handleDeleteClick = (id: string, question: string) => {
+    setMessageToDelete({ id, question });
+  };
+
+  const handleConfirmDelete = () => {
+    if (messageToDelete) {
+      deleteMutation.mutate(messageToDelete.id);
+      setMessageToDelete(null);
     }
   };
 
@@ -76,7 +85,7 @@ export default function CampaignQuestionsPanel({ campaignId }: CampaignQuestions
                     answerText={answerText[msg.id] || ''}
                     onAnswerChange={(value) => handleAnswerChange(msg.id, value)}
                     onAnswer={() => handleAnswer(msg.id)}
-                    onDelete={() => handleDelete(msg.id, msg.question)}
+                    onDelete={() => handleDeleteClick(msg.id, msg.question)}
                     isAnswering={answerMutation.isPending}
                     isDeleting={deleteMutation.isPending}
                   />
@@ -98,6 +107,28 @@ export default function CampaignQuestionsPanel({ campaignId }: CampaignQuestions
           )}
         </div>
       </div>
+
+      {/* Confirm Delete Modal */}
+      <ConfirmModal
+        isOpen={!!messageToDelete}
+        onClose={() => setMessageToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        title="Deletar Pergunta"
+        message={
+          messageToDelete ? (
+            <>
+              <p>Tem certeza que deseja deletar esta pergunta?</p>
+              <p className="mt-2 text-sm font-medium text-gray-700 italic">"{messageToDelete.question.substring(0, 100)}{messageToDelete.question.length > 100 ? '...' : ''}"</p>
+              <p className="mt-2 text-sm text-gray-600">Esta ação não pode ser desfeita.</p>
+            </>
+          ) : (
+            ""
+          )
+        }
+        confirmText="Deletar"
+        cancelText="Cancelar"
+        variant="danger"
+      />
     </div>
   );
 }

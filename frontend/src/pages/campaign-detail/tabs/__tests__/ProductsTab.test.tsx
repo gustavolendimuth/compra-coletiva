@@ -54,8 +54,6 @@ describe('ProductsTab', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Mock window.confirm
-    global.confirm = vi.fn(() => true);
   });
 
   describe('Rendering', () => {
@@ -280,22 +278,45 @@ describe('ProductsTab', () => {
 
       const deleteButtons = screen.getAllByTitle(/remover produto/i);
       if (deleteButtons.length > 0) {
+        // Click delete button
         await user.click(deleteButtons[0]);
-        expect(global.confirm).toHaveBeenCalled();
+
+        // Modal should appear with confirmation message
+        expect(screen.getByText('Remover Produto')).toBeInTheDocument();
+        expect(screen.getByText(/tem certeza que deseja remover o produto/i)).toBeInTheDocument();
+
+        // Click confirm button in modal (get all buttons with "Remover" and filter for the modal one)
+        const allRemoverButtons = screen.getAllByRole('button', { name: /remover/i });
+        // The last one should be the confirm button in the modal
+        const confirmButton = allRemoverButtons[allRemoverButtons.length - 1];
+        await user.click(confirmButton);
+
+        // onDeleteProduct should be called
         expect(mockCallbacks.onDeleteProduct).toHaveBeenCalledWith(mockProducts[0].id);
       }
     });
 
     it('should not call onDeleteProduct if user cancels confirmation', async () => {
-      global.confirm = vi.fn(() => false);
       const user = userEvent.setup();
       render(<ProductsTab {...defaultProps} />);
 
       const deleteButtons = screen.getAllByTitle(/remover produto/i);
       if (deleteButtons.length > 0) {
+        // Click delete button
         await user.click(deleteButtons[0]);
-        expect(global.confirm).toHaveBeenCalled();
+
+        // Modal should appear
+        expect(screen.getByText('Remover Produto')).toBeInTheDocument();
+
+        // Click cancel button in modal
+        const cancelButton = screen.getByRole('button', { name: /cancelar/i });
+        await user.click(cancelButton);
+
+        // onDeleteProduct should NOT be called
         expect(mockCallbacks.onDeleteProduct).not.toHaveBeenCalled();
+
+        // Modal should be closed
+        expect(screen.queryByText('Remover Produto')).not.toBeInTheDocument();
       }
     });
   });

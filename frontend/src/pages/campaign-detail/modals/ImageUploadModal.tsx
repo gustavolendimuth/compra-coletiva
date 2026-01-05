@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { Modal, ImageUpload, Button } from '@/components/ui';
+import { Modal, ImageUpload, Button, ConfirmModal } from '@/components/ui';
 import { campaignService } from '@/api';
 import { getImageUrlOrUndefined } from '@/lib/imageUrl';
 
@@ -19,6 +19,7 @@ export function ImageUploadModal({
   currentImageUrl,
 }: ImageUploadModalProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const queryClient = useQueryClient();
 
   const fullImageUrl = getImageUrlOrUndefined(currentImageUrl);
@@ -58,9 +59,12 @@ export function ImageUploadModal({
   };
 
   const handleDeleteCurrentImage = () => {
-    if (confirm('Tem certeza que deseja remover a imagem atual da campanha?')) {
-      deleteMutation.mutate();
-    }
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = () => {
+    deleteMutation.mutate();
+    setShowDeleteConfirm(false);
   };
 
   const handleUpload = () => {
@@ -124,6 +128,23 @@ export function ImageUploadModal({
           <p>• Recomendado: proporção 16:9 ou 2:1</p>
         </div>
       </div>
+
+      {/* Confirm Delete Modal */}
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleConfirmDelete}
+        title="Remover Imagem"
+        message={
+          <>
+            <p>Tem certeza que deseja remover a imagem atual da campanha?</p>
+            <p className="mt-2 text-sm text-gray-600">Esta ação não pode ser desfeita.</p>
+          </>
+        }
+        confirmText="Remover"
+        cancelText="Cancelar"
+        variant="danger"
+      />
     </Modal>
   );
 }

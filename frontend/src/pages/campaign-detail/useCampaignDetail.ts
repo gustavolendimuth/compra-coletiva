@@ -532,9 +532,7 @@ export function useCampaignDetail() {
   };
 
   const handleDeleteProduct = (productId: string) => {
-    if (window.confirm("Tem certeza que deseja remover este produto?")) {
-      deleteProductMutation.mutate(productId);
-    }
+    deleteProductMutation.mutate(productId);
   };
 
   const handleCreateOrder = (e: React.FormEvent) => {
@@ -587,9 +585,7 @@ export function useCampaignDetail() {
   };
 
   const handleDeleteOrder = (orderId: string) => {
-    if (window.confirm("Tem certeza que deseja remover este pedido?")) {
-      deleteOrderMutation.mutate(orderId);
-    }
+    deleteOrderMutation.mutate(orderId);
   };
 
   const handleUpdateShipping = (e: React.FormEvent) => {

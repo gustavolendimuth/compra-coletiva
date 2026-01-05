@@ -425,8 +425,7 @@ describe("useCampaignDetail", () => {
       });
     });
 
-    it("should call handleDeleteProduct with confirmation", async () => {
-      global.confirm = vi.fn(() => true);
+    it("should call handleDeleteProduct", async () => {
       vi.mocked(productApi.delete).mockResolvedValue(undefined);
 
       const { result } = renderHook(() => useCampaignDetail(), { wrapper });
@@ -435,27 +434,12 @@ describe("useCampaignDetail", () => {
         result.current.handleDeleteProduct("product-1");
       });
 
-      expect(global.confirm).toHaveBeenCalled();
-
       // Wait for the async delete to be called
       await waitFor(() => {
         expect(productApi.delete).toHaveBeenCalled();
         const calls = vi.mocked(productApi.delete).mock.calls;
         expect(calls[0][0]).toBe("product-1");
       });
-    });
-
-    it("should not delete product when user cancels confirmation", () => {
-      global.confirm = vi.fn(() => false);
-
-      const { result } = renderHook(() => useCampaignDetail(), { wrapper });
-
-      act(() => {
-        result.current.handleDeleteProduct("product-1");
-      });
-
-      expect(global.confirm).toHaveBeenCalled();
-      expect(productApi.delete).not.toHaveBeenCalled();
     });
   });
 
