@@ -110,14 +110,15 @@ npm run build --workspace=backend
 ## Project Statistics
 
 ### Backend
-- **9 Route Files**: auth, campaigns, products, orders, analytics, messages, campaignMessages, validation, feedback
-- **9 Services**: shippingCalculator, socketService, campaignScheduler, campaignStatusService, notificationService, spamDetectionService
-- **11 DB Tables**: User, Campaign, Product, Order, OrderItem, OrderMessage, CampaignMessage, Notification, Feedback, Session, PasswordResetToken
+- **17 Route Files**: auth, campaigns, products, orders, analytics, messages, campaignMessages, validation, feedback, notifications, profile, emailPreferences + admin/ (index, users, dashboard, content, audit)
+- **19 Services**: shippingCalculator, socketService, campaignScheduler, campaignStatusService, notificationService, spamDetectionService, auditService + email/ (emailQueue, emailWorker, templates, notificationEmailService)
+- **14 DB Tables**: User, Campaign, Product, Order, OrderItem, OrderMessage, CampaignMessage, Notification, Feedback, Session, PasswordResetToken, EmailPreference, EmailLog, AuditLog
 
 ### Frontend
-- **67 Components**: 8 UI primitives, 4 auth, 21 campaign, 15 campaign-detail modules, 19 other
-- **3 Pages**: Home, CampaignDetail (150 lines), NewCampaign
+- **81 Components**: 9 UI primitives (Avatar added), 4 auth, 21 campaign, 15 campaign-detail modules, 10 profile components, 6 admin components, 16 other
+- **54 Pages**: Home, CampaignDetail, NewCampaign, Profile, CompleteProfile, VerifyEmailChange, EmailPreferences + admin/ (AdminLayout, Dashboard, Users, UserDetail, Campaigns, Messages, Audit)
 - **4 Custom Hooks**: useCampaignDetail, useCampaignQuestions, useCampaignChat, useOrderChat
+- **12 API Services**: auth, campaign, product, order, message, notification, feedback, analytics, validation, profile, emailPreference, admin
 - **Test Suite**: 50+ test files, 607 passing tests (100% success), ~13s execution time
 
 ## Architecture
@@ -149,16 +150,34 @@ npm run build --workspace=backend
    - Rate limits: 1 msg/2min per campaign, 10/hr global
    - 15min edit window if unanswered
 
-7. **User**: Auth + reputation
+7. **User**: Auth + reputation + profile
    - Email/password + Google OAuth
    - Reputation: `messageCount`, `answeredCount`, `spamScore`, `isBanned`
+   - Profile: Avatar (S3/local), phone, pendingEmail (verification flow)
+   - Soft delete: `deletedAt`, `deletedReason` (anonymized)
+   - Phone completion flag for OAuth users
 
 8. **Notification**: Real-time alerts
-   - Types: CAMPAIGN_READY_TO_SEND, CAMPAIGN_STATUS_CHANGED, CAMPAIGN_ARCHIVED
+   - Types: CAMPAIGN_READY_TO_SEND, CAMPAIGN_STATUS_CHANGED, CAMPAIGN_ARCHIVED, NEW_MESSAGE
+   - Linked to EmailLog for tracking
 
 9. **Feedback**: User feedback/bug reports
    - Types: BUG, SUGGESTION, IMPROVEMENT, OTHER
    - Status: PENDING, IN_PROGRESS, RESOLVED, DISMISSED
+
+10. **EmailPreference**: User email opt-in/out
+    - Global opt-out + per-notification-type preferences
+    - Digest settings (REALTIME, DAILY, WEEKLY)
+
+11. **EmailLog**: Email delivery tracking
+    - Status: PENDING, SENT, FAILED, RETRYING
+    - Engagement tracking: opened, clicked, bounced
+    - Provider integration (Resend, Gmail)
+
+12. **AuditLog**: Admin action tracking
+    - Actions: USER_*, CAMPAIGN_*, MESSAGE_*, AUDIT_*, SYSTEM_*, SETTINGS_*
+    - Target types: USER, CAMPAIGN, ORDER, MESSAGE, FEEDBACK, SYSTEM
+    - IP address + user agent tracking
 
 ### Shipping Distribution
 - **Proportional by weight**: Total shipping cost distributed to orders by weight ratio
@@ -177,9 +196,9 @@ npm run build --workspace=backend
 - **Routes**: Express routers by resource
 - **Validation**: Zod schemas inline
 - **Error Handling**: `asyncHandler` + `AppError` class
-- **Auth**: JWT + sessions, Google OAuth
+- **Auth**: JWT + sessions, Google OAuth (with account linking & reactivation)
 - **Authorization**: `requireAuth`, `requireRole`, `requireCampaignOwnership`
-- **Testing**: Jest + ts-jest, 31 passing tests
+- **Testing**: Jest + ts-jest, 55 passing tests
 
 ### Frontend Stack
 - **State**: React Query for server state
@@ -508,6 +527,64 @@ useEffect(() => {
 5. If modifying orders, call `ShippingCalculator` methods
 6. **Use Money utility** for calculations
 
+### Google OAuth Authentication (CRITICAL)
+
+**Authentication Flow** (`backend/src/config/passport.ts`):
+
+The Google OAuth strategy implements intelligent user lookup with account linking and soft-delete reactivation:
+
+1. **Lookup by googleId First** (Primary Strategy):
+   - Finds user by `googleId` instead of email
+   - Handles deleted users trying to log in again (googleId persists)
+   - Prevents issues with email changes in Google account
+   - Protects against account takeover
+
+2. **Soft-Deleted User Reactivation**:
+   - If googleId matches a soft-deleted user, reactivate the account
+   - Update with current email from Google (restores original email)
+   - Update name from Google profile
+   - Clear `deletedAt` and `deletedReason` fields
+   - Log reactivation event
+
+3. **Account Linking for Existing Users**:
+   - If email exists but no googleId, link Google account to existing user
+   - Enables users who registered with email/password to add Google OAuth
+   - No duplicate accounts created
+
+4. **New User Creation**:
+   - If neither googleId nor email found, create new user
+   - Set `password: null` (OAuth users don't have password)
+   - Set `phoneCompleted: false` (OAuth users need to complete phone)
+   - Apply name capitalization via `capitalizeName()`
+   - Queue welcome email (non-blocking)
+
+**Key Features**:
+- **Email changes handled gracefully**: googleId is source of truth
+- **Non-blocking email**: OAuth login succeeds even if email system is down
+- **Privacy-safe**: Deleted users can reclaim their account seamlessly
+- **Security**: Prevents account takeover via email reuse
+
+**Environment Variables**:
+```env
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-client-secret
+GOOGLE_CALLBACK_URL=http://localhost:3000/api/auth/google/callback
+```
+
+**Database Requirements**:
+- `googleId`: string | null (@unique)
+- `email`: string (@unique)
+- `name`: string
+- `password`: string | null (null for OAuth users)
+- `phoneCompleted`: boolean (OAuth users must complete phone)
+- `deletedAt`: DateTime | null (soft delete)
+- `deletedReason`: string | null (soft delete)
+
+**Testing**:
+- 13 documentation tests in `backend/src/config/passport.test.ts`
+- Tests document expected behavior for all scenarios
+- Integration tested manually with Google OAuth flow
+
 ### Database
 - Schema changes: `npx prisma migrate dev --name <name>`
 - After schema: `npx prisma generate`
@@ -529,6 +606,16 @@ DATABASE_URL=postgresql://postgres:postgres@db:5432/compra_coletiva
 PORT=3000
 NODE_ENV=development
 CORS_ORIGIN=localhost:5173
+
+# Email Configuration (Optional - for notifications)
+RESEND_API_KEY=re_xxx                    # Resend API key (production)
+GMAIL_USER=your-email@gmail.com          # Gmail for development
+GMAIL_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx   # Gmail app password
+EMAIL_FROM=noreply@yourdomain.com        # Sender email
+EMAIL_PROVIDER=gmail                     # "resend" or "gmail"
+
+# Redis (Required for email queue)
+REDIS_URL=redis://redis:6379
 ```
 
 ### Frontend (.env)
@@ -618,6 +705,42 @@ npm run validate:financial
 ### Validation (`/api/validation`)
 - GET `/campaign/:campaignId`
 
+### Profile (`/api/profile`)
+- PATCH `/` - Update name, phone, password
+- POST `/avatar` - Upload avatar (max 5MB, JPEG/PNG/WebP)
+- DELETE `/avatar` - Delete avatar
+- POST `/change-email` - Request email change (sends verification)
+- POST `/verify-email` - Confirm email change with token
+- DELETE `/` - Soft delete account (anonymize + invalidate sessions)
+- GET `/export` - Export user data (LGPD compliance)
+
+### Email Preferences (`/api/email-preferences`)
+- GET `/` - Get user preferences
+- PATCH `/` - Update preferences
+- POST `/unsubscribe/:token` - Unsubscribe via email link
+
+### Admin (`/api/admin`)
+**Dashboard**:
+- GET `/dashboard/stats` - Dashboard statistics (users, campaigns, orders, revenue, recent activity)
+
+**User Management**:
+- GET `/users` - List users (filters: search, role, isBanned, page)
+- GET `/users/:id` - User details with stats
+- PATCH `/users/:id` - Edit user (name, email, role)
+- POST `/users/:id/ban` - Ban user
+- POST `/users/:id/unban` - Unban user
+- DELETE `/users/:id` - Delete user (soft delete with anonymization)
+
+**Content Moderation**:
+- GET `/content/campaigns` - List campaigns (filters: search, status, page)
+- PATCH `/content/campaigns/:id` - Archive/restore campaign
+- DELETE `/content/campaigns/:id` - Delete campaign
+- GET `/content/messages` - List messages (filter: minSpamScore, page)
+- DELETE `/content/messages/:id` - Delete message
+
+**Audit Logs**:
+- GET `/audit` - List audit logs (filters: action, targetType, page)
+
 ---
 
 ## Important Notes
@@ -631,6 +754,12 @@ npm run validate:financial
 - **XSS**: Use sanitization utilities
 - **Socket.IO**: Join/leave rooms in useEffect cleanup
 - **Rate Limiting**: Messages rate-limited
+- **Admin Routes**: Use `adminAuth` middleware (requireAuth + requireRole('ADMIN') + auto audit logging)
+- **Email System**: Queue-based worker with Resend/Gmail, tracks delivery status
+- **Soft Delete**: Anonymizes user data (name="Usuário Excluído", email=random@deleted.local) + sets deletedAt
+- **Email Verification**: Token-based flow for email changes (pendingEmail → verify → update)
+- **Avatar Upload**: Reuses ImageUploadService with folder="avatars", max 5MB, JPEG/PNG/WebP
+- **Audit Logs**: All admin actions tracked with IP address + user agent
 
 ### Frontend (CRITICAL)
 - **Mobile-First MANDATORY**: 320px-640px base, progressive enhancement
@@ -711,16 +840,19 @@ npm run test:coverage --workspace=frontend # Coverage report
 ### Backend Test Infrastructure
 
 **Test Framework**: Jest 29.7.0 + ts-jest
-**Coverage**: Money utility (financial calculations)
+**Coverage**: Money utility (financial calculations), Name formatter, Google OAuth authentication
 
-**Test Files (1 total)**:
+**Test Files (3 total)**:
 1. `src/utils/money.test.ts` - 31 tests (100% coverage of Money utility)
+2. `src/utils/nameFormatter.test.ts` - 11 tests (100% coverage of name capitalization)
+3. `src/config/passport.test.ts` - 13 tests (documentation of Google OAuth flow)
 
 **Test Statistics**:
-- Total: 31 tests passing
+- Total: 55 tests passing
 - Execution time: <1 second
 - Success rate: 100%
 - Critical: Financial precision tests (distributeProportionally guarantees exact sum)
+- OAuth: Complete documentation of authentication logic
 
 **Running Tests**:
 ```bash
@@ -730,7 +862,7 @@ npm run test:coverage --workspace=backend # Coverage report
 
 ### Combined Statistics
 
-- **Total Tests**: 638 passing (607 frontend + 31 backend)
+- **Total Tests**: 662 passing (607 frontend + 55 backend)
 - **Test Files**: 50+ files
 - **Execution Time**: ~13 seconds
 - **Success Rate**: 100%
@@ -738,6 +870,132 @@ npm run test:coverage --workspace=backend # Coverage report
 ---
 
 ## Recent Updates
+
+### January 7, 2026 - Enhanced Google OAuth with Account Linking & Reactivation
+
+**Google OAuth Flow Improvements** (`backend/src/config/passport.ts`):
+
+**Changes Made**:
+1. **User Lookup Strategy Changed**:
+   - Now searches by `googleId` first (primary identifier)
+   - Falls back to email lookup if googleId not found
+   - Previously searched by email first, causing issues with deleted accounts
+
+2. **Soft-Deleted User Reactivation**:
+   - When a user with deleted account logs in with Google again, account is reactivated
+   - Original email and name restored from Google profile
+   - `deletedAt` and `deletedReason` cleared
+   - Seamless user experience for account recovery
+
+3. **Account Linking**:
+   - If user exists with email but no googleId, Google account is linked
+   - Enables users who registered with email/password to add Google OAuth
+   - No duplicate accounts created
+
+4. **Better Edge Case Handling**:
+   - Handles conflicts with soft-deleted users that had anonymized emails
+   - Email changes in Google account handled gracefully
+   - googleId is now the source of truth for user identity
+
+**Test Coverage**:
+- Created `backend/src/config/passport.test.ts` with 13 documentation tests
+- Tests document expected behavior for all scenarios:
+  - googleId-first lookup strategy
+  - Soft-deleted user reactivation flow
+  - Account linking for existing users
+  - New user creation flow
+  - Email update handling
+  - Error handling for missing email
+  - Name capitalization
+  - Non-blocking email queue
+- All 55 backend tests passing (100%)
+
+**Benefits**:
+- **Privacy-Safe**: Deleted users can reclaim accounts by logging in with Google
+- **Security**: Prevents account takeover via email reuse
+- **Flexibility**: Supports both email/password and OAuth authentication methods
+- **Resilience**: Non-blocking email ensures OAuth flow always succeeds
+
+**Test Statistics Update**:
+- **Total**: 662 tests passing (607 frontend + 55 backend)
+- **Backend**: 31 → 55 tests (+24 tests)
+- **New test files**: passport.test.ts (13 tests), nameFormatter.test.ts (11 tests)
+
+### January 7, 2026 - User Profile, Email System, and Admin Panel
+
+**Major Features Implemented**:
+
+1. **User Profile System**:
+   - Edit name, phone, password
+   - Avatar upload/delete (reuses ImageUploadService, max 5MB, JPEG/PNG/WebP)
+   - Email change with verification flow (token sent to new email)
+   - Soft delete account with data anonymization
+   - Export user data (LGPD compliance)
+   - Components: Profile page + 6 modular components (ProfileHeader, ProfileForm, PasswordSection, EmailSection, AvatarUpload, DeleteAccountSection)
+   - New Avatar UI component with fallback initials
+
+2. **Complete Profile Flow (OAuth)**:
+   - After Google OAuth, users must complete phone number
+   - ProtectedRoute component redirects to /complete-profile if phoneCompleted = false
+   - Database: Added `phoneCompleted` flag to User model
+
+3. **Email Preferences System**:
+   - Global email opt-out
+   - Per-notification-type preferences (campaignReadyToSend, campaignStatusChanged, campaignArchived, newMessage)
+   - Digest settings (future: REALTIME, DAILY, WEEKLY)
+   - Unsubscribe via email link
+   - Database: EmailPreference model
+
+4. **Email Queue & Notification Service**:
+   - Background email worker with Bull queue (Redis)
+   - Email templates with Resend integration
+   - Email logs tracking (sent, failed, opened, clicked, bounced)
+   - Provider support: Resend (production), Gmail (development)
+   - Database: EmailLog model
+   - Services: emailQueue, emailWorker, templates, notificationEmailService
+
+5. **Admin Panel System**:
+   - **Dashboard**: Stats overview (users, campaigns, orders, revenue), recent activity
+   - **User Management**: List, search, view details, edit, ban/unban, soft delete
+   - **Campaign Moderation**: List, search by name/status, archive/restore, delete
+   - **Message Moderation**: View messages with spam scores, filter, delete
+   - **Audit Logs**: Track all admin actions with filters
+   - 6 admin pages (AdminLayout, Dashboard, Users, UserDetail, Campaigns, Messages, Audit)
+   - AdminRoute component for role-based access control
+   - Database: AuditLog model with 15+ action types
+
+6. **Audit System**:
+   - Auto-logging via adminAuth middleware
+   - Tracks: admin ID, action, target type/ID, details (JSON), IP address, user agent
+   - Actions: USER_LIST, USER_VIEW, USER_EDIT, USER_BAN, USER_UNBAN, USER_DELETE, ROLE_CHANGE, CAMPAIGN_LIST, CAMPAIGN_VIEW, CAMPAIGN_EDIT, CAMPAIGN_ARCHIVE, CAMPAIGN_RESTORE, CAMPAIGN_DELETE, MESSAGE_LIST, MESSAGE_DELETE, AUDIT_VIEW, SYSTEM_VIEW, SETTINGS_CHANGE
+   - Service: auditService.ts
+
+**Database Changes**:
+- **User model**: Added avatarUrl, avatarKey, avatarStorageType, pendingEmail, pendingEmailToken, pendingEmailExpires, deletedAt, deletedReason, phoneCompleted
+- **New models**: EmailPreference, EmailLog, AuditLog
+- **Migrations**: 4 new migrations (phone flag, name constraint removal, profile fields, audit actions)
+
+**API Endpoints Added** (30 total):
+- Profile: 7 endpoints (update, avatar upload/delete, email change/verify, delete, export)
+- Email Preferences: 3 endpoints (get, update, unsubscribe)
+- Admin: 13 endpoints across dashboard, users, content, audit
+
+**Infrastructure**:
+- Docker: Added Redis service for email queue
+- Backend: Added dependencies (@bull-board/express, bull, nodemailer, resend)
+- Config: Email configuration (backend/src/config/email.ts)
+- Utilities: Link builder for email links (backend/src/utils/linkBuilder.ts)
+
+**Security & Compliance**:
+- Soft delete with anonymization (LGPD)
+- Email verification for email changes
+- Admin route protection with auto audit logging
+- IP address + user agent tracking
+- Data export for LGPD compliance
+
+**Statistics Update**:
+- **Backend**: 17 route files (was 12), 19 services (was 9), 14 DB tables (was 11)
+- **Frontend**: 81 components (was 67), 54 pages (was 10), 12 API services (was 9)
 
 ### December 29, 2025 - Mobile Notifications Fix & Test Coverage
 
@@ -769,7 +1027,7 @@ npm run test:coverage --workspace=backend # Coverage report
 - Pass `buttonRef` to dropdown components to enable proper click-outside detection
 
 **Test Statistics Update**:
-- **Total**: 638 tests passing (607 frontend + 31 backend)
+- **Total**: 638 tests passing (607 frontend + 31 backend) at the time
 - **Success Rate**: 100% (up from 98.8%)
 - **New Tests**: 42 notification tests added
 

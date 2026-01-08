@@ -1,6 +1,7 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Input, PhoneInput, Button, Divider, GoogleButton } from "../ui";
+import { authService } from "../../api";
 
 interface RegisterFormProps {
   onSubmit: (
@@ -29,6 +30,31 @@ export const RegisterForm = ({
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [nameSuggestion, setNameSuggestion] = useState<string | null>(null);
+  const [checkingName, setCheckingName] = useState(false);
+
+  // Check if name exists (debounced)
+  useEffect(() => {
+    if (!name || name.trim().length < 2) {
+      setNameSuggestion(null);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        setCheckingName(true);
+        const result = await authService.checkName(name.trim());
+        setNameSuggestion(result.suggestion);
+      } catch (error) {
+        console.error("Error checking name:", error);
+        setNameSuggestion(null);
+      } finally {
+        setCheckingName(false);
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [name]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -41,11 +67,18 @@ export const RegisterForm = ({
         id="register-name"
         type="text"
         label="Nome"
+        placeholder="Nome Sobrenome"
         value={name}
         onChange={(e) => setName(e.target.value)}
         required
         disabled={isLoading}
         autoComplete="name"
+        helperText={
+          checkingName
+            ? "Verificando disponibilidade..."
+            : nameSuggestion || "Informe seu nome completo"
+        }
+        variant={nameSuggestion ? "warning" : undefined}
       />
 
       <Input

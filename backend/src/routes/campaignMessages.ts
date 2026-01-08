@@ -194,7 +194,8 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
           campaignSlug: campaign.slug,
           campaignName: campaign.name,
           messageId: message.id,
-          isQuestion: true
+          isQuestion: true,
+          senderName: message.sender.name
         }
       );
     } catch (error) {

@@ -112,7 +112,7 @@ export function CampaignHeader({
             {canEditCampaign && (
               <button
                 onClick={onImageUpload}
-                className="absolute -top-1 -right-1 p-1 bg-white rounded-full shadow-md hover:bg-gray-50 transition-colors border border-gray-200"
+                className="absolute top-1 right-1 p-1 bg-white rounded-full shadow-md hover:bg-gray-50 transition-colors border border-gray-200"
                 title="Alterar imagem"
               >
                 <Edit className="w-3 h-3 text-gray-700" />

@@ -34,6 +34,7 @@ export default function AuthCallback() {
       const userName = searchParams.get('userName');
       const userEmail = searchParams.get('userEmail');
       const userRole = searchParams.get('userRole');
+      const phoneCompleted = searchParams.get('phoneCompleted');
 
       if (!accessToken || !refreshToken || !userId || !userName || !userEmail || !userRole) {
         toast.error('Dados de autenticação incompletos');
@@ -47,10 +48,22 @@ export default function AuthCallback() {
         name: decodeURIComponent(userName),
         email: decodeURIComponent(userEmail),
         role: userRole as 'ADMIN' | 'CAMPAIGN_CREATOR' | 'CUSTOMER',
+        phoneCompleted: phoneCompleted === 'true',
       });
 
       // Reconnect socket with new token
       reconnectSocket();
+
+      // Check if user needs to complete phone registration
+      if (phoneCompleted === 'false') {
+        console.log('[AuthCallback] Usuário precisa completar telefone, redirecionando...');
+        if (!hasShownToast.current) {
+          toast.success(`Bem-vindo, ${decodeURIComponent(userName)}!`);
+          hasShownToast.current = true;
+        }
+        navigate('/complete-profile', { replace: true });
+        return;
+      }
 
       // Get return URL or default to campaigns
       const returnUrl = authStorage.getReturnUrl() || '/campaigns';

@@ -1,6 +1,7 @@
 import { NotificationType } from '@prisma/client';
 import { prisma } from '../index';
 import { emitNotificationCreated } from './socketService';
+import { queueNotificationEmail } from './email/emailQueue';
 
 export interface NotificationMetadata {
   campaignId?: string;
@@ -35,6 +36,30 @@ export class NotificationService {
 
       // Emitir evento socket para o usuário
       emitNotificationCreated(userId, notification);
+
+      // Enfileirar email (assíncrono, não bloqueia)
+      try {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { email: true, name: true },
+        });
+
+        if (user) {
+          await queueNotificationEmail(
+            notification.id,
+            type,
+            userId,
+            user.name,
+            user.email,
+            title,
+            message,
+            metadata
+          );
+        }
+      } catch (emailError) {
+        // Log erro mas não falha a requisição
+        console.error('[NotificationService] Failed to queue email:', emailError);
+      }
 
       return notification;
     } catch (error) {

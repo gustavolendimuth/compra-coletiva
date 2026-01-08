@@ -272,7 +272,11 @@ backend:
 
 **Login/Registro:**
 - Login com email/senha
-- Google OAuth 2.0
+- Google OAuth 2.0 com recursos avançados:
+  - Account linking (vincular Google a conta existente)
+  - Soft-delete reactivation (recuperar conta deletada)
+  - Email change handling (googleId como identificador primário)
+  - Non-blocking email queue (OAuth sempre sucede)
 - Sistema de sessões com JWT
 - Proteção de rotas (middleware)
 - Suporte a usuários legados (virtual users)
@@ -281,6 +285,12 @@ backend:
 - Token de recuperação via email
 - Validação de token com expiração
 - Interface de redefinição de senha
+
+**Google OAuth Flow Details:**
+- Lookup por googleId primeiro (evita problemas com email)
+- Reativa contas soft-deleted automaticamente
+- Vincula Google a contas email/password existentes
+- Testa com 13 testes de documentação (passport.test.ts)
 
 ### Sistema de Feedback (NEW - Dec 2025)
 
@@ -406,6 +416,188 @@ Status disponíveis: `PENDING`, `IN_PROGRESS`, `RESOLVED`, `DISMISSED`
 2. Pelo menos 1 pedido na campanha
 3. PELO MENOS UM pedido não pago (`isPaid = false`)
 
+### Sistema de Perfil de Usuário (NEW - Jan 2026)
+
+**Funcionalidades:**
+- Edição de nome, telefone e senha
+- Upload de avatar (max 5MB, JPEG/PNG/WebP, usa ImageUploadService)
+- Troca de email com verificação:
+  - Token enviado para NOVO email
+  - Usuário confirma via link
+  - Email antigo é notificado
+  - Token expira em 24h
+- Soft delete de conta:
+  - Anonimização de dados (nome="Usuário Excluído", email=random@deleted.local)
+  - Define `deletedAt` timestamp
+  - Invalida todas as sessões
+  - Mantém pedidos para integridade
+- Exportação de dados (LGPD compliance)
+
+**Rotas:**
+```bash
+# Atualizar perfil
+PATCH /api/profile
+{
+  "name": "Novo Nome",
+  "phone": "11987654321",
+  "password": "novasenha123"
+}
+
+# Upload de avatar
+POST /api/profile/avatar
+(multipart/form-data com arquivo)
+
+# Deletar avatar
+DELETE /api/profile/avatar
+
+# Solicitar troca de email
+POST /api/profile/change-email
+{
+  "newEmail": "novoemail@exemplo.com"
+}
+
+# Confirmar troca de email
+POST /api/profile/verify-email
+{
+  "token": "token-recebido-no-email"
+}
+
+# Excluir conta
+DELETE /api/profile
+{
+  "reason": "Motivo opcional"
+}
+
+# Exportar dados
+GET /api/profile/export
+```
+
+**Componentes:**
+- `frontend/src/pages/Profile.tsx` - Página principal
+- `frontend/src/pages/profile/` - Sub-componentes (ProfileHeader, ProfileForm, PasswordSection, EmailSection, AvatarUpload, DeleteAccountSection)
+- `frontend/src/components/ui/Avatar.tsx` - Avatar com fallback para iniciais
+- `frontend/src/pages/CompleteProfile.tsx` - Completar perfil após OAuth
+- `frontend/src/pages/VerifyEmailChange.tsx` - Verificar troca de email
+
+**Fluxo OAuth Completion:**
+- Usuários OAuth (Google) são redirecionados para `/complete-profile`
+- Devem informar telefone obrigatoriamente
+- `phoneCompleted` flag controla acesso via `ProtectedRoute`
+
+### Sistema de Preferências de Email (NEW - Jan 2026)
+
+**Funcionalidades:**
+- Opt-out global de emails
+- Preferências por tipo de notificação:
+  - Campaign Ready to Send
+  - Campaign Status Changed
+  - Campaign Archived
+  - New Message
+- Configurações de digest (REALTIME, DAILY, WEEKLY)
+- Link de unsubscribe em todos os emails
+- Sistema de fila com Bull + Redis
+- Tracking de entregas (sent, failed, opened, clicked, bounced)
+- Integração com Resend e Gmail
+
+**Rotas:**
+```bash
+# Obter preferências
+GET /api/email-preferences
+
+# Atualizar preferências
+PATCH /api/email-preferences
+{
+  "emailEnabled": true,
+  "campaignReadyToSend": true,
+  "campaignStatusChanged": false,
+  "digestEnabled": true,
+  "digestFrequency": "DAILY"
+}
+
+# Unsubscribe via email link
+POST /api/email-preferences/unsubscribe/:token
+```
+
+**Arquitetura de Email:**
+- `backend/src/services/email/emailQueue.ts` - Bull queue para envios assíncronos
+- `backend/src/services/email/emailWorker.ts` - Worker que processa fila
+- `backend/src/services/email/templates/` - Templates de email
+- `backend/src/services/email/notificationEmailService.ts` - Serviço de envio
+- `backend/src/config/email.ts` - Configuração (Resend/Gmail)
+
+**Tabelas de Banco:**
+- `EmailPreference` - Preferências do usuário
+- `EmailLog` - Log de emails enviados com status e tracking
+
+### Painel Administrativo (NEW - Jan 2026)
+
+**Funcionalidades:**
+- Dashboard com estatísticas (usuários, campanhas, pedidos, receita)
+- Gestão de usuários:
+  - Listar com filtros (search, role, isBanned)
+  - Ver detalhes (avatar, stats, campanhas, pedidos)
+  - Editar (nome, email, role)
+  - Banir/desbanir
+  - Deletar (soft delete com anonimização)
+- Moderação de campanhas:
+  - Listar com filtros (search, status)
+  - Arquivar/restaurar
+  - Deletar
+- Moderação de mensagens:
+  - Filtrar por spam score
+  - Visualizar detalhes de spam
+  - Deletar
+- Logs de auditoria:
+  - Rastreamento completo de ações admin
+  - Filtros por ação, tipo, data
+  - IP address + user agent tracking
+
+**Rotas Admin:**
+```bash
+# Dashboard
+GET /api/admin/dashboard/stats
+
+# Usuários
+GET /api/admin/users?page=1&search=nome&role=ADMIN
+GET /api/admin/users/:id
+PATCH /api/admin/users/:id
+POST /api/admin/users/:id/ban
+POST /api/admin/users/:id/unban
+DELETE /api/admin/users/:id
+
+# Campanhas
+GET /api/admin/content/campaigns?page=1&search=nome&status=ACTIVE
+PATCH /api/admin/content/campaigns/:id
+DELETE /api/admin/content/campaigns/:id
+
+# Mensagens
+GET /api/admin/content/messages?page=1&minSpamScore=50
+DELETE /api/admin/content/messages/:id
+
+# Auditoria
+GET /api/admin/audit?page=1&action=USER_VIEW&targetType=USER
+```
+
+**Componentes:**
+- `frontend/src/pages/admin/AdminLayout.tsx` - Layout com sidebar
+- `frontend/src/pages/admin/Dashboard.tsx` - Dashboard de estatísticas
+- `frontend/src/pages/admin/Users.tsx` - Lista de usuários
+- `frontend/src/pages/admin/UserDetail.tsx` - Detalhes do usuário
+- `frontend/src/pages/admin/Campaigns.tsx` - Moderação de campanhas
+- `frontend/src/pages/admin/Messages.tsx` - Moderação de mensagens
+- `frontend/src/pages/admin/Audit.tsx` - Logs de auditoria
+- `frontend/src/components/AdminRoute.tsx` - Proteção de rota (role='ADMIN')
+
+**Middleware:**
+- `backend/src/middleware/adminMiddleware.ts` - Combina requireAuth + requireRole('ADMIN') + auto audit logging
+- Todas as ações admin são automaticamente logadas na tabela AuditLog
+
+**Tabelas de Banco:**
+- `AuditLog` - Registros de ações administrativas
+  - Campos: adminId, action, targetType, targetId, details (JSON), ipAddress, userAgent
+  - Ações: USER_*, CAMPAIGN_*, MESSAGE_*, AUDIT_*, SYSTEM_*, SETTINGS_*
+  - Targets: USER, CAMPAIGN, ORDER, MESSAGE, FEEDBACK, SYSTEM
+
 ### Segurança XSS (NEW - Dec 2025)
 
 **Sanitização de Conteúdo:**
@@ -485,13 +677,17 @@ const campaigns = [mockActiveCampaign, mockClosedCampaign];
 - Setup global em `backend/src/__tests__/setup.ts`
 
 **Cobertura Atual**:
-- 31 testes passando
-- 1 arquivo de teste
+- 55 testes passando
+- 3 arquivos de teste
 - Tempo de execução: <1 segundo
 - Money utility: 100% coverage
+- Name formatter: 100% coverage
+- Google OAuth: Complete documentation
 
-**Arquivo de Teste**:
+**Arquivos de Teste**:
 1. `src/utils/money.test.ts` - 31 testes (cálculos financeiros críticos)
+2. `src/utils/nameFormatter.test.ts` - 11 testes (capitalização de nomes)
+3. `src/config/passport.test.ts` - 13 testes (documentação do fluxo OAuth)
 
 **Comandos**:
 ```bash
@@ -501,7 +697,7 @@ npm run test:coverage --workspace=backend # Relatório de cobertura
 
 ### Estatísticas Totais
 
-- **638 testes passando** (607 frontend + 31 backend)
+- **662 testes passando** (607 frontend + 55 backend)
 - **50+ arquivos de teste**
 - **100% taxa de sucesso**
 - **~13 segundos** tempo total de execução
@@ -519,11 +715,13 @@ npm run test:coverage --workspace=backend # Relatório de cobertura
 - Configure ESLint + Prettier para code quality
 - ✅ ~~Adicione testes automatizados (Jest/Vitest)~~ - COMPLETO
 - ✅ ~~Configure CI/CD pipeline~~ - GitHub Actions configurado
+- ✅ ~~Interface web de admin para gerenciar feedbacks visualmente~~ - COMPLETO (Painel Admin)
+- ✅ ~~Email notifications para perguntas respondidas~~ - COMPLETO (Sistema de Email)
+- ✅ ~~Sistema de perfil de usuário~~ - COMPLETO (Profile + Avatar)
+- ✅ ~~Preferências de email~~ - COMPLETO (EmailPreferences)
 - Adicione pre-commit hooks (Husky)
-- **Expandir testes**: CampaignDetail, hooks, backend routes
-- **Interface web de admin** para gerenciar feedbacks visualmente
+- **Expandir testes**: Admin pages, profile pages, email system
 - **Pagination** para lista de mensagens/notificações
-- **Email notifications** para perguntas respondidas
 - **Push notifications** (web/mobile)
 - **E2E tests** com Playwright
 - **Visual regression testing**

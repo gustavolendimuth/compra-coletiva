@@ -20,6 +20,7 @@ export interface StoredUser {
   email: string;
   name: string;
   phone?: string;
+  phoneCompleted?: boolean;
   role: "ADMIN" | "CAMPAIGN_CREATOR" | "CUSTOMER";
   googleId?: string;
 }

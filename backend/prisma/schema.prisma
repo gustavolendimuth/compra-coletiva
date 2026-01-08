@@ -15,11 +15,26 @@ model User {
   password     String?  // Nullable para Google OAuth
   name         String   // Removed @unique - uniqueness enforced at app level for non-legacy users
   phone        String?  // Celular/WhatsApp para contato (formato: XX XXXXX-XXXX). Obrigatório para novos cadastros, opcional para legados/OAuth
+  phoneCompleted Boolean @default(false) // Flag para indicar se usuário OAuth completou o telefone
   role         UserRole @default(CUSTOMER)
   googleId     String?  @unique
   isLegacyUser Boolean  @default(false) // Flag para diferenciar usuários virtuais (legados) de usuários reais
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  // Avatar/Foto de Perfil
+  avatarUrl         String?           // URL do avatar (S3 ou local)
+  avatarKey         String?           // Chave do arquivo no storage
+  avatarStorageType ImageStorageType? // Tipo de armazenamento (S3/LOCAL)
+
+  // Troca de Email (verificação pendente)
+  pendingEmail        String?   // Novo email aguardando verificação
+  pendingEmailToken   String?   @unique // Token de verificação
+  pendingEmailExpires DateTime? // Expiração do token
+
+  // Soft Delete
+  deletedAt     DateTime? // Timestamp de exclusão (soft delete)
+  deletedReason String?   // Motivo opcional da exclusão
 
   // Campaign Chat - Reputation & Rate Limiting
   messageCount  Int      @default(0)      // Total de perguntas feitas
@@ -38,12 +53,16 @@ model User {
   passwordResetTokens      PasswordResetToken[]
   notifications            Notification[]
   feedback                 Feedback[]
+  emailPreference          EmailPreference?
+  emailLogs                EmailLog[]
+  adminAuditLogs           AuditLog[]            @relation("AdminAuditLogs")
 
   @@map("users")
   @@index([email])
   @@index([googleId])
   @@index([name])
   @@index([phone])
+  @@index([deletedAt])
 }
 
 model Notification {
@@ -56,6 +75,7 @@ model Notification {
   metadata  Json?
   read      Boolean          @default(false)
   createdAt DateTime         @default(now())
+  emailLogs EmailLog[]
 
   @@map("notifications")
   @@index([userId, read])
@@ -309,4 +329,136 @@ model CampaignMessage {
   @@index([campaignId, isPublic, createdAt])
   @@index([senderId, createdAt])
   @@index([campaignId, isPublic])
+}
+
+// ========== EMAIL SYSTEM ==========
+
+model EmailPreference {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Opt-out global
+  emailEnabled Boolean @default(true)
+
+  // Por tipo de notificação
+  campaignReadyToSend   Boolean @default(true)
+  campaignStatusChanged Boolean @default(true)
+  campaignArchived      Boolean @default(true)
+  newMessage            Boolean @default(true)
+
+  // Digest (futuro)
+  digestEnabled   Boolean @default(false)
+  digestFrequency String  @default("DAILY") // REALTIME, DAILY, WEEKLY
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("email_preferences")
+  @@index([userId])
+}
+
+model EmailLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Detalhes do email
+  to           String
+  subject      String
+  templateName String
+  provider     String  // "resend", "gmail"
+
+  // Notificação relacionada
+  notificationId String?
+  notification   Notification? @relation(fields: [notificationId], references: [id], onDelete: SetNull)
+
+  // Status
+  status     EmailStatus @default(PENDING)
+  sentAt     DateTime?
+  failedAt   DateTime?
+  error      String?    @db.Text
+
+  // Rastreamento
+  providerId String?  // ID externo do provedor
+  attempts   Int      @default(0)
+
+  // Engajamento (webhooks do provedor)
+  opened     Boolean  @default(false)
+  openedAt   DateTime?
+  clicked    Boolean  @default(false)
+  clickedAt  DateTime?
+  bounced    Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("email_logs")
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@index([notificationId])
+  @@index([providerId])
+}
+
+enum EmailStatus {
+  PENDING    // Na fila
+  SENT       // Enviado com sucesso
+  FAILED     // Falha permanente
+  RETRYING   // Falha temporária, tentando novamente
+}
+
+// ========== ADMIN AUDIT SYSTEM ==========
+
+model AuditLog {
+  id          String          @id @default(cuid())
+  adminId     String?
+  admin       User?           @relation("AdminAuditLogs", fields: [adminId], references: [id], onDelete: SetNull)
+  action      AuditAction
+  targetType  AuditTargetType
+  targetId    String?         // ID do recurso afetado
+  details     Json?           // Detalhes adicionais da ação
+  ipAddress   String?         // IP do admin
+  userAgent   String?         // User agent do browser
+  createdAt   DateTime        @default(now())
+
+  @@map("audit_logs")
+  @@index([adminId])
+  @@index([action])
+  @@index([targetType, targetId])
+  @@index([createdAt])
+}
+
+enum AuditAction {
+  // Ações de usuário
+  USER_LIST
+  USER_VIEW
+  USER_EDIT
+  USER_BAN
+  USER_UNBAN
+  USER_DELETE
+  ROLE_CHANGE
+  // Ações de campanha
+  CAMPAIGN_LIST
+  CAMPAIGN_VIEW
+  CAMPAIGN_EDIT
+  CAMPAIGN_ARCHIVE
+  CAMPAIGN_RESTORE
+  CAMPAIGN_DELETE
+  // Ações de mensagem
+  MESSAGE_LIST
+  MESSAGE_DELETE
+  // Ações de auditoria
+  AUDIT_VIEW
+  // Ações de sistema
+  SYSTEM_VIEW
+  SETTINGS_CHANGE
+}
+
+enum AuditTargetType {
+  USER
+  CAMPAIGN
+  ORDER
+  MESSAGE
+  FEEDBACK
+  SYSTEM
 }

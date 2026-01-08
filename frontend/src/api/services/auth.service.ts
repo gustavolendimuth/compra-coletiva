@@ -3,13 +3,14 @@
  * Handles user registration, login, logout, and token management
  */
 
-import { authClient } from "../client";
+import { authClient, apiClient } from "../client";
 import type {
   RegisterRequest,
   LoginRequest,
   AuthResponse,
   RefreshResponse,
   StoredUser,
+  CompletePhoneRequest,
 } from "../types";
 
 export const authService = {
@@ -68,4 +69,26 @@ export const authService = {
         headers: { Authorization: `Bearer ${accessToken}` },
       })
       .then((res) => res.data.user),
+
+  /**
+   * Complete phone registration for OAuth users
+   * @param data - Phone number data
+   * @returns Updated user data
+   */
+  completePhone: (data: CompletePhoneRequest) =>
+    apiClient
+      .patch<{ user: StoredUser }>("/auth/complete-phone", data)
+      .then((res) => res.data.user),
+
+  /**
+   * Check if a name already exists in the database
+   * @param name - Name to check
+   * @returns Information about name availability
+   */
+  checkName: (name: string) =>
+    authClient
+      .get<{ exists: boolean; count: number; suggestion: string | null }>(
+        `/auth/check-name?name=${encodeURIComponent(name)}`
+      )
+      .then((res) => res.data),
 };

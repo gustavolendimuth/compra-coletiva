@@ -17,10 +17,29 @@ Sistema web profissional para gerenciamento de compras coletivas, desenvolvido c
 
 ### Authentication & Users
 - **Autenticação**: Sistema completo de login com Google OAuth e email/senha
+- **Google OAuth Avançado**: Account linking, soft-delete reactivation, email change handling
 - **Usuários Legados**: Suporte para pedidos históricos pré-autenticação
 - **Sessões Seguras**: JWT-based authentication com refresh tokens
+- **Perfil de Usuário**: Edição de dados pessoais, avatar, telefone, senha
+- **Troca de Email**: Fluxo de verificação com token enviado para novo email
+- **Exclusão de Conta**: Soft delete com anonimização de dados (LGPD)
+- **Exportação de Dados**: Conformidade com LGPD
 
-### Communication Systems (NEW)
+### User Preferences & Notifications (NEW)
+- **Preferências de Email**: Controle global e por tipo de notificação
+- **Email Digest**: Opção de receber resumos diários/semanais (futuro)
+- **Unsubscribe**: Link para cancelar inscrição diretamente nos emails
+- **Notificações por Email**: Sistema de fila com Resend/Gmail, tracking de entregas
+
+### Admin Panel (NEW)
+- **Dashboard Administrativo**: Estatísticas de usuários, campanhas, pedidos, receita
+- **Gestão de Usuários**: Listar, buscar, editar, banir/desbanir, deletar
+- **Moderação de Campanhas**: Listar, arquivar/restaurar, deletar
+- **Moderação de Mensagens**: Visualizar spam scores, filtrar, deletar
+- **Logs de Auditoria**: Rastreamento completo de ações administrativas
+- **Controle de Acesso**: Apenas usuários com role ADMIN
+
+### Communication Systems
 - **Chat de Pedidos**: Mensagens privadas entre cliente e criador da campanha
 - **Q&A Público de Campanhas**: Sistema de perguntas e respostas públicas com:
   - Moderação de spam com pontuação inteligente (8 fatores)
@@ -54,11 +73,14 @@ Sistema web profissional para gerenciamento de compras coletivas, desenvolvido c
 - **Express**: Framework web minimalista e robusto
 - **Prisma ORM**: ORM moderno com type-safety
 - **PostgreSQL**: Banco de dados relacional
+- **Redis**: Cache e fila de jobs (Bull)
 - **Socket.IO**: Real-time bidirectional communication
+- **Bull**: Sistema de fila para emails
+- **Resend** + **Nodemailer**: Envio de emails transacionais
 - **Zod**: Validação de schemas
-- **Passport.js**: Autenticação (Local + Google OAuth)
+- **Passport.js**: Autenticação (Local + Google OAuth com account linking)
 - **JWT**: JSON Web Tokens para sessões
-- **Jest** + **ts-jest**: Testing framework (31 tests, 100% success)
+- **Jest** + **ts-jest**: Testing framework (55 tests, 100% success)
 
 ### Frontend
 - **React 18** + **TypeScript**: Biblioteca UI com tipos
@@ -127,6 +149,7 @@ docker-compose up
 
 Isso irá iniciar:
 - PostgreSQL na porta `5432`
+- Redis na porta `6379` (fila de emails)
 - Backend na porta `3000`
 - Frontend na porta `5173`
 
@@ -206,6 +229,42 @@ npx prisma studio
 
 ### Validação (`/api/validation`)
 - `GET /campaign/:campaignId` - Validar integridade financeira
+
+### Perfil (`/api/profile`) - NEW
+- `PATCH /` - Atualizar nome, telefone, senha
+- `POST /avatar` - Upload de avatar (max 5MB, JPEG/PNG/WebP)
+- `DELETE /avatar` - Deletar avatar
+- `POST /change-email` - Solicitar troca de email (envia verificação)
+- `POST /verify-email` - Confirmar troca de email com token
+- `DELETE /` - Excluir conta (soft delete com anonimização)
+- `GET /export` - Exportar dados do usuário (LGPD)
+
+### Preferências de Email (`/api/email-preferences`) - NEW
+- `GET /` - Obter preferências do usuário
+- `PATCH /` - Atualizar preferências
+- `POST /unsubscribe/:token` - Cancelar inscrição via email
+
+### Admin (`/api/admin`) - NEW (apenas ADMIN role)
+**Dashboard**:
+- `GET /dashboard/stats` - Estatísticas (usuários, campanhas, pedidos, receita)
+
+**Gestão de Usuários**:
+- `GET /users` - Listar usuários (filtros: search, role, isBanned, page)
+- `GET /users/:id` - Detalhes do usuário com estatísticas
+- `PATCH /users/:id` - Editar usuário (nome, email, role)
+- `POST /users/:id/ban` - Banir usuário
+- `POST /users/:id/unban` - Desbanir usuário
+- `DELETE /users/:id` - Deletar usuário (soft delete com anonimização)
+
+**Moderação de Conteúdo**:
+- `GET /content/campaigns` - Listar campanhas (filtros: search, status, page)
+- `PATCH /content/campaigns/:id` - Arquivar/restaurar campanha
+- `DELETE /content/campaigns/:id` - Deletar campanha
+- `GET /content/messages` - Listar mensagens (filtro: minSpamScore, page)
+- `DELETE /content/messages/:id` - Deletar mensagem
+
+**Logs de Auditoria**:
+- `GET /audit` - Listar logs de auditoria (filtros: action, targetType, page)
 
 ## Deploy no Railway
 
@@ -292,11 +351,12 @@ npm run test:coverage --workspace=backend
 ```
 
 **Estatísticas de Testes**:
-- **Total**: 638 testes passando (607 frontend + 31 backend)
+- **Total**: 662 testes passando (607 frontend + 55 backend)
 - **Taxa de sucesso**: 100%
 - **Tempo de execução**: ~13 segundos
-- **Coverage**: Campaign listing + Campaign Detail + UI components + Hooks + Notifications
-- **Melhorias Recentes** (Dez 2025):
+- **Coverage**: Campaign listing + Campaign Detail + UI components + Hooks + Notifications + OAuth flow
+- **Melhorias Recentes** (Dez 2025 - Jan 2026):
+  - Jan 7: Added 24 backend tests (Google OAuth + name formatter)
   - Dec 29: Added 42 notification tests (NotificationIcon + NotificationDropdown)
   - Dec 6: Fixed 34 failing tests (87% improvement in reliability)
   - Progression: 93.1% → 98.8% → 100% success rate

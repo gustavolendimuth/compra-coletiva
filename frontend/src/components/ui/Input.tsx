@@ -5,6 +5,7 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
   helperText?: string;
+  variant?: "default" | "warning";
 }
 
 /**
@@ -16,7 +17,9 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
  * Uses [color-scheme:light] to prevent browser dark mode from overriding styles.
  */
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, helperText, className, id, ...props }, ref) => {
+  ({ label, error, helperText, className, id, variant = "default", ...props }, ref) => {
+    const isWarning = variant === "warning" && !error;
+
     return (
       <div className="w-full">
         {label && (
@@ -37,13 +40,19 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             "disabled:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50",
             "transition-colors",
             error && "border-red-500 focus:ring-red-500",
+            isWarning && "border-yellow-500 focus:ring-yellow-500",
             className
           )}
           {...props}
         />
         {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
         {helperText && !error && (
-          <p className="mt-1 text-sm text-gray-500">{helperText}</p>
+          <p className={cn(
+            "mt-1 text-sm",
+            isWarning ? "text-yellow-700" : "text-gray-500"
+          )}>
+            {helperText}
+          </p>
         )}
       </div>
     );

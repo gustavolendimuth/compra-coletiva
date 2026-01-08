@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, ChevronDown } from 'lucide-react';
+import { LogOut, ChevronDown, User, Settings, Shield } from 'lucide-react';
 
 interface UserMenuProps {
   variant?: 'default' | 'mobile';
@@ -85,13 +86,36 @@ export const UserMenu: React.FC<UserMenuProps> = ({ variant = 'default', onActio
             <div className="text-xs text-gray-500 mt-0.5">{getRoleName(user.role)}</div>
           </div>
         </div>
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
-        >
-          <LogOut size={18} />
-          Sair da Conta
-        </button>
+
+        <div className="flex flex-col gap-2">
+          <Link
+            to="/profile"
+            onClick={onAction}
+            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <User size={18} />
+            Meu Perfil
+          </Link>
+
+          {user.role === 'ADMIN' && (
+            <Link
+              to="/admin"
+              onClick={onAction}
+              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+            >
+              <Shield size={18} />
+              Painel de Admin
+            </Link>
+          )}
+
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+          >
+            <LogOut size={18} />
+            Sair da Conta
+          </button>
+        </div>
       </div>
     );
   }
@@ -124,9 +148,29 @@ export const UserMenu: React.FC<UserMenuProps> = ({ variant = 'default', onActio
             <div className="text-xs text-gray-400 mt-1">{getRoleName(user.role)}</div>
           </div>
 
+          <Link
+            to="/profile"
+            onClick={() => setIsOpen(false)}
+            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+          >
+            <User size={16} />
+            Meu Perfil
+          </Link>
+
+          {user.role === 'ADMIN' && (
+            <Link
+              to="/admin"
+              onClick={() => setIsOpen(false)}
+              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-blue-700 hover:bg-blue-50"
+            >
+              <Shield size={16} />
+              Painel de Admin
+            </Link>
+          )}
+
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-t border-gray-200 mt-1 pt-2"
           >
             <LogOut size={16} />
             Sair

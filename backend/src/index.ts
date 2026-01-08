@@ -7,6 +7,8 @@ import path from "path";
 import { PrismaClient } from "@prisma/client";
 import { configurePassport } from "./config/passport";
 import authRoutes from "./routes/auth";
+import profileRoutes from "./routes/profile";
+import adminRoutes from "./routes/admin";
 import campaignRoutes from "./routes/campaigns";
 import productRoutes from "./routes/products";
 import orderRoutes from "./routes/orders";
@@ -16,10 +18,13 @@ import campaignMessageRoutes from "./routes/campaignMessages";
 import validationRoutes from "./routes/validation";
 import feedbackRoutes from "./routes/feedback";
 import notificationRoutes from "./routes/notifications";
+import emailPreferenceRoutes from "./routes/emailPreferences";
 import { errorHandler } from "./middleware/errorHandler";
 import { startCampaignScheduler } from "./services/campaignScheduler";
 import { initializeSocket } from "./services/socketService";
 import { ImageUploadService } from "./services/imageUploadService";
+import { startEmailWorker, stopEmailWorker } from "./services/email/emailWorker";
+import { closeEmailQueue } from "./services/email/emailQueue";
 
 const app = express();
 const httpServer = createServer(app);
@@ -81,6 +86,8 @@ app.get("/health", (req, res) => {
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/profile", profileRoutes);
+app.use("/api/admin", adminRoutes);
 app.use("/api/campaigns", campaignRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
@@ -90,13 +97,25 @@ app.use("/api/campaign-messages", campaignMessageRoutes);
 app.use("/api/validation", validationRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/email-preferences", emailPreferenceRoutes);
 
 // Error handling
 app.use(errorHandler);
 
-// Prisma lifecycle
+// Graceful shutdown
 process.on("beforeExit", async () => {
+  console.log('Shutting down gracefully...');
+  await stopEmailWorker();
+  await closeEmailQueue();
   await prisma.$disconnect();
+});
+
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, shutting down...');
+  await stopEmailWorker();
+  await closeEmailQueue();
+  await prisma.$disconnect();
+  process.exit(0);
 });
 
 // Initialize Socket.IO
@@ -134,6 +153,20 @@ httpServer.listen(PORT, () => {
 
   // Start campaign scheduler to auto-close expired campaigns
   startCampaignScheduler();
+
+  // Start email worker (modular - pode ser separado depois)
+  const enableWorker = process.env.ENABLE_EMAIL_WORKER !== 'false';
+  if (enableWorker) {
+    try {
+      startEmailWorker();
+      console.log('📧 Email worker started successfully');
+    } catch (error) {
+      console.error('❌ Failed to start email worker:', error);
+      console.error('   Emails will not be sent. Check email configuration.');
+    }
+  } else {
+    console.log('📧 Email worker disabled (ENABLE_EMAIL_WORKER=false)');
+  }
 });
 
 export { prisma };

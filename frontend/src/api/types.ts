@@ -12,6 +12,7 @@ export interface StoredUser {
   email: string;
   name: string;
   phone?: string;
+  phoneCompleted?: boolean;
   role: "ADMIN" | "CAMPAIGN_CREATOR" | "CUSTOMER";
   googleId?: string;
 }
@@ -37,6 +38,10 @@ export interface AuthResponse {
 
 export interface RefreshResponse {
   accessToken: string;
+}
+
+export interface CompletePhoneRequest {
+  phone: string;
 }
 
 // ============================================================================
@@ -410,4 +415,360 @@ export interface ValidationResult {
     expectedTotal: number;
     actualTotal: number;
   };
+}
+
+// ============================================================================
+// Email Preference Types
+// ============================================================================
+
+export interface EmailPreference {
+  id: string;
+  userId: string;
+  emailEnabled: boolean;
+  campaignReadyToSend: boolean;
+  campaignStatusChanged: boolean;
+  campaignArchived: boolean;
+  newMessage: boolean;
+  digestEnabled: boolean;
+  digestFrequency: 'DAILY' | 'WEEKLY' | 'MONTHLY';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpdateEmailPreferenceDto {
+  emailEnabled?: boolean;
+  campaignReadyToSend?: boolean;
+  campaignStatusChanged?: boolean;
+  campaignArchived?: boolean;
+  newMessage?: boolean;
+  digestEnabled?: boolean;
+  digestFrequency?: 'DAILY' | 'WEEKLY' | 'MONTHLY';
+}
+
+export interface UnsubscribeResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface ResubscribeResponse {
+  success: boolean;
+  message: string;
+  preferences: EmailPreference;
+}
+
+// ============================================================================
+// Profile Types
+// ============================================================================
+
+export interface ProfileUser extends StoredUser {
+  avatarUrl?: string;
+  avatarKey?: string;
+  avatarStorageType?: 'S3' | 'LOCAL';
+  deletedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpdateProfileDto {
+  name?: string;
+  phone?: string;
+  currentPassword?: string;
+  newPassword?: string;
+}
+
+export interface UpdateProfileResponse {
+  message: string;
+  user: ProfileUser;
+}
+
+export interface AvatarUploadResponse {
+  message: string;
+  avatarUrl: string;
+}
+
+export interface ChangeEmailDto {
+  newEmail: string;
+  password: string;
+}
+
+export interface ChangeEmailResponse {
+  message: string;
+  expiresAt: string;
+}
+
+export interface VerifyEmailResponse {
+  message: string;
+  newEmail: string;
+}
+
+export interface DeleteAccountDto {
+  password?: string;
+  reason?: string;
+}
+
+export interface ExportDataResponse {
+  exportedAt: string;
+  userData: ProfileUser & {
+    orders: Order[];
+    campaigns: Campaign[];
+    notifications: Notification[];
+    feedback: Feedback[];
+    emailPreference?: EmailPreference;
+  };
+}
+
+// ============================================================================
+// Admin Types
+// ============================================================================
+
+// Dashboard
+export interface DashboardStats {
+  stats: {
+    users: { total: number };
+    campaigns: { total: number; active: number };
+    orders: { total: number };
+    revenue: { total: number };
+  };
+  recentUsers: Array<{
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    createdAt: string;
+  }>;
+}
+
+export interface DashboardActivity {
+  recentCampaigns: Array<{
+    id: string;
+    name: string;
+    status: string;
+    createdAt: string;
+    creator: {
+      id: string;
+      name: string;
+      email: string;
+    };
+  }>;
+  recentOrders: Array<{
+    id: string;
+    total: number;
+    isPaid: boolean;
+    createdAt: string;
+    customer: {
+      id: string;
+      name: string;
+      email: string;
+    };
+    campaign: {
+      id: string;
+      name: string;
+    };
+  }>;
+}
+
+// Users
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  role: 'ADMIN' | 'CAMPAIGN_CREATOR' | 'CUSTOMER';
+  isBanned: boolean;
+  isLegacyUser: boolean;
+  createdAt: string;
+  spamScore: number;
+  messageCount: number;
+  answeredCount: number;
+  _count: {
+    campaigns: number;
+    orders: number;
+  };
+}
+
+export interface AdminUserDetail extends AdminUser {
+  campaigns: Array<{
+    id: string;
+    name: string;
+    status: string;
+    createdAt: string;
+  }>;
+  orders: Array<{
+    id: string;
+    total: number;
+    isPaid: boolean;
+    createdAt: string;
+    campaign: {
+      id: string;
+      name: string;
+    };
+  }>;
+  _count: {
+    campaigns: number;
+    orders: number;
+    messages: number;
+  };
+}
+
+export interface PaginatedUsers {
+  users: AdminUser[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface ListUsersParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  role?: 'ADMIN' | 'CAMPAIGN_CREATOR' | 'CUSTOMER';
+  isBanned?: boolean;
+}
+
+export interface UpdateUserDto {
+  name?: string;
+  email?: string;
+  role?: 'ADMIN' | 'CAMPAIGN_CREATOR' | 'CUSTOMER';
+}
+
+export interface BanUserDto {
+  reason?: string;
+}
+
+// Content - Campaigns
+export interface PaginatedCampaigns {
+  campaigns: Array<
+    Campaign & {
+      creator: {
+        id: string;
+        name: string;
+        email: string;
+      };
+      _count: {
+        products: number;
+        orders: number;
+      };
+    }
+  >;
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface ListCampaignsParams {
+  page?: number;
+  limit?: number;
+  status?: 'ACTIVE' | 'CLOSED' | 'SENT' | 'ARCHIVED';
+  search?: string;
+}
+
+// Content - Messages
+export interface AdminMessage {
+  id: string;
+  message: string;
+  spamScore: number;
+  createdAt: string;
+  author: {
+    id: string;
+    name: string;
+    email: string;
+    spamScore: number;
+  };
+  campaign: {
+    id: string;
+    name: string;
+  };
+}
+
+export interface PaginatedMessages {
+  messages: AdminMessage[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface ListMessagesParams {
+  page?: number;
+  limit?: number;
+  minSpamScore?: number;
+}
+
+// Audit Logs
+export type AuditAction =
+  | 'USER_LIST'
+  | 'USER_VIEW'
+  | 'USER_EDIT'
+  | 'USER_BAN'
+  | 'USER_UNBAN'
+  | 'USER_DELETE'
+  | 'ROLE_CHANGE'
+  | 'CAMPAIGN_LIST'
+  | 'CAMPAIGN_VIEW'
+  | 'CAMPAIGN_EDIT'
+  | 'CAMPAIGN_ARCHIVE'
+  | 'CAMPAIGN_RESTORE'
+  | 'CAMPAIGN_DELETE'
+  | 'MESSAGE_LIST'
+  | 'MESSAGE_DELETE'
+  | 'AUDIT_VIEW'
+  | 'SYSTEM_VIEW'
+  | 'SETTINGS_CHANGE';
+
+export type AuditTargetType = 'USER' | 'CAMPAIGN' | 'ORDER' | 'MESSAGE' | 'FEEDBACK' | 'SYSTEM';
+
+export interface AuditLog {
+  id: string;
+  adminId: string | null;
+  admin?: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  };
+  action: AuditAction;
+  targetType: AuditTargetType;
+  targetId: string | null;
+  details: any;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+}
+
+export interface AuditLogDetail extends AuditLog {}
+
+export interface PaginatedAuditLogs {
+  logs: AuditLog[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface ListAuditLogsParams {
+  page?: number;
+  limit?: number;
+  adminId?: string;
+  action?: AuditAction;
+  targetType?: AuditTargetType;
+  targetId?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface AuditStats {
+  total: number;
+  byAction: Array<{
+    action: AuditAction;
+    count: number;
+  }>;
+  topAdmins: Array<{
+    admin: {
+      id: string;
+      name: string;
+      email: string;
+    } | null;
+    count: number;
+  }>;
 }

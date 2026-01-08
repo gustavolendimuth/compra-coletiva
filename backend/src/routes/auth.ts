@@ -12,9 +12,38 @@ import {
   getClearCookieOptions,
 } from "../utils/cookieConfig";
 import { capitalizeName } from "../utils/nameFormatter";
+import { queueWelcomeEmail, queuePasswordResetEmail } from "../services/email/emailQueue";
 
 const router = Router();
 const prisma = new PrismaClient();
+
+// ========== HELPER FUNCTIONS ==========
+
+/**
+ * Valida se o nome tem pelo menos 2 palavras (nome e sobrenome)
+ */
+function validateFullName(name: string): { isValid: boolean; error?: string } {
+  const trimmedName = name.trim();
+  const words = trimmedName.split(/\s+/).filter(word => word.length > 0);
+
+  if (words.length < 2) {
+    return {
+      isValid: false,
+      error: "Por favor, informe seu nome completo (nome e sobrenome)"
+    };
+  }
+
+  // Validar que cada palavra tem pelo menos 2 caracteres
+  const hasShortWords = words.some(word => word.length < 2);
+  if (hasShortWords) {
+    return {
+      isValid: false,
+      error: "Nome e sobrenome devem ter pelo menos 2 caracteres cada"
+    };
+  }
+
+  return { isValid: true };
+}
 
 // ========== SCHEMAS DE VALIDAÇÃO ==========
 
@@ -22,7 +51,14 @@ const prisma = new PrismaClient();
 const phoneRegex = /^(\d{2}\s?\d{4,5}-?\d{4}|\d{10,11})$/;
 
 const registerSchema = z.object({
-  name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
+  name: z
+    .string()
+    .min(2, "Nome deve ter pelo menos 2 caracteres")
+    .max(100, "Nome deve ter no máximo 100 caracteres")
+    .refine(
+      (name) => validateFullName(name).isValid,
+      (name) => ({ message: validateFullName(name).error || "Nome inválido" })
+    ),
   email: z.string().email("Email inválido"),
   password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
   phone: z
@@ -51,7 +87,15 @@ const resetPasswordSchema = z.object({
 });
 
 const updateProfileSchema = z.object({
-  name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres").optional(),
+  name: z
+    .string()
+    .min(2, "Nome deve ter pelo menos 2 caracteres")
+    .max(100, "Nome deve ter no máximo 100 caracteres")
+    .refine(
+      (name) => validateFullName(name).isValid,
+      (name) => ({ message: validateFullName(name).error || "Nome inválido" })
+    )
+    .optional(),
   phone: z
     .string()
     .min(10, "Celular deve ter pelo menos 10 dígitos")
@@ -65,7 +109,55 @@ const updateProfileSchema = z.object({
     .optional(),
 });
 
+const completePhoneSchema = z.object({
+  phone: z
+    .string()
+    .min(10, "Celular deve ter pelo menos 10 dígitos")
+    .max(15, "Celular deve ter no máximo 15 caracteres")
+    .regex(phoneRegex, "Formato de celular inválido. Use: XX XXXXX-XXXX"),
+});
+
 // ========== ROTAS ==========
+
+/**
+ * GET /api/auth/check-name?name=NomeDoUsuario
+ * Verifica se um nome já existe no banco de dados
+ */
+router.get("/check-name", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { name } = req.query;
+
+    if (!name || typeof name !== 'string') {
+      res.status(400).json({
+        error: "VALIDATION_ERROR",
+        message: "Nome é obrigatório",
+      });
+      return;
+    }
+
+    // Conta quantos usuários não-legados têm esse nome
+    const count = await prisma.user.count({
+      where: {
+        name: capitalizeName(name),
+        isLegacyUser: false,
+      },
+    });
+
+    res.status(200).json({
+      exists: count > 0,
+      count,
+      suggestion: count > 0
+        ? "Já existe um usuário com esse nome. Considere adicionar um sobrenome ou inicial para evitar confusões."
+        : null,
+    });
+  } catch (error) {
+    console.error("Erro ao verificar nome:", error);
+    res.status(500).json({
+      error: "INTERNAL_ERROR",
+      message: "Erro ao verificar nome",
+    });
+  }
+});
 
 /**
  * POST /api/auth/register
@@ -120,22 +212,6 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Verifica se nome já existe (apenas para usuários não-legados)
-    const existingName = await prisma.user.findFirst({
-      where: {
-        name,
-        isLegacyUser: false,
-      },
-    });
-
-    if (existingName) {
-      res.status(409).json({
-        error: "NAME_ALREADY_EXISTS",
-        message: "Este nome já está em uso. Por favor, escolha outro nome",
-      });
-      return;
-    }
-
     // Hash da senha
     const hashedPassword = await AuthService.hashPassword(password);
 
@@ -146,6 +222,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
         email,
         password: hashedPassword,
         phone,
+        phoneCompleted: true, // Email/password users provide phone during registration
         role: "CUSTOMER", // Default role
       },
     });
@@ -159,6 +236,15 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
 
     // Salva refresh token
     await TokenService.saveRefreshToken(user.id, tokens.refreshToken);
+
+    // Enfileirar email de boas-vindas (não bloqueia o fluxo)
+    try {
+      await queueWelcomeEmail(user.id, user.name, user.email);
+      console.log(`[Auth] Welcome email queued for user ${user.id}`);
+    } catch (emailError) {
+      console.error('[Auth] Failed to queue welcome email:', emailError);
+      // Não falha o registro se o email falhar
+    }
 
     // Set refresh token as HttpOnly cookie
     res.cookie(
@@ -174,6 +260,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
         name: user.name,
         email: user.email,
         phone: user.phone,
+        phoneCompleted: user.phoneCompleted,
         role: user.role,
       },
       accessToken: tokens.accessToken,
@@ -270,6 +357,7 @@ router.post("/login", async (req: Request, res: Response): Promise<void> => {
         name: user.name,
         email: user.email,
         phone: user.phone,
+        phoneCompleted: user.phoneCompleted,
         role: user.role,
       },
       accessToken: tokens.accessToken,
@@ -355,6 +443,7 @@ router.post("/refresh", async (req: Request, res: Response): Promise<void> => {
         name: user.name,
         email: user.email,
         phone: user.phone,
+        phoneCompleted: user.phoneCompleted,
         role: user.role,
       },
     });
@@ -424,6 +513,7 @@ router.get(
           name: req.user.name,
           email: req.user.email,
           phone: req.user.phone,
+          phoneCompleted: req.user.phoneCompleted,
           role: req.user.role,
           createdAt: req.user.createdAt,
         },
@@ -503,7 +593,8 @@ router.get(
           `userId=${encodeURIComponent(user.id)}&` +
           `userName=${encodeURIComponent(user.name)}&` +
           `userEmail=${encodeURIComponent(user.email)}&` +
-          `userRole=${user.role}`
+          `userRole=${user.role}&` +
+          `phoneCompleted=${user.phoneCompleted || false}`
       );
     } catch (error) {
       console.error("Erro no callback do Google:", error);
@@ -560,14 +651,24 @@ router.post(
         },
       });
 
-      // TODO: Enviar email com link de reset
-      // Link seria: ${FRONTEND_URL}/reset-password?token=${token}
-      console.log(`🔑 Password reset token para ${email}: ${token}`);
-      console.log(
-        `Link: ${
-          process.env.FRONTEND_URL || "http://localhost:5173"
-        }/reset-password?token=${token}`
-      );
+      // Enfileirar email de reset de senha
+      try {
+        await queuePasswordResetEmail(user.id, user.name, user.email, token);
+        console.log(`[Auth] Password reset email queued for user ${user.id}`);
+      } catch (emailError) {
+        console.error('[Auth] Failed to queue password reset email:', emailError);
+        // Não falha a requisição se o email falhar
+      }
+
+      // Log para desenvolvimento
+      if (process.env.NODE_ENV === "development") {
+        console.log(`🔑 Password reset token para ${email}: ${token}`);
+        console.log(
+          `Link: ${
+            process.env.FRONTEND_URL || "http://localhost:5173"
+          }/reset-password?token=${token}`
+        );
+      }
 
       res.json({
         message:
@@ -687,23 +788,6 @@ router.patch(
 
       // Atualiza nome se fornecido
       if (name) {
-        // Verifica se nome já existe (exceto se for o próprio usuário, apenas para usuários não-legados)
-        const existingName = await prisma.user.findFirst({
-          where: {
-            name,
-            isLegacyUser: false,
-            NOT: { id: req.user!.id },
-          },
-        });
-
-        if (existingName) {
-          res.status(409).json({
-            error: "NAME_ALREADY_EXISTS",
-            message: "Este nome já está em uso. Por favor, escolha outro nome",
-          });
-          return;
-        }
-
         updates.name = capitalizeName(name);
       }
 
@@ -779,6 +863,74 @@ router.patch(
       res.status(500).json({
         error: "INTERNAL_ERROR",
         message: "Erro ao atualizar perfil",
+      });
+    }
+  }
+);
+
+/**
+ * PATCH /api/auth/complete-phone
+ * Completa o cadastro de telefone para usuários OAuth
+ */
+router.patch(
+  "/complete-phone",
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      console.log("[CompletePhone] Requisição recebida:", {
+        userId: req.user!.id,
+        body: req.body,
+      });
+
+      const { phone } = completePhoneSchema.parse(req.body);
+
+      console.log("[CompletePhone] Validação OK, atualizando usuário:", {
+        userId: req.user!.id,
+        phone,
+      });
+
+      // Atualiza usuário com telefone e marca como completo
+      const updatedUser = await prisma.user.update({
+        where: { id: req.user!.id },
+        data: {
+          phone,
+          phoneCompleted: true,
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          phone: true,
+          role: true,
+          phoneCompleted: true,
+        },
+      });
+
+      console.log("[CompletePhone] Usuário atualizado com sucesso:", {
+        userId: updatedUser.id,
+        phoneCompleted: updatedUser.phoneCompleted,
+      });
+
+      res.json({
+        message: "Telefone cadastrado com sucesso",
+        user: updatedUser,
+      });
+    } catch (error) {
+      console.error("[CompletePhone] Erro ao completar telefone:", error);
+
+      if (error instanceof z.ZodError) {
+        console.error("[CompletePhone] Erro de validação:", error.errors);
+        res.status(400).json({
+          error: "VALIDATION_ERROR",
+          message: "Formato de telefone inválido",
+          details: error.errors,
+        });
+        return;
+      }
+
+      res.status(500).json({
+        error: "INTERNAL_ERROR",
+        message: "Erro ao cadastrar telefone",
       });
     }
   }

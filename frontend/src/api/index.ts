@@ -14,11 +14,14 @@ export * from './types';
 
 // Export all services
 export { authService } from './services/auth.service';
+export { profileService } from './services/profile.service';
+export { adminService } from './services/admin.service';
 export { campaignService } from './services/campaign.service';
 export { productService } from './services/product.service';
 export { orderService } from './services/order.service';
 export { orderMessageService, campaignMessageService } from './services/message.service';
 export { notificationService } from './services/notification.service';
+export { emailPreferenceService } from './services/emailPreference.service';
 export { feedbackService } from './services/feedback.service';
 export { analyticsService } from './services/analytics.service';
 export { validationService } from './services/validation.service';
@@ -31,6 +34,7 @@ export { orderService as orderApi } from './services/order.service';
 export { orderMessageService as messageApi } from './services/message.service';
 export { campaignMessageService as campaignMessageApi } from './services/message.service';
 export { feedbackService as feedbackApi } from './services/feedback.service';
+export { emailPreferenceService as emailPreferenceApi } from './services/emailPreference.service';
 export { analyticsService as analyticsApi } from './services/analytics.service';
 
 // Export api client as default 'api' for backward compatibility

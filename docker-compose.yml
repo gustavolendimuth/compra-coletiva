@@ -19,6 +19,20 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: compra-coletiva-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: ./backend
@@ -33,12 +47,16 @@ services:
     environment:
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
     volumes:
       - ./backend:/app
       - /app/node_modules
       - /app/dist
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     command: npm run dev
 
@@ -64,3 +82,4 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
