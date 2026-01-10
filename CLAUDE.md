@@ -218,106 +218,27 @@ npm run build --workspace=backend
 
 **MANDATORY**: All components mobile-first (320px-640px base).
 
-**Tailwind Breakpoints**:
-- `sm`: 640px+, `md`: 768px+, `lg`: 1024px+, `xl`: 1280px+, `2xl`: 1536px+
+**Breakpoints**: sm: 640px, md: 768px, lg: 1024px, xl: 1280px, 2xl: 1536px
 
-**Best Practices**:
-```typescript
-// ✅ Layout & Spacing
-<div className="p-4 md:p-6 lg:p-8">
-<div className="gap-2 md:gap-4">
+**Patterns**: `p-4 md:p-6 lg:p-8`, `text-xl md:text-2xl`, `grid-cols-1 md:grid-cols-2`, `min-h-[44px]` (touch targets), inputs `text-base` (16px+ prevents iOS zoom).
 
-// ✅ Typography
-<h1 className="text-xl md:text-2xl lg:text-4xl">
-<input className="w-full text-base">  // 16px+ prevents iOS zoom
-
-// ✅ Touch Targets (44x44px minimum)
-<button className="min-h-[44px] px-4 py-2">
-
-// ✅ Grids
-<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-
-// ✅ Modals
-<div className="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2">
-```
-
-**Testing Checklist**:
-- [ ] No horizontal scroll (320-640px)
-- [ ] Touch targets 44x44px
-- [ ] Text readable without zoom (16px+ for inputs)
-- [ ] Images scale correctly
-
-**Refactoring**: Fix desktop-first patterns when touched.
+**Checklist**: No horizontal scroll 320-640px, 44x44px touch targets, readable text, scaled images.
 
 ---
 
 ### Theme Consistency (CRITICAL)
 
-**Color Palette**:
-```typescript
-// ✅ CORRECT
-bg-blue-600    // Primary
-bg-green-600   // Success
-bg-red-600     // Danger
-bg-gray-*      // Neutral
+**Colors**: Blue (primary), Green (success), Red (danger), Gray (neutral). ❌ No purple/pink/teal.
 
-// ❌ WRONG
-bg-purple-600, bg-pink-500, bg-teal-400  // Not in system
-```
+**Typography**: h1: `text-2xl md:text-3xl lg:text-4xl font-bold`, h2: `text-xl md:text-2xl font-bold`, h3: `text-lg md:text-xl font-semibold`, body: `text-base`, secondary: `text-sm text-gray-600`, meta: `text-xs text-gray-500`.
 
-**Typography**:
-```typescript
-// ✅ Headings
-text-2xl md:text-3xl lg:text-4xl font-bold    // h1
-text-xl md:text-2xl font-bold                 // h2
-text-lg md:text-xl font-semibold              // h3
+**Spacing** (4px base): p-4 (16px), gap-2 (8px), mb-6 (24px).
 
-// ✅ Body
-text-base                     // Regular (16px)
-text-sm text-gray-600         // Secondary (14px)
-text-xs text-gray-500         // Meta (12px)
-```
+**Radius**: rounded (4px), rounded-lg (8px DEFAULT), rounded-xl (12px), rounded-full.
 
-**Spacing** (4px base):
-```typescript
-p-4      // 16px
-gap-2    // 8px
-mb-6     // 24px
-space-y-4
-```
+**Shadows**: shadow-sm/shadow/shadow-md/shadow-lg ONLY.
 
-**Border Radius**:
-```typescript
-rounded         // 4px
-rounded-lg      // 8px (DEFAULT)
-rounded-xl      // 12px
-rounded-full    // Circle
-```
-
-**Shadows**:
-```typescript
-shadow-sm    // Subtle
-shadow       // Standard
-shadow-md    // Medium
-shadow-lg    // High
-```
-
-**Component Patterns**:
-```typescript
-// Button (primary)
-<button className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">
-
-// Card
-<div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4 md:p-6">
-
-// Input
-<input className="w-full px-4 py-2 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-
-// Badge
-<span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-```
-
-**Refactoring**: Fix arbitrary colors/shadows/spacing when touched.
+**Components**: Button `px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700`, Card `bg-white border border-gray-200 rounded-lg shadow-sm p-4 md:p-6`, Input `w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500`, Badge `inline-flex px-2.5 py-0.5 rounded-full text-xs bg-green-100 text-green-800`.
 
 ---
 
@@ -529,61 +450,19 @@ useEffect(() => {
 
 ### Google OAuth Authentication (CRITICAL)
 
-**Authentication Flow** (`backend/src/config/passport.ts`):
+**Flow** (`backend/src/config/passport.ts`): googleId-first lookup → soft-delete reactivation → account linking → new user creation.
 
-The Google OAuth strategy implements intelligent user lookup with account linking and soft-delete reactivation:
+**Logic**:
+1. Find by googleId (primary), fallback to email
+2. If soft-deleted: reactivate (clear deletedAt/deletedReason, update email/name)
+3. If email exists without googleId: link accounts
+4. If new: create (password: null, phoneCompleted: false, capitalizeName, queue welcome email)
 
-1. **Lookup by googleId First** (Primary Strategy):
-   - Finds user by `googleId` instead of email
-   - Handles deleted users trying to log in again (googleId persists)
-   - Prevents issues with email changes in Google account
-   - Protects against account takeover
+**Benefits**: googleId as source of truth, prevents account takeover, seamless reactivation, non-blocking email.
 
-2. **Soft-Deleted User Reactivation**:
-   - If googleId matches a soft-deleted user, reactivate the account
-   - Update with current email from Google (restores original email)
-   - Update name from Google profile
-   - Clear `deletedAt` and `deletedReason` fields
-   - Log reactivation event
+**Env**: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_CALLBACK_URL
 
-3. **Account Linking for Existing Users**:
-   - If email exists but no googleId, link Google account to existing user
-   - Enables users who registered with email/password to add Google OAuth
-   - No duplicate accounts created
-
-4. **New User Creation**:
-   - If neither googleId nor email found, create new user
-   - Set `password: null` (OAuth users don't have password)
-   - Set `phoneCompleted: false` (OAuth users need to complete phone)
-   - Apply name capitalization via `capitalizeName()`
-   - Queue welcome email (non-blocking)
-
-**Key Features**:
-- **Email changes handled gracefully**: googleId is source of truth
-- **Non-blocking email**: OAuth login succeeds even if email system is down
-- **Privacy-safe**: Deleted users can reclaim their account seamlessly
-- **Security**: Prevents account takeover via email reuse
-
-**Environment Variables**:
-```env
-GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=your-client-secret
-GOOGLE_CALLBACK_URL=http://localhost:3000/api/auth/google/callback
-```
-
-**Database Requirements**:
-- `googleId`: string | null (@unique)
-- `email`: string (@unique)
-- `name`: string
-- `password`: string | null (null for OAuth users)
-- `phoneCompleted`: boolean (OAuth users must complete phone)
-- `deletedAt`: DateTime | null (soft delete)
-- `deletedReason`: string | null (soft delete)
-
-**Testing**:
-- 13 documentation tests in `backend/src/config/passport.test.ts`
-- Tests document expected behavior for all scenarios
-- Integration tested manually with Google OAuth flow
+**Tests**: 13 tests in passport.test.ts (all scenarios covered)
 
 ### Database
 - Schema changes: `npx prisma migrate dev --name <name>`
@@ -782,349 +661,45 @@ npm run validate:financial
 
 ## Testing Architecture
 
-### Frontend Test Infrastructure
+### Frontend (Vitest 4.0.15 + RTL)
+**Stats**: 607 tests, 50+ files, ~13s, 100% pass. Mock factories in `src/__tests__/mock-data.ts`.
 
-**Test Framework**: Vitest 4.0.15 + React Testing Library
-**Coverage**: Campaign listing + Campaign Detail + UI components + Hooks
-**Mock Data**: Centralized factories in `src/__tests__/mock-data.ts`
+**Patterns**:
+1. Multiple elements: `getAllByText()[0]` (mobile+desktop views)
+2. Async: `queryAllByText().length > 0` check
+3. Behavior over attributes: `toHaveFocus()` not `autoFocus`
+4. Flexible mocks: call count + `toMatchObject()`
+5. Complex components: `waitFor` timeout 5000ms
 
-**Test Statistics**:
-- **Total**: 607 tests passing (100% success rate)
-- **Test Files**: 50+ files
-- **Execution time**: ~13 seconds
-- **Coverage areas**: Rendering, user interactions, edge cases, responsive behavior, API integration, accessibility, notifications
+**Example**: `render(<Card campaign={createMockCampaign()} />); expect(screen.getAllByText('Ativa')[0]).toBeInTheDocument();`
 
-**Massive Test Improvement (December 6, 2025)**:
-- **Before**: 39 failing tests (93.1% success rate)
-- **After**: 5 failing tests (98.8% success rate)
-- **Improvement**: 87% reduction in failures!
-- **Tests Fixed**: 34 tests across 9 component files
+**Commands**: `npm test --workspace=frontend`, `npm run test:ui --workspace=frontend`, `npm run test:coverage --workspace=frontend`
 
-**Testing Patterns**:
-```typescript
-// Mock Data Factories
-const campaign = createMockCampaign({ status: 'ACTIVE' });
-const campaigns = [mockActiveCampaign, mockClosedCampaign];
+### Backend (Jest 29.7.0 + ts-jest)
+**Stats**: 55 tests, <1s, 100% pass. Files: money.test.ts (31), nameFormatter.test.ts (11), passport.test.ts (13).
 
-// Component Testing
-render(<CampaignCard campaign={campaign} />);
-expect(screen.getByText('Test Campaign')).toBeInTheDocument();
+**Coverage**: Money utility (distributeProportionally guarantees exact sum), name capitalization, OAuth flow.
 
-// User Interactions
-await userEvent.click(screen.getByRole('button', { name: /filtrar/i }));
+**Commands**: `npm test --workspace=backend`, `npm run test:coverage --workspace=backend`
 
-// Mobile-First Testing (Multiple Elements Pattern)
-const statusElements = screen.getAllByText('Ativa'); // Mobile + Desktop views
-expect(statusElements[0]).toBeInTheDocument();
-
-// Async Elements with Timeout
-await waitFor(() => {
-  expect(screen.queryAllByText('Product Name').length).toBeGreaterThan(0);
-}, { timeout: 5000 });
-```
-
-**Critical Test Patterns (Established December 2025)**:
-1. **Multiple Elements**: Use `getAllByText()[0]` for elements in mobile + desktop views
-2. **Async Rendering**: Use `queryAllByText()` with `.length > 0` check
-3. **React Props**: Test behavior, not attributes (e.g., `toHaveFocus()` instead of `autoFocus` attribute)
-4. **Flexible Mocks**: Use call count + `toMatchObject()` instead of exact matches
-5. **Complex Components**: Increase `waitFor` timeout to 5000ms
-
-**Running Tests**:
-```bash
-npm test --workspace=frontend              # All frontend tests
-npm run test:ui --workspace=frontend       # Interactive UI
-npm run test:coverage --workspace=frontend # Coverage report
-```
-
-### Backend Test Infrastructure
-
-**Test Framework**: Jest 29.7.0 + ts-jest
-**Coverage**: Money utility (financial calculations), Name formatter, Google OAuth authentication
-
-**Test Files (3 total)**:
-1. `src/utils/money.test.ts` - 31 tests (100% coverage of Money utility)
-2. `src/utils/nameFormatter.test.ts` - 11 tests (100% coverage of name capitalization)
-3. `src/config/passport.test.ts` - 13 tests (documentation of Google OAuth flow)
-
-**Test Statistics**:
-- Total: 55 tests passing
-- Execution time: <1 second
-- Success rate: 100%
-- Critical: Financial precision tests (distributeProportionally guarantees exact sum)
-- OAuth: Complete documentation of authentication logic
-
-**Running Tests**:
-```bash
-npm test --workspace=backend              # All backend tests
-npm run test:coverage --workspace=backend # Coverage report
-```
-
-### Combined Statistics
-
-- **Total Tests**: 662 passing (607 frontend + 55 backend)
-- **Test Files**: 50+ files
-- **Execution Time**: ~13 seconds
-- **Success Rate**: 100%
+**Total**: 662 tests (607 frontend + 55 backend), 100% success
 
 ---
 
 ## Recent Updates
 
-### January 7, 2026 - Enhanced Google OAuth with Account Linking & Reactivation
+### January 2026 - Profile, Email, Admin & OAuth Enhancements
+**Features**: User profile (avatar, email verification, soft delete, LGPD export), email system (Bull queue, Resend/Gmail, tracking), admin panel (dashboard, user/campaign/message moderation, audit logs), enhanced Google OAuth (googleId-first lookup, account linking, soft-delete reactivation).
 
-**Google OAuth Flow Improvements** (`backend/src/config/passport.ts`):
+**Components**: Profile (6 components), Avatar UI, CompleteProfile flow, EmailPreferences, 6 admin pages, AdminRoute.
 
-**Changes Made**:
-1. **User Lookup Strategy Changed**:
-   - Now searches by `googleId` first (primary identifier)
-   - Falls back to email lookup if googleId not found
-   - Previously searched by email first, causing issues with deleted accounts
+**Tests**: 662 total (607 frontend + 55 backend), 100% pass. Added passport.test.ts (13), nameFormatter.test.ts (11), notification tests (42).
 
-2. **Soft-Deleted User Reactivation**:
-   - When a user with deleted account logs in with Google again, account is reactivated
-   - Original email and name restored from Google profile
-   - `deletedAt` and `deletedReason` cleared
-   - Seamless user experience for account recovery
+**Mobile Fix**: NotificationDropdown now uses `fixed` positioning + z-[100] + buttonRef for proper mobile display.
 
-3. **Account Linking**:
-   - If user exists with email but no googleId, Google account is linked
-   - Enables users who registered with email/password to add Google OAuth
-   - No duplicate accounts created
+### December 2025 - Modular Architecture & Testing
+**Refactoring**: CampaignDetail 2562→150 lines, 28→81 components, API split into 13 files (services pattern).
 
-4. **Better Edge Case Handling**:
-   - Handles conflicts with soft-deleted users that had anonymized emails
-   - Email changes in Google account handled gracefully
-   - googleId is now the source of truth for user identity
+**Tests**: 164 campaign listing tests, 34 reliability fixes (98.8% success), established patterns (getAllByText()[0], queryAllByText(), waitFor 5000ms).
 
-**Test Coverage**:
-- Created `backend/src/config/passport.test.ts` with 13 documentation tests
-- Tests document expected behavior for all scenarios:
-  - googleId-first lookup strategy
-  - Soft-deleted user reactivation flow
-  - Account linking for existing users
-  - New user creation flow
-  - Email update handling
-  - Error handling for missing email
-  - Name capitalization
-  - Non-blocking email queue
-- All 55 backend tests passing (100%)
-
-**Benefits**:
-- **Privacy-Safe**: Deleted users can reclaim accounts by logging in with Google
-- **Security**: Prevents account takeover via email reuse
-- **Flexibility**: Supports both email/password and OAuth authentication methods
-- **Resilience**: Non-blocking email ensures OAuth flow always succeeds
-
-**Test Statistics Update**:
-- **Total**: 662 tests passing (607 frontend + 55 backend)
-- **Backend**: 31 → 55 tests (+24 tests)
-- **New test files**: passport.test.ts (13 tests), nameFormatter.test.ts (11 tests)
-
-### January 7, 2026 - User Profile, Email System, and Admin Panel
-
-**Major Features Implemented**:
-
-1. **User Profile System**:
-   - Edit name, phone, password
-   - Avatar upload/delete (reuses ImageUploadService, max 5MB, JPEG/PNG/WebP)
-   - Email change with verification flow (token sent to new email)
-   - Soft delete account with data anonymization
-   - Export user data (LGPD compliance)
-   - Components: Profile page + 6 modular components (ProfileHeader, ProfileForm, PasswordSection, EmailSection, AvatarUpload, DeleteAccountSection)
-   - New Avatar UI component with fallback initials
-
-2. **Complete Profile Flow (OAuth)**:
-   - After Google OAuth, users must complete phone number
-   - ProtectedRoute component redirects to /complete-profile if phoneCompleted = false
-   - Database: Added `phoneCompleted` flag to User model
-
-3. **Email Preferences System**:
-   - Global email opt-out
-   - Per-notification-type preferences (campaignReadyToSend, campaignStatusChanged, campaignArchived, newMessage)
-   - Digest settings (future: REALTIME, DAILY, WEEKLY)
-   - Unsubscribe via email link
-   - Database: EmailPreference model
-
-4. **Email Queue & Notification Service**:
-   - Background email worker with Bull queue (Redis)
-   - Email templates with Resend integration
-   - Email logs tracking (sent, failed, opened, clicked, bounced)
-   - Provider support: Resend (production), Gmail (development)
-   - Database: EmailLog model
-   - Services: emailQueue, emailWorker, templates, notificationEmailService
-
-5. **Admin Panel System**:
-   - **Dashboard**: Stats overview (users, campaigns, orders, revenue), recent activity
-   - **User Management**: List, search, view details, edit, ban/unban, soft delete
-   - **Campaign Moderation**: List, search by name/status, archive/restore, delete
-   - **Message Moderation**: View messages with spam scores, filter, delete
-   - **Audit Logs**: Track all admin actions with filters
-   - 6 admin pages (AdminLayout, Dashboard, Users, UserDetail, Campaigns, Messages, Audit)
-   - AdminRoute component for role-based access control
-   - Database: AuditLog model with 15+ action types
-
-6. **Audit System**:
-   - Auto-logging via adminAuth middleware
-   - Tracks: admin ID, action, target type/ID, details (JSON), IP address, user agent
-   - Actions: USER_LIST, USER_VIEW, USER_EDIT, USER_BAN, USER_UNBAN, USER_DELETE, ROLE_CHANGE, CAMPAIGN_LIST, CAMPAIGN_VIEW, CAMPAIGN_EDIT, CAMPAIGN_ARCHIVE, CAMPAIGN_RESTORE, CAMPAIGN_DELETE, MESSAGE_LIST, MESSAGE_DELETE, AUDIT_VIEW, SYSTEM_VIEW, SETTINGS_CHANGE
-   - Service: auditService.ts
-
-**Database Changes**:
-- **User model**: Added avatarUrl, avatarKey, avatarStorageType, pendingEmail, pendingEmailToken, pendingEmailExpires, deletedAt, deletedReason, phoneCompleted
-- **New models**: EmailPreference, EmailLog, AuditLog
-- **Migrations**: 4 new migrations (phone flag, name constraint removal, profile fields, audit actions)
-
-**API Endpoints Added** (30 total):
-- Profile: 7 endpoints (update, avatar upload/delete, email change/verify, delete, export)
-- Email Preferences: 3 endpoints (get, update, unsubscribe)
-- Admin: 13 endpoints across dashboard, users, content, audit
-
-**Infrastructure**:
-- Docker: Added Redis service for email queue
-- Backend: Added dependencies (@bull-board/express, bull, nodemailer, resend)
-- Config: Email configuration (backend/src/config/email.ts)
-- Utilities: Link builder for email links (backend/src/utils/linkBuilder.ts)
-
-**Security & Compliance**:
-- Soft delete with anonymization (LGPD)
-- Email verification for email changes
-- Admin route protection with auto audit logging
-- IP address + user agent tracking
-- Data export for LGPD compliance
-
-**Statistics Update**:
-- **Backend**: 17 route files (was 12), 19 services (was 9), 14 DB tables (was 11)
-- **Frontend**: 81 components (was 67), 54 pages (was 10), 12 API services (was 9)
-
-### December 29, 2025 - Mobile Notifications Fix & Test Coverage
-
-**Problem Solved**:
-- Fixed mobile notifications not appearing when clicking the notification icon in the MobileMenu
-- Issue caused by z-index conflict (dropdown z-50 vs MobileMenu z-[70]) and overflow clipping
-
-**Solution**:
-1. **NotificationDropdown component** (`frontend/src/components/NotificationDropdown.tsx`):
-   - Changed z-index from `z-50` to `z-[100]` to appear above MobileMenu
-   - Changed positioning from `absolute` to `fixed` on mobile screens (<768px) to avoid overflow issues
-   - Added `buttonRef` prop for calculating mobile positioning using `getBoundingClientRect()`
-   - Updated click-outside logic to check buttonRef and prevent closing when clicking the button
-
-2. **NotificationIcon component** (`frontend/src/components/NotificationIcon.tsx`):
-   - Added `buttonRef` using `useRef<HTMLButtonElement>`
-   - Passed buttonRef to button element and NotificationDropdown component
-
-**Test Coverage**:
-- Created comprehensive test suite for NotificationIcon (15 tests)
-- Created comprehensive test suite for NotificationDropdown (27 tests)
-- All 42 notification tests passing (100%)
-- Added mock notification data factories
-
-**Mobile Positioning Pattern**:
-- Use `fixed` positioning on mobile instead of `absolute` when parent has overflow constraints
-- Calculate position dynamically using button's `getBoundingClientRect()` for accurate placement
-- Use higher z-index values for dropdowns that need to appear above mobile menus (z-[100] recommended)
-- Pass `buttonRef` to dropdown components to enable proper click-outside detection
-
-**Test Statistics Update**:
-- **Total**: 638 tests passing (607 frontend + 31 backend) at the time
-- **Success Rate**: 100% (up from 98.8%)
-- **New Tests**: 42 notification tests added
-
-### December 6, 2025 - Massive Test Reliability Improvement (87% Reduction in Failures!)
-
-**Achievement**:
-- **Before**: 39 failing tests, 531 passing (93.1% success rate)
-- **After**: 5 failing tests, 565 passing (98.8% success rate)
-- **Improvement**: 87% reduction in test failures!
-- **Tests Fixed**: 34 tests across 9 component files
-
-**Components Fixed**:
-1. **ShippingTab.tsx** - Added null campaign handling (production code fix)
-2. **ProductsTab tests** - Fixed 8 tests (multiple element pattern)
-3. **OrdersTab tests** - Fixed 4 tests (multiple element pattern)
-4. **OverviewTab tests** - Fixed 7 tests (multiple elements + button titles)
-5. **OrderModals tests** - Fixed 7 tests (multiple elements + mock assertions)
-6. **CampaignModals tests** - Fixed 3 tests (autoFocus + multiple elements)
-7. **ProductModals tests** - Fixed 2 tests (autoFocus + onChange)
-8. **CampaignDetail tests** - Fixed 5 integration tests (multiple elements)
-
-**Test Patterns Established**:
-1. **Multiple Elements Pattern**: Use `getAllByText()[0]` for elements in mobile + desktop views
-2. **Async Elements**: Use `queryAllByText()` with `.length > 0` check
-3. **React Props vs Attributes**: Test behavior (e.g., `toHaveFocus()`), not implementation details
-4. **Flexible Mock Assertions**: Use call count + `toMatchObject()` instead of exact matches
-5. **Complex Components**: Increase `waitFor` timeout to 5000ms for multi-fetch components
-
-**Impact**:
-- Campaign Detail page now has 98% test reliability
-- Established reusable patterns for testing responsive components
-- Documented common pitfalls and solutions
-- Only 5 remaining edge cases (timing/mock complexity, non-critical)
-
-### December 6, 2025 - Comprehensive Test Suite for Campaign Listing
-
-**Test Coverage**:
-- Created comprehensive test suite for campaign listing page
-- 8 new test files covering all campaign list components
-- 164 frontend tests with 100% pass rate
-- Mock data factory system for consistent test data
-
-**Test Files Created**:
-1. Mock data utilities with factory functions
-2. Page-level integration tests (CampaignList)
-3. Component unit tests (Filters, Card, Header, Body, Footer, Skeleton)
-4. Coverage of rendering, interactions, edge cases, mobile-first behavior
-
-**Test Patterns Established**:
-- Factory pattern for mock data generation
-- Consistent testing structure (AAA pattern)
-- Mobile-first testing approach
-- Accessibility testing
-- Edge case coverage (empty states, missing data, errors)
-
-**Benefits**:
-- High confidence in campaign listing functionality
-- Regression prevention for UI changes
-- Documentation through tests
-- Fast execution (~3.7s for 164 tests)
-
-### December 5, 2025 - Frontend Modular Architecture & API Refactoring
-
-**Component Refactoring**:
-- **Before**: 28 components, 5 files >250 lines (max 2562!)
-- **After**: 67 components, 0 files >250 lines (max 287)
-- **CampaignDetail.tsx**: 2562 → 150 lines (94% reduction)
-
-**New Architecture**:
-1. **UI Primitives** (ui/): Button, Card, Input, Badge, Modal, Divider, GoogleButton + barrel export
-2. **Auth** (auth/): LoginForm, RegisterForm, AuthTabs + barrel
-3. **Campaign** (campaign/): 21 components + 3 hooks (CampaignQuestionsPanel, CampaignChat, OrderChat split)
-4. **Campaign Detail** (pages/campaign-detail/): 15 components + 1 hook (tabs, modals, header, navigation)
-
-**API Refactoring**:
-- **Before**: 1 file (lib/api.ts - 426 lines)
-- **After**: 13 files (max 124 lines, avg 95)
-- **Structure**: config.ts, types.ts, client.ts, index.ts + services/
-- **9 Services**: auth, campaign, product, order, message, notification, feedback, analytics, validation
-- **Features**: Two-client architecture, auto token refresh, request queueing, backward compatible
-
-**Benefits**:
-- Separation of concerns (logic in hooks, UI in components)
-- Improved reusability (ui/ components)
-- Easier testing (smaller components)
-- Mobile-first compliance
-- Design system consistency
-- Reduced duplication
-
-### December 4, 2025 - Campaign Q&A, Notifications, Feedback
-
-**New Features**:
-1. **Campaign Q&A**: Public Q&A, spam detection (8 factors, 0-100 score), rate limiting, 15min edit window
-2. **Notification System**: Real-time via Socket.IO, types (READY_TO_SEND, STATUS_CHANGED, ARCHIVED)
-3. **Feedback System**: Types (BUG, SUGGESTION, IMPROVEMENT, OTHER), status workflow, anonymous support
-4. **Spam Detection**: 8-factor analysis, rate limiting, user reputation
-5. **Campaign Status Automation**: Auto-archive when paid, auto-unarchive if unpaid
-6. **XSS Protection**: `sanitize.ts` with DOMPurify
-
-**Database**: Added CampaignMessage, Notification, Feedback tables. Extended User with reputation fields.
+**Features**: Campaign Q&A, notifications, feedback, spam detection, XSS protection (sanitize.ts).

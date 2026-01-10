@@ -10,6 +10,7 @@ import { ProfileHeader } from './profile/ProfileHeader';
 import { ProfileForm } from './profile/ProfileForm';
 import { PasswordSection } from './profile/PasswordSection';
 import { EmailSection } from './profile/EmailSection';
+import { EmailPreferencesSection } from './profile/EmailPreferencesSection';
 import { DeleteAccountSection } from './profile/DeleteAccountSection';
 import type { StoredUser } from '@/api/types';
 
@@ -42,7 +43,7 @@ export function Profile() {
   };
 
   // Check if user has password (users created via Google OAuth don't have one)
-  const hasPassword = !!(localUser as any).hasPassword ?? true;
+  const hasPassword = (localUser as any).hasPassword ?? true;
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 md:py-8 space-y-6">
@@ -55,6 +56,8 @@ export function Profile() {
       <EmailSection currentEmail={localUser.email} hasPassword={hasPassword} />
 
       <PasswordSection hasPassword={hasPassword} />
+
+      <EmailPreferencesSection />
 
       <DeleteAccountSection hasPassword={hasPassword} />
     </div>

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Fundo circular verde -->
+  <circle cx="256" cy="256" r="256" fill="#059669"/>
+  
+  <!-- Grupo de pessoas (compra coletiva) - design simplificado -->
+  <g transform="translate(256, 256)">
+    <!-- Pessoa 1 (esquerda) -->
+    <circle cx="-70" cy="-30" r="32" fill="none" stroke="white" stroke-width="8"/>
+    <path d="M -120 60 Q -120 10 -70 10 Q -20 10 -20 60" stroke="white" stroke-width="10" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Pessoa 2 (centro) -->
+    <circle cx="0" cy="-30" r="32" fill="none" stroke="white" stroke-width="8"/>
+    <path d="M -50 60 Q -50 10 0 10 Q 50 10 50 60" stroke="white" stroke-width="10" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Pessoa 3 (direita) -->
+    <circle cx="70" cy="-30" r="32" fill="none" stroke="white" stroke-width="8"/>
+    <path d="M 20 60 Q 20 10 70 10 Q 120 10 120 60" stroke="white" stroke-width="10" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
+

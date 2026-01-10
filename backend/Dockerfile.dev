@@ -5,15 +5,20 @@ RUN apk add --no-cache openssl libc6-compat postgresql-client
 
 WORKDIR /app
 
+# Copia package files e prisma schema primeiro
 COPY package*.json ./
+COPY prisma ./prisma
 
+# Instala dependências (postinstall automaticamente gera Prisma Client)
 RUN npm install
 
+# Copia o resto do código
 COPY . .
 
 # Bypass checksum validation if Prisma's binary server is down
 ENV PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
 
+# Garante que o Prisma Client está gerado (dupla verificação)
 RUN npx prisma generate
 
 EXPOSE 3000

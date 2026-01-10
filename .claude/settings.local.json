@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(where.exe:*)",
+      "Bash(winget search:*)",
+      "Bash(winget install:*)",
+      "Bash(echo $env:LOCALAPPDATA)",
+      "Bash(powershell -Command:*)",
+      "Bash(pwsh:*)",
+      "Bash(npm run build:*)"
+    ]
+  }
+}

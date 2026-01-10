@@ -93,7 +93,7 @@ export class LinkBuilder {
    */
   static buildPreferencesLink(): string {
     const baseUrl = this.getBaseUrl();
-    return `${baseUrl}/settings/email-preferences`;
+    return `${baseUrl}/email-preferences`;
   }
 
   /**
