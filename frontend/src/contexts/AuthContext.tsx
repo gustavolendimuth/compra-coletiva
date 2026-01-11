@@ -12,6 +12,7 @@ interface AuthContextType {
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  setUser: (user: StoredUser | null) => void;
   requireAuth: (callback: () => void, metadata?: PendingActionData) => void;
   setPendingAction: (action: (() => void) | null) => void;
   hasPendingAction: () => boolean;
@@ -213,6 +214,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     register,
     logout,
     refreshUser,
+    setUser,
     requireAuth,
     setPendingAction,
     hasPendingAction,

@@ -164,7 +164,7 @@ export function RecentActivity({ recentUsers, recentCampaigns, recentOrders }: R
                     </span>
                   </div>
                   <p className="text-xs text-gray-500">
-                    Pedido de <span className="font-medium">{order.customer.name}</span>
+                    Pedido de <span className="font-medium">{order.user.name}</span>
                   </p>
                   <div className="flex items-center gap-2 mt-1">
                     <span

@@ -49,7 +49,10 @@ export function Dashboard() {
       <RecentActivity
         recentUsers={statsData.data.recentUsers}
         recentCampaigns={activityData.data.recentCampaigns}
-        recentOrders={activityData.data.recentOrders}
+        recentOrders={activityData.data.recentOrders.map(order => ({
+          ...order,
+          user: order.customer
+        }))}
       />
     </div>
   );

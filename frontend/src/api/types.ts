@@ -497,8 +497,10 @@ export interface ChangeEmailResponse {
 }
 
 export interface VerifyEmailResponse {
-  message: string;
-  newEmail: string;
+  data: {
+    message: string;
+    email: string;
+  };
 }
 
 export interface DeleteAccountDto {
@@ -586,6 +588,7 @@ export interface AdminUser {
 }
 
 export interface AdminUserDetail extends AdminUser {
+  avatarUrl?: string;
   campaigns: Array<{
     id: string;
     name: string;
@@ -605,7 +608,7 @@ export interface AdminUserDetail extends AdminUser {
   _count: {
     campaigns: number;
     orders: number;
-    messages: number;
+    sentCampaignMessages: number;
   };
 }
 

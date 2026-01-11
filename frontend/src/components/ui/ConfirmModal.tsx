@@ -11,6 +11,8 @@ interface ConfirmModalProps {
   confirmText?: string;
   cancelText?: string;
   variant?: 'danger' | 'primary';
+  isLoading?: boolean;
+  children?: ReactNode;
 }
 
 /**
@@ -28,19 +30,28 @@ export const ConfirmModal = ({
   confirmText = 'Confirmar',
   cancelText = 'Cancelar',
   variant = 'danger',
+  isLoading = false,
+  children,
 }: ConfirmModalProps) => {
   const handleConfirm = () => {
     onConfirm();
-    onClose();
+    if (!isLoading) {
+      onClose();
+    }
   };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
       <div className="space-y-4">
         {/* Message */}
-        <div className="text-gray-700 text-base">
-          {typeof message === 'string' ? <p>{message}</p> : message}
-        </div>
+        {message && (
+          <div className="text-gray-700 text-base">
+            {typeof message === 'string' ? <p>{message}</p> : message}
+          </div>
+        )}
+
+        {/* Children content (optional) */}
+        {children}
 
         {/* Actions */}
         <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 sm:justify-end">
@@ -48,6 +59,7 @@ export const ConfirmModal = ({
             variant="secondary"
             onClick={onClose}
             className="w-full sm:w-auto min-h-[44px]"
+            disabled={isLoading}
           >
             {cancelText}
           </Button>
@@ -55,8 +67,9 @@ export const ConfirmModal = ({
             variant={variant}
             onClick={handleConfirm}
             className="w-full sm:w-auto min-h-[44px]"
+            disabled={isLoading}
           >
-            {confirmText}
+            {isLoading ? 'Processando...' : confirmText}
           </Button>
         </div>
       </div>

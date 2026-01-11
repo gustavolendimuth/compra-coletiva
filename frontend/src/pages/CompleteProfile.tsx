@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { authService } from '@/api';
 import { authStorage } from '@/lib/authStorage';
@@ -17,7 +16,6 @@ export function CompleteProfile() {
   const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { user, setUser } = useAuth();
-  const navigate = useNavigate();
   const isMountedRef = useRef(true);
 
   useEffect(() => {

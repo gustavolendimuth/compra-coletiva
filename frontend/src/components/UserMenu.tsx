@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, ChevronDown, User, Settings, Shield } from 'lucide-react';
+import { LogOut, ChevronDown, User, Shield } from 'lucide-react';
 
 interface UserMenuProps {
   variant?: 'default' | 'mobile';
