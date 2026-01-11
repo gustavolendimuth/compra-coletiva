@@ -22,11 +22,19 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
     description: string;
     deadline: string;
     shippingCost: number | "";
+    pixKey: string;
+    pixType: "CPF" | "CNPJ" | "EMAIL" | "PHONE" | "RANDOM" | "";
+    pixName: string;
+    pixVisibleAtStatus: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED";
   }>({
     name: "",
     description: "",
     deadline: "",
     shippingCost: "",
+    pixKey: "",
+    pixType: "",
+    pixName: "",
+    pixVisibleAtStatus: "ACTIVE",
   });
 
   const queryClient = useQueryClient();
@@ -52,6 +60,10 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
         description: "",
         deadline: "",
         shippingCost: "",
+        pixKey: "",
+        pixType: "",
+        pixName: "",
+        pixVisibleAtStatus: "ACTIVE",
       });
       setSelectedImage(null);
     },
@@ -70,6 +82,10 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
       description: formData.description,
       deadline: formData.deadline,
       shippingCost,
+      pixKey: formData.pixKey || undefined,
+      pixType: formData.pixType || undefined,
+      pixName: formData.pixName || undefined,
+      pixVisibleAtStatus: formData.pixVisibleAtStatus,
     });
   };
 
@@ -158,6 +174,84 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
             label="Valor do Frete Total"
             placeholder="0.00"
           />
+
+          <div className="border-t pt-4">
+            <h3 className="text-base font-semibold text-gray-900 mb-3">
+              Configuração PIX (opcional)
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Configure a chave PIX para que os compradores possam visualizar e realizar pagamentos.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tipo de Chave PIX
+                </label>
+                <select
+                  value={formData.pixType}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      pixType: e.target.value as any,
+                    })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                >
+                  <option value="">Selecione o tipo</option>
+                  <option value="CPF">CPF</option>
+                  <option value="CNPJ">CNPJ</option>
+                  <option value="EMAIL">E-mail</option>
+                  <option value="PHONE">Telefone</option>
+                  <option value="RANDOM">Chave Aleatória</option>
+                </select>
+              </div>
+
+              <Input
+                type="text"
+                value={formData.pixKey}
+                onChange={(e) =>
+                  setFormData({ ...formData, pixKey: e.target.value })
+                }
+                label="Chave PIX"
+                placeholder="Digite a chave PIX"
+              />
+
+              <Input
+                type="text"
+                value={formData.pixName}
+                onChange={(e) =>
+                  setFormData({ ...formData, pixName: e.target.value })
+                }
+                label="Nome do Titular"
+                placeholder="Nome do titular da conta PIX"
+              />
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Mostrar PIX quando a campanha estiver
+                </label>
+                <select
+                  value={formData.pixVisibleAtStatus}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      pixVisibleAtStatus: e.target.value as any,
+                    })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                >
+                  <option value="ACTIVE">Ativa</option>
+                  <option value="CLOSED">Fechada</option>
+                  <option value="SENT">Enviada</option>
+                  <option value="ARCHIVED">Arquivada</option>
+                </select>
+                <p className="text-sm text-gray-500 mt-2">
+                  O PIX será exibido em destaque apenas quando a campanha atingir o status selecionado.
+                </p>
+              </div>
+            </div>
+          </div>
 
           <div className="flex gap-3 pt-4">
             <Button

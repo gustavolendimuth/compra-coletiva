@@ -144,6 +144,12 @@ model Campaign {
   imageKey         String?              // Chave do arquivo no S3 para gerenciamento
   imageStorageType ImageStorageType?    // Tipo de armazenamento usado
 
+  // PIX para pagamento
+  pixKey              String?         // Chave PIX (CPF, CNPJ, email, telefone ou aleatória)
+  pixType             PixKeyType?     // Tipo da chave PIX
+  pixName             String?         // Nome do titular da conta PIX
+  pixVisibleAtStatus  CampaignStatus  @default(ACTIVE) // Status em que o PIX deve ser exibido
+
   // Auth - NULLABLE durante migração
   creatorId   String?
   creator     User?     @relation("CampaignCreator", fields: [creatorId], references: [id])
@@ -254,6 +260,14 @@ enum CampaignStatus {
   CLOSED
   SENT
   ARCHIVED
+}
+
+enum PixKeyType {
+  CPF
+  CNPJ
+  EMAIL
+  PHONE
+  RANDOM
 }
 
 enum ImageStorageType {

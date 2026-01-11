@@ -53,6 +53,7 @@ export function useCampaignDetail() {
   const [isSentConfirmOpen, setIsSentConfirmOpen] = useState(false);
   const [isCloneModalOpen, setIsCloneModalOpen] = useState(false);
   const [isImageUploadModalOpen, setIsImageUploadModalOpen] = useState(false);
+  const [isPixModalOpen, setIsPixModalOpen] = useState(false);
 
   // Editing states
   const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
@@ -105,6 +106,10 @@ export function useCampaignDetail() {
   const [deadlineForm, setDeadlineForm] = useState("");
   const [cloneName, setCloneName] = useState("");
   const [cloneDescription, setCloneDescription] = useState("");
+  const [pixKey, setPixKey] = useState("");
+  const [pixType, setPixType] = useState<"CPF" | "CNPJ" | "EMAIL" | "PHONE" | "RANDOM" | "">("");
+  const [pixName, setPixName] = useState("");
+  const [pixVisibleAtStatus, setPixVisibleAtStatus] = useState<"ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED">("ACTIVE");
 
   // Campaign inline edit states
   const [isEditingName, setIsEditingName] = useState(false);
@@ -430,6 +435,21 @@ export function useCampaignDetail() {
     onError: () => toast.error("Erro ao atualizar data limite"),
   });
 
+  const updatePixMutation = useMutation({
+    mutationFn: (data: {
+      pixKey?: string | null;
+      pixType?: "CPF" | "CNPJ" | "EMAIL" | "PHONE" | "RANDOM" | null;
+      pixName?: string | null;
+      pixVisibleAtStatus?: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED";
+    }) => campaignApi.update(slug!, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["campaign", slug] });
+      toast.success("PIX atualizado!");
+      setIsPixModalOpen(false);
+    },
+    onError: () => toast.error("Erro ao atualizar PIX"),
+  });
+
   const updateStatusMutation = useMutation({
     mutationFn: (status: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED") =>
       campaignApi.updateStatus(slug!, status),
@@ -596,6 +616,25 @@ export function useCampaignDetail() {
   const handleUpdateDeadline = (e: React.FormEvent) => {
     e.preventDefault();
     updateDeadlineMutation.mutate(deadlineForm || null);
+  };
+
+  const handleUpdatePix = (e: React.FormEvent) => {
+    e.preventDefault();
+    updatePixMutation.mutate({
+      pixKey: pixKey || null,
+      pixType: pixType || null,
+      pixName: pixName || null,
+      pixVisibleAtStatus,
+    });
+  };
+
+  const handleRemovePix = () => {
+    updatePixMutation.mutate({
+      pixKey: null,
+      pixType: null,
+      pixName: null,
+      pixVisibleAtStatus: "ACTIVE",
+    });
   };
 
   const handleUpdateStatus = (
@@ -812,6 +851,21 @@ export function useCampaignDetail() {
     }
   };
 
+  const handleOpenPixModal = () => {
+    setIsPixModalOpen(true);
+    if (campaign) {
+      setPixKey(campaign.pixKey || "");
+      setPixType(campaign.pixType || "");
+      setPixName(campaign.pixName || "");
+      setPixVisibleAtStatus(campaign.pixVisibleAtStatus || "ACTIVE");
+    } else {
+      setPixKey("");
+      setPixType("");
+      setPixName("");
+      setPixVisibleAtStatus("ACTIVE");
+    }
+  };
+
   const handleOpenCloneModal = () => {
     requireAuth(() => {
       if (campaign) {
@@ -893,6 +947,18 @@ export function useCampaignDetail() {
     deadlineForm,
     setDeadlineForm,
 
+    // PIX Modal State
+    isPixModalOpen,
+    setIsPixModalOpen,
+    pixKey,
+    setPixKey,
+    pixType,
+    setPixType,
+    pixName,
+    setPixName,
+    pixVisibleAtStatus,
+    setPixVisibleAtStatus,
+
     // Confirm Dialog State
     isCloseConfirmOpen,
     setIsCloseConfirmOpen,
@@ -945,6 +1011,8 @@ export function useCampaignDetail() {
     handleDeleteOrder,
     handleUpdateShipping,
     handleUpdateDeadline,
+    handleUpdatePix,
+    handleRemovePix,
     handleUpdateStatus,
     handleUpdateCampaign,
     handleNameClick,
@@ -962,6 +1030,7 @@ export function useCampaignDetail() {
     handleEditOrderFromView,
     handleReopenCampaign,
     handleOpenEditDeadline,
+    handleOpenPixModal,
     handleOpenCloneModal,
     handleCloneCampaign,
 
@@ -970,6 +1039,7 @@ export function useCampaignDetail() {
     updateProductMutation,
     updateShippingMutation,
     updateDeadlineMutation,
+    updatePixMutation,
     updateStatusMutation,
     createOrderMutation,
     updateOrderWithItemsMutation,

@@ -20,6 +20,7 @@ export { Divider } from "./Divider";
 export { GoogleButton } from "./GoogleButton";
 export { NotificationItem } from "./NotificationItem";
 export { ImageUpload } from "./ImageUpload";
+export { PixDisplay } from "./PixDisplay";
 export { Portal } from "./Portal";
 
 // Re-export default for backward compatibility

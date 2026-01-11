@@ -48,6 +48,8 @@ export interface CompletePhoneRequest {
 // Campaign Types
 // ============================================================================
 
+export type PixKeyType = "CPF" | "CNPJ" | "EMAIL" | "PHONE" | "RANDOM";
+
 export interface Campaign {
   id: string;
   slug: string;
@@ -60,6 +62,10 @@ export interface Campaign {
   imageUrl?: string;
   imageKey?: string;
   imageStorageType?: "S3" | "LOCAL";
+  pixKey?: string;
+  pixType?: PixKeyType;
+  pixName?: string;
+  pixVisibleAtStatus: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED";
   createdAt: string;
   updatedAt: string;
   _count?: {
@@ -105,6 +111,10 @@ export interface CreateCampaignDto {
   description?: string;
   deadline?: string;
   shippingCost?: number;
+  pixKey?: string;
+  pixType?: PixKeyType;
+  pixName?: string;
+  pixVisibleAtStatus?: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED";
 }
 
 export interface UpdateCampaignDto {
@@ -113,6 +123,10 @@ export interface UpdateCampaignDto {
   deadline?: string;
   shippingCost?: number;
   status?: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED";
+  pixKey?: string | null;
+  pixType?: PixKeyType | null;
+  pixName?: string | null;
+  pixVisibleAtStatus?: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED";
 }
 
 export interface CloneCampaignDto {

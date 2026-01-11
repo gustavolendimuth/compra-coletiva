@@ -38,6 +38,7 @@ export default function CampaignDetail() {
           canEditCampaign={hook.canEditCampaign}
           ordersCount={hook.orders?.length || 0}
           onEditDeadline={hook.handleOpenEditDeadline}
+          onEditPix={hook.handleOpenPixModal}
           onCloseCampaign={() => hook.setIsCloseConfirmOpen(true)}
           onReopenCampaign={() => hook.setIsReopenConfirmOpen(true)}
           onMarkAsSent={() => hook.setIsSentConfirmOpen(true)}
@@ -55,6 +56,7 @@ export default function CampaignDetail() {
 
       {activeTab === "overview" && hook.analytics && (
         <OverviewTab
+          campaign={hook.campaign}
           campaignId={hook.campaign.id}
           analytics={hook.analytics}
           products={hook.products || []}

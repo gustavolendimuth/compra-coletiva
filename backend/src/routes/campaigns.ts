@@ -46,6 +46,10 @@ const createCampaignSchema = z.object({
     return val;
   }, z.string().optional()),
   shippingCost: z.number().min(0).default(0),
+  pixKey: z.string().optional(),
+  pixType: z.enum(["CPF", "CNPJ", "EMAIL", "PHONE", "RANDOM"]).optional(),
+  pixName: z.string().optional(),
+  pixVisibleAtStatus: z.enum(["ACTIVE", "CLOSED", "SENT", "ARCHIVED"]).default("ACTIVE"),
 });
 
 const updateCampaignSchema = z.object({
@@ -61,6 +65,10 @@ const updateCampaignSchema = z.object({
   }, z.string().nullable().optional()),
   shippingCost: z.number().min(0).optional(),
   status: z.enum(["ACTIVE", "CLOSED", "SENT", "ARCHIVED"]).optional(),
+  pixKey: z.string().nullable().optional(),
+  pixType: z.enum(["CPF", "CNPJ", "EMAIL", "PHONE", "RANDOM"]).nullable().optional(),
+  pixName: z.string().nullable().optional(),
+  pixVisibleAtStatus: z.enum(["ACTIVE", "CLOSED", "SENT", "ARCHIVED"]).optional(),
 });
 
 const updateStatusSchema = z.object({
