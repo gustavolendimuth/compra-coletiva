@@ -122,9 +122,8 @@ export function RecentActivity({ recentUsers, recentCampaigns, recentOrders }: R
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <p className="text-sm font-medium text-gray-900 flex-1">{campaign.name}</p>
                   <span
-                    className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                      statusColors[campaign.status as keyof typeof statusColors]
-                    }`}
+                    className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusColors[campaign.status as keyof typeof statusColors]
+                      }`}
                   >
                     {campaign.status}
                   </span>
@@ -168,11 +167,10 @@ export function RecentActivity({ recentUsers, recentCampaigns, recentOrders }: R
                   </p>
                   <div className="flex items-center gap-2 mt-1">
                     <span
-                      className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                        order.isPaid
+                      className={`px-2 py-0.5 text-xs font-medium rounded-full ${order.isPaid
                           ? 'bg-green-100 text-green-800'
                           : 'bg-yellow-100 text-yellow-800'
-                      }`}
+                        }`}
                     >
                       {order.isPaid ? 'Pago' : 'Pendente'}
                     </span>
