@@ -8,7 +8,7 @@ import { Button as EmailButton } from '@react-email/components';
 
 interface ButtonProps {
   href: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   variant?: 'primary' | 'secondary';
 }
 

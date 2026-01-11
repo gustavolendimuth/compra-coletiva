@@ -17,7 +17,7 @@ import {
 
 interface BaseEmailProps {
   title: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   unsubscribeUrl: string;
   preferencesUrl?: string;
 }
