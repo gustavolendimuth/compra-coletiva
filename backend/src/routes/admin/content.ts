@@ -233,7 +233,7 @@ router.get(
       prisma.campaignMessage.findMany({
         where,
         include: {
-          author: {
+          sender: {
             select: {
               id: true,
               name: true,
