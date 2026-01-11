@@ -155,6 +155,8 @@ export function startEmailWorker(): Worker<EmailJobData> {
     : {
         host: config.redis.host,
         port: config.redis.port,
+        ...(config.redis.username && { username: config.redis.username }),
+        ...(config.redis.password && { password: config.redis.password }),
       };
 
   // Criar worker

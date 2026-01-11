@@ -26,6 +26,8 @@ export interface EmailConfig {
   redis: {
     host: string;
     port: number;
+    username?: string;
+    password?: string;
     url?: string;
   };
 
@@ -68,6 +70,8 @@ export function getEmailConfig(): EmailConfig {
     redis: {
       host: process.env.REDIS_HOST || 'localhost',
       port: parseInt(process.env.REDIS_PORT || '6379', 10),
+      username: process.env.REDIS_USERNAME || process.env.REDIS_USER,
+      password: process.env.REDIS_PASSWORD,
       url: process.env.REDIS_URL,
     },
 
