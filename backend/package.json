@@ -18,6 +18,7 @@
     "restore": "tsx scripts/restore-db.ts",
     "seed:migrate": "tsx prisma/seed-migration.ts",
     "capitalize:names": "node scripts/capitalize-user-names.js",
+    "queue:clear": "node scripts/clear-email-queue.js",
     "clean": "rm -rf dist node_modules"
   },
   "dependencies": {

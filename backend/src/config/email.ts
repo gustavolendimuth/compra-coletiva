@@ -54,7 +54,7 @@ export function getEmailConfig(): EmailConfig {
     // Resend configuration
     resend: {
       apiKey: process.env.RESEND_API_KEY,
-      fromEmail: process.env.RESEND_FROM_EMAIL || 'Compra Coletiva <noreply@compracoletiva.com>',
+      fromEmail: process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM || 'Compra Coletiva <noreply@compracoletiva.app>',
       fromName: process.env.RESEND_FROM_NAME || 'Compra Coletiva',
     },
 
