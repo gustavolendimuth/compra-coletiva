@@ -49,9 +49,11 @@ export function OverviewTab({
   onAddToOrder,
 }: OverviewTabProps) {
   // Verificar se deve mostrar o PIX baseado no status da campanha
+  // Nunca mostrar se a campanha estiver arquivada
   const shouldShowPix =
     campaign.pixKey &&
     campaign.pixType &&
+    campaign.status !== "ARCHIVED" &&
     campaign.status === campaign.pixVisibleAtStatus;
 
   return (
