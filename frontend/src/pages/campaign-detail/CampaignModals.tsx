@@ -4,6 +4,7 @@ import { AddOrderModal, EditOrderModal, ViewOrderModal } from './modals/OrderMod
 import {
   ShippingModal,
   DeadlineModal,
+  PixModal,
   CloseConfirmDialog,
   ReopenConfirmDialog,
   SentConfirmDialog,
@@ -92,6 +93,22 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
           hook.setDeadlineForm('');
           hook.handleUpdateDeadline({ preventDefault: () => {} } as React.FormEvent);
         }}
+      />
+
+      <PixModal
+        isOpen={hook.isPixModalOpen}
+        pixKey={hook.pixKey}
+        pixType={hook.pixType}
+        pixName={hook.pixName}
+        pixVisibleAtStatus={hook.pixVisibleAtStatus}
+        isPending={hook.updatePixMutation.isPending}
+        onClose={() => hook.setIsPixModalOpen(false)}
+        onChangePixKey={hook.setPixKey}
+        onChangePixType={hook.setPixType}
+        onChangePixName={hook.setPixName}
+        onChangePixVisibleAtStatus={hook.setPixVisibleAtStatus}
+        onSubmit={hook.handleUpdatePix}
+        onRemove={hook.handleRemovePix}
       />
 
       <CloseConfirmDialog

@@ -12,14 +12,15 @@ import {
   User,
   LayoutDashboard,
 } from "lucide-react";
-import { Card } from "@/components/ui";
+import { Card, PixDisplay } from "@/components/ui";
 import IconButton from "@/components/IconButton";
 import { CampaignChat } from "@/components/campaign";
 import { formatCurrency } from "@/lib/utils";
-import { Order, Product, CampaignAnalytics } from "@/api";
+import { Order, Product, CampaignAnalytics, Campaign } from "@/api";
 import { getCustomerDisplayName } from "../utils";
 
 interface OverviewTabProps {
+  campaign: Campaign;
   campaignId: string;
   analytics: CampaignAnalytics;
   products: Product[];
@@ -34,6 +35,7 @@ interface OverviewTabProps {
 }
 
 export function OverviewTab({
+  campaign,
   campaignId,
   analytics,
   products,
@@ -46,6 +48,12 @@ export function OverviewTab({
   onTogglePayment,
   onAddToOrder,
 }: OverviewTabProps) {
+  // Verificar se deve mostrar o PIX baseado no status da campanha
+  const shouldShowPix =
+    campaign.pixKey &&
+    campaign.pixType &&
+    campaign.status === campaign.pixVisibleAtStatus;
+
   return (
     <div className="space-y-6 pb-20 md:pb-0">
       <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-4">
@@ -78,6 +86,15 @@ export function OverviewTab({
           </div>
         )}
       </div>
+
+      {/* PIX em Destaque */}
+      {shouldShowPix && (
+        <PixDisplay
+          pixKey={campaign.pixKey!}
+          pixType={campaign.pixType!}
+          pixName={campaign.pixName}
+        />
+      )}
 
       {/* Produtos em Destaque */}
       {products && products.length > 0 && (

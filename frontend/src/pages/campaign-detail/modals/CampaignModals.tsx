@@ -1,7 +1,7 @@
 import { Modal, Button, Input, Textarea, CurrencyInput } from "@/components/ui";
 import DateTimeInput from "@/components/DateTimeInput";
 import ConfirmDialog from "@/components/ConfirmDialog";
-import { Campaign } from "@/api";
+import { Campaign, PixKeyType } from "@/api";
 
 interface CloneModalProps {
   isOpen: boolean;
@@ -208,6 +208,131 @@ export function SentConfirmDialog({
       cancelText="Cancelar"
       variant="info"
     />
+  );
+}
+
+interface PixModalProps {
+  isOpen: boolean;
+  pixKey: string;
+  pixType: PixKeyType | "";
+  pixName: string;
+  pixVisibleAtStatus: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED";
+  isPending: boolean;
+  onClose: () => void;
+  onChangePixKey: (value: string) => void;
+  onChangePixType: (value: PixKeyType | "") => void;
+  onChangePixName: (value: string) => void;
+  onChangePixVisibleAtStatus: (value: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED") => void;
+  onSubmit: (e: React.FormEvent) => void;
+  onRemove?: () => void;
+}
+
+export function PixModal({
+  isOpen,
+  pixKey,
+  pixType,
+  pixName,
+  pixVisibleAtStatus,
+  isPending,
+  onClose,
+  onChangePixKey,
+  onChangePixType,
+  onChangePixName,
+  onChangePixVisibleAtStatus,
+  onSubmit,
+  onRemove,
+}: PixModalProps) {
+  const hasPixConfigured = pixKey && pixType;
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Configurar PIX">
+      <form onSubmit={onSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Tipo de Chave PIX
+          </label>
+          <select
+            value={pixType}
+            onChange={(e) => onChangePixType(e.target.value as any)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+            autoFocus
+          >
+            <option value="">Selecione o tipo</option>
+            <option value="CPF">CPF</option>
+            <option value="CNPJ">CNPJ</option>
+            <option value="EMAIL">E-mail</option>
+            <option value="PHONE">Telefone</option>
+            <option value="RANDOM">Chave Aleatória</option>
+          </select>
+        </div>
+
+        <Input
+          id="pix-key"
+          type="text"
+          value={pixKey}
+          onChange={(e) => onChangePixKey(e.target.value)}
+          label="Chave PIX"
+          placeholder="Digite a chave PIX"
+        />
+
+        <Input
+          id="pix-name"
+          type="text"
+          value={pixName}
+          onChange={(e) => onChangePixName(e.target.value)}
+          label="Nome do Titular"
+          placeholder="Nome do titular da conta PIX"
+        />
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Mostrar PIX quando a campanha estiver
+          </label>
+          <select
+            value={pixVisibleAtStatus}
+            onChange={(e) => onChangePixVisibleAtStatus(e.target.value as any)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+          >
+            <option value="ACTIVE">Ativa</option>
+            <option value="CLOSED">Fechada</option>
+            <option value="SENT">Enviada</option>
+            <option value="ARCHIVED">Arquivada</option>
+          </select>
+          <p className="text-sm text-gray-500 mt-2">
+            O PIX será exibido em destaque quando a campanha atingir este status.
+          </p>
+        </div>
+
+        <div className="flex gap-3 pt-4">
+          <Button
+            type="submit"
+            disabled={isPending}
+            className="flex-1 whitespace-nowrap"
+          >
+            {isPending ? "Salvando..." : "Salvar"}
+          </Button>
+          {hasPixConfigured && onRemove && (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onRemove}
+              disabled={isPending}
+              className="whitespace-nowrap"
+            >
+              Remover PIX
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onClose}
+            className="whitespace-nowrap"
+          >
+            Cancelar
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 

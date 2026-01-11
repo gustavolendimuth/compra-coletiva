@@ -12,6 +12,7 @@ import {
   FileText,
   Copy,
   Image as ImageIcon,
+  QrCode,
 } from "lucide-react";
 import IconButton from "@/components/IconButton";
 import { Input, Textarea } from "@/components/ui";
@@ -24,6 +25,7 @@ interface CampaignHeaderProps {
   canEditCampaign: boolean;
   ordersCount: number;
   onEditDeadline: () => void;
+  onEditPix: () => void;
   onCloseCampaign: () => void;
   onReopenCampaign: () => void;
   onMarkAsSent: () => void;
@@ -37,6 +39,7 @@ export function CampaignHeader({
   canEditCampaign,
   ordersCount,
   onEditDeadline,
+  onEditPix,
   onCloseCampaign,
   onReopenCampaign,
   onMarkAsSent,
@@ -276,6 +279,18 @@ export function CampaignHeader({
           >
             Clonar Campanha
           </IconButton>
+
+          {canEditCampaign && (
+            <IconButton
+              size="sm"
+              variant="secondary"
+              icon={<QrCode className="w-4 h-4" />}
+              onClick={onEditPix}
+              className="text-xs sm:text-sm whitespace-nowrap"
+            >
+              Configurar PIX
+            </IconButton>
+          )}
 
           {ordersCount > 0 && canEditCampaign && (
             <IconButton
