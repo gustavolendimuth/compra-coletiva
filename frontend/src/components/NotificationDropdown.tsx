@@ -15,13 +15,20 @@ interface NotificationDropdownProps {
   buttonRef?: React.RefObject<HTMLButtonElement>;
 }
 
+interface Position {
+  top: number;
+  left: number;
+  width?: number;
+}
+
 export function NotificationDropdown({
   isOpen,
   onClose,
   buttonRef,
 }: NotificationDropdownProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const [position, setPosition] = useState<Position>({ top: 0, left: 0 });
+  const [isMobile, setIsMobile] = useState(false);
   const {
     notifications,
     isLoading,
@@ -33,28 +40,42 @@ export function NotificationDropdown({
   useEffect(() => {
     if (isOpen && buttonRef?.current) {
       const rect = buttonRef.current.getBoundingClientRect();
-      const isMobile = window.innerWidth < 768; // md breakpoint
-      const dropdownWidth = isMobile ? 320 : 384; // w-80 = 320px, md:w-96 = 384px
-      const spacing = 8; // 8px spacing
+      const isMobileView = window.innerWidth < 768; // md breakpoint
+      setIsMobile(isMobileView);
 
-      // Align dropdown's right edge with button's right edge
-      // but ensure it doesn't go off-screen on either side
-      let left = rect.right - dropdownWidth;
+      if (isMobileView) {
+        // Mobile: Center modal on screen
+        const dropdownWidth = Math.min(window.innerWidth - 32, 400); // Max 400px, with 16px margin on each side
+        setPosition({
+          top: 80, // Fixed top position below header
+          left: (window.innerWidth - dropdownWidth) / 2, // Center horizontally
+          width: dropdownWidth,
+        });
+      } else {
+        // Desktop: Align with button
+        const dropdownWidth = 384; // md:w-96 = 384px
+        const spacing = 8; // 8px spacing
 
-      // Prevent overflow on the left
-      if (left < spacing) {
-        left = spacing;
+        // Align dropdown's right edge with button's right edge
+        // but ensure it doesn't go off-screen on either side
+        let left = rect.right - dropdownWidth;
+
+        // Prevent overflow on the left
+        if (left < spacing) {
+          left = spacing;
+        }
+
+        // Prevent overflow on the right
+        if (left + dropdownWidth > window.innerWidth - spacing) {
+          left = window.innerWidth - dropdownWidth - spacing;
+        }
+
+        setPosition({
+          top: rect.bottom + spacing,
+          left: left,
+          width: dropdownWidth,
+        });
       }
-
-      // Prevent overflow on the right
-      if (left + dropdownWidth > window.innerWidth - spacing) {
-        left = window.innerWidth - dropdownWidth - spacing;
-      }
-
-      setPosition({
-        top: rect.bottom + spacing,
-        left: left,
-      });
     }
   }, [isOpen, buttonRef]);
 
@@ -106,12 +127,23 @@ export function NotificationDropdown({
 
   return (
     <Portal>
+      {/* Backdrop for mobile */}
+      {isMobile && (
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[90]"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Dropdown */}
       <div
         ref={dropdownRef}
-        className="fixed w-80 md:w-96 bg-white border border-gray-200 rounded-lg shadow-lg max-h-[80vh] overflow-hidden flex flex-col z-[100]"
+        className="fixed bg-white border border-gray-200 rounded-lg shadow-lg max-h-[80vh] overflow-hidden flex flex-col z-[100]"
         style={{
           top: `${position.top}px`,
           left: `${position.left}px`,
+          width: position.width ? `${position.width}px` : undefined,
         }}
       >
       {/* Header */}
