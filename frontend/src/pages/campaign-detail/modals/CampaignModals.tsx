@@ -2,6 +2,7 @@ import { Modal, Button, Input, Textarea, CurrencyInput } from "@/components/ui";
 import DateTimeInput from "@/components/DateTimeInput";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { Campaign, PixKeyType } from "@/api";
+import { applyPixMask, getPixPlaceholder } from "@/lib/pixMasks";
 
 interface CloneModalProps {
   isOpen: boolean;
@@ -270,9 +271,13 @@ export function PixModal({
           id="pix-key"
           type="text"
           value={pixKey}
-          onChange={(e) => onChangePixKey(e.target.value)}
+          onChange={(e) => {
+            const maskedValue = applyPixMask(e.target.value, pixType);
+            onChangePixKey(maskedValue);
+          }}
           label="Chave PIX"
-          placeholder="Digite a chave PIX"
+          placeholder={getPixPlaceholder(pixType)}
+          disabled={!pixType}
         />
 
         <Input
@@ -296,7 +301,6 @@ export function PixModal({
             <option value="ACTIVE">Ativa</option>
             <option value="CLOSED">Fechada</option>
             <option value="SENT">Enviada</option>
-            <option value="ARCHIVED">Arquivada</option>
           </select>
           <p className="text-sm text-gray-500 mt-2">
             O PIX será exibido em destaque quando a campanha atingir este status.

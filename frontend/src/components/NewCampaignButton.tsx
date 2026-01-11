@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import toast from "react-hot-toast";
@@ -6,6 +6,7 @@ import { campaignApi, campaignService } from "@/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button, Modal, Input, Textarea, ImageUpload } from "@/components/ui";
 import DateTimeInput from "@/components/DateTimeInput";
+import { applyPixMask, removeMask, getPixPlaceholder } from "@/lib/pixMasks";
 
 interface NewCampaignButtonProps {
   onModalOpen?: () => void; // Callback when modal is opened
@@ -38,6 +39,13 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
   });
 
   const queryClient = useQueryClient();
+
+  // Clear PIX key when type changes to avoid inconsistencies
+  useEffect(() => {
+    if (formData.pixType) {
+      setFormData((prev) => ({ ...prev, pixKey: "" }));
+    }
+  }, [formData.pixType]);
 
   const createMutation = useMutation({
     mutationFn: campaignApi.create,
@@ -77,12 +85,17 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
     const shippingCost =
       typeof formData.shippingCost === "number" ? formData.shippingCost : 0;
 
+    // Remove mask from PIX key before sending
+    const cleanPixKey = formData.pixKey
+      ? removeMask(formData.pixKey, formData.pixType)
+      : undefined;
+
     createMutation.mutate({
       name: formData.name,
       description: formData.description,
       deadline: formData.deadline,
       shippingCost,
-      pixKey: formData.pixKey || undefined,
+      pixKey: cleanPixKey,
       pixType: formData.pixType || undefined,
       pixName: formData.pixName || undefined,
       pixVisibleAtStatus: formData.pixVisibleAtStatus,
@@ -210,11 +223,13 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
               <Input
                 type="text"
                 value={formData.pixKey}
-                onChange={(e) =>
-                  setFormData({ ...formData, pixKey: e.target.value })
-                }
+                onChange={(e) => {
+                  const maskedValue = applyPixMask(e.target.value, formData.pixType);
+                  setFormData({ ...formData, pixKey: maskedValue });
+                }}
                 label="Chave PIX"
-                placeholder="Digite a chave PIX"
+                placeholder={getPixPlaceholder(formData.pixType)}
+                disabled={!formData.pixType}
               />
 
               <Input
@@ -244,7 +259,6 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
                   <option value="ACTIVE">Ativa</option>
                   <option value="CLOSED">Fechada</option>
                   <option value="SENT">Enviada</option>
-                  <option value="ARCHIVED">Arquivada</option>
                 </select>
                 <p className="text-sm text-gray-500 mt-2">
                   O PIX será exibido em destaque apenas quando a campanha atingir o status selecionado.

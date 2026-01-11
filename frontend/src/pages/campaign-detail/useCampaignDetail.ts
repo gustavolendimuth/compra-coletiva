@@ -11,6 +11,7 @@ import {
   Product,
 } from "@/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { removeMask, applyPixMask } from "@/lib/pixMasks";
 
 interface ProductForm {
   campaignId: string;
@@ -216,6 +217,13 @@ export function useCampaignDetail() {
       isFirstEditRenderRef.current = true;
     }
   }, [isEditOrderModalOpen]);
+
+  // Clear PIX key when type changes to avoid inconsistencies
+  useEffect(() => {
+    if (pixType) {
+      setPixKey("");
+    }
+  }, [pixType]);
 
   // State for handling navigation from notifications
   const [shouldOpenQuestionsTab, setShouldOpenQuestionsTab] = useState(false);
@@ -620,8 +628,10 @@ export function useCampaignDetail() {
 
   const handleUpdatePix = (e: React.FormEvent) => {
     e.preventDefault();
+    // Remove mask from PIX key before sending
+    const cleanPixKey = pixKey ? removeMask(pixKey, pixType) : null;
     updatePixMutation.mutate({
-      pixKey: pixKey || null,
+      pixKey: cleanPixKey,
       pixType: pixType || null,
       pixName: pixName || null,
       pixVisibleAtStatus,
@@ -854,7 +864,11 @@ export function useCampaignDetail() {
   const handleOpenPixModal = () => {
     setIsPixModalOpen(true);
     if (campaign) {
-      setPixKey(campaign.pixKey || "");
+      // Apply mask to existing PIX key when loading
+      const maskedPixKey = campaign.pixKey && campaign.pixType
+        ? applyPixMask(campaign.pixKey, campaign.pixType)
+        : "";
+      setPixKey(maskedPixKey);
       setPixType(campaign.pixType || "");
       setPixName(campaign.pixName || "");
       setPixVisibleAtStatus(campaign.pixVisibleAtStatus || "ACTIVE");
