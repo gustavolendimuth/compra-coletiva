@@ -34,6 +34,23 @@ export const getSocket = (): Socket => {
   return socket;
 };
 
+/**
+ * Update socket authentication token
+ * Call this after token refresh to update the socket connection
+ */
+export const updateSocketToken = (newToken: string) => {
+  if (socket && socket.connected) {
+    // Update the auth token for future reconnections
+    socket.auth = { token: newToken };
+
+    // Disconnect and reconnect to apply new token
+    socket.disconnect();
+    socket.connect();
+
+    console.log('🔄 Socket token updated and reconnected');
+  }
+};
+
 export const disconnectSocket = () => {
   if (socket) {
     socket.disconnect();

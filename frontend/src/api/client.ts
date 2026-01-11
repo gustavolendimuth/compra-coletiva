@@ -7,6 +7,7 @@ import axios, { AxiosInstance } from "axios";
 import { apiConfig } from "./config";
 import { authStorage } from "../lib/authStorage";
 import { RefreshResponse } from "./types";
+import { updateSocketToken } from "../lib/socket";
 
 /**
  * Main API client instance
@@ -105,6 +106,13 @@ apiClient.interceptors.response.use(
 
       const { accessToken } = response.data;
       authStorage.setAccessToken(accessToken);
+
+      // Update Socket.IO token when access token is refreshed
+      try {
+        updateSocketToken(accessToken);
+      } catch (err) {
+        console.warn('Failed to update socket token:', err);
+      }
 
       // Update the failed request with new token
       originalRequest.headers.Authorization = `Bearer ${accessToken}`;
