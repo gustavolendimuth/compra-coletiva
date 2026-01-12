@@ -15,7 +15,9 @@ interface ModalProps {
 /**
  * Modal Component - Design System Primitive
  *
- * Mobile-first modal that's full-screen on mobile, centered on desktop.
+ * Mobile-first modal that's centered on all screen sizes.
+ * On mobile: centered with padding, rounded corners
+ * On desktop: centered with max-width constraints
  * Follows design system colors, shadows, and spacing.
  * Handles body scroll locking and keyboard accessibility.
  */
@@ -63,22 +65,22 @@ export const Modal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-0">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50"
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Modal Content - Full screen on mobile, centered on desktop */}
+      {/* Modal Content - Centered with max width on mobile, standard on desktop */}
       <div
         className={cn(
           'relative bg-white',
-          'w-full h-full md:h-auto', // Full height mobile, auto desktop
-          'md:rounded-lg md:shadow-lg', // Rounded corners only on desktop
+          'w-full md:h-auto', // Full width with padding, auto height
+          'rounded-lg shadow-lg', // Rounded corners on all screens
           'md:mx-4', // Margin on desktop
-          'max-h-[100vh] md:max-h-[90vh]', // Full viewport mobile, 90% desktop
+          'max-h-[90vh]', // Max 90% viewport on all screens
           'overflow-y-auto',
           sizeClasses[size],
           className
