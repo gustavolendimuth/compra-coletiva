@@ -160,9 +160,8 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
               <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3 px-4">
                 Notificações
               </h3>
-              <div className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition-colors">
+              <div className="flex items-center gap-3 px-4 py-3">
                 <NotificationIcon />
-                <span className="text-sm text-gray-700">Mensagens</span>
               </div>
             </div>
           </nav>
