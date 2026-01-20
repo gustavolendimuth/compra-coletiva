@@ -32,6 +32,9 @@ export const uploadCampaignImage = uploadMiddleware.single("image");
 // Avatar upload configuration
 export const uploadAvatar = uploadMiddleware.single("avatar");
 
+// Payment proof upload configuration
+export const uploadPaymentProof = uploadMiddleware.single("paymentProof");
+
 // Error handler for multer errors
 export const handleUploadError = (
   err: Error,

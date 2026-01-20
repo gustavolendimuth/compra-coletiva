@@ -42,6 +42,26 @@ export const orderService = {
     apiClient.put<Order>(`/orders/${id}`, data).then(res => res.data),
 
   /**
+   * Update order payment status with proof
+   * @param id - Order ID
+   * @param isPaid - Payment status
+   * @param file - Payment proof file (required when marking as paid)
+   * @returns Updated order
+   */
+  updatePayment: (id: string, isPaid: boolean, file?: File) => {
+    const formData = new FormData();
+    formData.append('isPaid', String(isPaid));
+    if (file) {
+      formData.append('paymentProof', file);
+    }
+    return apiClient
+      .patch<Order>(`/orders/${id}/payment`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((res) => res.data);
+  },
+
+  /**
    * Delete an order
    * @param id - Order ID
    */

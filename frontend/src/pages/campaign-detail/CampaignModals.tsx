@@ -11,6 +11,7 @@ import {
   CloneModal,
 } from './modals/CampaignModals';
 import { ImageUploadModal } from './modals/ImageUploadModal';
+import { PaymentProofModal } from './modals/PaymentProofModal';
 
 interface CampaignModalsProps {
   hook: any;
@@ -70,6 +71,17 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
           hook.setViewingOrder(null);
         }}
         onEdit={hook.handleEditOrderFromView}
+      />
+
+      <PaymentProofModal
+        isOpen={hook.isPaymentProofModalOpen}
+        order={hook.orderForPayment}
+        isPending={hook.updatePaymentMutation.isPending}
+        onClose={() => {
+          hook.setIsPaymentProofModalOpen(false);
+          hook.setOrderForPayment(null);
+        }}
+        onSubmit={hook.handlePaymentProofSubmit}
       />
 
       <ShippingModal

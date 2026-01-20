@@ -3,6 +3,7 @@ import { Modal, Button, Input, Select } from "@/components/ui";
 import IconButton from "@/components/IconButton";
 import { OrderChat } from "@/components/campaign";
 import { formatCurrency } from "@/lib/utils";
+import { getImageUrl } from "@/lib/imageUrl";
 import { Order, Product } from "@/api";
 
 interface OrderForm {
@@ -236,6 +237,22 @@ export function ViewOrderModal({
               </span>
             </div>
           </div>
+
+          {/* Comprovante de Pagamento */}
+          {order.paymentProofUrl && (
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-2">
+                Comprovante de Pagamento
+              </h4>
+              <div className="border rounded-lg overflow-hidden">
+                <img
+                  src={getImageUrl(order.paymentProofUrl) || undefined}
+                  alt="Comprovante PIX"
+                  className="w-full h-auto"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Chat */}
           <div>
