@@ -7,6 +7,8 @@ import { ShippingCalculator } from '../services/shippingCalculator';
 import { emitOrderCreated, emitOrderUpdated, emitOrderDeleted, emitOrderStatusChanged } from '../services/socketService';
 import { Money } from '../utils/money';
 import { CampaignStatusService } from '../services/campaignStatusService';
+import { uploadPaymentProof, handleUploadError } from '../middleware/uploadMiddleware';
+import { ImageUploadService } from '../services/imageUploadService';
 
 const router = Router();
 
@@ -500,6 +502,115 @@ router.delete('/:id/items/:itemId', requireAuth, requireOrderOwnership, asyncHan
 
   res.status(204).send();
 }));
+
+// PATCH /api/orders/:id/payment - Atualiza status de pagamento com comprovante
+router.patch('/:id/payment',
+  requireAuth,
+  requireOrderOrCampaignOwnership,
+  uploadPaymentProof,
+  handleUploadError,
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { isPaid } = req.body; // "true" or "false" as string
+
+    const order = await prisma.order.findUnique({
+      where: { id },
+      include: { campaign: true }
+    });
+
+    if (!order) {
+      throw new AppError(404, 'Order not found');
+    }
+
+    // Se está marcando como pago, exige comprovante
+    if (isPaid === 'true' && !req.file) {
+      throw new AppError(400, 'Comprovante de pagamento é obrigatório');
+    }
+
+    let updateData: any = {
+      isPaid: isPaid === 'true'
+    };
+
+    // Se está marcando como pago, faz upload do comprovante
+    if (isPaid === 'true' && req.file) {
+      // Deleta comprovante anterior se existir
+      if (order.paymentProofKey && order.paymentProofStorageType) {
+        await ImageUploadService.deleteImage(
+          order.paymentProofKey,
+          order.paymentProofStorageType
+        );
+      }
+
+      // Upload do novo comprovante
+      const uploadResult = await ImageUploadService.uploadImage(
+        req.file,
+        'payment-proofs'
+      );
+
+      updateData.paymentProofUrl = uploadResult.imageUrl;
+      updateData.paymentProofKey = uploadResult.imageKey;
+      updateData.paymentProofStorageType = uploadResult.storageType;
+    }
+
+    // Se está desmarcando como pago, remove comprovante
+    if (isPaid === 'false' && order.paymentProofKey && order.paymentProofStorageType) {
+      await ImageUploadService.deleteImage(
+        order.paymentProofKey,
+        order.paymentProofStorageType
+      );
+
+      updateData.paymentProofUrl = null;
+      updateData.paymentProofKey = null;
+      updateData.paymentProofStorageType = null;
+    }
+
+    const updatedOrder = await prisma.order.update({
+      where: { id },
+      data: updateData,
+      include: {
+        items: {
+          include: {
+            product: true
+          }
+        },
+        campaign: true,
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      }
+    });
+
+    // Emite eventos e verifica auto-arquivamento
+    emitOrderStatusChanged(order.campaignId, {
+      orderId: updatedOrder.id,
+      isPaid: updatedOrder.isPaid,
+      isSeparated: updatedOrder.isSeparated,
+      customerName: updatedOrder.customer.name
+    });
+
+    if (isPaid !== undefined) {
+      try {
+        const archiveResult = await CampaignStatusService.checkAndArchiveCampaign(order.campaignId);
+        const unarchiveResult = await CampaignStatusService.checkAndUnarchiveCampaign(order.campaignId);
+
+        if (archiveResult.changed) {
+          console.log(`[Orders] Campaign ${order.campaignId} status changed: ${archiveResult.previousStatus} → ${archiveResult.newStatus}`);
+        }
+        if (unarchiveResult.changed) {
+          console.log(`[Orders] Campaign ${order.campaignId} status changed: ${unarchiveResult.previousStatus} → ${unarchiveResult.newStatus}`);
+        }
+      } catch (error) {
+        console.error('[Orders] Error in auto-status change:', error);
+      }
+    }
+
+    res.json(updatedOrder);
+  })
+);
 
 // DELETE /api/orders/:id - Remove um pedido
 router.delete('/:id', requireAuth, requireOrderOwnership, asyncHandler(async (req, res) => {

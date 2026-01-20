@@ -193,6 +193,9 @@ export interface Order {
   createdAt: string;
   updatedAt: string;
   items: OrderItem[];
+  paymentProofUrl?: string;
+  paymentProofKey?: string;
+  paymentProofStorageType?: 'S3' | 'LOCAL';
 }
 
 export interface CreateOrderDto {

@@ -192,6 +192,11 @@ model Order {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // Comprovante de pagamento PIX
+  paymentProofUrl         String?           // URL do comprovante (S3 ou local)
+  paymentProofKey         String?           // Chave do arquivo no storage
+  paymentProofStorageType ImageStorageType? // Tipo de armazenamento (S3/LOCAL)
+
   // Auth - OBRIGATÓRIO para novos pedidos
   userId      String
   customer    User     @relation("CustomerOrders", fields: [userId], references: [id])

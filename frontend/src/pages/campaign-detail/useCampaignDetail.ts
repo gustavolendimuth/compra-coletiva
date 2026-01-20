@@ -55,9 +55,11 @@ export function useCampaignDetail() {
   const [isCloneModalOpen, setIsCloneModalOpen] = useState(false);
   const [isImageUploadModalOpen, setIsImageUploadModalOpen] = useState(false);
   const [isPixModalOpen, setIsPixModalOpen] = useState(false);
+  const [isPaymentProofModalOpen, setIsPaymentProofModalOpen] = useState(false);
 
   // Editing states
   const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
+  const [orderForPayment, setOrderForPayment] = useState<Order | null>(null);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
@@ -505,6 +507,28 @@ export function useCampaignDetail() {
     onError: () => toast.error("Erro ao atualizar pedido"),
   });
 
+  const updatePaymentMutation = useMutation({
+    mutationFn: ({
+      orderId,
+      isPaid,
+      file,
+    }: {
+      orderId: string;
+      isPaid: boolean;
+      file?: File;
+    }) => orderApi.updatePayment(orderId, isPaid, file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders", campaignId] });
+      queryClient.invalidateQueries({ queryKey: ["analytics", campaignId] });
+      toast.success("Status de pagamento atualizado!");
+      setIsPaymentProofModalOpen(false);
+      setOrderForPayment(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || "Erro ao atualizar pagamento");
+    },
+  });
+
   const cloneCampaignMutation = useMutation({
     mutationFn: ({
       id,
@@ -731,9 +755,25 @@ export function useCampaignDetail() {
   };
 
   const handleTogglePayment = (order: Order) => {
-    updateOrderMutation.mutate({
-      orderId: order.id,
-      data: { isPaid: !order.isPaid },
+    // Se está marcando como pago, abre modal para upload
+    if (!order.isPaid) {
+      setOrderForPayment(order);
+      setIsPaymentProofModalOpen(true);
+    } else {
+      // Se está desmarcando, apenas atualiza (sem arquivo)
+      updatePaymentMutation.mutate({
+        orderId: order.id,
+        isPaid: false,
+      });
+    }
+  };
+
+  const handlePaymentProofSubmit = (file: File) => {
+    if (!orderForPayment) return;
+    updatePaymentMutation.mutate({
+      orderId: orderForPayment.id,
+      isPaid: true,
+      file,
     });
   };
 
@@ -973,6 +1013,12 @@ export function useCampaignDetail() {
     pixVisibleAtStatus,
     setPixVisibleAtStatus,
 
+    // Payment Proof Modal State
+    isPaymentProofModalOpen,
+    setIsPaymentProofModalOpen,
+    orderForPayment,
+    setOrderForPayment,
+
     // Confirm Dialog State
     isCloseConfirmOpen,
     setIsCloseConfirmOpen,
@@ -1041,6 +1087,7 @@ export function useCampaignDetail() {
     handleProductSort,
     handleAddToOrder,
     handleTogglePayment,
+    handlePaymentProofSubmit,
     handleEditOrderFromView,
     handleReopenCampaign,
     handleOpenEditDeadline,
@@ -1057,6 +1104,7 @@ export function useCampaignDetail() {
     updateStatusMutation,
     createOrderMutation,
     updateOrderWithItemsMutation,
+    updatePaymentMutation,
     cloneCampaignMutation,
   };
 }
