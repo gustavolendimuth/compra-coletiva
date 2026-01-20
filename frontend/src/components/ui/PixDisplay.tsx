@@ -1,13 +1,16 @@
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, Upload } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
-import { PixKeyType } from "@/api";
+import { PixKeyType, Order } from "@/api";
+import Button from "./Button";
 
 interface PixDisplayProps {
   pixKey: string;
   pixType: PixKeyType;
   pixName?: string;
   className?: string;
+  userOrder?: Order;
+  onUploadProof?: (order: Order) => void;
 }
 
 const pixTypeLabels: Record<PixKeyType, string> = {
@@ -18,7 +21,14 @@ const pixTypeLabels: Record<PixKeyType, string> = {
   RANDOM: "Chave Aleatória",
 };
 
-export function PixDisplay({ pixKey, pixType, pixName, className = "" }: PixDisplayProps) {
+export function PixDisplay({
+  pixKey,
+  pixType,
+  pixName,
+  className = "",
+  userOrder,
+  onUploadProof
+}: PixDisplayProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -29,6 +39,12 @@ export function PixDisplay({ pixKey, pixType, pixName, className = "" }: PixDisp
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
       toast.error("Erro ao copiar chave PIX");
+    }
+  };
+
+  const handleUploadClick = () => {
+    if (userOrder && onUploadProof) {
+      onUploadProof(userOrder);
     }
   };
 
@@ -73,12 +89,32 @@ export function PixDisplay({ pixKey, pixType, pixName, className = "" }: PixDisp
         </button>
       </div>
 
-      <p className="text-xs md:text-sm text-green-700 mt-3 flex items-start gap-1.5">
-        <span className="font-medium">💡</span>
-        <span>
-          Use esta chave PIX para realizar o pagamento. Após pagar, aguarde a confirmação do vendedor.
-        </span>
-      </p>
+      <div className="mt-4 space-y-3">
+        <p className="text-xs md:text-sm text-green-700 flex items-start gap-1.5">
+          <span className="font-medium">💡</span>
+          <span>
+            Use esta chave PIX para realizar o pagamento. Após pagar, envie o comprovante para confirmar seu pagamento.
+          </span>
+        </p>
+
+        {userOrder && onUploadProof && !userOrder.isPaid && (
+          <Button
+            onClick={handleUploadClick}
+            className="w-full sm:w-auto gap-2 bg-green-600 hover:bg-green-700"
+            size="sm"
+          >
+            <Upload className="w-4 h-4" />
+            Enviar Comprovante de Pagamento
+          </Button>
+        )}
+
+        {userOrder?.isPaid && (
+          <div className="flex items-center gap-2 text-green-700 bg-green-200 px-3 py-2 rounded-lg">
+            <Check className="w-4 h-4" />
+            <span className="text-sm font-medium">Pagamento confirmado!</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
