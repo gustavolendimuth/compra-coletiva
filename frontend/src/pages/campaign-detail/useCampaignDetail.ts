@@ -491,22 +491,6 @@ export function useCampaignDetail() {
     onError: () => toast.error("Erro ao atualizar campanha"),
   });
 
-  const updateOrderMutation = useMutation({
-    mutationFn: ({
-      orderId,
-      data,
-    }: {
-      orderId: string;
-      data: Partial<Order>;
-    }) => orderApi.update(orderId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["orders", campaignId] });
-      queryClient.invalidateQueries({ queryKey: ["analytics", campaignId] });
-      toast.success("Pedido atualizado!");
-    },
-    onError: () => toast.error("Erro ao atualizar pedido"),
-  });
-
   const updatePaymentMutation = useMutation({
     mutationFn: ({
       orderId,
