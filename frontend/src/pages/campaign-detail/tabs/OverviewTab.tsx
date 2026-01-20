@@ -51,16 +51,17 @@ export function OverviewTab({
 }: OverviewTabProps) {
   const { user } = useAuth();
 
-  // Verificar se deve mostrar o PIX baseado no status da campanha
-  // Nunca mostrar se a campanha estiver arquivada
+  // Encontrar o pedido do usuário atual
+  const userOrder = user ? orders.find(o => o.userId === user.id) : undefined;
+
+  // Verificar se deve mostrar o PIX baseado no status da campanha e se usuário tem pedido
+  // Só mostra se o usuário tiver um pedido e a campanha não estiver arquivada
   const shouldShowPix =
     campaign.pixKey &&
     campaign.pixType &&
     campaign.status !== "ARCHIVED" &&
-    campaign.status === campaign.pixVisibleAtStatus;
-
-  // Encontrar o pedido do usuário atual
-  const userOrder = user ? orders.find(o => o.userId === user.id) : undefined;
+    campaign.status === campaign.pixVisibleAtStatus &&
+    userOrder !== undefined; // Só mostra se o usuário tiver um pedido
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
