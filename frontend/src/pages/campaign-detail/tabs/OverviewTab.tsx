@@ -18,6 +18,7 @@ import { CampaignChat } from "@/components/campaign";
 import { formatCurrency } from "@/lib/utils";
 import { Order, Product, CampaignAnalytics, Campaign } from "@/api";
 import { getCustomerDisplayName } from "../utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface OverviewTabProps {
   campaign: Campaign;
@@ -48,6 +49,8 @@ export function OverviewTab({
   onTogglePayment,
   onAddToOrder,
 }: OverviewTabProps) {
+  const { user } = useAuth();
+
   // Verificar se deve mostrar o PIX baseado no status da campanha
   // Nunca mostrar se a campanha estiver arquivada
   const shouldShowPix =
@@ -55,6 +58,9 @@ export function OverviewTab({
     campaign.pixType &&
     campaign.status !== "ARCHIVED" &&
     campaign.status === campaign.pixVisibleAtStatus;
+
+  // Encontrar o pedido do usuário atual
+  const userOrder = user ? orders.find(o => o.userId === user.id) : undefined;
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
@@ -95,6 +101,8 @@ export function OverviewTab({
           pixKey={campaign.pixKey!}
           pixType={campaign.pixType!}
           pixName={campaign.pixName}
+          userOrder={userOrder}
+          onUploadProof={onTogglePayment}
         />
       )}
 
