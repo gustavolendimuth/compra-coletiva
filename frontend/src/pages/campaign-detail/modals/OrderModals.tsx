@@ -24,7 +24,6 @@ interface OrderModalBaseProps {
   isOpen: boolean;
   form: OrderForm;
   products: Product[];
-  isPending: boolean;
   onClose: () => void;
   onChange: (form: OrderForm) => void;
 }
@@ -39,7 +38,6 @@ export function AddOrderModal({
   isOpen,
   form,
   products,
-  isPending,
   onClose,
   onChange,
   title = "Novo Pedido",
@@ -55,7 +53,7 @@ export function AddOrderModal({
               <strong>Atalho:</strong> Alt+P para adicionar produto
             </p>
             {isAutosaving && (
-              <Badge variant="secondary" className="text-xs">
+              <Badge variant="neutral" className="text-xs">
                 <Loader className="w-3 h-3 animate-spin mr-1" />
                 Salvando...
               </Badge>
@@ -159,7 +157,6 @@ export function EditOrderModal({
   isOpen,
   form,
   products,
-  isPending,
   onClose,
   onChange,
   isAutosaving = false,
@@ -170,7 +167,6 @@ export function EditOrderModal({
       isOpen={isOpen}
       form={form}
       products={products}
-      isPending={isPending}
       onClose={onClose}
       onChange={onChange}
       title="Editar Pedido"
