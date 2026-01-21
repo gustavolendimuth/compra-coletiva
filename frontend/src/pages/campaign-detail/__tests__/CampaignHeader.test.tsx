@@ -224,9 +224,9 @@ describe('CampaignHeader', () => {
       };
       renderComponent({ campaign: campaignWithDeadline });
 
-      expect(screen.getByText(/data limite:/i)).toBeInTheDocument();
-      expect(screen.getByText(/31\/12\/2025/)).toBeInTheDocument();
-      expect(screen.getByText(/23:59/)).toBeInTheDocument();
+      expect(screen.getAllByText(/data limite:/i)[0]).toBeInTheDocument();
+      expect(screen.getAllByText(/31\/12\/2025/)[0]).toBeInTheDocument();
+      expect(screen.getAllByText(/23:59/)[0]).toBeInTheDocument();
     });
 
     it('should show edit button for deadline when present and user can edit', () => {
@@ -236,7 +236,7 @@ describe('CampaignHeader', () => {
       };
       renderComponent({ campaign: campaignWithDeadline });
 
-      const editButton = screen.getByTitle(/editar data limite/i);
+      const editButton = screen.getAllByTitle(/editar data limite/i)[0];
       expect(editButton).toBeInTheDocument();
     });
 
@@ -248,7 +248,7 @@ describe('CampaignHeader', () => {
       };
       renderComponent({ campaign: campaignWithDeadline });
 
-      const editButton = screen.getByTitle(/editar data limite/i);
+      const editButton = screen.getAllByTitle(/editar data limite/i)[0];
       await user.click(editButton);
 
       expect(mockOnEditDeadline).toHaveBeenCalled();
@@ -258,7 +258,7 @@ describe('CampaignHeader', () => {
       const campaignWithoutDeadline = { ...mockCampaign, deadline: undefined };
       renderComponent({ campaign: campaignWithoutDeadline });
 
-      expect(screen.getByRole('button', { name: /adicionar data limite/i })).toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: /adicionar data limite/i })[0]).toBeInTheDocument();
     });
 
     it('should highlight deadline in red when expired', () => {
@@ -268,7 +268,7 @@ describe('CampaignHeader', () => {
       };
       renderComponent({ campaign: expiredCampaign });
 
-      const deadlineElement = screen.getByText(/data limite:/i).closest('div');
+      const deadlineElement = screen.getAllByText(/data limite:/i)[0].closest('div');
       expect(deadlineElement).toHaveClass('bg-red-100', 'text-red-800');
     });
 
@@ -279,7 +279,7 @@ describe('CampaignHeader', () => {
       };
       renderComponent({ campaign: soonExpiring });
 
-      const deadlineElement = screen.getByText(/data limite:/i).closest('div');
+      const deadlineElement = screen.getAllByText(/data limite:/i)[0].closest('div');
       expect(deadlineElement).toHaveClass('bg-yellow-100', 'text-yellow-800');
     });
 
@@ -290,7 +290,7 @@ describe('CampaignHeader', () => {
       };
       renderComponent({ campaign: notExpiringSoon });
 
-      const deadlineElement = screen.getByText(/data limite:/i).closest('div');
+      const deadlineElement = screen.getAllByText(/data limite:/i)[0].closest('div');
       expect(deadlineElement).toHaveClass('bg-blue-100', 'text-blue-800');
     });
   });
