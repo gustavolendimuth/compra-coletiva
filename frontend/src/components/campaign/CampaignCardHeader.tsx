@@ -27,18 +27,18 @@ export function CampaignCardHeader({ campaign }: CampaignCardHeaderProps) {
   const status = statusConfig[campaign.status];
 
   return (
-    <div className="flex flex-col justify-center w-full space-y-1 md:space-y-2">
+    <div className="flex flex-col justify-center w-full h-full space-y-1 md:space-y-2">
       {/* Status badge */}
       <div className="flex items-start justify-between">
         <span
-          className={`px-2.5 py-1 text-xs font-medium rounded-full ${status.classes}`}
+          className={`px-2.5 py-0.5 md:py-1 text-xs font-medium rounded-full ${status.classes}`}
         >
           {status.label}
         </span>
       </div>
 
       {/* Nome da campanha - Smaller text on mobile, line-clamp-2 */}
-      <h3 className="text-sm md:text-lg font-semibold text-gray-900 line-clamp-2 leading-tight">
+      <h3 className="text-sm md:text-lg font-semibold text-gray-900 line-clamp-2 leading-snug md:leading-tight">
         {campaign.name}
       </h3>
 
