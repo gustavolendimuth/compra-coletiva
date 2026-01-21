@@ -11,6 +11,7 @@ import {
   Truck,
   User,
   LayoutDashboard,
+  Upload,
 } from "lucide-react";
 import { Card, PixDisplay } from "@/components/ui";
 import IconButton from "@/components/IconButton";
@@ -51,16 +52,17 @@ export function OverviewTab({
 }: OverviewTabProps) {
   const { user } = useAuth();
 
-  // Verificar se deve mostrar o PIX baseado no status da campanha
-  // Nunca mostrar se a campanha estiver arquivada
+  // Encontrar o pedido do usuário atual
+  const userOrder = user ? orders.find(o => o.userId === user.id) : undefined;
+
+  // Verificar se deve mostrar o PIX baseado no status da campanha e se usuário tem pedido
+  // Só mostra se o usuário tiver um pedido e a campanha não estiver arquivada
   const shouldShowPix =
     campaign.pixKey &&
     campaign.pixType &&
     campaign.status !== "ARCHIVED" &&
-    campaign.status === campaign.pixVisibleAtStatus;
-
-  // Encontrar o pedido do usuário atual
-  const userOrder = user ? orders.find(o => o.userId === user.id) : undefined;
+    campaign.status === campaign.pixVisibleAtStatus &&
+    userOrder !== undefined; // Só mostra se o usuário tiver um pedido
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
@@ -262,12 +264,12 @@ export function OverviewTab({
                               <IconButton
                                 size="sm"
                                 variant={item.isPaid ? "success" : "secondary"}
-                                icon={<CircleDollarSign className="w-5 h-5" />}
+                                icon={<Upload className="w-5 h-5" />}
                                 onClick={() => onTogglePayment(order)}
                                 title={
                                   item.isPaid
                                     ? "Marcar como não pago"
-                                    : "Marcar como pago"
+                                    : "Enviar comprovante de pagamento"
                                 }
                               />
                             </>
