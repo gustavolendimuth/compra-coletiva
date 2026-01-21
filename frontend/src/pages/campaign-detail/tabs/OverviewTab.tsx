@@ -11,6 +11,7 @@ import {
   Truck,
   User,
   LayoutDashboard,
+  Upload,
 } from "lucide-react";
 import { Card, PixDisplay } from "@/components/ui";
 import IconButton from "@/components/IconButton";
@@ -263,12 +264,12 @@ export function OverviewTab({
                               <IconButton
                                 size="sm"
                                 variant={item.isPaid ? "success" : "secondary"}
-                                icon={<CircleDollarSign className="w-5 h-5" />}
+                                icon={<Upload className="w-5 h-5" />}
                                 onClick={() => onTogglePayment(order)}
                                 title={
                                   item.isPaid
                                     ? "Marcar como não pago"
-                                    : "Marcar como pago"
+                                    : "Enviar comprovante de pagamento"
                                 }
                               />
                             </>
