@@ -64,7 +64,7 @@ describe('CampaignCardHeader', () => {
       render(<CampaignCardHeader campaign={campaign} />);
 
       const badge = screen.getByText('Ativa');
-      expect(badge).toHaveClass('px-2.5', 'py-1', 'text-xs', 'font-medium', 'rounded-full');
+      expect(badge).toHaveClass('px-2.5', 'py-0.5', 'md:py-1', 'text-xs', 'font-medium', 'rounded-full');
     });
   });
 

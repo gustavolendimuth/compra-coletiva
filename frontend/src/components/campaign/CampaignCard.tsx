@@ -50,7 +50,7 @@ export function CampaignCard({
           )}
 
           {/* Header: Status + Nome + Criador - Side by side on mobile, below image on desktop */}
-          <div className="flex-1 min-w-0 p-4 md:p-5 flex items-center md:items-start">
+          <div className="flex-1 min-w-0 h-24 md:h-auto p-3 md:p-5 flex items-center md:items-start md:block">
             <CampaignCardHeader campaign={campaign} />
           </div>
         </div>
