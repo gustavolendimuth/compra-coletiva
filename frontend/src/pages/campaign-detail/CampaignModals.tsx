@@ -44,7 +44,6 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
         isOpen={hook.isEditOrderModalOpen}
         form={hook.editOrderForm}
         products={hook.alphabeticalProducts || []}
-        isPending={hook.updateOrderWithItemsMutation.isPending}
         onClose={() => {
           hook.setIsEditOrderModalOpen(false);
           hook.setEditingOrder(null);
