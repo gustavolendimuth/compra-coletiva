@@ -202,7 +202,7 @@ export function ViewOrderModal({
             <div>
               <span className="text-sm text-gray-500">Cliente</span>
               <p className="font-semibold text-gray-900">
-                {order.customerName}
+                {order.customer.name}
               </p>
             </div>
 

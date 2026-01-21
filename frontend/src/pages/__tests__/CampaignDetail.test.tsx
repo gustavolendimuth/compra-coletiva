@@ -86,13 +86,13 @@ describe("CampaignDetail", () => {
   const mockOrders = [
     createMockOrder({
       id: "order-1",
-      customerName: "Customer 1",
+      customer: { id: "u1", name: "Customer 1", email: "customer1@test.com" },
       isPaid: false,
       total: 150,
     }),
     createMockOrder({
       id: "order-2",
-      customerName: "Customer 2",
+      customer: { id: "u2", name: "Customer 2", email: "customer2@test.com" },
       isPaid: true,
       total: 200,
     }),

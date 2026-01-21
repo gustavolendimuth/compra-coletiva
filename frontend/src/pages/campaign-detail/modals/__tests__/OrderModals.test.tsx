@@ -301,7 +301,7 @@ describe('OrderModals', () => {
   describe('ViewOrderModal', () => {
     const mockOrder = createMockOrder({
       id: 'order-123',
-      customerName: 'John Doe',
+      customer: { id: 'u1', name: 'John Doe', email: 'john@test.com' },
       isPaid: false,
       subtotal: 199.98,
       shippingFee: 10.0,

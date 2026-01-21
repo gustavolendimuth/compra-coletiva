@@ -133,7 +133,6 @@ describe.skip('Order Autosave', () => {
       id: 'order-1',
       campaignId: 'campaign-1',
       userId: 'user-1',
-      customerName: 'Test User',
       subtotal: 0,
       shippingFee: 0,
       total: 0,
@@ -168,7 +167,6 @@ describe.skip('Order Autosave', () => {
     await waitFor(() => {
       expect(createOrderMock).toHaveBeenCalledWith({
         campaignId: 'campaign-1',
-        customerName: 'Test User',
         items: [],
       });
     });
@@ -188,8 +186,7 @@ describe.skip('Order Autosave', () => {
         id: 'order-1',
         campaignId: 'campaign-1',
         userId: 'user-1',
-        customerName: 'Test User',
-        subtotal: 10,
+          subtotal: 10,
         shippingFee: 5,
         total: 15,
         isPaid: false,
@@ -233,7 +230,6 @@ describe.skip('Order Autosave', () => {
       id: 'order-1',
       campaignId: 'campaign-1',
       userId: 'user-1',
-      customerName: 'Test User',
       subtotal: 20,
       shippingFee: 5,
       total: 25,
@@ -321,8 +317,7 @@ describe.skip('Order Autosave', () => {
         id: 'order-1',
         campaignId: 'campaign-1',
         userId: 'user-1',
-        customerName: 'Test User',
-        subtotal: 10,
+          subtotal: 10,
         shippingFee: 5,
         total: 15,
         isPaid: false,
@@ -419,8 +414,7 @@ describe.skip('Order Autosave', () => {
         id: 'order-1',
         campaignId: 'campaign-1',
         userId: 'user-1',
-        customerName: 'Test User',
-        subtotal: 10,
+          subtotal: 10,
         shippingFee: 5,
         total: 15,
         isPaid: false,

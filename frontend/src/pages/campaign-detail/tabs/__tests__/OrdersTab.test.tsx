@@ -6,9 +6,9 @@ import { createMockOrder } from '@/__tests__/mock-data';
 
 // Mock OrderCard component
 vi.mock('@/components/campaign/OrderCard', () => ({
-  default: ({ order, onView, onEdit, onDelete, onTogglePayment }: any) => (
+  default: ({ order, customerName, onView, onEdit, onDelete, onTogglePayment }: any) => (
     <div data-testid={`order-card-${order.id}`}>
-      <span>Order: {order.customerName}</span>
+      <span>Order: {customerName}</span>
       <button onClick={onView}>View</button>
       <button onClick={onEdit}>Edit</button>
       <button onClick={onDelete}>Delete</button>
@@ -30,7 +30,7 @@ describe('OrdersTab', () => {
   const mockOrders = [
     createMockOrder({
       id: 'order-1',
-      customerName: 'Alice',
+      customer: { id: 'u1', name: 'Alice', email: 'alice@test.com' },
       subtotal: 100,
       shippingFee: 10,
       total: 110,
@@ -38,7 +38,7 @@ describe('OrdersTab', () => {
     }),
     createMockOrder({
       id: 'order-2',
-      customerName: 'Bob',
+      customer: { id: 'u2', name: 'Bob', email: 'bob@test.com' },
       subtotal: 200,
       shippingFee: 20,
       total: 220,
@@ -46,7 +46,7 @@ describe('OrdersTab', () => {
     }),
     createMockOrder({
       id: 'order-3',
-      customerName: 'Charlie',
+      customer: { id: 'u3', name: 'Charlie', email: 'charlie@test.com' },
       subtotal: 150,
       shippingFee: 15,
       total: 165,

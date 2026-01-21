@@ -309,12 +309,13 @@ export function useCampaignDetail() {
     let filtered = orders;
     if (orderSearch) {
       filtered = filtered.filter((order) =>
-        order.customerName?.toLowerCase().includes(orderSearch.toLowerCase())
+        order.customer.name?.toLowerCase().includes(orderSearch.toLowerCase())
       );
     }
     return [...filtered].sort((a, b) => {
-      const aVal = a[orderSortField];
-      const bVal = b[orderSortField];
+      // Handle customerName field specially since it's now in customer.name
+      const aVal = orderSortField === "customerName" ? a.customer.name : a[orderSortField];
+      const bVal = orderSortField === "customerName" ? b.customer.name : b[orderSortField];
       const modifier = orderSortDirection === "asc" ? 1 : -1;
       if (typeof aVal === "boolean") {
         return (aVal === bVal ? 0 : aVal ? -1 : 1) * modifier;
@@ -602,7 +603,7 @@ export function useCampaignDetail() {
     setEditingOrder(order);
     setEditOrderForm({
       campaignId: campaignId || "",
-      customerName: order.customerName || "",
+      customerName: order.customer.name,
       items: order.items.map((item) => ({
         productId: item.productId,
         quantity: item.quantity,
@@ -777,7 +778,7 @@ export function useCampaignDetail() {
         // Atualiza o formulário de edição ANTES da mutação
         setEditOrderForm({
           campaignId: campaignId || "",
-          customerName: existingOrder.customerName || "",
+          customerName: existingOrder.customer.name,
           items: items,
         });
         setEditingOrder(existingOrder);
@@ -803,10 +804,9 @@ export function useCampaignDetail() {
 
         toast.success(`Pedido criado com "${product.name}"!`);
 
-        // Prepara o formulário antes de criar
-        const newOrderForm = {
+        // Prepara os dados para criar o pedido (API não aceita customerName)
+        const createOrderData = {
           campaignId: campaignId || "",
-          customerName: user.name,
           items: [{ productId: product.id, quantity: 1 }],
         };
 
@@ -814,7 +814,7 @@ export function useCampaignDetail() {
         isAddingFromButtonRef.current = true;
 
         // Cria o pedido
-        createOrderMutation.mutate(newOrderForm, {
+        createOrderMutation.mutate(createOrderData, {
           onSuccess: async () => {
             // Aguarda as queries serem atualizadas
             await queryClient.invalidateQueries({
@@ -850,7 +850,7 @@ export function useCampaignDetail() {
         setEditingOrder(existingOrder);
         setEditOrderForm({
           campaignId: campaignId || "",
-          customerName: existingOrder.customerName || existingOrder.customer.name,
+          customerName: existingOrder.customer.name,
           items: existingOrder.items.map((item) => ({
             productId: item.productId,
             quantity: item.quantity,
@@ -864,14 +864,14 @@ export function useCampaignDetail() {
           return;
         }
 
-        const newOrderForm = {
+        // Prepara os dados para criar o pedido (API não aceita customerName)
+        const createOrderData = {
           campaignId: campaignId || "",
-          customerName: user.name,
           items: [], // Pedido vazio - autosave vai adicionar items
         };
 
         // Cria o pedido vazio
-        createOrderMutation.mutate(newOrderForm, {
+        createOrderMutation.mutate(createOrderData, {
           onSuccess: async (newOrder) => {
             // Aguarda as queries serem atualizadas
             await queryClient.invalidateQueries({

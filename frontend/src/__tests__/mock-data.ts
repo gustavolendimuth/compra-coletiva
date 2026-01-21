@@ -192,7 +192,6 @@ export const createMockOrderItem = (
 export const createMockOrder = (overrides: Partial<Order> = {}): Order => ({
   id: `order-${Math.random().toString(36).substring(7)}`,
   campaignId: 'campaign-1',
-  customerName: 'Test Customer',
   userId: 'user-1',
   customer: {
     id: 'user-1',

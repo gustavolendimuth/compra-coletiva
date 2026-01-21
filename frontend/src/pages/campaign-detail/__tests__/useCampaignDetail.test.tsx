@@ -333,9 +333,9 @@ describe("useCampaignDetail", () => {
 
     it("should filter orders by search term", async () => {
       const orders = [
-        createMockOrder({ id: "o1", customerName: "Alice" }),
-        createMockOrder({ id: "o2", customerName: "Bob" }),
-        createMockOrder({ id: "o3", customerName: "Charlie" }),
+        createMockOrder({ id: "o1", customer: { id: "u1", name: "Alice", email: "alice@test.com" } }),
+        createMockOrder({ id: "o2", customer: { id: "u2", name: "Bob", email: "bob@test.com" } }),
+        createMockOrder({ id: "o3", customer: { id: "u3", name: "Charlie", email: "charlie@test.com" } }),
       ];
       vi.mocked(orderApi.getByCampaign).mockResolvedValue(orders);
 
@@ -351,15 +351,15 @@ describe("useCampaignDetail", () => {
 
       await waitFor(() => {
         expect(result.current.filteredOrders).toHaveLength(1);
-        expect(result.current.filteredOrders[0].customerName).toBe("Alice");
+        expect(result.current.filteredOrders[0].customer.name).toBe("Alice");
       });
     });
 
     it("should sort orders by customerName ascending", async () => {
       const orders = [
-        createMockOrder({ id: "o1", customerName: "Charlie" }),
-        createMockOrder({ id: "o2", customerName: "Alice" }),
-        createMockOrder({ id: "o3", customerName: "Bob" }),
+        createMockOrder({ id: "o1", customer: { id: "u1", name: "Charlie", email: "charlie@test.com" } }),
+        createMockOrder({ id: "o2", customer: { id: "u2", name: "Alice", email: "alice@test.com" } }),
+        createMockOrder({ id: "o3", customer: { id: "u3", name: "Bob", email: "bob@test.com" } }),
       ];
       vi.mocked(orderApi.getByCampaign).mockResolvedValue(orders);
 
@@ -367,9 +367,9 @@ describe("useCampaignDetail", () => {
 
       await waitFor(() => {
         expect(result.current.filteredOrders).toBeDefined();
-        expect(result.current.filteredOrders[0].customerName).toBe("Alice");
-        expect(result.current.filteredOrders[1].customerName).toBe("Bob");
-        expect(result.current.filteredOrders[2].customerName).toBe("Charlie");
+        expect(result.current.filteredOrders[0].customer.name).toBe("Alice");
+        expect(result.current.filteredOrders[1].customer.name).toBe("Bob");
+        expect(result.current.filteredOrders[2].customer.name).toBe("Charlie");
       });
     });
 
