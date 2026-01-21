@@ -44,7 +44,6 @@ export function useCampaignDetail() {
   // Modal states
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isEditProductModalOpen, setIsEditProductModalOpen] = useState(false);
-  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [isEditOrderModalOpen, setIsEditOrderModalOpen] = useState(false);
   const [isViewOrderModalOpen, setIsViewOrderModalOpen] = useState(false);
   const [isShippingModalOpen, setIsShippingModalOpen] = useState(false);
@@ -77,6 +76,10 @@ export function useCampaignDetail() {
   // Quando true, não fecha o modal e não mostra toast
   const isAutosavingRef = useRef(false);
 
+  // Estados para indicador visual de autosave
+  const [isAutosaving, setIsAutosaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+
   // Form states
   const [productForm, setProductForm] = useState<ProductForm>({
     campaignId: "",
@@ -91,12 +94,6 @@ export function useCampaignDetail() {
     price: "",
     weight: "",
     imageUrl: "",
-  });
-
-  const [orderForm, setOrderForm] = useState<OrderForm>({
-    campaignId: "",
-    customerName: "",
-    items: [],
   });
 
   const [editOrderForm, setEditOrderForm] = useState<OrderForm>({
@@ -191,6 +188,7 @@ export function useCampaignDetail() {
       if (hasValidItems && !isAddingFromButtonRef.current) {
         // Define flag de autosave para não fechar o modal
         isAutosavingRef.current = true;
+        setIsAutosaving(true);
 
         // Faz a mutação em background sem fechar o modal
         updateOrderWithItemsMutation.mutate({
@@ -213,10 +211,12 @@ export function useCampaignDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editOrderForm.items, isEditOrderModalOpen, editingOrder?.id]);
 
-  // Reset first render flag when modal closes
+  // Reset first render flag and autosave states when modal closes
   useEffect(() => {
     if (!isEditOrderModalOpen) {
       isFirstEditRenderRef.current = true;
+      setIsAutosaving(false);
+      setLastSaved(null);
     }
   }, [isEditOrderModalOpen]);
 
@@ -265,6 +265,30 @@ export function useCampaignDetail() {
   const isClosed = campaign?.status === "CLOSED";
   const isSent = campaign?.status === "SENT";
   const canEditCampaign = campaign?.creatorId === user?.id;
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Alt+N: Adicionar Pedido (apenas se campanha estiver ativa e usuário autenticado)
+      if (e.altKey && e.key === 'n' && isActive && user) {
+        e.preventDefault();
+        handleAddOrder();
+      }
+
+      // Alt+P: Adicionar Produto ao pedido (apenas se modal de edição estiver aberto)
+      if (e.altKey && e.key === 'p' && isEditOrderModalOpen) {
+        e.preventDefault();
+        setEditOrderForm((prev) => ({
+          ...prev,
+          items: [...prev.items, { productId: "", quantity: 1 }],
+        }));
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive, user, isEditOrderModalOpen]);
 
   // Sorted & filtered data
   const sortedProducts = useMemo(() => {
@@ -358,18 +382,7 @@ export function useCampaignDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders", campaignId] });
       queryClient.invalidateQueries({ queryKey: ["analytics", campaignId] });
-
-      // Só limpa o formulário e fecha o modal se o modal estiver aberto
-      // (ou seja, se foi criado manualmente via modal, não automaticamente)
-      if (isOrderModalOpen) {
-        toast.success("Pedido criado!");
-        setIsOrderModalOpen(false);
-        setOrderForm({
-          campaignId: campaignId || "",
-          customerName: "",
-          items: [],
-        });
-      }
+      // Toast será mostrado pelo handleAddOrder quando apropriado
     },
     onError: () => toast.error("Erro ao criar pedido"),
   });
@@ -391,6 +404,8 @@ export function useCampaignDetail() {
       // Se for autosave, não fecha o modal e não mostra toast
       if (isAutosavingRef.current) {
         isAutosavingRef.current = false;
+        setIsAutosaving(false);
+        setLastSaved(new Date());
         return;
       }
 
@@ -408,6 +423,7 @@ export function useCampaignDetail() {
       toast.error("Erro ao atualizar pedido");
       isAddingFromButtonRef.current = false;
       isAutosavingRef.current = false;
+      setIsAutosaving(false);
     },
   });
 
@@ -569,31 +585,6 @@ export function useCampaignDetail() {
 
   const handleDeleteProduct = (productId: string) => {
     deleteProductMutation.mutate(productId);
-  };
-
-  const handleCreateOrder = (e: React.FormEvent) => {
-    e.preventDefault();
-    createOrderMutation.mutate(orderForm);
-  };
-
-  const handleCloseOrderModal = () => {
-    setIsOrderModalOpen(false);
-    // Mantém os items para que o usuário possa continuar adicionando produtos depois
-    // Os items só são limpos quando o pedido é criado com sucesso
-  };
-
-  const loadExistingOrder = () => {
-    const existingOrder = orders?.find((o) => o.userId === user?.id);
-    if (existingOrder) {
-      setOrderForm({
-        campaignId: campaignId || "",
-        customerName: existingOrder.customerName || existingOrder.customer.name,
-        items: existingOrder.items.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
-        })),
-      });
-    }
   };
 
   const handleEditOrder = (e: React.FormEvent) => {
@@ -850,9 +841,54 @@ export function useCampaignDetail() {
   };
 
   const handleAddOrder = () => {
-    requireAuth(() => {
-      loadExistingOrder();
-      setIsOrderModalOpen(true);
+    requireAuth(async () => {
+      // Verifica se usuário já tem pedido
+      const existingOrder = orders?.find((o) => o.userId === user?.id);
+
+      if (existingOrder) {
+        // Se já tem pedido, abre modal de edição
+        setEditingOrder(existingOrder);
+        setEditOrderForm({
+          campaignId: campaignId || "",
+          customerName: existingOrder.customerName || existingOrder.customer.name,
+          items: existingOrder.items.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+          })),
+        });
+        setIsEditOrderModalOpen(true);
+      } else {
+        // Se não tem pedido, cria pedido vazio primeiro
+        if (!user?.name) {
+          toast.error("Erro: Nome de usuário não encontrado");
+          return;
+        }
+
+        const newOrderForm = {
+          campaignId: campaignId || "",
+          customerName: user.name,
+          items: [], // Pedido vazio - autosave vai adicionar items
+        };
+
+        // Cria o pedido vazio
+        createOrderMutation.mutate(newOrderForm, {
+          onSuccess: async (newOrder) => {
+            // Aguarda as queries serem atualizadas
+            await queryClient.invalidateQueries({
+              queryKey: ["orders", campaignId],
+            });
+
+            // Abre modal de edição com o pedido vazio
+            setEditingOrder(newOrder);
+            setEditOrderForm({
+              campaignId: campaignId || "",
+              customerName: user.name,
+              items: [],
+            });
+            setIsEditOrderModalOpen(true);
+          },
+        });
+      }
     });
   };
 
@@ -958,16 +994,14 @@ export function useCampaignDetail() {
     setEditProductForm,
 
     // Order Modal State
-    isOrderModalOpen,
-    setIsOrderModalOpen,
-    orderForm,
-    setOrderForm,
     isEditOrderModalOpen,
     setIsEditOrderModalOpen,
     editingOrder,
     setEditingOrder,
     editOrderForm,
     setEditOrderForm,
+    isAutosaving,
+    lastSaved,
     isViewOrderModalOpen,
     setIsViewOrderModalOpen,
     viewingOrder,
@@ -1046,9 +1080,6 @@ export function useCampaignDetail() {
     handleEditProduct,
     openEditProductModal,
     handleDeleteProduct,
-    handleCreateOrder,
-    handleCloseOrderModal,
-    loadExistingOrder,
     handleAddOrder,
     handleEditOrder,
     openEditOrderModal,

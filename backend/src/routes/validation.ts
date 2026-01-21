@@ -3,6 +3,8 @@ import { prisma } from '../index';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
 import { Money } from '../utils/money';
 import { requireAuth } from '../middleware/authMiddleware';
+import { OrderCleanupService } from '../services/orderCleanupService';
+import { z } from 'zod';
 
 const router = Router();
 
@@ -66,6 +68,45 @@ router.get('/campaign/:campaignId', requireAuth, asyncHandler(async (req, res) =
     result.checks.paidUnpaidSum.passed;
 
   res.json(result);
+}));
+
+// GET /api/validation/empty-orders - Get statistics about empty orders
+router.get('/empty-orders', requireAuth, asyncHandler(async (req, res) => {
+  // Only allow campaign creators and admins to view stats
+  if (req.user?.role !== 'ADMIN') {
+    // Check if user is creator of any campaign
+    const userCampaigns = await prisma.campaign.count({
+      where: { creatorId: req.user!.id }
+    });
+
+    if (userCampaigns === 0) {
+      throw new AppError(403, 'Only campaign creators and admins can view empty order statistics');
+    }
+  }
+
+  const stats = await OrderCleanupService.getEmptyOrdersStats();
+  res.json(stats);
+}));
+
+const cleanupSchema = z.object({
+  ageInHours: z.number().min(1).max(168).optional().default(24) // Max 1 week
+});
+
+// DELETE /api/validation/empty-orders - Clean up empty orders
+router.delete('/empty-orders', requireAuth, asyncHandler(async (req, res) => {
+  // Only allow admins to run cleanup
+  if (req.user?.role !== 'ADMIN') {
+    throw new AppError(403, 'Only admins can run order cleanup');
+  }
+
+  const { ageInHours } = cleanupSchema.parse(req.body);
+  const deletedCount = await OrderCleanupService.cleanupEmptyOrders(ageInHours);
+
+  res.json({
+    success: true,
+    deletedCount,
+    ageInHours,
+  });
 }));
 
 export default router;
