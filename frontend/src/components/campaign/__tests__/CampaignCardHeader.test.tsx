@@ -104,7 +104,7 @@ describe('CampaignCardHeader', () => {
       });
       const { container } = render(<CampaignCardHeader campaign={campaign} />);
 
-      const wrapper = container.querySelector('.space-y-2');
+      const wrapper = container.querySelector('.space-y-1');
       expect(wrapper).toBeInTheDocument();
     });
 
@@ -115,11 +115,11 @@ describe('CampaignCardHeader', () => {
       render(<CampaignCardHeader campaign={campaign} />);
 
       const campaignName = screen.getByText(campaign.name);
-      expect(campaignName).toHaveClass('text-lg', 'font-semibold');
+      expect(campaignName).toHaveClass('text-sm', 'md:text-lg', 'font-semibold');
 
       // Get the p element containing "por"
       const creatorParagraph = screen.getByText(/por/).closest('p');
-      expect(creatorParagraph).toHaveClass('text-sm', 'text-gray-500');
+      expect(creatorParagraph).toHaveClass('hidden', 'md:block', 'text-sm', 'text-gray-500');
     });
   });
 
