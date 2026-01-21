@@ -101,7 +101,7 @@ export function CampaignHeader({
       </Link>
 
       {/* Layout: Imagem à esquerda + Título/Descrição à direita */}
-      <div className="flex flex-col md:flex-row gap-4 mb-4">
+      <div className="flex flex-row gap-3 md:gap-4 mb-4">
         {/* Imagem da Campanha - Quadrado à esquerda */}
         {imageUrl ? (
           <div className="relative flex-shrink-0 w-24 h-24 md:w-32 md:h-32 rounded-lg overflow-hidden bg-gray-100 shadow-sm">
@@ -132,10 +132,10 @@ export function CampaignHeader({
         ) : null}
 
         {/* Conteúdo: Nome e Descrição */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 h-24 md:h-auto flex flex-col justify-center">
           {/* Nome */}
           {isEditingName ? (
-            <div className="mb-2">
+            <div className="mb-1 md:mb-2">
               <Input
                 type="text"
                 value={editedName}
@@ -150,15 +150,15 @@ export function CampaignHeader({
                   }
                 }}
                 autoFocus
-                className="text-2xl md:text-3xl font-bold text-gray-900 px-2 py-1 border-2 border-primary-500"
+                className="text-lg md:text-2xl lg:text-3xl font-bold text-gray-900 px-2 py-1 border-2 border-primary-500"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-500 mt-1 hidden md:block">
                 Pressione Enter para salvar, Esc para cancelar
               </p>
             </div>
           ) : (
             <h1
-              className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 cursor-pointer hover:text-primary-600 transition-colors"
+              className="text-lg md:text-2xl lg:text-3xl font-bold text-gray-900 mb-1 md:mb-2 cursor-pointer hover:text-primary-600 transition-colors line-clamp-2"
               onClick={handleNameClick}
               title="Clique para editar"
             >
@@ -168,7 +168,7 @@ export function CampaignHeader({
 
           {/* Descrição */}
           {isEditingDescription ? (
-            <div className="mb-2">
+            <div className="mb-1 md:mb-2">
               <Textarea
                 value={editedDescription}
                 onChange={(e) => setEditedDescription(e.target.value)}
@@ -194,7 +194,7 @@ export function CampaignHeader({
             <>
               {campaign.description ? (
                 <p
-                  className="text-gray-600 mb-2 cursor-pointer hover:text-primary-600 transition-colors"
+                  className="text-sm text-gray-600 mb-1 md:mb-2 cursor-pointer hover:text-primary-600 transition-colors line-clamp-1 md:line-clamp-none"
                   onClick={handleDescriptionClick}
                   title="Clique para editar"
                 >
@@ -202,7 +202,7 @@ export function CampaignHeader({
                 </p>
               ) : (
                 <p
-                  className="text-gray-400 mb-2 cursor-pointer hover:text-primary-400 transition-colors italic"
+                  className="text-sm text-gray-400 mb-1 md:mb-2 cursor-pointer hover:text-primary-400 transition-colors italic"
                   onClick={handleDescriptionClick}
                   title="Clique para adicionar descrição"
                 >
@@ -212,10 +212,10 @@ export function CampaignHeader({
             </>
           )}
 
-          {/* Deadline */}
+          {/* Deadline - Hidden on mobile in this section, shown below */}
           {campaign.deadline && (
             <div
-              className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium mt-2 ${
+              className={`hidden md:inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium mt-2 ${
                 new Date(campaign.deadline) < new Date()
                   ? "bg-red-100 text-red-800 border border-red-300"
                   : new Date(campaign.deadline).getTime() -
@@ -258,12 +258,68 @@ export function CampaignHeader({
               variant="secondary"
               icon={<Calendar className="w-4 h-4" />}
               onClick={onEditDeadline}
-              className="mt-2"
+              className="mt-2 hidden md:inline-flex"
             >
               Adicionar data limite
             </IconButton>
           )}
         </div>
+      </div>
+
+      {/* Mobile-only sections below */}
+      <div className="md:hidden space-y-4 mb-4">
+        {/* Deadline on mobile */}
+        {campaign.deadline && (
+          <div
+            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium ${
+              new Date(campaign.deadline) < new Date()
+                ? "bg-red-100 text-red-800 border border-red-300"
+                : new Date(campaign.deadline).getTime() -
+                    new Date().getTime() <
+                  24 * 60 * 60 * 1000
+                ? "bg-yellow-100 text-yellow-800 border border-yellow-300"
+                : "bg-blue-100 text-blue-800 border border-blue-300"
+            }`}
+          >
+            <Clock className="w-4 h-4" />
+            <span className="text-sm">
+              Data limite:{" "}
+              {new Date(campaign.deadline).toLocaleDateString("pt-BR", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+              })}{" "}
+              às{" "}
+              {new Date(campaign.deadline).toLocaleTimeString("pt-BR", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: false,
+              })}
+            </span>
+            {canEditCampaign && (
+              <IconButton
+                size="sm"
+                variant="ghost"
+                icon={<Edit className="w-3 h-3" />}
+                onClick={onEditDeadline}
+                title="Editar data limite"
+                className="!p-1"
+              />
+            )}
+          </div>
+        )}
+
+        {/* Botão adicionar deadline no mobile */}
+        {!campaign.deadline && isActive && canEditCampaign && (
+          <IconButton
+            size="sm"
+            variant="secondary"
+            icon={<Calendar className="w-4 h-4" />}
+            onClick={onEditDeadline}
+          >
+            Adicionar data limite
+          </IconButton>
+        )}
       </div>
 
       {/* Action Buttons */}
