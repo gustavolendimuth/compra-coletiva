@@ -21,13 +21,11 @@ const createOrderSchema = z.object({
 });
 
 const updateOrderSchema = z.object({
-  customerName: z.string().min(1).optional(),
   isPaid: z.boolean().optional(),
   isSeparated: z.boolean().optional()
 });
 
 const updateOrderWithItemsSchema = z.object({
-  customerName: z.string().min(1).optional(),
   items: z.array(z.object({
     productId: z.string(),
     quantity: z.number().int().min(1)
@@ -288,8 +286,7 @@ router.patch('/:id', requireAuth, requireOrderOrCampaignOwnership, asyncHandler(
     emitOrderStatusChanged(order.campaignId, {
       orderId: order.id,
       isPaid: order.isPaid,
-      isSeparated: order.isSeparated,
-      customerName: order.customer.name
+      isSeparated: order.isSeparated
     });
 
     // Se mudou status de pagamento, verifica se deve arquivar/desarquivar a campanha
@@ -593,8 +590,7 @@ router.patch('/:id/payment',
     emitOrderStatusChanged(order.campaignId, {
       orderId: updatedOrder.id,
       isPaid: updatedOrder.isPaid,
-      isSeparated: updatedOrder.isSeparated,
-      customerName: updatedOrder.customer.name
+      isSeparated: updatedOrder.isSeparated
     });
 
     if (isPaid !== undefined) {

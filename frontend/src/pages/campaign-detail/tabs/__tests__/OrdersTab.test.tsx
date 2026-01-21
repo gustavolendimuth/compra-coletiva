@@ -6,9 +6,9 @@ import { createMockOrder } from '@/__tests__/mock-data';
 
 // Mock OrderCard component
 vi.mock('@/components/campaign/OrderCard', () => ({
-  default: ({ order, customerName, onView, onEdit, onDelete, onTogglePayment }: any) => (
+  default: ({ order, onView, onEdit, onDelete, onTogglePayment }: any) => (
     <div data-testid={`order-card-${order.id}`}>
-      <span>Order: {customerName}</span>
+      <span>Order: {order.customer.name}</span>
       <button onClick={onView}>View</button>
       <button onClick={onEdit}>Edit</button>
       <button onClick={onDelete}>Delete</button>

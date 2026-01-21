@@ -14,7 +14,6 @@ import IconButton from "@/components/IconButton";
 
 interface OrderCardProps {
   order: Order;
-  customerName: string;
   canEditCampaign: boolean;
   isActive: boolean;
   currentUserId?: string;
@@ -26,7 +25,6 @@ interface OrderCardProps {
 
 export default function OrderCard({
   order,
-  customerName,
   canEditCampaign,
   isActive,
   currentUserId,
@@ -54,7 +52,7 @@ export default function OrderCard({
             {order.isPaid ? "Pago" : "Pendente"}
           </span>
           <h3 className="font-semibold text-gray-900 leading-tight flex-1">
-            {customerName}
+            {order.customer.name}
           </h3>
         </div>
 
