@@ -17,7 +17,7 @@ const createOrderSchema = z.object({
   items: z.array(z.object({
     productId: z.string(),
     quantity: z.number().int().min(1)
-  })).min(1)
+  })).min(0).optional().default([]) // Permite criar pedidos vazios
 });
 
 const updateOrderSchema = z.object({
@@ -134,14 +134,17 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
     throw new AppError(400, 'Cannot create orders in a closed or sent group');
   }
 
-  // Busca produtos para calcular preços
-  const productIds = data.items.map(item => item.productId);
-  const products = await prisma.product.findMany({
-    where: { id: { in: productIds } }
-  });
+  // Busca produtos para calcular preços (apenas se houver items)
+  let productMap = new Map<string, any>();
+  if (data.items && data.items.length > 0) {
+    const productIds = data.items.map(item => item.productId);
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds } }
+    });
 
-  type ProductType = typeof products[number];
-  const productMap = new Map<string, ProductType>(products.map(p => [p.id, p]));
+    type ProductType = typeof products[number];
+    productMap = new Map<string, ProductType>(products.map(p => [p.id, p]));
+  }
 
   // Verifica se já existe um pedido do usuário nesta campanha
   const existingOrder = await prisma.order.findFirst({
@@ -166,33 +169,35 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
         where: { orderId: existingOrder.id }
       });
 
-      // Cria novos itens com as quantidades enviadas
-      await tx.orderItem.createMany({
-        data: data.items.map(item => {
-          const product = productMap.get(item.productId);
-          if (!product) {
-            throw new AppError(400, `Product ${item.productId} not found`);
-          }
-          return {
-            orderId: existingOrder.id,
-            productId: item.productId,
-            quantity: item.quantity,
-            unitPrice: product.price,
-            subtotal: Money.multiply(product.price, item.quantity)
-          };
-        })
-      });
+      // Cria novos itens com as quantidades enviadas (se houver items)
+      if (data.items && data.items.length > 0) {
+        await tx.orderItem.createMany({
+          data: data.items.map(item => {
+            const product = productMap.get(item.productId);
+            if (!product) {
+              throw new AppError(400, `Product ${item.productId} not found`);
+            }
+            return {
+              orderId: existingOrder.id,
+              productId: item.productId,
+              quantity: item.quantity,
+              unitPrice: product.price,
+              subtotal: Money.multiply(product.price, item.quantity)
+            };
+          })
+        });
+      }
     });
 
     order = existingOrder;
   } else {
-    // Pedido não existe - criar novo
+    // Pedido não existe - criar novo (pode ser vazio)
     isNewOrder = true;
     order = await prisma.order.create({
       data: {
         campaignId: data.campaignId,
         userId: req.user!.id, // Vincula ao usuário autenticado
-        items: {
+        items: data.items && data.items.length > 0 ? {
           create: data.items.map(item => {
             const product = productMap.get(item.productId);
             if (!product) {
@@ -205,7 +210,7 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
               subtotal: Money.multiply(product.price, item.quantity)
             };
           })
-        }
+        } : undefined
       },
       include: {
         items: {

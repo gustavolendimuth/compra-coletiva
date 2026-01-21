@@ -1,6 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { AddProductModal, EditProductModal } from './modals/ProductModals';
-import { AddOrderModal, EditOrderModal, ViewOrderModal } from './modals/OrderModals';
+import { EditOrderModal, ViewOrderModal } from './modals/OrderModals';
 import {
   ShippingModal,
   DeadlineModal,
@@ -40,15 +40,6 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
         onSubmit={hook.handleEditProduct}
       />
 
-      <AddOrderModal
-        isOpen={hook.isOrderModalOpen}
-        form={hook.orderForm}
-        products={hook.alphabeticalProducts || []}
-        isPending={hook.createOrderMutation.isPending}
-        onClose={hook.handleCloseOrderModal}
-        onChange={hook.setOrderForm}
-      />
-
       <EditOrderModal
         isOpen={hook.isEditOrderModalOpen}
         form={hook.editOrderForm}
@@ -59,6 +50,8 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
           hook.setEditingOrder(null);
         }}
         onChange={hook.setEditOrderForm}
+        isAutosaving={hook.isAutosaving}
+        lastSaved={hook.lastSaved}
       />
 
       <ViewOrderModal

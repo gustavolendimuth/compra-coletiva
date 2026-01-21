@@ -1,5 +1,5 @@
-import { Plus, Trash2, Edit } from "lucide-react";
-import { Modal, Button, Input, Select } from "@/components/ui";
+import { Plus, Trash2, Edit, Check, Loader } from "lucide-react";
+import { Modal, Button, Input, Select, Badge } from "@/components/ui";
 import IconButton from "@/components/IconButton";
 import { OrderChat } from "@/components/campaign";
 import { formatCurrency } from "@/lib/utils";
@@ -8,6 +8,16 @@ import { Order, Product } from "@/api";
 
 interface OrderForm {
   items: Array<{ productId: string; quantity: number | "" }>;
+}
+
+function formatRelativeTime(date: Date): string {
+  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+  if (seconds < 5) return "agora";
+  if (seconds < 60) return `${seconds}s atrás`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m atrás`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h atrás`;
 }
 
 interface OrderModalBaseProps {
@@ -21,6 +31,8 @@ interface OrderModalBaseProps {
 
 interface AddOrderModalProps extends OrderModalBaseProps {
   title?: string;
+  isAutosaving?: boolean;
+  lastSaved?: Date | null;
 }
 
 export function AddOrderModal({
@@ -31,20 +43,30 @@ export function AddOrderModal({
   onClose,
   onChange,
   title = "Novo Pedido",
+  isAutosaving = false,
+  lastSaved = null,
 }: AddOrderModalProps) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title}>
       <div className="space-y-4">
         <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm text-blue-800">
-            <strong>Atalho:</strong> Alt+P para adicionar produto
-          </p>
-          {isPending && (
-            <p className="text-sm text-blue-600 mt-2 flex items-center gap-2">
-              <span className="animate-spin">⏳</span> Salvando
-              automaticamente...
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm text-blue-800">
+              <strong>Atalho:</strong> Alt+P para adicionar produto
             </p>
-          )}
+            {isAutosaving && (
+              <Badge variant="secondary" className="text-xs">
+                <Loader className="w-3 h-3 animate-spin mr-1" />
+                Salvando...
+              </Badge>
+            )}
+            {!isAutosaving && lastSaved && (
+              <Badge variant="success" className="text-xs">
+                <Check className="w-3 h-3 mr-1" />
+                Salvo {formatRelativeTime(lastSaved)}
+              </Badge>
+            )}
+          </div>
         </div>
 
         <div>
@@ -128,6 +150,11 @@ export function AddOrderModal({
   );
 }
 
+interface EditOrderModalProps extends OrderModalBaseProps {
+  isAutosaving?: boolean;
+  lastSaved?: Date | null;
+}
+
 export function EditOrderModal({
   isOpen,
   form,
@@ -135,7 +162,9 @@ export function EditOrderModal({
   isPending,
   onClose,
   onChange,
-}: OrderModalBaseProps) {
+  isAutosaving = false,
+  lastSaved = null,
+}: EditOrderModalProps) {
   return (
     <AddOrderModal
       isOpen={isOpen}
@@ -145,6 +174,8 @@ export function EditOrderModal({
       onClose={onClose}
       onChange={onChange}
       title="Editar Pedido"
+      isAutosaving={isAutosaving}
+      lastSaved={lastSaved}
     />
   );
 }
