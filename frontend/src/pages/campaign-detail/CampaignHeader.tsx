@@ -104,14 +104,12 @@ export function CampaignHeader({
       <div className="flex flex-col md:flex-row gap-4 mb-4">
         {/* Imagem da Campanha - Quadrado à esquerda */}
         {imageUrl ? (
-          <div className="relative flex-shrink-0">
-            <div className="w-24 h-24 md:w-32 md:h-32 rounded-lg overflow-hidden bg-gray-100 shadow-sm">
-              <img
-                src={imageUrl}
-                alt={campaign.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
+          <div className="relative flex-shrink-0 w-24 h-24 md:w-32 md:h-32 rounded-lg overflow-hidden bg-gray-100 shadow-sm">
+            <img
+              src={imageUrl}
+              alt={campaign.name}
+              className="w-full h-full object-cover"
+            />
             {canEditCampaign && (
               <button
                 onClick={onImageUpload}
