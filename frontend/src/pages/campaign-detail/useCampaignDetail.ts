@@ -23,7 +23,6 @@ interface ProductForm {
 
 interface OrderForm {
   campaignId: string;
-  customerName: string;
   items: Array<{ productId: string; quantity: number }>;
 }
 
@@ -98,7 +97,6 @@ export function useCampaignDetail() {
 
   const [editOrderForm, setEditOrderForm] = useState<OrderForm>({
     campaignId: "",
-    customerName: "",
     items: [],
   });
 
@@ -603,7 +601,6 @@ export function useCampaignDetail() {
     setEditingOrder(order);
     setEditOrderForm({
       campaignId: campaignId || "",
-      customerName: order.customer.name,
       items: order.items.map((item) => ({
         productId: item.productId,
         quantity: item.quantity,
@@ -778,7 +775,6 @@ export function useCampaignDetail() {
         // Atualiza o formulário de edição ANTES da mutação
         setEditOrderForm({
           campaignId: campaignId || "",
-          customerName: existingOrder.customer.name,
           items: items,
         });
         setEditingOrder(existingOrder);
@@ -850,7 +846,6 @@ export function useCampaignDetail() {
         setEditingOrder(existingOrder);
         setEditOrderForm({
           campaignId: campaignId || "",
-          customerName: existingOrder.customer.name,
           items: existingOrder.items.map((item) => ({
             productId: item.productId,
             quantity: item.quantity,
@@ -882,7 +877,6 @@ export function useCampaignDetail() {
             setEditingOrder(newOrder);
             setEditOrderForm({
               campaignId: campaignId || "",
-              customerName: user.name,
               items: [],
             });
             setIsEditOrderModalOpen(true);
