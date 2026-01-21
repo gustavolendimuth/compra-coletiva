@@ -52,13 +52,13 @@ describe("OverviewTab", () => {
   const mockOrders = [
     createMockOrder({
       id: "order-1",
-      customerName: "Alice",
+      customer: { id: "u1", name: "Alice", email: "alice@test.com" },
       isPaid: true,
       total: 110,
     }),
     createMockOrder({
       id: "order-2",
-      customerName: "Bob",
+      customer: { id: "u2", name: "Bob", email: "bob@test.com" },
       isPaid: false,
       total: 220,
     }),

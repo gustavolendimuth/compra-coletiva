@@ -178,7 +178,6 @@ export function OrdersTab({
               <OrderCard
                 key={order.id}
                 order={order}
-                customerName={getCustomerDisplayName(order)}
                 canEditCampaign={!!canEditCampaign}
                 isActive={isActive}
                 currentUserId={currentUserId}

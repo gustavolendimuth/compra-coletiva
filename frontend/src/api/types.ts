@@ -178,7 +178,6 @@ export interface OrderItem {
 export interface Order {
   id: string;
   campaignId: string;
-  customerName?: string;
   userId: string;
   customer: {
     id: string;
