@@ -27,7 +27,7 @@ export function CampaignCardHeader({ campaign }: CampaignCardHeaderProps) {
   const status = statusConfig[campaign.status];
 
   return (
-    <div className="space-y-2">
+    <div className="flex flex-col justify-center w-full space-y-1 md:space-y-2">
       {/* Status badge */}
       <div className="flex items-start justify-between">
         <span
@@ -37,14 +37,14 @@ export function CampaignCardHeader({ campaign }: CampaignCardHeaderProps) {
         </span>
       </div>
 
-      {/* Nome da campanha */}
-      <h3 className="text-lg font-semibold text-gray-900 line-clamp-2 leading-tight">
+      {/* Nome da campanha - Smaller text on mobile, line-clamp-2 */}
+      <h3 className="text-sm md:text-lg font-semibold text-gray-900 line-clamp-2 leading-tight">
         {campaign.name}
       </h3>
 
-      {/* Criador */}
+      {/* Criador - Hidden on mobile to save space */}
       {campaign.creator && (
-        <p className="text-sm text-gray-500">
+        <p className="hidden md:block text-sm text-gray-500">
           por <span className="font-medium text-gray-700">{campaign.creator.name}</span>
         </p>
       )}
