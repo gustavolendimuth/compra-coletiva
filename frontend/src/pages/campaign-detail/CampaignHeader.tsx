@@ -3,22 +3,17 @@ import { Link } from "react-router-dom";
 import {
   ArrowLeft,
   Edit,
-  Lock,
-  Unlock,
-  Send,
   AlertCircle,
   Calendar,
   Clock,
-  FileText,
-  Copy,
   Image as ImageIcon,
-  QrCode,
 } from "lucide-react";
 import IconButton from "@/components/IconButton";
 import { Input, Textarea } from "@/components/ui";
-import { Campaign, campaignApi } from "@/api";
+import { Campaign } from "@/api";
 import { getImageUrl } from "@/lib/imageUrl";
 import toast from "react-hot-toast";
+import { CampaignActionButtons } from "./CampaignActionButtons";
 
 interface CampaignHeaderProps {
   campaign: Campaign;
@@ -32,6 +27,8 @@ interface CampaignHeaderProps {
   onUpdateCampaign: (data: { name?: string; description?: string }) => void;
   onCloneCampaign: () => void;
   onImageUpload: () => void;
+  onAddProduct?: () => void;
+  onAddOrder?: () => void;
 }
 
 export function CampaignHeader({
@@ -46,6 +43,8 @@ export function CampaignHeader({
   onUpdateCampaign,
   onCloneCampaign,
   onImageUpload,
+  onAddProduct,
+  onAddOrder,
 }: CampaignHeaderProps) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
@@ -347,93 +346,19 @@ export function CampaignHeader({
       </div>
 
       {/* Action Buttons */}
-      <div className="flex flex-wrap gap-2 mb-4">
-          <IconButton
-            size="sm"
-            variant="secondary"
-            icon={<Copy className="w-4 h-4" />}
-            onClick={onCloneCampaign}
-            className="text-xs sm:text-sm whitespace-nowrap"
-          >
-            Clonar Campanha
-          </IconButton>
-
-          {canEditCampaign && (
-            <IconButton
-              size="sm"
-              variant="secondary"
-              icon={<QrCode className="w-4 h-4" />}
-              onClick={onEditPix}
-              className="text-xs sm:text-sm whitespace-nowrap"
-            >
-              Configurar PIX
-            </IconButton>
-          )}
-
-          {ordersCount > 0 && canEditCampaign && (
-            <IconButton
-              size="sm"
-              variant="secondary"
-              icon={<FileText className="w-4 h-4" />}
-              onClick={async () => {
-                try {
-                  await campaignApi.downloadSupplierInvoice(campaign.id);
-                  toast.success("Fatura gerada com sucesso!");
-                } catch (error) {
-                  toast.error("Erro ao gerar fatura");
-                }
-              }}
-              className="text-xs sm:text-sm whitespace-nowrap"
-            >
-              Gerar Fatura
-            </IconButton>
-          )}
-
-          {isActive && canEditCampaign && (
-            <IconButton
-              size="sm"
-              icon={<Lock className="w-4 h-4" />}
-              onClick={onCloseCampaign}
-              variant="warning"
-              className="text-xs sm:text-sm whitespace-nowrap"
-            >
-              Fechar Campanha
-            </IconButton>
-          )}
-
-          {isClosed && canEditCampaign && (
-            <>
-              <IconButton
-                size="sm"
-                icon={<Unlock className="w-4 h-4" />}
-                onClick={onReopenCampaign}
-                variant="warning"
-                className="text-xs sm:text-sm whitespace-nowrap"
-              >
-                Reabrir
-              </IconButton>
-              <IconButton
-                size="sm"
-                icon={<Send className="w-4 h-4" />}
-                onClick={onMarkAsSent}
-                className="text-xs sm:text-sm whitespace-nowrap"
-              >
-                Marcar como Enviado
-              </IconButton>
-            </>
-          )}
-
-          {isSent && canEditCampaign && (
-            <IconButton
-              size="sm"
-              icon={<Unlock className="w-4 h-4" />}
-              onClick={onReopenCampaign}
-              variant="warning"
-              className="text-xs sm:text-sm whitespace-nowrap"
-            >
-              Reabrir Campanha
-            </IconButton>
-          )}
+      <div className="mb-4">
+        <CampaignActionButtons
+          campaign={campaign}
+          canEditCampaign={canEditCampaign}
+          ordersCount={ordersCount}
+          onEditPix={onEditPix}
+          onCloseCampaign={onCloseCampaign}
+          onReopenCampaign={onReopenCampaign}
+          onMarkAsSent={onMarkAsSent}
+          onCloneCampaign={onCloneCampaign}
+          onAddProduct={onAddProduct}
+          onAddOrder={onAddOrder}
+        />
       </div>
 
       {/* Alert Banner */}

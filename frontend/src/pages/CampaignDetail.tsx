@@ -45,6 +45,8 @@ export default function CampaignDetail() {
           onUpdateCampaign={hook.handleUpdateCampaign}
           onCloneCampaign={hook.handleOpenCloneModal}
           onImageUpload={() => hook.setIsImageUploadModalOpen(true)}
+          onAddProduct={() => hook.setIsProductModalOpen(true)}
+          onAddOrder={hook.handleAddOrder}
         />
       </div>
 
