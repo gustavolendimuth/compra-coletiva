@@ -131,7 +131,7 @@ export function CampaignHeader({
           </button>
         ) : null}
 
-        {/* Conteúdo: Nome e Descrição */}
+        {/* Conteúdo: Apenas Nome no mobile, Nome + Descrição + Deadline no desktop */}
         <div className="flex-1 min-w-0 h-24 md:h-auto flex flex-col justify-center">
           {/* Nome */}
           {isEditingName ? (
@@ -158,7 +158,7 @@ export function CampaignHeader({
             </div>
           ) : (
             <h1
-              className="text-lg md:text-2xl lg:text-3xl font-bold text-gray-900 mb-1 md:mb-2 cursor-pointer hover:text-primary-600 transition-colors line-clamp-2"
+              className="text-lg md:text-2xl lg:text-3xl font-bold text-gray-900 mb-0 md:mb-2 cursor-pointer hover:text-primary-600 transition-colors line-clamp-2"
               onClick={handleNameClick}
               title="Clique para editar"
             >
@@ -166,35 +166,12 @@ export function CampaignHeader({
             </h1>
           )}
 
-          {/* Descrição */}
-          {isEditingDescription ? (
-            <div className="mb-1 md:mb-2">
-              <Textarea
-                value={editedDescription}
-                onChange={(e) => setEditedDescription(e.target.value)}
-                onBlur={handleDescriptionSave}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleDescriptionSave();
-                  } else if (e.key === "Escape") {
-                    setIsEditingDescription(false);
-                  }
-                }}
-                autoFocus
-                rows={3}
-                className="text-gray-600 px-2 py-1 border-2 border-primary-500"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Pressione Enter para salvar, Shift+Enter para nova linha, Esc
-                para cancelar
-              </p>
-            </div>
-          ) : (
+          {/* Descrição - Hidden on mobile, shown on desktop (only when not editing) */}
+          {!isEditingDescription && (
             <>
               {campaign.description ? (
                 <p
-                  className="text-sm text-gray-600 mb-1 md:mb-2 cursor-pointer hover:text-primary-600 transition-colors line-clamp-1 md:line-clamp-none"
+                  className="hidden md:block text-sm text-gray-600 mb-1 md:mb-2 cursor-pointer hover:text-primary-600 transition-colors"
                   onClick={handleDescriptionClick}
                   title="Clique para editar"
                 >
@@ -202,7 +179,7 @@ export function CampaignHeader({
                 </p>
               ) : (
                 <p
-                  className="text-sm text-gray-400 mb-1 md:mb-2 cursor-pointer hover:text-primary-400 transition-colors italic"
+                  className="hidden md:block text-sm text-gray-400 mb-1 md:mb-2 cursor-pointer hover:text-primary-400 transition-colors italic"
                   onClick={handleDescriptionClick}
                   title="Clique para adicionar descrição"
                 >
@@ -266,8 +243,55 @@ export function CampaignHeader({
         </div>
       </div>
 
+      {/* Descrição - Below image on mobile, inline on desktop */}
+      {isEditingDescription ? (
+        <div className="mb-4">
+          <Textarea
+            value={editedDescription}
+            onChange={(e) => setEditedDescription(e.target.value)}
+            onBlur={handleDescriptionSave}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleDescriptionSave();
+              } else if (e.key === "Escape") {
+                setIsEditingDescription(false);
+              }
+            }}
+            autoFocus
+            rows={3}
+            className="text-gray-600 px-2 py-1 border-2 border-primary-500"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Pressione Enter para salvar, Shift+Enter para nova linha, Esc
+            para cancelar
+          </p>
+        </div>
+      ) : (
+        <div className="md:hidden mb-4">
+          {campaign.description ? (
+            <p
+              className="text-sm text-gray-600 cursor-pointer hover:text-primary-600 transition-colors"
+              onClick={handleDescriptionClick}
+              title="Clique para editar"
+            >
+              {campaign.description}
+            </p>
+          ) : (
+            <p
+              className="text-sm text-gray-400 cursor-pointer hover:text-primary-400 transition-colors italic"
+              onClick={handleDescriptionClick}
+              title="Clique para adicionar descrição"
+            >
+              Clique para adicionar descrição
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Mobile-only sections below */}
       <div className="md:hidden space-y-4 mb-4">
+
         {/* Deadline on mobile */}
         {campaign.deadline && (
           <div

@@ -71,7 +71,7 @@ describe('CampaignHeader', () => {
 
     it('should render campaign description', () => {
       renderComponent();
-      expect(screen.getByText('Test Description')).toBeInTheDocument();
+      expect(screen.getAllByText('Test Description')[0]).toBeInTheDocument();
     });
 
     it('should render back link to campaigns list', () => {
@@ -85,7 +85,7 @@ describe('CampaignHeader', () => {
       const campaignWithoutDescription = { ...mockCampaign, description: undefined };
       renderComponent({ campaign: campaignWithoutDescription });
 
-      expect(screen.getByText(/clique para adicionar descrição/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/clique para adicionar descrição/i)[0]).toBeInTheDocument();
     });
   });
 
@@ -166,10 +166,10 @@ describe('CampaignHeader', () => {
       const user = userEvent.setup();
       renderComponent();
 
-      const descriptionElement = screen.getByText('Test Description');
+      const descriptionElement = screen.getAllByText('Test Description')[0];
       await user.click(descriptionElement);
 
-      const textarea = screen.getByDisplayValue('Test Description');
+      const textarea = screen.getAllByDisplayValue('Test Description')[0];
       expect(textarea).toBeInTheDocument();
       expect(textarea).toHaveFocus();
     });
@@ -178,10 +178,10 @@ describe('CampaignHeader', () => {
       const user = userEvent.setup();
       renderComponent();
 
-      const descriptionElement = screen.getByText('Test Description');
+      const descriptionElement = screen.getAllByText('Test Description')[0];
       await user.click(descriptionElement);
 
-      const textarea = screen.getByDisplayValue('Test Description');
+      const textarea = screen.getAllByDisplayValue('Test Description')[0];
       await user.clear(textarea);
       await user.type(textarea, 'New description{Enter}');
 
@@ -192,10 +192,10 @@ describe('CampaignHeader', () => {
       const user = userEvent.setup();
       renderComponent();
 
-      const descriptionElement = screen.getByText('Test Description');
+      const descriptionElement = screen.getAllByText('Test Description')[0];
       await user.click(descriptionElement);
 
-      const textarea = screen.getByDisplayValue('Test Description');
+      const textarea = screen.getAllByDisplayValue('Test Description')[0];
       await user.clear(textarea);
       await user.type(textarea, 'Line 1{Shift>}{Enter}{/Shift}Line 2');
 
@@ -206,10 +206,10 @@ describe('CampaignHeader', () => {
       const user = userEvent.setup();
       renderComponent();
 
-      const descriptionElement = screen.getByText('Test Description');
+      const descriptionElement = screen.getAllByText('Test Description')[0];
       await user.click(descriptionElement);
 
-      const textarea = screen.getByDisplayValue('Test Description');
+      const textarea = screen.getAllByDisplayValue('Test Description')[0];
       await user.type(textarea, ' Modified{Escape}');
 
       expect(mockOnUpdateCampaign).not.toHaveBeenCalled();
