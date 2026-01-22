@@ -150,7 +150,7 @@ export function CampaignHeader({
                   }
                 }}
                 autoFocus
-                className="text-lg md:text-2xl lg:text-3xl font-bold text-gray-900 px-2 py-1 border-2 border-primary-500"
+                className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 px-2 py-1 border-2 border-primary-500"
               />
               <p className="text-xs text-gray-500 mt-1 hidden md:block">
                 Pressione Enter para salvar, Esc para cancelar
@@ -158,7 +158,7 @@ export function CampaignHeader({
             </div>
           ) : (
             <h1
-              className="text-lg md:text-2xl lg:text-3xl font-bold text-gray-900 mb-0 md:mb-2 cursor-pointer hover:text-primary-600 transition-colors line-clamp-2"
+              className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 mb-0 md:mb-2 cursor-pointer hover:text-primary-600 transition-colors line-clamp-2 leading-tight"
               onClick={handleNameClick}
               title="Clique para editar"
             >
