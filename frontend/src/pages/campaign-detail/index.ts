@@ -1,5 +1,6 @@
 export { useCampaignDetail } from './useCampaignDetail';
 export { CampaignHeader } from './CampaignHeader';
+export { CampaignActionButtons } from './CampaignActionButtons';
 export { TabNavigation } from './TabNavigation';
 export { LoadingSkeleton } from './LoadingSkeleton';
 export { CampaignModals } from './CampaignModals';

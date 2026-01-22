@@ -1,7 +1,6 @@
 import {
   MessageCircle,
   Package,
-  ShoppingBag,
   Eye,
   CircleDollarSign,
   BarChart3,
@@ -66,35 +65,11 @@ export function OverviewTab({
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
-      <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-4">
+      <div className="mb-6">
         <h2 className="text-2xl font-bold flex items-center gap-2">
           <LayoutDashboard className="w-6 h-6 text-primary-600" />
           Visão Geral
         </h2>
-
-        {isActive && (
-          <div className="flex gap-2 justify-center md:justify-end flex-wrap">
-            {canEditCampaign && (
-              <IconButton
-                size="sm"
-                icon={<Package className="w-4 h-4" />}
-                onClick={onAddProduct}
-                className="text-xs sm:text-sm"
-              >
-                Adicionar Produto
-              </IconButton>
-            )}
-            <IconButton
-              size="sm"
-              icon={<ShoppingBag className="w-4 h-4" />}
-              onClick={onAddOrder}
-              className="text-xs sm:text-sm"
-              title="Adicionar Pedido (Alt+N)"
-            >
-              Adicionar Pedido
-            </IconButton>
-          </div>
-        )}
       </div>
 
       {/* PIX em Destaque */}
