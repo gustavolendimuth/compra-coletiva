@@ -65,8 +65,6 @@ export default function CampaignDetail() {
           orders={hook.orders || []}
           isActive={hook.isActive}
           canEditCampaign={hook.canEditCampaign}
-          onAddProduct={() => hook.setIsProductModalOpen(true)}
-          onAddOrder={hook.handleAddOrder}
           onViewOrder={(order) => {
             hook.setViewingOrder(order);
             hook.setIsViewOrderModalOpen(true);

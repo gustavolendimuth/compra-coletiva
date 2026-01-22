@@ -11,6 +11,7 @@ import {
   User,
   LayoutDashboard,
   Upload,
+  ShoppingBag,
 } from "lucide-react";
 import { Card, PixDisplay } from "@/components/ui";
 import IconButton from "@/components/IconButton";
@@ -28,8 +29,6 @@ interface OverviewTabProps {
   orders: Order[];
   isActive: boolean;
   canEditCampaign: boolean;
-  onAddProduct: () => void;
-  onAddOrder: () => void;
   onViewOrder: (order: Order) => void;
   onTogglePayment: (order: Order) => void;
   onAddToOrder: (product: Product) => void;
@@ -43,8 +42,6 @@ export function OverviewTab({
   orders,
   isActive,
   canEditCampaign,
-  onAddProduct,
-  onAddOrder,
   onViewOrder,
   onTogglePayment,
   onAddToOrder,

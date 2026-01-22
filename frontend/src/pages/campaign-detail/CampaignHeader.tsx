@@ -53,7 +53,6 @@ export function CampaignHeader({
 
   const isActive = campaign.status === "ACTIVE";
   const isClosed = campaign.status === "CLOSED";
-  const isSent = campaign.status === "SENT";
 
   const imageUrl = getImageUrl(campaign.imageUrl);
 
