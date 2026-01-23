@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * NotificationIcon Component
  * Bell icon with badge showing unread notification count

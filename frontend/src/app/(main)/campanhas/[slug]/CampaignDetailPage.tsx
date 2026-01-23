@@ -1,0 +1,143 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCampaignDetailBySlug } from '@/hooks/useCampaignDetailBySlug';
+import { LoadingSkeleton } from '@/pages/campaign-detail/LoadingSkeleton';
+import { CampaignHeader } from '@/pages/campaign-detail';
+import { TabNavigation } from '@/pages/campaign-detail';
+import { OverviewTab } from '@/pages/campaign-detail/tabs/OverviewTab';
+import { ProductsTab } from '@/pages/campaign-detail/tabs/ProductsTab';
+import { OrdersTab } from '@/pages/campaign-detail/tabs/OrdersTab';
+import { ShippingTab } from '@/pages/campaign-detail/tabs/ShippingTab';
+import { QuestionsTab } from '@/pages/campaign-detail/tabs/QuestionsTab';
+import { CampaignModals } from '@/pages/campaign-detail/CampaignModals';
+
+interface CampaignDetailPageProps {
+  slug: string;
+}
+
+export function CampaignDetailPage({ slug }: CampaignDetailPageProps) {
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'products' | 'orders' | 'shipping' | 'questions'
+  >('overview');
+  const hook = useCampaignDetailBySlug(slug);
+
+  // Handle navigation from notifications
+  useEffect(() => {
+    if (hook.shouldOpenQuestionsTab) {
+      setActiveTab('questions');
+      hook.setShouldOpenQuestionsTab(false);
+    }
+  }, [hook.shouldOpenQuestionsTab, hook.setShouldOpenQuestionsTab]);
+
+  if (!hook.campaign) {
+    return <LoadingSkeleton />;
+  }
+
+  return (
+    <div>
+      <div className="mb-4 md:mb-6">
+        <CampaignHeader
+          campaign={hook.campaign}
+          canEditCampaign={hook.canEditCampaign}
+          ordersCount={hook.orders?.length || 0}
+          onEditDeadline={hook.handleOpenEditDeadline}
+          onEditPix={hook.handleOpenPixModal}
+          onCloseCampaign={() => hook.setIsCloseConfirmOpen(true)}
+          onReopenCampaign={() => hook.setIsReopenConfirmOpen(true)}
+          onMarkAsSent={() => hook.setIsSentConfirmOpen(true)}
+          onUpdateCampaign={hook.handleUpdateCampaign}
+          onCloneCampaign={hook.handleOpenCloneModal}
+          onImageUpload={() => hook.setIsImageUploadModalOpen(true)}
+          onAddProduct={() => hook.setIsProductModalOpen(true)}
+          onAddOrder={hook.handleAddOrder}
+        />
+      </div>
+
+      <TabNavigation
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        canEditCampaign={hook.canEditCampaign}
+      />
+
+      {activeTab === 'overview' && hook.analytics && (
+        <OverviewTab
+          campaign={hook.campaign}
+          campaignId={hook.campaign.id}
+          analytics={hook.analytics}
+          products={hook.products || []}
+          orders={hook.orders || []}
+          isActive={hook.isActive}
+          canEditCampaign={hook.canEditCampaign}
+          onViewOrder={(order) => {
+            hook.setViewingOrder(order);
+            hook.setIsViewOrderModalOpen(true);
+          }}
+          onTogglePayment={hook.handleTogglePayment}
+          onAddToOrder={hook.handleAddToOrder}
+        />
+      )}
+
+      {activeTab === 'products' && (
+        <ProductsTab
+          products={hook.products || []}
+          sortedProducts={hook.sortedProducts || []}
+          isActive={hook.isActive}
+          canEditCampaign={hook.canEditCampaign}
+          sortField={hook.productSortField}
+          sortDirection={hook.productSortDirection}
+          onAddProduct={() => hook.setIsProductModalOpen(true)}
+          onEditProduct={hook.openEditProductModal}
+          onDeleteProduct={hook.handleDeleteProduct}
+          onSort={hook.handleProductSort}
+        />
+      )}
+
+      {activeTab === 'orders' && (
+        <OrdersTab
+          orders={hook.orders || []}
+          filteredOrders={hook.filteredOrders || []}
+          isActive={hook.isActive}
+          canEditCampaign={hook.canEditCampaign}
+          currentUserId={user?.id}
+          orderSearch={hook.orderSearch}
+          sortField={hook.orderSortField}
+          sortDirection={hook.orderSortDirection}
+          onAddOrder={hook.handleAddOrder}
+          onViewOrder={(order) => {
+            hook.setViewingOrder(order);
+            hook.setIsViewOrderModalOpen(true);
+          }}
+          onTogglePayment={hook.handleTogglePayment}
+          onEditOrder={hook.openEditOrderModal}
+          onDeleteOrder={hook.handleDeleteOrder}
+          onSearchChange={hook.setOrderSearch}
+          onSort={hook.handleSort}
+        />
+      )}
+
+      {activeTab === 'shipping' && hook.campaign && (
+        <ShippingTab
+          campaign={hook.campaign}
+          isActive={hook.isActive}
+          canEditCampaign={hook.canEditCampaign}
+          onEditShipping={() => {
+            hook.setShippingCost(String(hook.campaign!.shippingCost));
+            hook.setIsShippingModalOpen(true);
+          }}
+        />
+      )}
+
+      {activeTab === 'questions' && hook.canEditCampaign && (
+        <QuestionsTab
+          campaignId={hook.campaign.id}
+          canEditCampaign={hook.canEditCampaign}
+        />
+      )}
+
+      <CampaignModals hook={hook} />
+    </div>
+  );
+}

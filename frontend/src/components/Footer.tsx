@@ -1,4 +1,6 @@
-import { Link } from 'react-router-dom';
+'use client';
+
+import Link from 'next/link';
 import { Users, MessageCircle, Heart, Mail, ExternalLink } from 'lucide-react';
 
 interface FooterProps {
@@ -50,7 +52,7 @@ export function Footer({ onFeedbackClick }: FooterProps) {
             <ul className="space-y-2.5">
               <li>
                 <Link
-                  to="/campaigns"
+                  href="/campanhas"
                   className="text-sm text-gray-600 hover:text-primary-600 transition-colors inline-flex items-center gap-1 group"
                 >
                   <span>Campanhas Ativas</span>
@@ -68,7 +70,7 @@ export function Footer({ onFeedbackClick }: FooterProps) {
               </li>
               <li>
                 <Link
-                  to="/privacy"
+                  href="/privacidade"
                   className="text-sm text-gray-600 hover:text-primary-600 transition-colors inline-flex items-center gap-1 group"
                 >
                   <span>Política de Privacidade</span>
@@ -77,7 +79,7 @@ export function Footer({ onFeedbackClick }: FooterProps) {
               </li>
               <li>
                 <Link
-                  to="/terms"
+                  href="/termos"
                   className="text-sm text-gray-600 hover:text-primary-600 transition-colors inline-flex items-center gap-1 group"
                 >
                   <span>Termos de Serviço</span>
@@ -145,14 +147,14 @@ export function Footer({ onFeedbackClick }: FooterProps) {
         <div className="pt-4 md:pt-6 flex flex-col items-center gap-2 md:gap-4 text-xs md:text-sm text-gray-500">
           <div className="flex flex-wrap items-center justify-center gap-2 md:gap-4">
             <Link
-              to="/privacy"
+              href="/privacidade"
               className="text-xs md:text-sm text-gray-500 hover:text-primary-600 transition-colors"
             >
               Privacidade
             </Link>
             <span className="text-gray-300">•</span>
             <Link
-              to="/terms"
+              href="/termos"
               className="text-xs md:text-sm text-gray-500 hover:text-primary-600 transition-colors"
             >
               Termos

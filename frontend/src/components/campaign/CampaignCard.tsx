@@ -1,4 +1,6 @@
-import { Link } from 'react-router-dom';
+'use client';
+
+import Link from 'next/link';
 import { Image as ImageIcon } from 'lucide-react';
 import { CampaignWithProducts } from '@/api';
 import { getImageUrl } from '@/lib/imageUrl';
@@ -19,7 +21,7 @@ export function CampaignCard({
   const imageUrl = getImageUrl(campaign.imageUrl);
 
   return (
-    <Link to={`/campaigns/${campaign.slug}`}>
+    <Link href={`/campanhas/${campaign.slug}`}>
       <article className="h-full bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md hover:border-primary-300 transition-all duration-200 cursor-pointer flex flex-col">
         {/* Mobile: Image + Title side by side | Desktop: Image full width */}
         <div className="flex flex-row md:flex-col">
