@@ -6,9 +6,30 @@
 import { ReactElement } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 import * as AuthContext from '@/contexts/AuthContext';
+
+// Mock next/navigation
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+  usePathname: () => '/',
+  useSearchParams: () => new URLSearchParams(),
+  useParams: () => ({}),
+}));
+
+// Mock next/link
+vi.mock('next/link', () => ({
+  default: ({ children, href, ...props }: { children: React.ReactNode; href: string; [key: string]: any }) => (
+    <a href={href} {...props}>{children}</a>
+  ),
+}));
 
 // Mock AuthContext
 export const mockAuthContext = {
@@ -24,6 +45,7 @@ export const mockAuthContext = {
   register: vi.fn(),
   logout: vi.fn(),
   refreshUser: vi.fn(),
+  setUser: vi.fn(),
   requireAuth: vi.fn(),
   setPendingAction: vi.fn(),
   hasPendingAction: vi.fn(() => false),
@@ -75,7 +97,7 @@ export function renderWithProviders(
   function Wrapper({ children }: { children: React.ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>{children}</BrowserRouter>
+        {children}
       </QueryClientProvider>
     );
   }

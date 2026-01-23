@@ -1,5 +1,7 @@
+'use client';
+
 import { FormEvent, useState } from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { Input, Button, Divider, GoogleButton } from '../ui';
 
 interface LoginFormProps {
@@ -65,7 +67,7 @@ export const LoginForm = ({ onSubmit, onGoogleLogin, isLoading }: LoginFormProps
         <p className="text-xs text-gray-600 text-center">
           Ao usar o Google, você concorda com nossos{' '}
           <Link
-            to="/terms"
+            href="/termos"
             className="text-blue-600 hover:text-blue-700 font-medium"
             target="_blank"
             rel="noopener noreferrer"
@@ -74,7 +76,7 @@ export const LoginForm = ({ onSubmit, onGoogleLogin, isLoading }: LoginFormProps
           </Link>
           {' '}e{' '}
           <Link
-            to="/privacy"
+            href="/privacidade"
             className="text-blue-600 hover:text-blue-700 font-medium"
             target="_blank"
             rel="noopener noreferrer"

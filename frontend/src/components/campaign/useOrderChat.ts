@@ -1,6 +1,7 @@
+'use client';
+
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useLocation } from 'react-router-dom';
 import { messageApi, OrderMessage } from '@/api';
 import { getSocket } from '@/lib/socket';
 import toast from 'react-hot-toast';
@@ -14,7 +15,6 @@ export const useOrderChat = (orderId: string, userId?: string) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   const socket = getSocket();
-  const location = useLocation();
   const previousMessagesLength = useRef<number | null>(null);
   const hasScrolledToHash = useRef(false);
 
@@ -83,7 +83,8 @@ export const useOrderChat = (orderId: string, userId?: string) => {
     const currentLength = messages.length;
 
     // Check if coming from notification (hash in URL)
-    const shouldScrollFromHash = location.hash === '#chat' && !hasScrolledToHash.current;
+    const locationHash = typeof window !== 'undefined' ? window.location.hash : '';
+    const shouldScrollFromHash = locationHash === '#chat' && !hasScrolledToHash.current;
 
     // Check if new message arrived (but NOT on initial load)
     // previousMessagesLength starts as null, so first load won't trigger scroll
@@ -102,7 +103,7 @@ export const useOrderChat = (orderId: string, userId?: string) => {
 
     // Update previous length (after first check, will be a number)
     previousMessagesLength.current = currentLength;
-  }, [messages, location.hash]);
+  }, [messages]);
 
   return {
     message,

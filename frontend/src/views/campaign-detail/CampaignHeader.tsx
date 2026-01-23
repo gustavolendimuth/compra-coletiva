@@ -1,5 +1,7 @@
+'use client';
+
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import Link from "next/link";
 import {
   ArrowLeft,
   Edit,
@@ -91,7 +93,7 @@ export function CampaignHeader({
   return (
     <div className="mb-4 md:mb-6">
       <Link
-        to="/campaigns"
+        href="/campanhas"
         className="inline-flex items-center text-primary-600 hover:text-primary-700 mb-3 md:mb-4"
       >
         <ArrowLeft className="w-4 h-4 mr-2" />

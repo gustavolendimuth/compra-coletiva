@@ -1,10 +1,12 @@
+'use client';
+
 /**
  * RecentActivity Component
  * Feed de atividades recentes
  */
 
+import Link from 'next/link';
 import { Card } from '@/components/ui';
-import { Link } from 'react-router-dom';
 
 interface RecentUser {
   id: string;
@@ -84,7 +86,7 @@ export function RecentActivity({ recentUsers, recentCampaigns, recentOrders }: R
             recentUsers.map((user) => (
               <Link
                 key={user.id}
-                to={`/admin/users/${user.id}`}
+                href={`/admin/usuarios/${user.id}`}
                 className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">

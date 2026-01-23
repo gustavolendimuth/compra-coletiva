@@ -1,6 +1,8 @@
+'use client';
+
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useParams, useLocation, useNavigate } from "react-router-dom";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import {
   campaignApi,
@@ -36,7 +38,8 @@ type SortDirection = "asc" | "desc";
 type ProductSortField = "name" | "price" | "weight";
 
 export function useCampaignDetail() {
-  const { slug } = useParams<{ slug: string }>();
+  const params = useParams();
+  const slug = params?.slug as string;
   const { user, requireAuth } = useAuth();
   const queryClient = useQueryClient();
 
@@ -155,8 +158,8 @@ export function useCampaignDetail() {
   });
 
   // Handle navigation from notifications
-  const location = useLocation();
-  const navigate = useNavigate();
+  const pathname = usePathname();
+  const router = useRouter();
 
   // Autosave effect for edit order form
   useEffect(() => {
@@ -229,11 +232,18 @@ export function useCampaignDetail() {
   const [shouldOpenQuestionsTab, setShouldOpenQuestionsTab] = useState(false);
 
   useEffect(() => {
-    const state = location.state as {
+    // In Next.js, we use sessionStorage to pass navigation state
+    const storedState = typeof window !== 'undefined'
+      ? sessionStorage.getItem('campaignNavigationState')
+      : null;
+
+    if (!storedState) return;
+
+    const state = JSON.parse(storedState) as {
       openOrderChat?: boolean;
       orderId?: string;
       openQuestionsTab?: boolean;
-    } | null;
+    };
 
     if (state?.openOrderChat && state?.orderId && orders) {
       // Find the order
@@ -245,7 +255,7 @@ export function useCampaignDetail() {
         setIsViewOrderModalOpen(true);
 
         // Clear the state to prevent reopening on refresh
-        navigate(location.pathname, { replace: true, state: {} });
+        sessionStorage.removeItem('campaignNavigationState');
       }
     }
 
@@ -254,9 +264,9 @@ export function useCampaignDetail() {
       setShouldOpenQuestionsTab(true);
 
       // Clear the state to prevent reopening on refresh
-      navigate(location.pathname, { replace: true, state: {} });
+      sessionStorage.removeItem('campaignNavigationState');
     }
-  }, [location.state, orders, navigate, location.pathname]);
+  }, [orders]);
 
   // Computed states
   const isActive = campaign?.status === "ACTIVE";
@@ -497,7 +507,7 @@ export function useCampaignDetail() {
       // If the name changed, the slug might have changed too
       // Navigate to the new slug if different
       if (updatedCampaign.slug !== slug) {
-        navigate(`/campaigns/${updatedCampaign.slug}`, { replace: true });
+        router.replace(`/campanhas/${updatedCampaign.slug}`);
       } else {
         queryClient.invalidateQueries({ queryKey: ["campaign", slug] });
       }
@@ -543,7 +553,7 @@ export function useCampaignDetail() {
       setCloneName("");
       setCloneDescription("");
       // Navigate to the new campaign using slug
-      navigate(`/campaigns/${newCampaign.slug}`);
+      router.push(`/campanhas/${newCampaign.slug}`);
     },
     onError: () => toast.error("Erro ao clonar campanha"),
   });

@@ -1,6 +1,8 @@
+'use client';
+
 import { useEffect } from 'react';
 import { X, Package, ExternalLink } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { ProductPreview as ProductPreviewType } from '@/api';
 import { formatCurrency } from '@/lib/utils';
 
@@ -120,7 +122,7 @@ export function ProductPreviewModal({
         {/* Footer with link to campaign */}
         <div className="sticky bottom-0 bg-gray-50 border-t border-gray-100 px-6 py-4">
           <Link
-            to={`/campaigns/${campaignSlug}`}
+            href={`/campanhas/${campaignSlug}`}
             className="flex items-center justify-center gap-2 w-full py-3 bg-primary-600 text-white font-medium rounded-xl hover:bg-primary-700 transition-colors"
             onClick={(e) => e.stopPropagation()}
           >

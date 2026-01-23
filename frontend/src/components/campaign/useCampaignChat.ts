@@ -1,6 +1,7 @@
+'use client';
+
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useLocation } from 'react-router-dom';
 import { campaignMessageApi, CampaignMessage } from '@/api';
 import { getSocket } from '@/lib/socket';
 import toast from 'react-hot-toast';
@@ -18,7 +19,6 @@ export const useCampaignChat = (campaignId: string, userId?: string) => {
   const queryClient = useQueryClient();
   const socket = getSocket();
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
-  const location = useLocation();
   const previousMessagesLength = useRef<number | null>(null);
   const hasScrolledToHash = useRef(false);
   const isInitialLoad = useRef(true);
@@ -97,7 +97,8 @@ export const useCampaignChat = (campaignId: string, userId?: string) => {
     const currentLength = publicMessages.messages.length;
 
     // Check if coming from notification (hash in URL)
-    const shouldScrollFromHash = location.hash === '#chat' && !hasScrolledToHash.current;
+    const locationHash = typeof window !== 'undefined' ? window.location.hash : '';
+    const shouldScrollFromHash = locationHash === '#chat' && !hasScrolledToHash.current;
 
     // Check if new message published (but NOT on initial load)
     // Skip scroll on initial data fetch - only scroll when new messages arrive after
@@ -123,7 +124,7 @@ export const useCampaignChat = (campaignId: string, userId?: string) => {
 
     // Update previous length
     previousMessagesLength.current = currentLength;
-  }, [publicMessages.messages, location.hash, isLoading]);
+  }, [publicMessages.messages, isLoading]);
 
   // Typing indicator
   const handleTyping = () => {

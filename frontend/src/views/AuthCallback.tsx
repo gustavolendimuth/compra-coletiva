@@ -1,12 +1,14 @@
+'use client';
+
 import { useEffect, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { authStorage } from '../lib/authStorage';
 import { reconnectSocket } from '../lib/socket';
 import toast from 'react-hot-toast';
 
 export default function AuthCallback() {
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const hasShownToast = useRef(false);
   const hasProcessedCallback = useRef(false);
 
@@ -20,25 +22,25 @@ export default function AuthCallback() {
 
     const handleCallback = () => {
       // Check for error
-      const error = searchParams.get('error');
+      const error = searchParams?.get('error');
       if (error) {
         toast.error('Erro ao fazer login com Google');
-        navigate('/campaigns');
+        router.push('/campanhas');
         return;
       }
 
       // Extract tokens and user data from URL
-      const accessToken = searchParams.get('accessToken');
-      const refreshToken = searchParams.get('refreshToken');
-      const userId = searchParams.get('userId');
-      const userName = searchParams.get('userName');
-      const userEmail = searchParams.get('userEmail');
-      const userRole = searchParams.get('userRole');
-      const phoneCompleted = searchParams.get('phoneCompleted');
+      const accessToken = searchParams?.get('accessToken');
+      const refreshToken = searchParams?.get('refreshToken');
+      const userId = searchParams?.get('userId');
+      const userName = searchParams?.get('userName');
+      const userEmail = searchParams?.get('userEmail');
+      const userRole = searchParams?.get('userRole');
+      const phoneCompleted = searchParams?.get('phoneCompleted');
 
       if (!accessToken || !refreshToken || !userId || !userName || !userEmail || !userRole) {
         toast.error('Dados de autenticação incompletos');
-        navigate('/campaigns');
+        router.push('/campanhas');
         return;
       }
 
@@ -61,12 +63,12 @@ export default function AuthCallback() {
           toast.success(`Bem-vindo, ${decodeURIComponent(userName)}!`);
           hasShownToast.current = true;
         }
-        navigate('/complete-profile', { replace: true });
+        router.replace('/completar-perfil');
         return;
       }
 
       // Get return URL or default to campaigns
-      const returnUrl = authStorage.getReturnUrl() || '/campaigns';
+      const returnUrl = authStorage.getReturnUrl() || '/campanhas';
       console.log('[AuthCallback] returnUrl recuperado do storage:', returnUrl);
       authStorage.clearReturnUrl();
 
@@ -76,16 +78,13 @@ export default function AuthCallback() {
         hasShownToast.current = true;
       }
 
-      // Navigate to the original page using React Router
-      // This avoids full page reload and preserves React state
-      // The AuthContext will pick up the user from localStorage on init
-      // The destination component will read pendingActionData on mount
+      // Navigate to the original page
       console.log('[AuthCallback] Navegando para:', returnUrl);
-      navigate(returnUrl, { replace: true });
+      router.replace(returnUrl);
     };
 
     handleCallback();
-  }, [searchParams, navigate]);
+  }, [searchParams, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
