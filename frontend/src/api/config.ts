@@ -4,6 +4,16 @@
  */
 
 /**
+ * Check if we're running on the server or client
+ */
+const isServer = typeof window === 'undefined';
+
+/**
+ * Check if we're in production
+ */
+const isProduction = process.env.NODE_ENV === 'production';
+
+/**
  * Process environment variable URL with automatic protocol handling
  *
  * Rules:
@@ -22,15 +32,15 @@ export function processEnvUrl(
   const trimmed = url.trim();
 
   // If protocol is already specified, use as-is
-  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
     return trimmed;
   }
 
   // Determine if domain is local
   const isLocal =
-    trimmed.includes("localhost") ||
-    trimmed.includes("127.0.0.1") ||
-    trimmed.includes("0.0.0.0");
+    trimmed.includes('localhost') ||
+    trimmed.includes('127.0.0.1') ||
+    trimmed.includes('0.0.0.0');
 
   // Local domains always use http
   if (isLocal) {
@@ -38,7 +48,7 @@ export function processEnvUrl(
   }
 
   // Remote domains: use https in production, http in development
-  const protocol = import.meta.env.PROD ? "https" : "http";
+  const protocol = isProduction ? 'https' : 'http';
   return `${protocol}://${trimmed}`;
 }
 
@@ -46,9 +56,14 @@ export function processEnvUrl(
  * Get the API URL from environment variables with automatic protocol handling
  */
 export const API_URL = processEnvUrl(
-  import.meta.env.VITE_API_URL,
-  "http://localhost:3000"
+  process.env.NEXT_PUBLIC_API_URL,
+  'http://localhost:3000'
 );
+
+/**
+ * Get the site URL for SEO purposes
+ */
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://compracoletiva.app';
 
 /**
  * API Configuration
@@ -57,7 +72,7 @@ export const apiConfig = {
   baseURL: `${API_URL}/api`,
   timeout: 30000,
   headers: {
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json',
   },
   withCredentials: true, // Enable sending cookies with cross-origin requests
 };

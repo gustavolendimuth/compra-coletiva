@@ -1,3 +1,5 @@
+'use client';
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authStorage, StoredUser, PendingActionData } from '../lib/authStorage';
 import { authApi, RegisterRequest, LoginRequest } from '../lib/authApi';

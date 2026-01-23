@@ -1,5 +1,8 @@
+'use client';
+
 import React, { useEffect, useRef, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { UserMenu } from './UserMenu';
@@ -12,7 +15,7 @@ interface MobileMenuProps {
 }
 
 const MENU_ITEMS = [
-  { to: '/campaigns', label: 'Campanhas' },
+  { href: '/campanhas', label: 'Campanhas' },
 ] as const;
 
 /**
@@ -20,7 +23,7 @@ const MENU_ITEMS = [
  * Appears from the left side and covers the entire viewport
  */
 export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
-  const location = useLocation();
+  const pathname = usePathname();
   const menuRef = useRef<HTMLDivElement>(null);
   const [isAnimating, setIsAnimating] = useState(false);
   const [shouldAnimate, setShouldAnimate] = useState(false);
@@ -50,16 +53,19 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
 
   // Close menu when route changes (but not on initial mount)
   const isFirstRender = useRef(true);
+  const previousPathname = useRef(pathname);
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
+      previousPathname.current = pathname;
       return;
     }
 
-    if (isOpen) {
+    if (pathname !== previousPathname.current && isOpen) {
       onClose();
     }
-  }, [location.pathname]);
+    previousPathname.current = pathname;
+  }, [pathname, isOpen, onClose]);
 
   // Handle escape key
   useEffect(() => {
@@ -123,9 +129,9 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
           <nav className="flex-1 p-6 space-y-4">
             {MENU_ITEMS.map((item, index) => (
               <Link
-                key={item.to}
-                to={item.to}
-                className={`block px-4 py-3 rounded-lg font-semibold text-base transition-all ${location.pathname.includes(item.to)
+                key={item.href}
+                href={item.href}
+                className={`block px-4 py-3 rounded-lg font-semibold text-base transition-all ${pathname?.includes(item.href)
                     ? 'bg-primary-100 text-primary-700'
                     : 'text-gray-700 hover:bg-gray-100 hover:scale-[1.02]'
                   } ${shouldAnimate ? 'animate-slide-in opacity-100' : 'opacity-0'}`}

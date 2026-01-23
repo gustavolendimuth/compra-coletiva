@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * useNotifications Hook
  * Manages notification fetching, state, and actions
@@ -5,17 +7,17 @@
 
 import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../contexts/AuthContext';
 import { notificationService } from '../api';
 import type { Notification } from '../api/types';
 import toast from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
 import { getSocket } from '../lib/socket';
 
 export function useNotifications() {
   const { isAuthenticated, user } = useAuth();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
+  const router = useRouter();
 
   // Fetch notifications
   const { data, isLoading } = useQuery({
@@ -103,7 +105,6 @@ export function useNotifications() {
     // Navigate based on notification type
     // Prefer campaignSlug, fallback to campaignId for backward compatibility
     const campaignSlug = notification.metadata?.campaignSlug || notification.metadata?.campaignId;
-    const orderId = notification.metadata?.orderId;
     const isQuestion = notification.metadata?.isQuestion;
 
     switch (notification.type) {
@@ -111,21 +112,17 @@ export function useNotifications() {
       case 'CAMPAIGN_STATUS_CHANGED':
       case 'CAMPAIGN_ARCHIVED':
         if (campaignSlug) {
-          navigate(`/campaigns/${campaignSlug}`);
+          router.push(`/campanhas/${campaignSlug}`);
         }
         break;
       case 'NEW_MESSAGE':
         if (campaignSlug) {
           if (isQuestion) {
             // Navigate to campaign questions tab
-            navigate(`/campaigns/${campaignSlug}`, {
-              state: { openQuestionsTab: true }
-            });
+            router.push(`/campanhas/${campaignSlug}?openQuestions=true`);
           } else {
-            // Navigate to campaign detail page with order chat
-            navigate(`/campaigns/${campaignSlug}`, {
-              state: { openOrderChat: true, orderId }
-            });
+            // Navigate to campaign detail page
+            router.push(`/campanhas/${campaignSlug}`);
           }
         }
         break;

@@ -1,5 +1,7 @@
+'use client';
+
 import React, { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { useAuth } from '../contexts/AuthContext';
 import { LogOut, ChevronDown, User, Shield } from 'lucide-react';
 
@@ -89,7 +91,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({ variant = 'default', onActio
 
         <div className="flex flex-col gap-2">
           <Link
-            to="/profile"
+            href="/perfil"
             onClick={onAction}
             className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
           >
@@ -99,7 +101,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({ variant = 'default', onActio
 
           {user.role === 'ADMIN' && (
             <Link
-              to="/admin"
+              href="/admin"
               onClick={onAction}
               className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
             >
@@ -149,7 +151,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({ variant = 'default', onActio
           </div>
 
           <Link
-            to="/profile"
+            href="/perfil"
             onClick={() => setIsOpen(false)}
             className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
           >
@@ -159,7 +161,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({ variant = 'default', onActio
 
           {user.role === 'ADMIN' && (
             <Link
-              to="/admin"
+              href="/admin"
               onClick={() => setIsOpen(false)}
               className="w-full flex items-center gap-2 px-4 py-2 text-sm text-blue-700 hover:bg-blue-50"
             >
