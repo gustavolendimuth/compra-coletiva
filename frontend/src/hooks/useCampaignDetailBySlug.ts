@@ -131,19 +131,19 @@ export function useCampaignDetailBySlug(slug: string) {
 
   const { data: products } = useQuery({
     queryKey: ['products', campaign?.id],
-    queryFn: () => productApi.list(campaign!.id),
+    queryFn: () => productApi.getByCampaign(campaign!.id),
     enabled: !!campaign?.id,
   });
 
   const { data: orders } = useQuery({
     queryKey: ['orders', campaign?.id],
-    queryFn: () => orderApi.list(campaign!.id),
+    queryFn: () => orderApi.getByCampaign(campaign!.id),
     enabled: !!campaign?.id,
   });
 
   const { data: analytics } = useQuery({
     queryKey: ['analytics', campaign?.id],
-    queryFn: () => analyticsApi.getCampaignAnalytics(campaign!.id),
+    queryFn: () => analyticsApi.getByCampaign(campaign!.id),
     enabled: !!campaign?.id,
   });
 
@@ -175,14 +175,14 @@ export function useCampaignDetailBySlug(slug: string) {
     if (orderSearch) {
       const searchLower = orderSearch.toLowerCase();
       filtered = filtered.filter((order) =>
-        order.customerName.toLowerCase().includes(searchLower)
+        order.customer.name?.toLowerCase().includes(searchLower)
       );
     }
     filtered.sort((a, b) => {
       let comparison = 0;
       switch (orderSortField) {
         case 'customerName':
-          comparison = a.customerName.localeCompare(b.customerName);
+          comparison = (a.customer.name || '').localeCompare(b.customer.name || '');
           break;
         case 'subtotal':
           comparison = a.subtotal - b.subtotal;
@@ -341,7 +341,7 @@ export function useCampaignDetailBySlug(slug: string) {
 
   const togglePaymentMutation = useMutation({
     mutationFn: ({ id, isPaid }: { id: string; isPaid: boolean }) =>
-      orderApi.togglePayment(id, isPaid),
+      orderApi.updatePayment(id, isPaid),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders', campaign?.id] });
       queryClient.invalidateQueries({ queryKey: ['analytics', campaign?.id] });
@@ -370,7 +370,8 @@ export function useCampaignDetailBySlug(slug: string) {
   });
 
   const cloneCampaignMutation = useMutation({
-    mutationFn: () => campaignApi.clone(campaign!.id),
+    mutationFn: (data: { name: string; description?: string }) =>
+      campaignApi.clone(campaign!.id, data),
     onSuccess: (newCampaign) => {
       queryClient.invalidateQueries({ queryKey: ['campaigns'] });
       setIsCloneModalOpen(false);
@@ -390,7 +391,6 @@ export function useCampaignDetailBySlug(slug: string) {
       name: productForm.name,
       price: parseFloat(productForm.price),
       weight: parseFloat(productForm.weight),
-      imageUrl: productForm.imageUrl || undefined,
     });
   };
 
@@ -432,12 +432,12 @@ export function useCampaignDetailBySlug(slug: string) {
     });
   };
 
-  const handleAddToOrder = (productId: string, quantity: number) => {
+  const handleAddToOrder = (product: Product) => {
     requireAuth(() => {
       isAddingFromButtonRef.current = true;
       createOrderMutation.mutate({
         campaignId: campaign!.id,
-        items: [{ productId, quantity }],
+        items: [{ productId: product.id, quantity: 1 }],
       });
     });
   };
@@ -503,7 +503,7 @@ export function useCampaignDetailBySlug(slug: string) {
   };
 
   const handleUpdatePix = () => {
-    const cleanPixKey = removeMask(pixKey);
+    const cleanPixKey = removeMask(pixKey, pixType);
     updateCampaignMutation.mutate({
       pixKey: cleanPixKey,
       pixType,
@@ -530,7 +530,11 @@ export function useCampaignDetailBySlug(slug: string) {
   };
 
   const handleCloneCampaign = () => {
-    cloneCampaignMutation.mutate();
+    if (!campaign) return;
+    cloneCampaignMutation.mutate({
+      name: `${campaign.name} (Cópia)`,
+      description: campaign.description || undefined,
+    });
   };
 
   const handleSort = (field: SortField) => {
@@ -557,7 +561,7 @@ export function useCampaignDetailBySlug(slug: string) {
       name: product.name,
       price: String(product.price),
       weight: String(product.weight),
-      imageUrl: product.imageUrl || '',
+      imageUrl: '',
     });
     isFirstEditRenderRef.current = true;
     setIsEditProductModalOpen(true);

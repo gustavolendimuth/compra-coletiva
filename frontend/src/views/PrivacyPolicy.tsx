@@ -1,4 +1,6 @@
-import { Link } from 'react-router-dom';
+'use client';
+
+import Link from 'next/link';
 
 export default function PrivacyPolicy() {
   return (
@@ -7,7 +9,7 @@ export default function PrivacyPolicy() {
         {/* Header */}
         <div className="mb-8">
           <Link
-            to="/campaigns"
+            href="/campanhas"
             className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700 mb-4"
           >
             ← Voltar
@@ -274,7 +276,7 @@ export default function PrivacyPolicy() {
         {/* Footer */}
         <div className="mt-8 text-center">
           <Link
-            to="/terms"
+            href="/termos"
             className="text-sm text-blue-600 hover:text-blue-700"
           >
             Ver Termos de Serviço

@@ -3,15 +3,15 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCampaignDetailBySlug } from '@/hooks/useCampaignDetailBySlug';
-import { LoadingSkeleton } from '@/pages/campaign-detail/LoadingSkeleton';
-import { CampaignHeader } from '@/pages/campaign-detail';
-import { TabNavigation } from '@/pages/campaign-detail';
-import { OverviewTab } from '@/pages/campaign-detail/tabs/OverviewTab';
-import { ProductsTab } from '@/pages/campaign-detail/tabs/ProductsTab';
-import { OrdersTab } from '@/pages/campaign-detail/tabs/OrdersTab';
-import { ShippingTab } from '@/pages/campaign-detail/tabs/ShippingTab';
-import { QuestionsTab } from '@/pages/campaign-detail/tabs/QuestionsTab';
-import { CampaignModals } from '@/pages/campaign-detail/CampaignModals';
+import { LoadingSkeleton } from '@/views/campaign-detail/LoadingSkeleton';
+import { CampaignHeader } from '@/views/campaign-detail';
+import { TabNavigation } from '@/views/campaign-detail';
+import { OverviewTab } from '@/views/campaign-detail/tabs/OverviewTab';
+import { ProductsTab } from '@/views/campaign-detail/tabs/ProductsTab';
+import { OrdersTab } from '@/views/campaign-detail/tabs/OrdersTab';
+import { ShippingTab } from '@/views/campaign-detail/tabs/ShippingTab';
+import { QuestionsTab } from '@/views/campaign-detail/tabs/QuestionsTab';
+import { CampaignModals } from '@/views/campaign-detail/CampaignModals';
 
 interface CampaignDetailPageProps {
   slug: string;

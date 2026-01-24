@@ -1,17 +1,24 @@
+'use client';
+
 /**
  * UserDetail Page
  * Página de detalhes do usuário no painel admin
  */
 
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { adminService } from '@/api';
 import { Card, Button } from '@/components/ui';
 import { Avatar } from '@/components/ui/Avatar';
 
-export function UserDetail() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+interface UserDetailProps {
+  userId?: string;
+}
+
+export function UserDetail({ userId: propUserId }: UserDetailProps) {
+  const params = useParams();
+  const router = useRouter();
+  const id = propUserId || (params?.id as string);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'user', id],
@@ -32,7 +39,7 @@ export function UserDetail() {
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="text-center">
           <p className="text-gray-600">Usuário não encontrado</p>
-          <Button onClick={() => navigate('/admin/users')} className="mt-4">
+          <Button onClick={() => router.push('/admin/usuarios')} className="mt-4">
             Voltar para Usuários
           </Button>
         </div>
@@ -58,7 +65,7 @@ export function UserDetail() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button variant="secondary" onClick={() => navigate('/admin/users')}>
+        <Button variant="secondary" onClick={() => router.push('/admin/usuarios')}>
           ← Voltar
         </Button>
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Detalhes do Usuário</h1>

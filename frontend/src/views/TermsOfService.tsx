@@ -1,4 +1,6 @@
-import { Link } from 'react-router-dom';
+'use client';
+
+import Link from 'next/link';
 
 export default function TermsOfService() {
   return (
@@ -7,7 +9,7 @@ export default function TermsOfService() {
         {/* Header */}
         <div className="mb-8">
           <Link
-            to="/campaigns"
+            href="/campanhas"
             className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700 mb-4"
           >
             ← Voltar
@@ -234,7 +236,7 @@ export default function TermsOfService() {
             <div className="space-y-3">
               <p className="text-base text-gray-700 leading-relaxed">
                 Nossa coleta e uso de dados pessoais são regidos pela nossa{' '}
-                <Link to="/privacy" className="text-blue-600 hover:text-blue-700">
+                <Link href="/privacidade" className="text-blue-600 hover:text-blue-700">
                   Política de Privacidade
                 </Link>
                 , que está em conformidade com a Lei Geral de Proteção de Dados (LGPD).
@@ -341,7 +343,7 @@ export default function TermsOfService() {
         {/* Footer */}
         <div className="mt-8 text-center">
           <Link
-            to="/privacy"
+            href="/privacidade"
             className="text-sm text-blue-600 hover:text-blue-700"
           >
             Ver Política de Privacidade

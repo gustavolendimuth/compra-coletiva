@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * DeleteAccountSection Component
  * Seção para exclusão de conta
@@ -5,7 +7,7 @@
 
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { Card, Input, Button, ConfirmModal, Textarea } from '@/components/ui';
 import { profileService } from '@/api';
@@ -16,7 +18,7 @@ interface DeleteAccountSectionProps {
 }
 
 export function DeleteAccountSection({ hasPassword }: DeleteAccountSectionProps) {
-  const navigate = useNavigate();
+  const router = useRouter();
   const { logout } = useAuth();
   const [showModal, setShowModal] = useState(false);
   const [password, setPassword] = useState('');
@@ -28,7 +30,7 @@ export function DeleteAccountSection({ hasPassword }: DeleteAccountSectionProps)
     onSuccess: async () => {
       toast.success('Conta excluída com sucesso');
       await logout();
-      navigate('/');
+      router.push('/');
     },
     onError: (error: any) => {
       const message = error?.response?.data?.message || 'Erro ao excluir conta';

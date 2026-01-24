@@ -1,5 +1,7 @@
+'use client';
+
 import { FormEvent, useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import Link from "next/link";
 import { Input, PhoneInput, Button, Divider, GoogleButton } from "../ui";
 import { authService } from "../../api";
 
@@ -120,7 +122,7 @@ export const RegisterForm = ({
         <p className="text-xs text-gray-600 text-center">
           Ao criar uma conta, você concorda com nossos{' '}
           <Link
-            to="/terms"
+            href="/termos"
             className="text-blue-600 hover:text-blue-700 font-medium"
             target="_blank"
             rel="noopener noreferrer"
@@ -129,7 +131,7 @@ export const RegisterForm = ({
           </Link>
           {' '}e{' '}
           <Link
-            to="/privacy"
+            href="/privacidade"
             className="text-blue-600 hover:text-blue-700 font-medium"
             target="_blank"
             rel="noopener noreferrer"

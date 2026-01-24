@@ -12,6 +12,11 @@ dist/
 build/
 **/dist/
 **/build/
+.next/
+**/.next/
+
+# Archived files
+_archive_vite/
 
 # Database
 postgres_data/

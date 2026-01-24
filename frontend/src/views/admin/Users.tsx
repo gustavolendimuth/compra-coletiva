@@ -1,10 +1,12 @@
+'use client';
+
 /**
  * Users Page
  * Página de gestão de usuários
  */
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { adminService, type AdminUser } from '@/api';
@@ -12,7 +14,7 @@ import { Card, Button, Input } from '@/components/ui';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 export function Users() {
-  const navigate = useNavigate();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -179,7 +181,7 @@ export function Users() {
                       <Button
                         size="sm"
                         variant="secondary"
-                        onClick={() => navigate(`/admin/users/${user.id}`)}
+                        onClick={() => router.push(`/admin/usuarios/${user.id}`)}
                       >
                         Ver
                       </Button>

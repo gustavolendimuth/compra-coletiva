@@ -1,23 +1,32 @@
+'use client';
+
 /**
  * VerifyEmailChange Page
  * Página de verificação de troca de email
  */
 
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Card, Button } from '@/components/ui';
 import { profileService } from '@/api';
 import { useAuth } from '@/contexts/AuthContext';
 
 type VerificationStatus = 'loading' | 'success' | 'error' | 'expired';
 
-export function VerifyEmailChange() {
-  const { token } = useParams<{ token: string }>();
-  const navigate = useNavigate();
+interface VerifyEmailChangeProps {
+  token?: string;
+}
+
+export function VerifyEmailChange({ token: propToken }: VerifyEmailChangeProps) {
+  const params = useParams();
+  const router = useRouter();
   const { refreshUser } = useAuth();
   const [status, setStatus] = useState<VerificationStatus>('loading');
   const [message, setMessage] = useState('');
   const [newEmail, setNewEmail] = useState('');
+
+  const token = propToken || (params?.token as string);
 
   useEffect(() => {
     const verifyEmail = async () => {
@@ -76,7 +85,7 @@ export function VerifyEmailChange() {
                 Seu novo email: <strong>{newEmail}</strong>
               </p>
             )}
-            <Button onClick={() => navigate('/profile')}>
+            <Button onClick={() => router.push('/perfil')}>
               Ir para o Perfil
             </Button>
           </div>
@@ -92,7 +101,7 @@ export function VerifyEmailChange() {
             </div>
             <h2 className="text-xl font-bold text-gray-900 mb-2">Link Expirado</h2>
             <p className="text-gray-600 mb-6">{message}</p>
-            <Button onClick={() => navigate('/profile')}>
+            <Button onClick={() => router.push('/perfil')}>
               Solicitar Novamente
             </Button>
           </div>
@@ -109,10 +118,10 @@ export function VerifyEmailChange() {
             <h2 className="text-xl font-bold text-gray-900 mb-2">Erro na Verificação</h2>
             <p className="text-gray-600 mb-6">{message}</p>
             <div className="flex justify-center gap-3">
-              <Link to="/profile">
+              <Link href="/perfil">
                 <Button variant="secondary">Ir para o Perfil</Button>
               </Link>
-              <Link to="/campaigns">
+              <Link href="/campanhas">
                 <Button>Ver Campanhas</Button>
               </Link>
             </div>

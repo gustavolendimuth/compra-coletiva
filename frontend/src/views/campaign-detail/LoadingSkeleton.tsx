@@ -1,4 +1,6 @@
-import { Link } from 'react-router-dom';
+'use client';
+
+import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { SkeletonDetailHeader, SkeletonProductCard } from '@/components/Skeleton';
 
@@ -6,7 +8,7 @@ export function LoadingSkeleton() {
   return (
     <div>
       <div className="mb-4 md:mb-6">
-        <Link to="/campaigns" className="inline-flex items-center text-primary-600 hover:text-primary-700 mb-3 md:mb-4">
+        <Link href="/campanhas" className="inline-flex items-center text-primary-600 hover:text-primary-700 mb-3 md:mb-4">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Voltar
         </Link>
