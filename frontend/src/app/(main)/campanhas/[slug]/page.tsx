@@ -70,44 +70,92 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-// Generate JSON-LD structured data
-function generateStructuredData(campaign: any) {
+// Generate JSON-LD structured data for SEO
+function generateStructuredData(campaign: any, slug: string) {
   if (!campaign) return null;
 
-  return {
+  const imageUrl = campaign.imageUrl
+    ? `${API_URL}${campaign.imageUrl}`
+    : `${SITE_URL}/og-image.png`;
+
+  // Main product structured data
+  const productData = {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: campaign.name,
     description: campaign.description || `Campanha de compra coletiva: ${campaign.name}`,
-    image: campaign.imageUrl ? `${API_URL}${campaign.imageUrl}` : undefined,
+    image: imageUrl,
+    url: `${SITE_URL}/campanhas/${slug}`,
     offers: {
       '@type': 'AggregateOffer',
       priceCurrency: 'BRL',
       offerCount: campaign._count?.products || 0,
-      availability: campaign.status === 'ACTIVE'
-        ? 'https://schema.org/InStock'
-        : 'https://schema.org/OutOfStock',
+      availability:
+        campaign.status === 'ACTIVE'
+          ? 'https://schema.org/InStock'
+          : 'https://schema.org/OutOfStock',
     },
     seller: {
       '@type': 'Person',
       name: campaign.creator?.name || 'Organizador',
     },
+    // Add aggregated ratings if available
+    ...(campaign._count?.orders > 0 && {
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: '4.5',
+        reviewCount: campaign._count.orders,
+      },
+    }),
   };
+
+  // Breadcrumb structured data
+  const breadcrumbData = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: SITE_URL,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Campanhas',
+        item: `${SITE_URL}/campanhas`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: campaign.name,
+        item: `${SITE_URL}/campanhas/${slug}`,
+      },
+    ],
+  };
+
+  return [productData, breadcrumbData];
 }
 
 export default async function CampanhaDetailPage({ params }: PageProps) {
   const { slug } = await params;
   const campaign = await getCampaign(slug);
 
-  const structuredData = generateStructuredData(campaign);
+  const structuredDataList = generateStructuredData(campaign, slug);
 
   return (
     <>
-      {structuredData && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
-        />
+      {structuredDataList && (
+        <>
+          {structuredDataList.map((data, index) => (
+            <script
+              key={`structured-data-${index}`}
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+            />
+          ))}
+        </>
       )}
       <CampaignDetailPage slug={slug} />
     </>

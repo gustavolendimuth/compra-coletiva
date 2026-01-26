@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Providers } from './providers';
+import { StructuredData } from '@/components/seo/StructuredData';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -71,12 +72,36 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://compracoletiva.app';
+
   return (
     <html lang="pt-BR">
       <head>
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
       </head>
       <body>
+        <StructuredData
+          type="organization"
+          data={{
+            name: 'Compra Coletiva',
+            url: siteUrl,
+            description:
+              'Plataforma para organizar compras coletivas de forma simples e eficiente. Crie campanhas, gerencie produtos, pedidos e distribuição de frete.',
+            logo: `${siteUrl}/logo.png`,
+          }}
+        />
+        <StructuredData
+          type="website"
+          data={{
+            name: 'Compra Coletiva',
+            url: siteUrl,
+            potentialAction: {
+              '@type': 'SearchAction',
+              target: `${siteUrl}/campanhas?q={search_term}`,
+              'query-input': 'required name=search_term',
+            },
+          }}
+        />
         <Providers>{children}</Providers>
       </body>
     </html>
