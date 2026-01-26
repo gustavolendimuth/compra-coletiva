@@ -1,42 +1,60 @@
-# Multi-stage build para produção do frontend
+# Multi-stage build para produção do frontend Next.js
+# Otimizado para Railway
 
 # Stage 1: Build
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Argumentos de build para variáveis de ambiente do Vite
-ARG VITE_API_URL
-ENV VITE_API_URL=$VITE_API_URL
+# Instala dependências necessárias
+RUN apk add --no-cache libc6-compat
 
-# Copia package.json
-COPY package*.json ./
+# Argumentos de build para variáveis de ambiente do Next.js
+# Railway passa essas variáveis automaticamente via Service Variables
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_SITE_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 
-# Instala todas as dependências (incluindo devDependencies para o build)
-RUN npm install
+# Copia package files
+COPY package.json package-lock.json* ./
+
+# Instala dependências
+RUN npm install --legacy-peer-deps
 
 # Copia o código fonte
 COPY . .
 
-# Build da aplicação (tsc + vite build)
+# Build da aplicação Next.js
+ENV NODE_ENV=production
 RUN npm run build
 
-# Verifica se o build foi criado
-RUN ls -la /app/dist
+# Stage 2: Production - Next.js standalone
+FROM node:20-alpine AS runner
+WORKDIR /app
 
-# Stage 2: Production - Serve com nginx
-FROM nginx:alpine
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# Instala envsubst (já vem no nginx:alpine via gettext package)
-RUN apk add --no-cache gettext
+# Cria usuário não-root para segurança
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
 
-# Copia o build do stage anterior
-COPY --from=builder /app/dist /usr/share/nginx/html
+# Copia arquivos públicos
+COPY --from=builder /app/public ./public
 
-# Copia configuração customizada do nginx
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copia build standalone
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Expõe a porta (Railway usa a variável PORT)
-EXPOSE 80
+USER nextjs
 
-# Script para substituir variáveis de ambiente e iniciar nginx
-CMD ["/bin/sh", "-c", "nginx -g 'daemon off;'"]
+# Expõe a porta 3000 (padrão do Next.js)
+# Railway vai expor essa porta automaticamente via $PORT
+EXPOSE 3000
+
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+# Inicia o servidor Next.js
+# Railway irá usar a porta definida em $PORT (que é 3000 por padrão)
+CMD ["node", "server.js"]

@@ -1,215 +1,102 @@
-# Guia de Deploy - Railway
+# Guia de Deploy - Compra Coletiva
 
-Este guia detalha como fazer o deploy da aplicação Compra Coletiva no Railway.
+Deploy do frontend Next.js (migrado do Vite) no **Railway**.
 
-## Pré-requisitos
+## 🚂 Railway (Recomendado)
 
-- Conta no [Railway](https://railway.app/)
-- Repositório Git (GitHub, GitLab ou Bitbucket)
-- Código commitado no repositório
+Este projeto está **otimizado para Railway** com:
+- ✅ Dockerfiles configurados (backend + frontend)
+- ✅ railway.json para cada serviço
+- ✅ Variáveis de ambiente via Railway references
+- ✅ Deploy automático via Git
+- ✅ PostgreSQL e Redis integrados
 
-## Passo a Passo
+### Quick Start
 
-### 1. Criar Novo Projeto
+```bash
+# 1. Criar projeto no Railway
+# https://railway.app → New Project → Deploy from GitHub
 
-1. Acesse [Railway Dashboard](https://railway.app/dashboard)
-2. Clique em **"New Project"**
-3. Escolha **"Deploy from GitHub repo"**
-4. Selecione seu repositório
+# 2. Adicionar serviços:
+#    - Backend (detecta railway.json na raiz)
+#    - Frontend (configurar Root Directory: frontend)
+#    - PostgreSQL (Add Database → PostgreSQL)
+#    - Redis (Add Database → Redis - opcional)
 
-### 2. Adicionar Banco de Dados PostgreSQL
+# 3. Configurar variáveis de ambiente (ver RAILWAY.md)
 
-1. No projeto, clique em **"New"**
-2. Selecione **"Database"**
-3. Escolha **"PostgreSQL"**
-4. O Railway criará automaticamente o banco
+# 4. Deploy automático acontece via Git push
+git push origin main
+```
 
-### 3. Configurar Variáveis de Ambiente
+### Documentação Completa
 
-1. Clique no serviço da aplicação (não no PostgreSQL)
-2. Vá em **"Variables"**
-3. Adicione as seguintes variáveis:
+📖 **[RAILWAY.md](RAILWAY.md)** - Guia completo com:
+- Setup passo a passo
+- Variáveis de ambiente
+- Migrations
+- Domínio custom
+- Troubleshooting
+- Custos
 
-```env
-NODE_ENV=production
-PORT=3000
+## 📦 Arquitetura
+
+### Frontend (Next.js 14)
+- **Build**: Multi-stage Docker (builder + runner)
+- **Modo**: Standalone (otimizado)
+- **Porta**: 3000
+- **Tamanho**: ~150MB (otimizado)
+
+### Backend (Express + Prisma)
+- **Build**: Docker otimizado
+- **Porta**: 3000
+- **Banco**: PostgreSQL (Railway)
+- **Cache**: Redis (Railway - opcional)
+
+## ⚙️ Variáveis de Ambiente
+
+### Frontend
+```bash
+NEXT_PUBLIC_API_URL=https://${{Backend.RAILWAY_PUBLIC_DOMAIN}}
+NEXT_PUBLIC_SITE_URL=https://${{RAILWAY_PUBLIC_DOMAIN}}
+```
+
+### Backend
+```bash
 DATABASE_URL=${{Postgres.DATABASE_URL}}
-CORS_ORIGIN=${{RAILWAY_PUBLIC_DOMAIN}}
+REDIS_URL=${{Redis.REDIS_URL}}
+CORS_ORIGIN=${{Frontend.RAILWAY_PUBLIC_DOMAIN}}
+JWT_SECRET=<gerar-com-openssl-rand>
 ```
 
-**Importante**:
-- `${{Postgres.DATABASE_URL}}` é uma referência automática ao PostgreSQL
-- `${{RAILWAY_PUBLIC_DOMAIN}}` é o domínio público gerado pelo Railway
+## 🔍 SEO
 
-### 4. Configurar Build
+Todas as otimizações de SEO estão implementadas:
+- ✅ Sitemap dinâmico (/sitemap.xml)
+- ✅ Robots.txt (/robots.txt)
+- ✅ Structured data (JSON-LD)
+- ✅ Metadata completa
+- ✅ Mobile-first
 
-O Railway detectará automaticamente o arquivo `railway.json` na raiz do projeto. Certifique-se de que ele está presente:
+📖 **[SEO.md](SEO.md)** - Documentação completa de SEO
 
-```json
-{
-  "$schema": "https://railway.app/railway.schema.json",
-  "build": {
-    "builder": "DOCKERFILE",
-    "dockerfilePath": "Dockerfile.production"
-  },
-  "deploy": {
-    "numReplicas": 1,
-    "startCommand": "sh -c 'cd backend && npx prisma migrate deploy && node dist/index.js'",
-    "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 10
-  }
-}
-```
+## 🎯 Próximos Passos
 
-### 5. Deploy
+1. ✅ Build está pronto para Railway
+2. ⏳ Configurar variáveis de ambiente no Railway
+3. ⏳ Deploy via Railway (push to main)
+4. ⏳ Executar migrations
+5. ⏳ Configurar domínio custom
 
-1. Faça commit das suas alterações
-2. Push para o repositório
-3. O Railway iniciará o deploy automaticamente
-4. Acompanhe os logs em tempo real
+## 🔧 Arquivos de Configuração
 
-### 6. Executar Migrations
+- [frontend/Dockerfile](frontend/Dockerfile) - Docker otimizado para Next.js
+- [frontend/railway.json](frontend/railway.json) - Configuração Railway
+- [frontend/.dockerignore](frontend/.dockerignore) - Otimização de build
+- [backend/Dockerfile](backend/Dockerfile) - Docker backend
+- [railway.json](railway.json) - Configuração backend Railway
 
-As migrations do Prisma são executadas automaticamente no `startCommand`. Mas se precisar executá-las manualmente:
+---
 
-1. Vá em **"Settings"** do serviço
-2. Clique em **"Deploy"**
-3. Em **"Custom Start Command"**, temporariamente use:
-```bash
-sh -c 'cd backend && npx prisma migrate deploy && node dist/index.js'
-```
-
-### 7. Verificar Deploy
-
-1. Acesse o domínio público fornecido pelo Railway
-2. Teste a aplicação
-3. Verifique os logs em caso de problemas
-
-## Configurações Opcionais
-
-### Domínio Customizado
-
-1. No serviço, vá em **"Settings"**
-2. Clique em **"Domains"**
-3. Adicione seu domínio customizado
-4. Configure os DNS conforme instruções do Railway
-5. Atualize a variável `CORS_ORIGIN` com o novo domínio
-
-### Escalonamento
-
-Para escalonar a aplicação:
-
-1. Vá em **"Settings"**
-2. Em **"Deploy"** > **"Replicas"**
-3. Ajuste o número de réplicas
-
-**Nota**: O plano gratuito permite apenas 1 réplica.
-
-### Monitoramento
-
-Railway fornece:
-- **Logs em tempo real**: Veja logs na aba "Deployments"
-- **Métricas**: CPU, memória e rede na aba "Metrics"
-- **Uptime monitoring**: Status da aplicação
-
-## Troubleshooting
-
-### Build Falha
-
-**Problema**: Build do Docker falha
-
-**Solução**:
-1. Verifique os logs de build
-2. Teste o build localmente: `docker build -f Dockerfile.production .`
-3. Certifique-se de que todos os arquivos necessários estão commitados
-
-### Database Connection Error
-
-**Problema**: Aplicação não conecta ao banco
-
-**Solução**:
-1. Verifique se `DATABASE_URL` está configurada corretamente
-2. Use a referência `${{Postgres.DATABASE_URL}}`
-3. Reinicie o serviço
-
-### Migrations Não Executam
-
-**Problema**: Tabelas não são criadas
-
-**Solução**:
-1. Verifique o `startCommand` no `railway.json`
-2. Execute migrations manualmente via Railway CLI:
-```bash
-railway run npx prisma migrate deploy
-```
-
-### CORS Error
-
-**Problema**: Frontend não consegue acessar a API
-
-**Solução**:
-1. Verifique a variável `CORS_ORIGIN`
-2. Use `${{RAILWAY_PUBLIC_DOMAIN}}` ou configure o domínio correto
-3. Se usar domínio customizado, atualize a variável
-
-## Railway CLI (Opcional)
-
-Para desenvolvimento local conectado ao Railway:
-
-```bash
-# Instalar CLI
-npm i -g @railway/cli
-
-# Login
-railway login
-
-# Linkar projeto
-railway link
-
-# Executar comandos no ambiente Railway
-railway run npm start
-
-# Ver logs
-railway logs
-
-# Abrir shell no container
-railway shell
-```
-
-## Custos
-
-- **Plano Hobby (Gratuito)**:
-  - $5 de crédito mensal
-  - 500h de execução
-  - 1GB RAM
-  - 1GB storage
-
-- **Plano Developer**:
-  - $5/mês base
-  - Uso adicional conforme demanda
-  - Mais recursos disponíveis
-
-## Boas Práticas
-
-1. **Use variáveis de ambiente** para configurações sensíveis
-2. **Configure logs** adequadamente para debugging
-3. **Monitore métricas** regularmente
-4. **Mantenha backups** do banco de dados
-5. **Use domínio customizado** para produção
-6. **Configure health checks** na aplicação
-
-## Próximos Passos
-
-Após deploy bem-sucedido:
-
-1. Configure domínio customizado
-2. Configure backups automáticos do PostgreSQL
-3. Implemente monitoring e alertas
-4. Configure CI/CD mais robusto
-5. Implemente testes automatizados
-
-## Suporte
-
-- [Railway Documentation](https://docs.railway.app/)
-- [Railway Discord](https://discord.gg/railway)
-- [Railway Status](https://status.railway.app/)
+**Status**: ✅ Pronto para deploy no Railway
+**Última atualização**: 2026-01-26
