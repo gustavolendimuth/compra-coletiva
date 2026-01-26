@@ -13,7 +13,10 @@ O frontend está configurado para deploy no Railway usando:
 
 **Sintoma**: Build completo, mas healthcheck falha com "service unavailable"
 
-**Causa**: O Next.js standalone não estava usando a porta correta fornecida pelo Railway via variável `$PORT`.
+**Causas identificadas**:
+1. Dockerfile estava configurado para Vite + nginx (porta 80) ao invés de Next.js (porta dinâmica)
+2. O nginx serve conteúdo estático e não responde corretamente ao healthcheck do Railway
+3. O Next.js standalone precisa usar a porta fornecida via variável `$PORT`
 
 **Solução**:
 1. Removida a variável `ENV PORT=3000` hardcoded do Dockerfile
