@@ -91,6 +91,13 @@ Após o deploy, verifique:
 - Verificar se `src/app/(main)/page.tsx` existe
 - Verificar build standalone em `.next/standalone`
 
+**Resquícios do Vite**:
+- ✅ Removido `vite-env.d.ts`
+- ✅ Removido `nginx.conf`
+- ✅ Variáveis de ambiente migradas (VITE_* → NEXT_PUBLIC_*)
+- ✅ Vitest mantido apenas para testes (vitest.config.ts é válido)
+- ✅ Build Next.js standalone funcionando corretamente
+
 ### Comandos Úteis
 
 ```bash
