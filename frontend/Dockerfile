@@ -46,15 +46,18 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Copia script de inicialização
+COPY --from=builder --chown=nextjs:nodejs /app/start.sh ./start.sh
+RUN chmod +x ./start.sh
+
 USER nextjs
 
-# Expõe a porta 3000 (padrão do Next.js)
-# Railway vai expor essa porta automaticamente via $PORT
+# Railway define a porta via variável de ambiente $PORT
+# Exponha a porta padrão (será sobrescrita pelo Railway)
 EXPOSE 3000
 
-ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Inicia o servidor Next.js
-# Railway irá usar a porta definida em $PORT (que é 3000 por padrão)
-CMD ["node", "server.js"]
+# Inicia o servidor Next.js usando o script de inicialização
+# O script garante que a variável PORT do Railway seja usada
+CMD ["./start.sh"]
