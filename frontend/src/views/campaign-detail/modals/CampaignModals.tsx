@@ -272,11 +272,11 @@ export function PixModal({
           type="text"
           value={pixKey || ''}
           onChange={(e) => {
-            const maskedValue = applyPixMask(e.target.value, pixType);
+            const maskedValue = applyPixMask(e.target.value, pixType || '');
             onChangePixKey(maskedValue);
           }}
           label="Chave PIX"
-          placeholder={getPixPlaceholder(pixType)}
+          placeholder={getPixPlaceholder(pixType || '')}
           disabled={!pixType}
         />
 
