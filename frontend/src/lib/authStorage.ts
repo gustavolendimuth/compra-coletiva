@@ -1,6 +1,8 @@
 /**
  * Authentication Storage Utilities
- * Manages access and refresh tokens in localStorage
+ * Manages access and refresh tokens in localStorage and cookies
+ * Cookies are used for middleware route protection (server-side)
+ * localStorage is used for client-side access
  */
 
 const ACCESS_TOKEN_KEY = "accessToken";
@@ -9,6 +11,23 @@ const USER_KEY = "user";
 const PENDING_ACTION_KEY = "pendingAction";
 const RETURN_URL_KEY = "returnUrl";
 const PENDING_ACTION_DATA_KEY = "pendingActionData";
+
+// Cookie names for middleware
+const AUTH_TOKEN_COOKIE = "auth-token";
+const USER_ROLE_COOKIE = "user-role";
+
+// Helper to set a cookie
+function setCookie(name: string, value: string, days = 7): void {
+  if (typeof document === 'undefined') return;
+  const expires = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toUTCString();
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
+}
+
+// Helper to delete a cookie
+function deleteCookie(name: string): void {
+  if (typeof document === 'undefined') return;
+  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+}
 
 export interface PendingActionData {
   type: string;
@@ -33,6 +52,7 @@ export const authStorage = {
 
   setAccessToken(token: string): void {
     localStorage.setItem(ACCESS_TOKEN_KEY, token);
+    setCookie(AUTH_TOKEN_COOKIE, token);
   },
 
   getRefreshToken(): string | null {
@@ -61,6 +81,7 @@ export const authStorage = {
 
   setUser(user: StoredUser): void {
     localStorage.setItem(USER_KEY, JSON.stringify(user));
+    setCookie(USER_ROLE_COOKIE, user.role);
   },
 
   // Set both tokens and user (for login/register)
@@ -75,6 +96,8 @@ export const authStorage = {
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    deleteCookie(AUTH_TOKEN_COOKIE);
+    deleteCookie(USER_ROLE_COOKIE);
   },
 
   // Check if user is authenticated
