@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Prisma generated files
+**/prisma/generated/
+
+# Environment files
+*.env
+*.env.local
+*.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Docker
+Dockerfile
+docker-compose.yml
+
+# Git
+.git/
+.gitignore
+
+# Test files (optional - remova se quiser lint em testes)
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+**/__tests__/
+**/__mocks__/
+
+# Generated files
+*.d.ts

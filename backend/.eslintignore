@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Prisma generated files
+prisma/generated/
+node_modules/.prisma/
+
+# Environment files
+*.env
+*.env.local
+*.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test files (opcional - remova se quiser lint em testes)
+**/*.test.ts
+**/*.spec.ts
+**/__tests__/
+**/__mocks__/
+
+# Scripts (opcional - remova se quiser lint em scripts)
+scripts/
+
+# Generated TypeScript definitions
+*.d.ts
