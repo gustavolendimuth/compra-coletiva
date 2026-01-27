@@ -1,42 +1,72 @@
-# Multi-stage build para produção do frontend
+# Multi-stage build para produção do frontend (Next.js)
 
-# Stage 1: Build
+# Stage 1: Dependencies
+FROM node:20-alpine AS deps
+WORKDIR /app
+
+# Copia package.json
+COPY package*.json ./
+
+# Instala dependências
+RUN npm ci --only=production
+
+# Stage 2: Build
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Argumentos de build para variáveis de ambiente do Vite
-ARG VITE_API_URL
-ENV VITE_API_URL=$VITE_API_URL
+# Argumentos de build para variáveis de ambiente do Next.js
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_SITE_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 
 # Copia package.json
 COPY package*.json ./
 
 # Instala todas as dependências (incluindo devDependencies para o build)
-RUN npm install
+RUN npm ci
 
 # Copia o código fonte
 COPY . .
 
-# Build da aplicação (tsc + vite build)
+# Desabilita telemetria do Next.js
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Build da aplicação
 RUN npm run build
 
-# Verifica se o build foi criado
-RUN ls -la /app/dist
+# Stage 3: Production - Node.js runner
+FROM node:20-alpine AS runner
+WORKDIR /app
 
-# Stage 2: Production - Serve com nginx
-FROM nginx:alpine
+# Define ambiente de produção
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# Instala envsubst (já vem no nginx:alpine via gettext package)
-RUN apk add --no-cache gettext
+# Cria usuário não-root
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
 
-# Copia o build do stage anterior
-COPY --from=builder /app/dist /usr/share/nginx/html
+# Copia arquivos necessários do build
+COPY --from=builder /app/public ./public
 
-# Copia configuração customizada do nginx
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Set the correct permission for prerender cache
+RUN mkdir .next
+RUN chown nextjs:nodejs .next
 
-# Expõe a porta (Railway usa a variável PORT)
-EXPOSE 80
+# Automatically leverage output traces to reduce image size
+# https://nextjs.org/docs/advanced-features/output-file-tracing
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Script para substituir variáveis de ambiente e iniciar nginx
-CMD ["/bin/sh", "-c", "nginx -g 'daemon off;'"]
+# Muda para usuário não-root
+USER nextjs
+
+# Expõe a porta
+EXPOSE 3000
+
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+# Inicia o servidor Next.js
+CMD ["node", "server.js"]
