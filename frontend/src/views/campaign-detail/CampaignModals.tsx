@@ -25,7 +25,7 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
       <AddProductModal
         isOpen={hook.isProductModalOpen}
         form={hook.productForm}
-        isPending={hook.createProductMutation.isPending}
+        isPending={hook.createProductMutation?.isPending || false}
         onClose={() => hook.setIsProductModalOpen(false)}
         onChange={hook.setProductForm}
         onSubmit={hook.handleCreateProduct}
@@ -34,7 +34,7 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
       <EditProductModal
         isOpen={hook.isEditProductModalOpen}
         form={hook.editProductForm}
-        isPending={hook.updateProductMutation.isPending}
+        isPending={hook.updateProductMutation?.isPending || false}
         onClose={() => hook.setIsEditProductModalOpen(false)}
         onChange={hook.setEditProductForm}
         onSubmit={hook.handleEditProduct}
@@ -68,7 +68,7 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
       <PaymentProofModal
         isOpen={hook.isPaymentProofModalOpen}
         order={hook.orderForPayment}
-        isPending={hook.updatePaymentMutation.isPending}
+        isPending={hook.updatePaymentMutation?.isPending || false}
         onClose={() => {
           hook.setIsPaymentProofModalOpen(false);
           hook.setOrderForPayment(null);
@@ -79,7 +79,7 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
       <ShippingModal
         isOpen={hook.isShippingModalOpen}
         shippingCost={hook.shippingCost}
-        isPending={hook.updateShippingMutation.isPending}
+        isPending={hook.updateShippingMutation?.isPending || false}
         onClose={() => hook.setIsShippingModalOpen(false)}
         onChange={hook.setShippingCost}
         onSubmit={hook.handleUpdateShipping}
@@ -89,7 +89,7 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
         isOpen={hook.isEditDeadlineModalOpen}
         campaign={hook.campaign}
         deadlineForm={hook.deadlineForm}
-        isPending={hook.updateDeadlineMutation.isPending}
+        isPending={hook.updateDeadlineMutation?.isPending || false}
         onClose={() => hook.setIsEditDeadlineModalOpen(false)}
         onChange={hook.setDeadlineForm}
         onSubmit={hook.handleUpdateDeadline}
@@ -105,7 +105,7 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
         pixType={hook.pixType}
         pixName={hook.pixName}
         pixVisibleAtStatus={hook.pixVisibleAtStatus}
-        isPending={hook.updatePixMutation.isPending}
+        isPending={hook.updatePixMutation?.isPending || false}
         onClose={() => hook.setIsPixModalOpen(false)}
         onChangePixKey={hook.setPixKey}
         onChangePixType={hook.setPixType}

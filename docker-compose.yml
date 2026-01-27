@@ -45,14 +45,17 @@ services:
     env_file:
       - ./backend/.env
     environment:
+      # Configurações para hot reload funcionar em containers Docker
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
+      # Redis connection (sobrescreve o .env se necessário)
       REDIS_HOST: redis
       REDIS_PORT: "6379"
     volumes:
       - ./backend:/app
       - /app/node_modules
       - /app/dist
+      - /app/prisma/migrations
     depends_on:
       db:
         condition: service_healthy
@@ -71,11 +74,15 @@ services:
     env_file:
       - ./frontend/.env
     environment:
+      # Configurações para hot reload funcionar em containers Docker
+      WATCHPACK_POLLING: "true"
       CHOKIDAR_USEPOLLING: "true"
+      # Desabilita telemetria do Next.js
+      NEXT_TELEMETRY_DISABLED: "1"
     volumes:
       - ./frontend:/app
       - /app/node_modules
-      - /app/dist
+      - /app/.next
     depends_on:
       - backend
     command: npm run dev

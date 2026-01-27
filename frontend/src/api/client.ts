@@ -20,6 +20,28 @@ export const apiClient: AxiosInstance = axios.create(apiConfig);
 export const authClient: AxiosInstance = axios.create(apiConfig);
 
 // ============================================================================
+// Error Logging Interceptor: Suppress expected 401s
+// ============================================================================
+
+authClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Suppress console logging for expected 401 errors on /auth/me
+    // These occur during initialization when checking if user is logged in
+    const is401OnAuthMe =
+      error.response?.status === 401 &&
+      error.config?.url?.includes('/auth/me');
+
+    if (!is401OnAuthMe) {
+      // Log other errors normally
+      console.error('API Error:', error);
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+// ============================================================================
 // Request Interceptor: Add Authorization Header
 // ============================================================================
 

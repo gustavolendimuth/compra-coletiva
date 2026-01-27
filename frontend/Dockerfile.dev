@@ -1,18 +1,24 @@
-# Dockerfile para desenvolvimento com hot reload
+# Dockerfile para desenvolvimento com hot reload (Next.js)
 FROM node:20-alpine
+
 WORKDIR /app
 
-# Copia package.json
-COPY package*.json ./
+# Instala dependências necessárias
+RUN apk add --no-cache libc6-compat
+
+# Copia package files
+COPY package.json package-lock.json* ./
 
 # Instala dependências
-RUN npm install
+RUN npm install --legacy-peer-deps
 
-# Copia o código fonte
-COPY . .
-
-# Expõe a porta do Vite
+# Expõe a porta do Next.js
 EXPOSE 5173
 
-# Comando será sobrescrito pelo docker-compose
+# Next.js coleta telemetria anônima sobre uso geral
+# Desabilite em ambiente de desenvolvimento se desejar
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Comando de desenvolvimento com hot reload
+# O código fonte será montado via volume no docker-compose
 CMD ["npm", "run", "dev"]

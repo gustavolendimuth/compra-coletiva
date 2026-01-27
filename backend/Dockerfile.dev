@@ -12,15 +12,16 @@ COPY prisma ./prisma
 # Instala dependências (postinstall automaticamente gera Prisma Client)
 RUN npm install
 
-# Copia o resto do código
-COPY . .
-
 # Bypass checksum validation if Prisma's binary server is down
 ENV PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
 
-# Garante que o Prisma Client está gerado (dupla verificação)
+# Garante que o Prisma Client está gerado
 RUN npx prisma generate
 
-EXPOSE 3000
+# Expõe portas do backend e Prisma Studio
+EXPOSE 3000 5555
 
+# Comando de desenvolvimento com hot reload
+# O código fonte será montado via volume no docker-compose
+# tsx watch monitora mudanças e reinicia automaticamente
 CMD ["npm", "run", "dev"]

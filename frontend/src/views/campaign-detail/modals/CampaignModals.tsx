@@ -7,8 +7,8 @@ import { applyPixMask, getPixPlaceholder } from "@/lib/pixMasks";
 interface CloneModalProps {
   isOpen: boolean;
   campaign: Campaign | null;
-  cloneName: string;
-  cloneDescription: string;
+  cloneName: string | undefined;
+  cloneDescription: string | undefined;
   isPending: boolean;
   onClose: () => void;
   onChangeName: (name: string) => void;
@@ -18,7 +18,7 @@ interface CloneModalProps {
 
 interface ShippingModalProps {
   isOpen: boolean;
-  shippingCost: string;
+  shippingCost: string | undefined;
   isPending: boolean;
   onClose: () => void;
   onChange: (cost: string) => void;
@@ -39,7 +39,7 @@ export function ShippingModal({
         <CurrencyInput
           id="shipping-cost"
           autoFocus
-          value={shippingCost}
+          value={shippingCost || ''}
           onChange={onChange}
           label="Valor do Frete Total"
           helperText="O frete será distribuído proporcionalmente ao peso de cada pedido."
@@ -70,7 +70,7 @@ export function ShippingModal({
 interface DeadlineModalProps {
   isOpen: boolean;
   campaign: Campaign | null;
-  deadlineForm: string;
+  deadlineForm: string | undefined;
   isPending: boolean;
   onClose: () => void;
   onChange: (deadline: string) => void;
@@ -95,7 +95,7 @@ export function DeadlineModal({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Data e Hora Limite
           </label>
-          <DateTimeInput value={deadlineForm} onChange={onChange} autoFocus />
+          <DateTimeInput value={deadlineForm || ''} onChange={onChange} autoFocus />
           <p className="text-sm text-gray-500 mt-2">
             A campanha será fechada automaticamente quando atingir esta data.
             Formato: dd/mm/aaaa HH:mm (24h)
@@ -214,10 +214,10 @@ export function SentConfirmDialog({
 
 interface PixModalProps {
   isOpen: boolean;
-  pixKey: string;
-  pixType: PixKeyType | "";
-  pixName: string;
-  pixVisibleAtStatus: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED";
+  pixKey: string | undefined;
+  pixType: PixKeyType | "" | undefined;
+  pixName: string | undefined;
+  pixVisibleAtStatus: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED" | undefined;
   isPending: boolean;
   onClose: () => void;
   onChangePixKey: (value: string) => void;
@@ -253,7 +253,7 @@ export function PixModal({
             Tipo de Chave PIX
           </label>
           <select
-            value={pixType}
+            value={pixType || ''}
             onChange={(e) => onChangePixType(e.target.value as any)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
             autoFocus
@@ -270,7 +270,7 @@ export function PixModal({
         <Input
           id="pix-key"
           type="text"
-          value={pixKey}
+          value={pixKey || ''}
           onChange={(e) => {
             const maskedValue = applyPixMask(e.target.value, pixType);
             onChangePixKey(maskedValue);
@@ -283,7 +283,7 @@ export function PixModal({
         <Input
           id="pix-name"
           type="text"
-          value={pixName}
+          value={pixName || ''}
           onChange={(e) => onChangePixName(e.target.value)}
           label="Nome do Titular"
           placeholder="Nome do titular da conta PIX"
@@ -294,7 +294,7 @@ export function PixModal({
             Mostrar PIX quando a campanha estiver
           </label>
           <select
-            value={pixVisibleAtStatus}
+            value={pixVisibleAtStatus || 'ACTIVE'}
             onChange={(e) => onChangePixVisibleAtStatus(e.target.value as any)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
           >
@@ -359,7 +359,7 @@ export function CloneModal({
           type="text"
           required
           autoFocus
-          value={cloneName}
+          value={cloneName || ''}
           onChange={(e) => onChangeName(e.target.value)}
           label="Nome da Nova Campanha *"
           placeholder="Digite o nome da nova campanha"
@@ -368,7 +368,7 @@ export function CloneModal({
         <Textarea
           id="clone-description"
           rows={3}
-          value={cloneDescription}
+          value={cloneDescription || ''}
           onChange={(e) => onChangeDescription(e.target.value)}
           label="Descrição (opcional)"
           placeholder="Adicione uma descrição"
@@ -388,7 +388,7 @@ export function CloneModal({
         <div className="flex gap-3 pt-4">
           <Button
             type="submit"
-            disabled={isPending || !cloneName.trim()}
+            disabled={isPending || !cloneName?.trim()}
             className="flex-1 whitespace-nowrap"
           >
             {isPending ? "Clonando..." : "Clonar Campanha"}

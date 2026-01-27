@@ -43,6 +43,11 @@ export const authStorage = {
     localStorage.setItem(REFRESH_TOKEN_KEY, token);
   },
 
+  setTokens(tokens: { accessToken: string; refreshToken: string }): void {
+    this.setAccessToken(tokens.accessToken);
+    this.setRefreshToken(tokens.refreshToken);
+  },
+
   // User management
   getUser(): StoredUser | null {
     const userJson = localStorage.getItem(USER_KEY);

@@ -1,5 +1,21 @@
 # Comandos Docker - Guia de Uso
 
+## Ambiente de Desenvolvimento vs Produção
+
+### Desenvolvimento (Docker Compose - Local)
+- Usa `Dockerfile.dev` para backend e frontend
+- **Hot Reload ATIVADO**: Alterações no código são refletidas automaticamente
+- Volumes montam o código fonte local nos containers
+- Prisma Studio disponível em `localhost:5555`
+- Ideal para desenvolvimento diário
+
+### Produção (Railway)
+- Usa `Dockerfile` (multi-stage build otimizado)
+- Build estático do Next.js (standalone mode)
+- Backend compilado para JavaScript
+- Sem hot reload (código compilado)
+- Otimizado para performance
+
 ## Diferença entre `docker-compose down` e `docker-compose down -v`
 
 ### `docker-compose down` (RECOMENDADO para desenvolvimento)
@@ -119,6 +135,32 @@ Os seguintes volumes são **persistentes** e sobrevivem a `docker-compose down`:
 4. **frontend_node_modules**: Dependências do frontend
 5. **frontend_dist**: Build do frontend
 
+## Hot Reload - Como Funciona
+
+### Backend (Express + TypeScript)
+- `tsx watch` monitora alterações em arquivos `.ts`
+- Reinicia automaticamente o servidor quando detecta mudanças
+- **Testado e funcionando**: Edite arquivos em `backend/src/` e veja as mudanças instantaneamente
+
+### Frontend (Next.js)
+- Next.js Dev Server com Fast Refresh
+- Mudanças em componentes React são atualizadas **sem perder o estado**
+- **Testado e funcionando**: Edite arquivos em `frontend/src/` e veja as mudanças no navegador
+
+### Prisma Studio
+- Acesse `http://localhost:5555` para gerenciar o banco de dados visualmente
+- Inicia automaticamente junto com o backend no modo dev
+
+### Variáveis de Ambiente para Hot Reload
+O `docker-compose.yml` já está configurado com:
+```yaml
+environment:
+  CHOKIDAR_USEPOLLING: "true"
+  WATCHPACK_POLLING: "true"
+```
+
+Essas variáveis garantem que o hot reload funcione corretamente em containers Docker.
+
 ## Solução de Problemas Comuns
 
 ### Dependências não instaladas após `docker-compose down`
@@ -150,6 +192,42 @@ docker-compose restart backend
 docker exec compra-coletiva-backend npx prisma generate
 docker exec compra-coletiva-backend npx prisma migrate dev
 docker-compose restart backend
+```
+
+### Hot Reload não está funcionando
+1. **Verifique se os volumes estão montados corretamente**:
+   ```bash
+   docker-compose ps
+   ```
+
+2. **Verifique os logs para erros**:
+   ```bash
+   docker-compose logs -f backend
+   docker-compose logs -f frontend
+   ```
+
+3. **Reconstrua os containers**:
+   ```bash
+   docker-compose down
+   docker-compose up --build
+   ```
+
+4. **Verifique as variáveis de ambiente** no `docker-compose.yml`:
+   - `CHOKIDAR_USEPOLLING: "true"`
+   - `WATCHPACK_POLLING: "true"`
+
+### Porta já em uso
+Se as portas 3000, 5173 ou 5432 já estiverem em uso:
+```bash
+# Windows - identificar processo usando a porta
+netstat -ano | findstr :3000
+
+# Linux/Mac
+lsof -i :3000
+
+# Parar containers e tentar novamente
+docker-compose down
+docker-compose up
 ```
 
 ## Fluxo Recomendado de Desenvolvimento
