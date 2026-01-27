@@ -57,10 +57,12 @@ NEXT_PUBLIC_SITE_URL=https://seu-frontend.railway.app
 
 ### Healthcheck
 
-Configurado em `railway.json`:
-- **Path**: `/`
-- **Timeout**: 100 segundos
+Configurado em `railway.json` e `Dockerfile`:
+- **Path**: `/api/health` (endpoint dedicado Next.js API Route)
+- **Timeout**: 100 segundos (Railway), 30s (Docker)
+- **Start Period**: 40 segundos (tempo para Next.js inicializar)
 - **Política de restart**: ON_FAILURE (max 10 tentativas)
+- **Endpoint**: Retorna `{ status: 'ok', timestamp, service }` com status 200
 
 ### Verificação de Deploy
 
@@ -77,10 +79,12 @@ Após o deploy, verifique:
 - Verifique se `package-lock.json` existe
 - Use flag `--legacy-peer-deps` (já incluído)
 
-**Healthcheck timeout**:
-- Verifique se `start.sh` está executável (`chmod +x`)
-- Verifique logs para mensagens de erro
-- Confirme que Railway está definindo `$PORT`
+**Healthcheck timeout** (RESOLVIDO):
+- ✅ Endpoint `/api/health` criado em `src/app/api/health/route.ts`
+- ✅ HEALTHCHECK adicionado ao Dockerfile (verifica `/api/health`)
+- ✅ railway.json atualizado para usar `/api/health`
+- ✅ Start period de 40s para Next.js inicializar completamente
+- Se ainda falhar: verifique logs para erros de inicialização do Next.js
 
 **Página não carrega**:
 - Verifique `NEXT_PUBLIC_API_URL` nas variáveis
@@ -107,6 +111,9 @@ npm run build
 # Testar standalone localmente
 cd .next/standalone
 PORT=3000 node server.js
+
+# Testar endpoint de health
+curl http://localhost:3000/api/health
 
 # Ver estrutura do build
 ls -R .next/standalone
