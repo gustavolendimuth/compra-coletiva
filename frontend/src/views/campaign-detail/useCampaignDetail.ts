@@ -827,19 +827,22 @@ export function useCampaignDetail() {
               queryKey: ["orders", campaignId],
             });
 
-            // Aguarda um pouco para garantir que a query foi atualizada
-            setTimeout(() => {
-              // Busca o pedido recém-criado
-              queryClient
-                .refetchQueries({ queryKey: ["orders", campaignId] })
-                .then(() => {
-                  const newOrder = orders?.find((o) => o.userId === user?.id);
-                  if (newOrder) {
-                    isAddingFromButtonRef.current = true;
-                    openEditOrderModal(newOrder);
-                  }
-                });
-            }, 300);
+            // Refetch e busca o pedido recém-criado do cache atualizado
+            await queryClient.refetchQueries({
+              queryKey: ["orders", campaignId],
+            });
+
+            const updatedOrders = queryClient.getQueryData<Order[]>([
+              "orders",
+              campaignId,
+            ]);
+            const newOrder = updatedOrders?.find(
+              (o) => o.userId === user?.id
+            );
+            if (newOrder) {
+              isAddingFromButtonRef.current = true;
+              openEditOrderModal(newOrder);
+            }
           },
         });
       }
