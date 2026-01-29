@@ -180,6 +180,22 @@ compra-coletiva/
 ├── frontend/
 │   ├── src/              # ✏️ Edite aqui - HMR ativo
 │   │   ├── components/
+│   │   │   ├── ui/       # Primitivos reutilizáveis
+│   │   │   ├── features/ # Componentes específicos de feature
+│   │   │   ├── layout/   # Layout components
+│   │   │   └── shared/   # Componentes de negócio compartilhados
+│   │   ├── hooks/        # Custom React hooks (6 hooks)
+│   │   │   ├── useCampaignDetail.ts       (~828 linhas)
+│   │   │   ├── useCampaignQuestions.ts
+│   │   │   ├── useCampaignChat.ts
+│   │   │   ├── useOrderChat.ts
+│   │   │   ├── useOrderModal.ts           (352 linhas) ⭐
+│   │   │   └── useOrderAutosave.ts        (~113 linhas) ⭐
+│   │   ├── api/          # API services (13 serviços)
+│   │   │   ├── config.ts
+│   │   │   ├── types.ts  # Tipos compartilhados (OrderForm, OrderFormItem)
+│   │   │   ├── client.ts
+│   │   │   └── services/ # Domain services
 │   │   ├── pages/
 │   │   ├── lib/
 │   │   └── main.tsx
@@ -267,6 +283,74 @@ backend:
 - **Use Docker Desktop** para monitorar recursos
 
 ## Funcionalidades Implementadas
+
+### Sistema de Modais de Pedidos (Order Modals) ⭐ NEW - Jan 2026
+
+**Arquitetura Modular:**
+
+Sistema refatorado em 2 fases para separar responsabilidades, eliminar bugs e simplificar código:
+
+**Fase 1 (Early Jan 2026)**: Extração inicial
+- Criados useOrderModal (352 linhas) e useOrderAutosave (118 linhas)
+- Removidas ~237 linhas de useCampaignDetail (1130→893)
+
+**Fase 2 (Jan 29, 2026)**: Consolidação e simplificação
+- Removidas ~65 linhas adicionais de useCampaignDetail (893→~828)
+- Simplificado useOrderAutosave (~113 linhas, removido skipNextSave)
+- Total removido: ~302 linhas de useCampaignDetail
+
+**1. useOrderModal Hook (352 linhas)**
+- **Responsabilidade**: Gerenciamento de estado dos modais e operações CRUD
+- **Estados**: 3 modais (edit, view, payment), 3 orders (editing, viewing, payment)
+- **Operações**: create, update, delete orders com React Query mutations
+- **Features**:
+  - Atalhos de teclado (Ctrl/Cmd+S para salvar)
+  - Integração com autosave
+  - Validação de autenticação com `requireAuth`
+  - Helper `closeEditOrderModal` para limpeza adequada do form
+
+**2. useOrderAutosave Hook (~113 linhas)**
+- **Responsabilidade**: Salvamento automático de mudanças
+- **Features**:
+  - Debounce de 2 segundos
+  - Snapshot inicial para evitar saves desnecessários
+  - Estado de autosave (isAutosaving, lastSaved)
+  - Implementação simplificada (removido mecanismo skipNextSave)
+
+**3. Tipos Compartilhados (api/types.ts)**
+- `OrderForm`: Formulário completo com campaignId
+- `OrderFormItem`: Item individual (productId, quantity, product?)
+
+**Uso no useCampaignDetail:**
+```typescript
+const orderModal = useOrderModal({
+  orders,
+  campaignId,
+  user,
+  isActive,
+  requireAuth,
+});
+
+// Acessar estados
+const { isEditOrderModalOpen, editOrderForm } = orderModal;
+
+// Acessar handlers
+const { handleAddToOrder, handleEditOrder, closeEditOrderModal } = orderModal;
+
+// Acessar autosave
+const { isAutosaving, lastSaved } = orderModal.autosave;
+```
+
+**Benefícios da Refatoração:**
+- ✅ Removido ~302 linhas totais de useCampaignDetail (1130→~828 linhas)
+- ✅ Eliminados bugs de stale closure
+- ✅ Código duplicado removido (handleEditOrderFromView, skipNextSave)
+- ✅ **Bug Fix**: Produtos agora carregam corretamente no dropdown
+- ✅ **Bug Fix**: Pedidos existentes aparecem e carregam corretamente
+- ✅ **Bug Fix**: Autosave mais robusto previne perda de dados
+- ✅ Testabilidade melhorada (24 testes useOrderModal, 15 testes useOrderAutosave)
+- ✅ Separação clara de responsabilidades
+- ✅ Abordagem mais segura: handleAddToOrder atualiza backend primeiro, depois abre modal
 
 ### Sistema de Autenticação
 
@@ -645,6 +729,8 @@ GET /api/admin/audit?page=1&action=USER_VIEW&targetType=USER
 - Campaign listing: 100% coberto
 - Campaign Detail: 98% coberto
 - Notifications: 100% coberto
+- useOrderModal hook: 100% coberto (24/24 tests)
+- useOrderAutosave hook: 100% coberto (15/15 tests, simplificado de 16 testes)
 
 **Principais Arquivos de Teste**:
 1. `src/__tests__/mock-data.ts` - Factories para dados mock
@@ -653,7 +739,9 @@ GET /api/admin/audit?page=1&action=USER_VIEW&targetType=USER
 4. Notifications (2 arquivos) - 42 testes
    - `src/components/__tests__/NotificationIcon.test.tsx` - 15 testes
    - `src/components/__tests__/NotificationDropdown.test.tsx` - 27 testes
-5. UI Components - 50+ testes
+5. useOrderModal hook - 24 testes (100% coverage)
+   - `src/hooks/__tests__/useOrderModal.test.ts` - Modal state, CRUD, autosave
+6. UI Components - 50+ testes
 
 **Comandos**:
 ```bash

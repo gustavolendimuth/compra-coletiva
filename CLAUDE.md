@@ -117,9 +117,9 @@ npm run build --workspace=backend
 ### Frontend
 - **90 Components**: 12 UI primitives (Avatar, CepInput, AddressForm, Map, DistanceBadge added), 4 auth, 22 campaign (ProximitySearch added), 17 campaign-detail modules (CampaignLocationSection, CampaignLocationMap added), 11 profile components (ProfileAddressSection added), 6 admin components, 18 other
 - **54 Pages**: Home, CampaignDetail, NewCampaign, Profile, CompleteProfile, VerifyEmailChange, EmailPreferences + admin/ (AdminLayout, Dashboard, Users, UserDetail, Campaigns, Messages, Audit)
-- **4 Custom Hooks**: useCampaignDetail, useCampaignQuestions, useCampaignChat, useOrderChat
+- **6 Custom Hooks**: useCampaignDetail (~828 lines), useCampaignQuestions, useCampaignChat, useOrderChat, useOrderModal (352 lines), useOrderAutosave (~113 lines)
 - **13 API Services**: auth, campaign, product, order, message, notification, feedback, analytics, validation, profile, emailPreference, admin, geocoding
-- **Test Suite**: 50+ test files, 568 passing tests (100% success), ~13s execution time
+- **Test Suite**: 50+ test files, 607 passing tests (100% success), ~13s execution time
 
 ## Architecture
 
@@ -422,6 +422,65 @@ import { sanitizeText, sanitizeHtml } from '../lib/sanitize';
 
 **Where**: Messages, descriptions, feedback, any user input.
 
+### Order Modal Architecture (CRITICAL)
+
+**Modular Order System**: Complex order modal functionality split into specialized hooks for maintainability and testability.
+
+**Hooks**:
+1. **useOrderModal** (`hooks/useOrderModal.ts`, 352 lines):
+   - Modal state management (edit/view/payment modals)
+   - Order CRUD operations (create, update, delete)
+   - Integration with useOrderAutosave
+   - Keyboard shortcuts (Ctrl/Cmd+S for save)
+   - Auth validation with requireAuth
+   - Helper: `closeEditOrderModal` for proper form cleanup
+
+2. **useOrderAutosave** (`hooks/useOrderAutosave.ts`, ~113 lines):
+   - Automatic saving of order changes (2s debounce)
+   - Initial snapshot comparison (prevents saving unchanged data)
+   - Autosave state tracking (isAutosaving, lastSaved)
+   - Simplified implementation (removed skipNextSave mechanism)
+
+**Recent Improvements (Jan 29, 2026)**:
+- Removed ~65 lines of duplicate code from useCampaignDetail (893 → ~828 lines)
+- Fixed bug: Products now load correctly in dropdown
+- Fixed bug: Existing orders load and display properly
+- Fixed bug: More robust autosave prevents data loss
+- Centralized order modal logic in useOrderModal
+- Refactored handleAddToOrder: backend update first, then open modal (safer approach)
+- Simplified useOrderAutosave by removing skipNextSave parameter
+
+**Benefits**:
+- Single Responsibility: Each hook has one clear purpose
+- No stale closures: Fresh state via proper dependency management
+- Bug-free: Comprehensive fixes for products loading, orders displaying, autosave reliability
+- Testable: Isolated logic, comprehensive test coverage (24 tests useOrderModal, 15 tests useOrderAutosave)
+- Reusable: Can be used in any component needing order management
+
+**Usage Pattern**:
+```typescript
+const orderModal = useOrderModal({
+  orders,
+  campaignId,
+  user,
+  isActive,
+  requireAuth,
+});
+
+// Access modals
+const { isEditOrderModalOpen, editOrderForm, setEditOrderForm } = orderModal;
+
+// Access handlers
+const { handleAddToOrder, handleDeleteOrder, handleEditOrder, closeEditOrderModal } = orderModal;
+
+// Access autosave state
+const { isAutosaving, lastSaved } = orderModal.autosave;
+```
+
+**Shared Types** (`api/types.ts`):
+- `OrderForm`: Full form with campaignId
+- `OrderFormItem`: Individual item (productId, quantity, product?)
+
 ### Real-Time Features
 
 **Server**:
@@ -676,7 +735,7 @@ npm run validate:financial
 ## Testing Architecture
 
 ### Frontend (Vitest 4.0.15 + RTL)
-**Stats**: 568 tests, 50+ files, ~13s, 100% pass. Mock factories in `src/__tests__/mock-data.ts`.
+**Stats**: 607 tests, 50+ files, ~13s, 100% pass. Mock factories in `src/__tests__/mock-data.ts`.
 
 **Patterns**:
 1. Multiple elements: `getAllByText()[0]` (mobile+desktop views)
@@ -684,6 +743,7 @@ npm run validate:financial
 3. Behavior over attributes: `toHaveFocus()` not `autoFocus`
 4. Flexible mocks: call count + `toMatchObject()`
 5. Complex components: `waitFor` timeout 5000ms
+6. Avoid hoisting issues: Use `vi.mocked()` instead of direct variable references
 
 **Example**: `render(<Card campaign={createMockCampaign()} />); expect(screen.getAllByText('Ativa')[0]).toBeInTheDocument();`
 
@@ -696,14 +756,24 @@ npm run validate:financial
 
 **Commands**: `npm test --workspace=backend`, `npm run test:coverage --workspace=backend`
 
-**Total**: 623 tests (568 frontend + 55 backend), 100% success
+**Total**: 662 tests (607 frontend + 55 backend), 100% success
 
 ---
 
 ## Recent Updates
 
-### January 2026 - Pickup Location, Proximity Search, Profile, Email, Admin & OAuth
-**Pickup & Proximity (latest)**: Campaign pickup address (9 fields: zip, street, number, complement, neighborhood, city, state, lat, lng), user default address (9 fields + addressCompleted flag), geocoding service (ViaCEP + BrasilAPI + Nominatim/OpenStreetMap), Haversine distance calculation, proximity search (nearZipCode + maxDistance), Leaflet/OpenStreetMap maps, CEP input with auto-lookup, multi-step CompleteProfile (phone + address), distance badges on campaign cards.
+### January 2026 - Order Modal Refactoring, Pickup Location, Proximity Search, Profile, Email, Admin & OAuth
+**Order Modal Refactoring (latest - Jan 29)**: Consolidated and simplified order modal logic:
+- **Phase 1 (Early Jan)**: Split from useCampaignDetail (1130→893 lines) into useOrderModal (352 lines) + useOrderAutosave (118 lines)
+- **Phase 2 (Jan 29)**: Removed ~65 lines of duplicate code from useCampaignDetail (893→~828 lines)
+- **useOrderModal**: Modal state, CRUD operations, keyboard shortcuts, closeEditOrderModal helper
+- **useOrderAutosave**: Simplified to ~113 lines, removed skipNextSave mechanism
+- **Bug Fixes**: Products now load in dropdown, existing orders display correctly, more robust autosave
+- **Improvements**: Centralized modal logic, refactored handleAddToOrder (backend first, then modal), safer approach
+- **Tests**: 24 tests useOrderModal.test.ts (100%), 15 tests useOrderAutosave.test.ts (100%)
+- **Total removed**: ~302 lines from useCampaignDetail across both refactoring phases
+
+**Pickup & Proximity**: Campaign pickup address (9 fields: zip, street, number, complement, neighborhood, city, state, lat, lng), user default address (9 fields + addressCompleted flag), geocoding service (ViaCEP + BrasilAPI + Nominatim/OpenStreetMap), Haversine distance calculation, proximity search (nearZipCode + maxDistance), Leaflet/OpenStreetMap maps, CEP input with auto-lookup, multi-step CompleteProfile (phone + address), distance badges on campaign cards.
 
 **New Components**: CepInput, AddressForm, Map, DistanceBadge (ui/), ProximitySearch (campaign/), ProfileAddressSection (profile/), CampaignLocationSection, CampaignLocationMap (campaign-detail/), geocoding.service.ts (api/).
 
@@ -713,7 +783,7 @@ npm run validate:financial
 
 **Components**: Profile (6 components), Avatar UI, CompleteProfile flow (multi-step: phone + address), EmailPreferences, 6 admin pages, AdminRoute.
 
-**Tests**: 623 total (568 frontend + 55 backend), 100% pass. Fixed vitest.config.ts with React plugin. Added passport.test.ts (13), nameFormatter.test.ts (11), notification tests (42).
+**Tests**: 662 total (607 frontend + 55 backend), 100% pass. Fixed vitest.config.ts with React plugin. Added passport.test.ts (13), nameFormatter.test.ts (11), notification tests (42), useOrderModal.test.ts (24). Fixed mock verification in useOrderModal tests (Jan 29).
 
 **Mobile Fix**: NotificationDropdown now uses `fixed` positioning + z-[100] + buttonRef for proper mobile display.
 

@@ -13,19 +13,20 @@ vi.mock('react-hot-toast', () => ({
   },
 }));
 
-// Mock the order API - use a stable object that useMutation can reference
-const mockOrderApi = {
-  create: vi.fn(),
-  updateWithItems: vi.fn(),
-  delete: vi.fn(),
-  updatePayment: vi.fn(),
-};
-
+// Mock the order API
 vi.mock('@/api', () => ({
-  orderApi: mockOrderApi,
+  orderApi: {
+    create: vi.fn(),
+    updateWithItems: vi.fn(),
+    delete: vi.fn(),
+    updatePayment: vi.fn(),
+  },
   Order: {},
   Product: {},
 }));
+
+// Import after mock
+import { orderApi } from '@/api';
 
 // Mock useOrderAutosave
 vi.mock('../useOrderAutosave', () => ({
@@ -74,10 +75,10 @@ describe('useOrderModal', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockOrderApi.create.mockResolvedValue(createMockOrder({ id: 'new-order' }));
-    mockOrderApi.updateWithItems.mockResolvedValue(createMockOrder({ id: 'order-1' }));
-    mockOrderApi.delete.mockResolvedValue(undefined);
-    mockOrderApi.updatePayment.mockResolvedValue(undefined);
+    vi.mocked(orderApi.create).mockResolvedValue(createMockOrder({ id: 'new-order' }));
+    vi.mocked(orderApi.updateWithItems).mockResolvedValue(createMockOrder({ id: 'order-1' }));
+    vi.mocked(orderApi.delete).mockResolvedValue(undefined);
+    vi.mocked(orderApi.updatePayment).mockResolvedValue(undefined);
   });
 
   describe('Initial State', () => {
@@ -281,7 +282,7 @@ describe('useOrderModal', () => {
       expect(result.current.isEditOrderModalOpen).toBe(true);
     });
 
-    it('should create a new order when user has no existing order', () => {
+    it('should create a new order when user has no existing order', async () => {
       const wrapper = createWrapper();
       const { result } = renderHook(
         () => useOrderModal({
@@ -295,30 +296,31 @@ describe('useOrderModal', () => {
         result.current.handleAddOrder();
       });
 
-      expect(mockCreate).toHaveBeenCalledWith({
-        campaignId: 'campaign-1',
-        items: [],
+      await waitFor(() => {
+        expect(orderApi.create).toHaveBeenCalled();
+        const callArgs = vi.mocked(orderApi.create).mock.calls[0];
+        expect(callArgs[0]).toEqual({
+          campaignId: 'campaign-1',
+          items: [],
+        });
       });
     });
   });
 
   describe('handleDeleteOrder', () => {
-    it('should call deleteOrderMutation.mutate with orderId', () => {
+    it('should call deleteOrderMutation.mutate with orderId', async () => {
       const wrapper = createWrapper();
       const { result } = renderHook(() => useOrderModal(defaultOptions), { wrapper });
-
-      // Spy on the mutation's mutate function
-      const mutateSpy = vi.spyOn(result.current.deleteOrderMutation, 'mutate');
 
       act(() => {
         result.current.handleDeleteOrder('order-1');
       });
 
-      // The handler calls deleteOrderMutation.mutate('order-1')
-      // but the spy was set after the first render, so the handler has a stale ref
-      // Instead just verify the handler doesn't throw and is callable
-      expect(typeof result.current.handleDeleteOrder).toBe('function');
-      mutateSpy.mockRestore();
+      await waitFor(() => {
+        expect(orderApi.delete).toHaveBeenCalled();
+        const callArgs = vi.mocked(orderApi.delete).mock.calls[0];
+        expect(callArgs[0]).toBe('order-1');
+      });
     });
   });
 
@@ -368,7 +370,7 @@ describe('useOrderModal', () => {
       });
 
       await waitFor(() => {
-        expect(mockUpdatePayment).toHaveBeenCalled();
+        expect(orderApi.updatePayment).toHaveBeenCalled();
       });
     });
   });
@@ -390,7 +392,7 @@ describe('useOrderModal', () => {
       });
 
       await waitFor(() => {
-        expect(mockUpdatePayment).toHaveBeenCalled();
+        expect(orderApi.updatePayment).toHaveBeenCalled();
       });
     });
 
@@ -403,7 +405,7 @@ describe('useOrderModal', () => {
         result.current.handlePaymentProofSubmit(mockFile);
       });
 
-      expect(mockUpdatePayment).not.toHaveBeenCalled();
+      expect(orderApi.updatePayment).not.toHaveBeenCalled();
     });
   });
 

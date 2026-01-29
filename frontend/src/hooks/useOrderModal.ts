@@ -11,6 +11,7 @@ interface UseOrderModalOptions {
   user: { id: string; name: string } | null;
   isActive: boolean;
   requireAuth: (callback: () => void) => void;
+  products: Product[];
 }
 
 export function useOrderModal({
@@ -19,6 +20,7 @@ export function useOrderModal({
   user,
   isActive,
   requireAuth,
+  products,
 }: UseOrderModalOptions) {
   const queryClient = useQueryClient();
 
@@ -33,14 +35,12 @@ export function useOrderModal({
     campaignId: '',
     items: [],
   });
-  const [skipNextSave, setSkipNextSave] = useState(false);
 
   // Autosave
   const autosave = useOrderAutosave({
     orderId: editingOrder?.id ?? null,
     items: editOrderForm.items,
     isEnabled: isEditOrderModalOpen && !!editingOrder,
-    skipNextSave,
     onSave: (orderId, validItems) => {
       updateOrderWithItemsMutation.mutate({
         orderId,
@@ -81,18 +81,14 @@ export function useOrderModal({
       // Manual save (form submit) - close modal
       if (isEditOrderModalOpen) {
         toast.success('Pedido atualizado!');
-        setIsEditOrderModalOpen(false);
-        setEditingOrder(null);
+        closeEditOrderModal();
       }
-
-      setSkipNextSave(false);
     },
     onError: (_error, variables) => {
       toast.error('Erro ao atualizar pedido');
       if (variables.isAutosave) {
         autosave._markError();
       }
-      setSkipNextSave(false);
     },
   });
 
@@ -129,6 +125,12 @@ export function useOrderModal({
   });
 
   // Helpers
+  const closeEditOrderModal = useCallback(() => {
+    setIsEditOrderModalOpen(false);
+    setEditingOrder(null);
+    setEditOrderForm({ campaignId: '', items: [] });
+  }, []);
+
   const openEditOrderModal = useCallback((order: Order) => {
     setEditingOrder(order);
     setEditOrderForm({
@@ -163,22 +165,24 @@ export function useOrderModal({
           toast.success(`"${product.name}" adicionado ao pedido!`);
         }
 
-        setEditOrderForm({
-          campaignId: campaignId || '',
-          items,
-        });
-        setEditingOrder(existingOrder);
-        setSkipNextSave(true);
-        setIsEditOrderModalOpen(true);
-
+        // 1. Atualiza backend PRIMEIRO
         updateOrderWithItemsMutation.mutate({
           orderId: existingOrder.id,
           data: { items },
           isAutosave: false,
         }, {
-          onSuccess: () => {
-            setSkipNextSave(false);
-          },
+          onSuccess: (updatedOrder: Order) => {
+            // 2. Abre modal com dados frescos DEPOIS do sucesso
+            setEditingOrder(updatedOrder);
+            setEditOrderForm({
+              campaignId: campaignId || '',
+              items: updatedOrder.items.map((i) => ({
+                productId: i.productId,
+                quantity: i.quantity,
+              })),
+            });
+            setIsEditOrderModalOpen(true);
+          }
         });
       } else {
         if (!user?.name) {
@@ -193,10 +197,10 @@ export function useOrderModal({
           items: [{ productId: product.id, quantity: 1 }],
         };
 
-        setSkipNextSave(true);
-
+        // 1. Cria pedido no backend PRIMEIRO
         createOrderMutation.mutate(createOrderData, {
           onSuccess: (createdOrder: Order) => {
+            // 2. Abre modal com pedido criado DEPOIS do sucesso
             setEditingOrder(createdOrder);
             setEditOrderForm({
               campaignId: campaignId || '',
@@ -206,8 +210,7 @@ export function useOrderModal({
               })),
             });
             setIsEditOrderModalOpen(true);
-            setSkipNextSave(false);
-          },
+          }
         });
       }
     });
@@ -342,6 +345,7 @@ export function useOrderModal({
     handleTogglePayment,
     handlePaymentProofSubmit,
     openEditOrderModal,
+    closeEditOrderModal,
 
     // Mutations
     createOrderMutation,

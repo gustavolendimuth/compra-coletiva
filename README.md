@@ -93,7 +93,7 @@ Sistema web profissional para gerenciamento de compras coletivas, desenvolvido c
 - **Axios**: HTTP client
 - **Lucide React**: Ícones modernos
 - **React Hot Toast**: Notificações de UI
-- **Vitest** + **React Testing Library**: Testing (607 tests, 100% success)
+- **Vitest** + **React Testing Library**: Testing (608 tests, 100% success)
 
 ### DevOps
 - **Docker** + **Docker Compose**: Containerização
@@ -116,8 +116,14 @@ compra-coletiva/
 │   └── package.json
 ├── frontend/                   # App React
 │   ├── src/
-│   │   ├── components/        # Componentes reutilizáveis
-│   │   ├── pages/             # Páginas da aplicação
+│   │   ├── components/        # 90 componentes (ui/, features/, layout/, shared/)
+│   │   ├── hooks/             # 6 custom hooks
+│   │   │   ├── useCampaignDetail.ts (~828 linhas, consolidado)
+│   │   │   ├── useOrderModal.ts (352 linhas, modal management)
+│   │   │   ├── useOrderAutosave.ts (~113 linhas, simplificado)
+│   │   │   └── ... (outros hooks)
+│   │   ├── api/               # 13 serviços de API com tipos compartilhados
+│   │   ├── pages/             # 54 páginas
 │   │   ├── lib/               # Utilitários e API client
 │   │   └── main.tsx           # Entry point
 │   ├── Dockerfile
@@ -354,12 +360,17 @@ npm run test:coverage --workspace=backend
 - **Total**: 662 testes passando (607 frontend + 55 backend)
 - **Taxa de sucesso**: 100%
 - **Tempo de execução**: ~13 segundos
-- **Coverage**: Campaign listing + Campaign Detail + UI components + Hooks + Notifications + OAuth flow
+- **Coverage**: Campaign listing + Campaign Detail + UI components + Hooks (useOrderModal + useOrderAutosave) + Notifications + OAuth flow
 - **Melhorias Recentes** (Dez 2025 - Jan 2026):
+  - Jan 29: **Refatoração Phase 2** - Consolidação order modals
+    - Removidas ~65 linhas duplicadas de useCampaignDetail (893→~828)
+    - Simplificado useOrderAutosave (~113 linhas, removido skipNextSave)
+    - Fixed bugs: produtos carregam, orders aparecem, autosave robusto
+    - 24/24 testes useOrderModal (100%), 15/15 testes useOrderAutosave (100%)
   - Jan 7: Added 24 backend tests (Google OAuth + name formatter)
   - Dec 29: Added 42 notification tests (NotificationIcon + NotificationDropdown)
   - Dec 6: Fixed 34 failing tests (87% improvement in reliability)
-  - Progression: 93.1% → 98.8% → 100% success rate
+  - Progression: 93.1% → 98.8% → 100%
 
 ## Funcionalidades Futuras (Roadmap)
 
@@ -401,8 +412,8 @@ MIT
 - **[LEGAL_PAGES.md](LEGAL_PAGES.md)** - Documentação Política de Privacidade e Termos
 
 ### Desenvolvimento
-- **[CLAUDE.md](CLAUDE.md)** - Guia completo para desenvolvimento (arquitetura, padrões, comandos)
-- **[DEVELOPMENT.md](DEVELOPMENT.md)** - Guia de desenvolvimento detalhado
+- **[CLAUDE.md](CLAUDE.md)** - Guia completo para desenvolvimento (arquitetura, padrões, comandos, hooks)
+- **[DEVELOPMENT.md](DEVELOPMENT.md)** - Guia de desenvolvimento detalhado (inclui sistema de modais de pedidos)
 
 ## Suporte
 

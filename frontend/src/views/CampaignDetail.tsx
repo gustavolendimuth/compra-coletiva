@@ -46,7 +46,7 @@ export default function CampaignDetail() {
           onCloneCampaign={hook.handleOpenCloneModal}
           onImageUpload={() => hook.setIsImageUploadModalOpen(true)}
           onAddProduct={() => hook.setIsProductModalOpen(true)}
-          onAddOrder={hook.handleAddOrder}
+          onAddOrder={hook.orderModal.handleAddOrder}
         />
       </div>
 
@@ -69,8 +69,8 @@ export default function CampaignDetail() {
             hook.setViewingOrder(order);
             hook.setIsViewOrderModalOpen(true);
           }}
-          onTogglePayment={hook.handleTogglePayment}
-          onAddToOrder={hook.handleAddToOrder}
+          onTogglePayment={hook.orderModal.handleTogglePayment}
+          onAddToOrder={hook.orderModal.handleAddToOrder}
         />
       )}
 
@@ -99,12 +99,12 @@ export default function CampaignDetail() {
           orderSearch={hook.orderSearch}
           sortField={hook.orderSortField}
           sortDirection={hook.orderSortDirection}
-          onAddOrder={hook.handleAddOrder}
+          onAddOrder={hook.orderModal.handleAddOrder}
           onViewOrder={(order) => {
             hook.setViewingOrder(order);
             hook.setIsViewOrderModalOpen(true);
           }}
-          onTogglePayment={hook.handleTogglePayment}
+          onTogglePayment={hook.orderModal.handleTogglePayment}
           onEditOrder={hook.openEditOrderModal}
           onDeleteOrder={hook.handleDeleteOrder}
           onSearchChange={hook.setOrderSearch}

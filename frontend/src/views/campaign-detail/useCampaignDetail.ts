@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -11,6 +11,7 @@ import {
   analyticsApi,
   Product,
 } from "@/api";
+import { Order } from "@/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { removeMask, applyPixMask } from "@/lib/pixMasks";
 import { useOrderModal } from "@/hooks/useOrderModal";
@@ -139,6 +140,12 @@ export function useCampaignDetail() {
   const isSent = campaign?.status === "SENT";
   const canEditCampaign = campaign?.creatorId === user?.id;
 
+  // Alphabetical products for modal dropdown
+  const alphabeticalProducts = useMemo(() => {
+    if (!products) return [];
+    return [...products].sort((a, b) => a.name.localeCompare(b.name));
+  }, [products]);
+
   // Order modal hook (handles all order modal logic, autosave, keyboard shortcuts)
   const orderModal = useOrderModal({
     orders,
@@ -146,7 +153,26 @@ export function useCampaignDetail() {
     user: user ? { id: user.id, name: user.name } : null,
     isActive,
     requireAuth,
+    products: alphabeticalProducts,
   });
+
+  // Expose useful order modal state/mutations locally for convenience
+  const {
+    isPaymentProofModalOpen,
+    setIsPaymentProofModalOpen,
+    orderForPayment,
+    setOrderForPayment,
+    updatePaymentMutation,
+    // Order-related helpers
+    setEditOrderForm,
+    setEditingOrder,
+    setIsEditOrderModalOpen,
+    updateOrderWithItemsMutation,
+    createOrderMutation,
+    openEditOrderModal,
+    setIsViewOrderModalOpen,
+    setViewingOrder,
+  } = orderModal;
 
   // State for handling navigation from notifications
   const [shouldOpenQuestionsTab, setShouldOpenQuestionsTab] = useState(false);
@@ -216,11 +242,6 @@ export function useCampaignDetail() {
       return ((aVal as number) - (bVal as number)) * modifier;
     });
   }, [orders, orderSearch, orderSortField, orderSortDirection]);
-
-  const alphabeticalProducts = useMemo(() => {
-    if (!products) return [];
-    return [...products].sort((a, b) => a.name.localeCompare(b.name));
-  }, [products]);
 
   // Product mutations
   const createProductMutation = useMutation({
@@ -508,115 +529,6 @@ export function useCampaignDetail() {
     }
   };
 
-  const handleTogglePayment = (order: Order) => {
-    // Se está marcando como pago, abre modal para upload
-    if (!order.isPaid) {
-      setOrderForPayment(order);
-      setIsPaymentProofModalOpen(true);
-    } else {
-      // Se está desmarcando, apenas atualiza (sem arquivo)
-      updatePaymentMutation.mutate({
-        orderId: order.id,
-        isPaid: false,
-      });
-    }
-  };
-
-  const handlePaymentProofSubmit = (file: File) => {
-    if (!orderForPayment) return;
-    updatePaymentMutation.mutate({
-      orderId: orderForPayment.id,
-      isPaid: true,
-      file,
-    });
-  };
-
-  const handleAddToOrder = async (product: Product) => {
-    requireAuth(async () => {
-      const existingOrder = orders?.find((o) => o.userId === user?.id);
-
-      if (existingOrder) {
-        // Se o usuário já tem um pedido, adiciona o produto e salva automaticamente
-        const items = existingOrder.items.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
-        }));
-
-        const existingItemIndex = items.findIndex(
-          (item) => item.productId === product.id
-        );
-        if (existingItemIndex >= 0) {
-          items[existingItemIndex].quantity++;
-          toast.success(`Quantidade de "${product.name}" aumentada!`);
-        } else {
-          items.push({ productId: product.id, quantity: 1 });
-          toast.success(`"${product.name}" adicionado ao pedido!`);
-        }
-
-        // Atualiza o formulário de edição ANTES da mutação
-        setEditOrderForm({
-          campaignId: campaignId || "",
-          items: items,
-        });
-        setEditingOrder(existingOrder);
-
-        // Define a flag para indicar que veio do botão "Pedir"
-        // Isso evita que o modal seja fechado automaticamente no onSuccess
-        isAddingFromButtonRef.current = true;
-
-        // Abre o modal imediatamente
-        setIsEditOrderModalOpen(true);
-
-        // Faz a mutação em background
-        updateOrderWithItemsMutation.mutate({
-          orderId: existingOrder.id,
-          data: { items },
-        });
-      } else {
-        // Se o usuário NÃO tem pedido, cria automaticamente com o produto
-        if (!user?.name) {
-          toast.error("Erro: Nome de usuário não encontrado");
-          return;
-        }
-
-        toast.success(`Pedido criado com "${product.name}"!`);
-
-        // Prepara os dados para criar o pedido (API não aceita customerName)
-        const createOrderData = {
-          campaignId: campaignId || "",
-          items: [{ productId: product.id, quantity: 1 }],
-        };
-
-        // Define a flag para indicar que veio do botão "Pedir"
-        isAddingFromButtonRef.current = true;
-
-        // Cria o pedido
-        createOrderMutation.mutate(createOrderData, {
-          onSuccess: async () => {
-            // Aguarda as queries serem atualizadas
-            await queryClient.invalidateQueries({
-              queryKey: ["orders", campaignId],
-            });
-
-            // Aguarda um pouco para garantir que a query foi atualizada
-            setTimeout(() => {
-              // Busca o pedido recém-criado
-              queryClient
-                .refetchQueries({ queryKey: ["orders", campaignId] })
-                .then(() => {
-                  const newOrder = orders?.find((o) => o.userId === user?.id);
-                  if (newOrder) {
-                    isAddingFromButtonRef.current = true;
-                    openEditOrderModal(newOrder);
-                  }
-                });
-            }, 300);
-          },
-        });
-      }
-    });
-  };
-
   const handleAddOrder = () => {
     requireAuth(async () => {
       // Verifica se usuário já tem pedido
@@ -665,13 +577,6 @@ export function useCampaignDetail() {
         });
       }
     });
-  };
-
-  const handleEditOrderFromView = () => {
-    if (viewingOrder) {
-      setIsViewOrderModalOpen(false);
-      openEditOrderModal(viewingOrder);
-    }
   };
 
   const handleReopenCampaign = () => {
@@ -769,6 +674,7 @@ export function useCampaignDetail() {
 
     // Order Modal State (delegated to useOrderModal)
     ...orderModal,
+    orderModal,
 
     // Shipping Modal State
     isShippingModalOpen,

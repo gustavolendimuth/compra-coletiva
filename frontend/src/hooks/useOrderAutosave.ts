@@ -5,7 +5,6 @@ interface UseOrderAutosaveOptions {
   orderId: string | null;
   items: OrderFormItem[];
   isEnabled: boolean;
-  skipNextSave: boolean;
   onSave: (orderId: string, validItems: Array<{ productId: string; quantity: number }>) => void;
 }
 
@@ -19,7 +18,6 @@ export function useOrderAutosave({
   orderId,
   items,
   isEnabled,
-  skipNextSave,
   onSave,
 }: UseOrderAutosaveOptions): UseOrderAutosaveReturn {
   const [isAutosaving, setIsAutosaving] = useState(false);
@@ -45,9 +43,6 @@ export function useOrderAutosave({
     const currentSnapshot = JSON.stringify(items);
     if (currentSnapshot === initialSnapshotRef.current) return;
 
-    // Don't save during "Pedir" flow
-    if (skipNextSave) return;
-
     // Clear previous timer
     if (autosaveTimerRef.current) {
       clearTimeout(autosaveTimerRef.current);
@@ -72,7 +67,7 @@ export function useOrderAutosave({
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, isEnabled, orderId, skipNextSave]);
+  }, [items, isEnabled, orderId]);
 
   const markSaved = useCallback(() => {
     if (isAutosavingRef.current) {

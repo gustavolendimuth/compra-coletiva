@@ -10,7 +10,6 @@ describe('useOrderAutosave', () => {
     orderId: 'order-1',
     items: [{ productId: 'product-1', quantity: 2 }] as OrderFormItem[],
     isEnabled: true,
-    skipNextSave: false,
     onSave: mockOnSave,
   };
 
@@ -164,27 +163,6 @@ describe('useOrderAutosave', () => {
       rerender({
         ...defaultOptions,
         orderId: null,
-        items: [{ productId: 'product-1', quantity: 5 }],
-      });
-
-      act(() => {
-        vi.advanceTimersByTime(1000);
-      });
-
-      expect(mockOnSave).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('Skip Next Save', () => {
-    it('should not call onSave when skipNextSave is true', () => {
-      const { rerender } = renderHook(
-        (props) => useOrderAutosave(props),
-        { initialProps: defaultOptions }
-      );
-
-      rerender({
-        ...defaultOptions,
-        skipNextSave: true,
         items: [{ productId: 'product-1', quantity: 5 }],
       });
 

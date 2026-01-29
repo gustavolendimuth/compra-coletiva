@@ -43,11 +43,8 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
       <EditOrderModal
         isOpen={hook.isEditOrderModalOpen}
         form={hook.editOrderForm}
-        products={hook.alphabeticalProducts || []}
-        onClose={() => {
-          hook.setIsEditOrderModalOpen(false);
-          hook.setEditingOrder(null);
-        }}
+        products={hook.alphabeticalProducts || hook.products || []}
+        onClose={hook.closeEditOrderModal}
         onChange={hook.setEditOrderForm}
         isAutosaving={hook.isAutosaving}
         lastSaved={hook.lastSaved}
@@ -73,7 +70,7 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
           hook.setIsPaymentProofModalOpen(false);
           hook.setOrderForPayment(null);
         }}
-        onSubmit={hook.handlePaymentProofSubmit}
+        onSubmit={hook.orderModal.handlePaymentProofSubmit}
       />
 
       <ShippingModal
