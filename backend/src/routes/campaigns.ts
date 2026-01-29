@@ -14,6 +14,8 @@ import { ShippingCalculator } from "../services/shippingCalculator";
 import { generateUniqueSlug } from "../utils/slugify";
 import { uploadCampaignImage } from "../middleware/uploadMiddleware";
 import { ImageUploadService } from "../services/imageUploadService";
+import { geocodingService } from "../services/geocodingService";
+import { haversineDistance, getBoundingBox } from "../utils/distance";
 
 const router = Router();
 
@@ -32,6 +34,8 @@ const listCampaignsSchema = z.object({
     (val) => val === "true" || val === true,
     z.boolean().optional()
   ),
+  nearZipCode: z.string().optional(),
+  maxDistance: z.coerce.number().min(1).max(500).default(50).optional(),
 });
 
 const createCampaignSchema = z.object({
@@ -50,6 +54,14 @@ const createCampaignSchema = z.object({
   pixType: z.enum(["CPF", "CNPJ", "EMAIL", "PHONE", "RANDOM"]).optional(),
   pixName: z.string().optional(),
   pixVisibleAtStatus: z.enum(["ACTIVE", "CLOSED", "SENT", "ARCHIVED"]).default("ACTIVE"),
+  // Endereço de retirada (obrigatório para novas campanhas)
+  pickupZipCode: z.string().regex(/^\d{5}-?\d{3}$/, "CEP deve ter o formato XXXXX-XXX"),
+  pickupAddress: z.string().min(1, "Endereço é obrigatório"),
+  pickupAddressNumber: z.string().min(1, "Número é obrigatório"),
+  pickupComplement: z.string().optional(),
+  pickupNeighborhood: z.string().optional(),
+  pickupCity: z.string().optional(),
+  pickupState: z.string().optional(),
 });
 
 const updateCampaignSchema = z.object({
@@ -69,6 +81,14 @@ const updateCampaignSchema = z.object({
   pixType: z.enum(["CPF", "CNPJ", "EMAIL", "PHONE", "RANDOM"]).nullable().optional(),
   pixName: z.string().nullable().optional(),
   pixVisibleAtStatus: z.enum(["ACTIVE", "CLOSED", "SENT", "ARCHIVED"]).optional(),
+  // Endereço de retirada (opcional na atualização)
+  pickupZipCode: z.string().regex(/^\d{5}-?\d{3}$/).optional(),
+  pickupAddress: z.string().min(1).optional(),
+  pickupAddressNumber: z.string().min(1).optional(),
+  pickupComplement: z.string().nullable().optional(),
+  pickupNeighborhood: z.string().optional(),
+  pickupCity: z.string().optional(),
+  pickupState: z.string().optional(),
 });
 
 const updateStatusSchema = z.object({
@@ -162,11 +182,14 @@ router.get(
       creatorId,
       fromSellers,
       similarProducts,
+      nearZipCode,
+      maxDistance,
     } = listCampaignsSchema.parse(req.query);
 
     // Construir where clause dinâmica
     let where: Prisma.CampaignWhereInput = {};
     let searchCampaignIdList: string[] | null = null;
+    let userCoords: { latitude: number; longitude: number } | null = null;
 
     // Filtro de status
     if (status) {
@@ -289,6 +312,22 @@ router.get(
       }
     }
 
+    // Filtro de proximidade por CEP
+    if (nearZipCode) {
+      try {
+        const geoResult = await geocodingService.geocodeCEP(nearZipCode);
+        userCoords = { latitude: geoResult.latitude, longitude: geoResult.longitude };
+        const distance = maxDistance || 50;
+        const bbox = getBoundingBox(geoResult.latitude, geoResult.longitude, distance);
+
+        where.pickupLatitude = { gte: bbox.minLat, lte: bbox.maxLat };
+        where.pickupLongitude = { gte: bbox.minLon, lte: bbox.maxLon };
+      } catch (error) {
+        // CEP inválido - ignorar filtro de proximidade
+        console.warn("[Campaign] Falha na geocodificação para busca:", error);
+      }
+    }
+
     // Query com cursor pagination
     const campaigns = await prisma.campaign.findMany({
       where,
@@ -308,11 +347,31 @@ router.get(
     });
 
     const hasMore = campaigns.length > limit;
-    const data = hasMore ? campaigns.slice(0, -1) : campaigns;
+    let data: any[] = hasMore ? campaigns.slice(0, -1) : campaigns;
     const nextCursor =
       hasMore && data.length > 0 ? data[data.length - 1].id : null;
 
     const total = await prisma.campaign.count({ where });
+
+    // Calcular distância e filtrar/ordenar por proximidade
+    if (userCoords) {
+      const distanceLimit = maxDistance || 50;
+      data = data
+        .map((campaign: any) => {
+          if (campaign.pickupLatitude && campaign.pickupLongitude) {
+            const dist = haversineDistance(
+              userCoords!.latitude,
+              userCoords!.longitude,
+              campaign.pickupLatitude,
+              campaign.pickupLongitude
+            );
+            return { ...campaign, distance: dist };
+          }
+          return { ...campaign, distance: null };
+        })
+        .filter((c: any) => c.distance !== null && c.distance <= distanceLimit)
+        .sort((a: any, b: any) => (a.distance || 0) - (b.distance || 0));
+    }
 
     // Se temos resultados de busca mas poucos, adicionar sugestões
     let suggestions: typeof data = [];
@@ -342,6 +401,89 @@ router.get(
     }
 
     res.json({ data, suggestions, nextCursor, hasMore, total });
+  })
+);
+
+// GET /api/campaigns/:idOrSlug/distance - Calcula distância do CEP informado até a campanha
+router.get(
+  "/:idOrSlug/distance",
+  asyncHandler(async (req, res) => {
+    const { idOrSlug } = req.params;
+    const fromZipCode = typeof req.query.fromZipCode === "string" ? req.query.fromZipCode : "";
+
+    if (!fromZipCode) {
+      throw new AppError(400, "fromZipCode é obrigatório");
+    }
+
+    // Buscar campanha
+    let campaign = await prisma.campaign.findUnique({
+      where: { slug: idOrSlug },
+      select: {
+        id: true,
+        pickupLatitude: true,
+        pickupLongitude: true,
+        pickupZipCode: true,
+        pickupAddress: true,
+        pickupAddressNumber: true,
+        pickupCity: true,
+        pickupState: true,
+      },
+    });
+
+    if (!campaign) {
+      campaign = await prisma.campaign.findUnique({
+        where: { id: idOrSlug },
+        select: {
+          id: true,
+          pickupLatitude: true,
+          pickupLongitude: true,
+          pickupZipCode: true,
+          pickupAddress: true,
+          pickupAddressNumber: true,
+          pickupCity: true,
+          pickupState: true,
+        },
+      });
+    }
+
+    if (!campaign) {
+      throw new AppError(404, "Campaign not found");
+    }
+
+    if (!campaign.pickupLatitude || !campaign.pickupLongitude) {
+      throw new AppError(400, "Campanha não possui endereço de retirada com coordenadas");
+    }
+
+    // Geocodificar CEP do usuário
+    const fromGeo = await geocodingService.geocodeCEP(fromZipCode);
+
+    const distanceKm = haversineDistance(
+      fromGeo.latitude,
+      fromGeo.longitude,
+      campaign.pickupLatitude,
+      campaign.pickupLongitude
+    );
+
+    res.json({
+      campaignId: campaign.id,
+      from: {
+        zipCode: fromGeo.zipCode,
+        city: fromGeo.city,
+        state: fromGeo.state,
+        latitude: fromGeo.latitude,
+        longitude: fromGeo.longitude,
+      },
+      to: {
+        zipCode: campaign.pickupZipCode,
+        address: campaign.pickupAddress,
+        number: campaign.pickupAddressNumber,
+        city: campaign.pickupCity,
+        state: campaign.pickupState,
+        latitude: campaign.pickupLatitude,
+        longitude: campaign.pickupLongitude,
+      },
+      distanceKm,
+    });
   })
 );
 
@@ -415,6 +557,25 @@ router.post(
     const prismaData: any = { ...data };
     if (data.deadline) {
       prismaData.deadline = new Date(data.deadline);
+    }
+
+    // Geocodificar endereço de retirada para obter coordenadas
+    if (data.pickupZipCode && data.pickupAddress) {
+      try {
+        const geoResult = await geocodingService.geocodeCEP(
+          data.pickupZipCode,
+          data.pickupAddressNumber
+        );
+        prismaData.pickupZipCode = geoResult.zipCode;
+        prismaData.pickupNeighborhood = prismaData.pickupNeighborhood || geoResult.neighborhood;
+        prismaData.pickupCity = prismaData.pickupCity || geoResult.city;
+        prismaData.pickupState = prismaData.pickupState || geoResult.state;
+        prismaData.pickupLatitude = geoResult.latitude;
+        prismaData.pickupLongitude = geoResult.longitude;
+      } catch (error) {
+        console.warn("[Campaign] Falha na geocodificação:", error);
+        // Continua sem coordenadas - endereço ainda será salvo
+      }
     }
 
     // Adiciona o creatorId do usuário autenticado
@@ -569,6 +730,24 @@ router.patch(
     // If name is being updated, regenerate slug
     if (data.name) {
       prismaData.slug = await generateUniqueSlug(data.name, campaignId);
+    }
+
+    // Geocodificar se o endereço de retirada foi atualizado
+    if (data.pickupZipCode && data.pickupAddress) {
+      try {
+        const geoResult = await geocodingService.geocodeCEP(
+          data.pickupZipCode,
+          data.pickupAddressNumber
+        );
+        prismaData.pickupZipCode = geoResult.zipCode;
+        prismaData.pickupNeighborhood = prismaData.pickupNeighborhood || geoResult.neighborhood;
+        prismaData.pickupCity = prismaData.pickupCity || geoResult.city;
+        prismaData.pickupState = prismaData.pickupState || geoResult.state;
+        prismaData.pickupLatitude = geoResult.latitude;
+        prismaData.pickupLongitude = geoResult.longitude;
+      } catch (error) {
+        console.warn("[Campaign] Falha na geocodificação:", error);
+      }
     }
 
     const updatedCampaign = await prisma.campaign.update({

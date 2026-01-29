@@ -40,8 +40,17 @@ export interface StoredUser {
   name: string;
   phone?: string;
   phoneCompleted?: boolean;
+  addressCompleted?: boolean;
   role: "ADMIN" | "CAMPAIGN_CREATOR" | "CUSTOMER";
   googleId?: string;
+  defaultZipCode?: string | null;
+  defaultAddress?: string | null;
+  defaultAddressNumber?: string | null;
+  defaultNeighborhood?: string | null;
+  defaultCity?: string | null;
+  defaultState?: string | null;
+  defaultLatitude?: number | null;
+  defaultLongitude?: number | null;
 }
 
 export const authStorage = {

@@ -73,6 +73,7 @@ export const configurePassport = () => {
                     password: null, // No password for Google OAuth users
                     role: 'CUSTOMER', // Default role
                     phoneCompleted: false, // OAuth users need to complete phone
+                    addressCompleted: false, // OAuth users need to complete address
                   },
                 });
 

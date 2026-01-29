@@ -20,6 +20,7 @@ import { formatCurrency } from "@/lib/utils";
 import { Order, Product, CampaignAnalytics, Campaign } from "@/api";
 import { getCustomerDisplayName } from "../utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { CampaignLocationSection } from "../CampaignLocationSection";
 
 interface OverviewTabProps {
   campaign: Campaign;
@@ -62,6 +63,11 @@ export function OverviewTab({
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
+      {/* Localização de Retirada */}
+      {campaign.pickupAddress && (
+        <CampaignLocationSection campaign={campaign} />
+      )}
+
       <div className="mb-6">
         <h2 className="text-2xl font-bold flex items-center gap-2">
           <LayoutDashboard className="w-6 h-6 text-primary-600" />

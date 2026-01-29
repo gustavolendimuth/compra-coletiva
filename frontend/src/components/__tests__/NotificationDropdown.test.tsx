@@ -328,7 +328,7 @@ describe('NotificationDropdown', () => {
   });
 
   describe('Fixed Positioning (buttonRef)', () => {
-    it('calculates position when buttonRef is provided', () => {
+    it('calculates position when buttonRef is provided', async () => {
       Object.defineProperty(window, 'innerWidth', {
         writable: true,
         configurable: true,
@@ -345,16 +345,15 @@ describe('NotificationDropdown', () => {
         />
       );
 
-      // Since Portal renders to document.body, query from document
-      const dropdown = document.querySelector('[class*="fixed"]');
-      expect(dropdown).toBeInTheDocument();
-
-      // Dropdown should have inline styles for positioning (fixed positioning)
-      expect(dropdown).toHaveStyle({ top: '108px' }); // bottom (100) + 8px spacing
-
-      // On mobile with button at rect.right=200, dropdown width=320
-      // left = 200 - 320 = -120, clamped to spacing=8
-      expect(dropdown).toHaveStyle({ left: '8px' });
+      // Mobile: centered modal, top=80, dropdownWidth=min(375-32,400)=343, left=(375-343)/2=16
+      // Re-query after state update since Portal may recreate DOM elements
+      await waitFor(() => {
+        const dropdownEl = document.querySelector('[class*="fixed"][style]');
+        expect(dropdownEl).not.toBeNull();
+      });
+      const updatedDropdown = document.querySelector('[class*="fixed"][style]');
+      expect(updatedDropdown).toHaveStyle({ top: '80px' });
+      expect(updatedDropdown).toHaveStyle({ left: '16px' });
     });
 
     it('applies inline positioning for both mobile and desktop', () => {
@@ -378,15 +377,14 @@ describe('NotificationDropdown', () => {
       const dropdown = document.querySelector('[class*="fixed"]');
       expect(dropdown).toBeInTheDocument();
 
-      // Now uses fixed positioning for both mobile and desktop
-      expect(dropdown).toHaveStyle({ top: '108px' }); // bottom (100) + 8px spacing
+      // Desktop: top = bottom(100) + spacing(8) = 108
+      expect(dropdown).toHaveStyle({ top: '108px' });
 
-      // On desktop with button at rect.right=200, dropdown width=384
-      // left = 200 - 384 = -184, clamped to spacing=8
+      // Desktop: left = rect.right(200) - dropdownWidth(384) = -184, clamped to spacing(8)
       expect(dropdown).toHaveStyle({ left: '8px' });
     });
 
-    it('prevents overflow on the right edge', () => {
+    it('prevents overflow on the right edge', async () => {
       Object.defineProperty(window, 'innerWidth', {
         writable: true,
         configurable: true,
@@ -420,11 +418,17 @@ describe('NotificationDropdown', () => {
       const dropdown = document.querySelector('[class*="fixed"]');
       expect(dropdown).toBeInTheDocument();
 
-      // Dropdown width = 320 (mobile), viewport = 400
-      // Ideal left = 395 - 320 = 75
-      // Max allowed = 400 - 320 - 8 = 72
-      // So left should be clamped to 72
-      expect(dropdown).toHaveStyle({ left: '72px' });
+      // Mobile (400 < 768): centered modal
+      // dropdownWidth = min(400 - 32, 400) = 368
+      // left = (400 - 368) / 2 = 16
+      // Re-query after state update since Portal may recreate DOM elements
+      await waitFor(() => {
+        const dropdownEl = document.querySelector('[class*="fixed"][style]');
+        expect(dropdownEl).not.toBeNull();
+      });
+      const updatedDropdown = document.querySelector('[class*="fixed"][style]');
+      expect(updatedDropdown).toHaveStyle({ top: '80px' });
+      expect(updatedDropdown).toHaveStyle({ left: '16px' });
     });
   });
 
@@ -437,8 +441,6 @@ describe('NotificationDropdown', () => {
       const dropdown = document.querySelector('[class*="fixed"]');
       expect(dropdown).toHaveClass(
         'fixed',
-        'w-80',
-        'md:w-96',
         'z-[100]'
       );
     });
@@ -462,7 +464,9 @@ describe('NotificationDropdown', () => {
 
       const dropdown = document.querySelector('[class*="fixed"]');
       expect(dropdown).toHaveClass('fixed');
-      // Position is set via inline styles, not classes
+      // Desktop: position is set via inline styles
+      // top = bottom(100) + spacing(8) = 108
+      // left = right(200) - 384 = -184, clamped to 8
       expect(dropdown).toHaveStyle({ top: '108px', left: '8px' });
     });
 

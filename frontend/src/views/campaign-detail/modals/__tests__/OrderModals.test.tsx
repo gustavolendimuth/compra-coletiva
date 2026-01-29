@@ -26,7 +26,7 @@ describe('OrderModals', () => {
       isOpen: true,
       form: { items: [{ productId: '', quantity: 1 as number | '' }] },
       products: mockProducts,
-      isPending: false,
+      isAutosaving: false,
       onClose: mockOnClose,
       onChange: mockOnChange,
     };
@@ -234,16 +234,16 @@ describe('OrderModals', () => {
     });
 
     describe('Loading State', () => {
-      it('should show loading message when isPending is true', () => {
-        render(<AddOrderModal {...defaultProps} isPending={true} />);
+      it('should show loading message when isAutosaving is true', () => {
+        render(<AddOrderModal {...defaultProps} isAutosaving={true} />);
 
-        expect(screen.getByText(/salvando automaticamente/i)).toBeInTheDocument();
+        expect(screen.getByText(/salvando/i)).toBeInTheDocument();
       });
 
-      it('should not show loading message when isPending is false', () => {
-        render(<AddOrderModal {...defaultProps} isPending={false} />);
+      it('should not show loading message when isAutosaving is false', () => {
+        render(<AddOrderModal {...defaultProps} isAutosaving={false} />);
 
-        expect(screen.queryByText(/salvando automaticamente/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(/salvando/i)).not.toBeInTheDocument();
       });
     });
 
@@ -273,7 +273,7 @@ describe('OrderModals', () => {
       isOpen: true,
       form: { items: [{ productId: 'product-1', quantity: 2 }] },
       products: mockProducts,
-      isPending: false,
+      isAutosaving: false,
       onClose: mockOnClose,
       onChange: mockOnChange,
     };

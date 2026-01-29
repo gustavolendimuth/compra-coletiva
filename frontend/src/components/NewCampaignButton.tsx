@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import { campaignApi, campaignService } from "@/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button, Modal, Input, Textarea, ImageUpload } from "@/components/ui";
+import { AddressForm, type AddressData } from "@/components/ui/AddressForm";
 import DateTimeInput from "@/components/DateTimeInput";
 import { applyPixMask, removeMask, getPixPlaceholder } from "@/lib/pixMasks";
 
@@ -20,6 +21,16 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
   const { requireAuth, refreshUser } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [pickupAddress, setPickupAddress] = useState<AddressData>({
+    zipCode: '',
+    address: '',
+    addressNumber: '',
+    complement: '',
+    neighborhood: '',
+    city: '',
+    state: '',
+  });
+  const [addressErrors, setAddressErrors] = useState<Partial<Record<keyof AddressData, string>>>({});
   const [formData, setFormData] = useState<{
     name: string;
     description: string;
@@ -76,14 +87,47 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
         pixVisibleAtStatus: "ACTIVE",
       });
       setSelectedImage(null);
+      setPickupAddress({
+        zipCode: '',
+        address: '',
+        addressNumber: '',
+        complement: '',
+        neighborhood: '',
+        city: '',
+        state: '',
+      });
+      setAddressErrors({});
     },
     onError: () => {
       toast.error("Erro ao criar campanha");
     },
   });
 
+  const validateAddress = (): boolean => {
+    const errors: Partial<Record<keyof AddressData, string>> = {};
+    const hasAnyField = pickupAddress.zipCode || pickupAddress.address || pickupAddress.city;
+
+    if (hasAnyField) {
+      if (!pickupAddress.zipCode || pickupAddress.zipCode.replace(/\D/g, '').length !== 8) {
+        errors.zipCode = 'CEP é obrigatório';
+      }
+      if (!pickupAddress.address) {
+        errors.address = 'Endereço é obrigatório';
+      }
+      if (!pickupAddress.addressNumber) {
+        errors.addressNumber = 'Número é obrigatório';
+      }
+    }
+
+    setAddressErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!validateAddress()) return;
+
     const shippingCost =
       typeof formData.shippingCost === "number" ? formData.shippingCost : 0;
 
@@ -91,6 +135,8 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
     const cleanPixKey = formData.pixKey
       ? removeMask(formData.pixKey, formData.pixType)
       : undefined;
+
+    const hasAddress = pickupAddress.zipCode && pickupAddress.address;
 
     createMutation.mutate({
       name: formData.name,
@@ -101,6 +147,15 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
       pixType: formData.pixType || undefined,
       pixName: formData.pixName || undefined,
       pixVisibleAtStatus: formData.pixVisibleAtStatus,
+      ...(hasAddress && {
+        pickupZipCode: pickupAddress.zipCode.replace(/\D/g, ''),
+        pickupAddress: pickupAddress.address,
+        pickupAddressNumber: pickupAddress.addressNumber,
+        pickupComplement: pickupAddress.complement || undefined,
+        pickupNeighborhood: pickupAddress.neighborhood,
+        pickupCity: pickupAddress.city,
+        pickupState: pickupAddress.state,
+      }),
     });
   };
 
@@ -267,6 +322,21 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
                 </p>
               </div>
             </div>
+          </div>
+
+          <div className="border-t pt-4">
+            <h3 className="text-base font-semibold text-gray-900 mb-3">
+              Endereço de Retirada (opcional)
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Informe o local onde os compradores poderão retirar os produtos.
+            </p>
+            <AddressForm
+              value={pickupAddress}
+              onChange={setPickupAddress}
+              errors={addressErrors}
+              disabled={createMutation.isPending}
+            />
           </div>
 
           <div className="flex gap-3 pt-4">

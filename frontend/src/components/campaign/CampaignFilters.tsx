@@ -2,6 +2,7 @@ import { Search, X, Filter, ChevronDown } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/Input";
+import { ProximitySearch } from "./ProximitySearch";
 
 export type CampaignStatusFilter =
   | "ACTIVE"
@@ -28,6 +29,9 @@ interface CampaignFiltersProps {
   filters: CampaignFiltersState;
   onFiltersChange: (filters: CampaignFiltersState) => void;
   total?: number;
+  onProximitySearch?: (zipCode: string, maxDistance: number) => void;
+  onProximityClear?: () => void;
+  isProximityActive?: boolean;
 }
 
 const statusOptions = [
@@ -44,6 +48,9 @@ export function CampaignFilters({
   filters,
   onFiltersChange,
   total,
+  onProximitySearch,
+  onProximityClear,
+  isProximityActive = false,
 }: CampaignFiltersProps) {
   const { user } = useAuth();
   const [isStatusOpen, setIsStatusOpen] = useState(false);
@@ -210,6 +217,15 @@ export function CampaignFilters({
           </div>
         </div>
       </div>
+
+      {/* Busca por proximidade */}
+      {onProximitySearch && onProximityClear && (
+        <ProximitySearch
+          onSearch={onProximitySearch}
+          onClear={onProximityClear}
+          isActive={isProximityActive}
+        />
+      )}
     </div>
   );
 }

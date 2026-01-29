@@ -11,6 +11,7 @@ import type {
   RefreshResponse,
   StoredUser,
   CompletePhoneRequest,
+  CompleteAddressRequest,
 } from "../types";
 
 export const authService = {
@@ -91,4 +92,12 @@ export const authService = {
         `/auth/check-name?name=${encodeURIComponent(name)}`
       )
       .then((res) => res.data),
+
+  /**
+   * Complete address registration for users
+   */
+  completeAddress: (data: CompleteAddressRequest) =>
+    apiClient
+      .patch<{ user: StoredUser }>('/auth/complete-address', data)
+      .then((res) => res.data.user),
 };

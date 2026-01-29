@@ -31,6 +31,17 @@ declare global {
       deletedAt: Date | null;
       deletedReason: string | null;
 
+      // Endereço padrão do usuário (para cálculo de distância)
+      addressCompleted: boolean;
+      defaultZipCode: string | null;
+      defaultAddress: string | null;
+      defaultAddressNumber: string | null;
+      defaultNeighborhood: string | null;
+      defaultCity: string | null;
+      defaultState: string | null;
+      defaultLatitude: number | null;
+      defaultLongitude: number | null;
+
       // Reputation & Rate Limiting
       messageCount: number;
       answeredCount: number;

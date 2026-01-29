@@ -110,16 +110,16 @@ npm run build --workspace=backend
 ## Project Statistics
 
 ### Backend
-- **17 Route Files**: auth, campaigns, products, orders, analytics, messages, campaignMessages, validation, feedback, notifications, profile, emailPreferences + admin/ (index, users, dashboard, content, audit)
-- **19 Services**: shippingCalculator, socketService, campaignScheduler, campaignStatusService, notificationService, spamDetectionService, auditService + email/ (emailQueue, emailWorker, templates, notificationEmailService)
+- **18 Route Files**: auth, campaigns, products, orders, analytics, messages, campaignMessages, validation, feedback, notifications, profile, emailPreferences, geocoding + admin/ (index, users, dashboard, content, audit)
+- **21 Services**: shippingCalculator, socketService, campaignScheduler, campaignStatusService, notificationService, spamDetectionService, auditService, geocodingService + utils/distance + email/ (emailQueue, emailWorker, templates, notificationEmailService)
 - **14 DB Tables**: User, Campaign, Product, Order, OrderItem, OrderMessage, CampaignMessage, Notification, Feedback, Session, PasswordResetToken, EmailPreference, EmailLog, AuditLog
 
 ### Frontend
-- **81 Components**: 9 UI primitives (Avatar added), 4 auth, 21 campaign, 15 campaign-detail modules, 10 profile components, 6 admin components, 16 other
+- **90 Components**: 12 UI primitives (Avatar, CepInput, AddressForm, Map, DistanceBadge added), 4 auth, 22 campaign (ProximitySearch added), 17 campaign-detail modules (CampaignLocationSection, CampaignLocationMap added), 11 profile components (ProfileAddressSection added), 6 admin components, 18 other
 - **54 Pages**: Home, CampaignDetail, NewCampaign, Profile, CompleteProfile, VerifyEmailChange, EmailPreferences + admin/ (AdminLayout, Dashboard, Users, UserDetail, Campaigns, Messages, Audit)
 - **4 Custom Hooks**: useCampaignDetail, useCampaignQuestions, useCampaignChat, useOrderChat
-- **12 API Services**: auth, campaign, product, order, message, notification, feedback, analytics, validation, profile, emailPreference, admin
-- **Test Suite**: 50+ test files, 607 passing tests (100% success), ~13s execution time
+- **13 API Services**: auth, campaign, product, order, message, notification, feedback, analytics, validation, profile, emailPreference, admin, geocoding
+- **Test Suite**: 50+ test files, 568 passing tests (100% success), ~13s execution time
 
 ## Architecture
 
@@ -133,6 +133,7 @@ npm run build --workspace=backend
 1. **Campaign**: Container for collective purchases
    - Status: ACTIVE, CLOSED, SENT, ARCHIVED
    - Auto-archives when all orders paid
+   - Pickup location: `pickupZipCode`, `pickupStreet`, `pickupNumber`, `pickupComplement`, `pickupNeighborhood`, `pickupCity`, `pickupState`, `pickupLatitude`, `pickupLongitude`
 
 2. **Product**: Items in campaign
    - `price` and `weight` (weight critical for shipping)
@@ -154,8 +155,9 @@ npm run build --workspace=backend
    - Email/password + Google OAuth
    - Reputation: `messageCount`, `answeredCount`, `spamScore`, `isBanned`
    - Profile: Avatar (S3/local), phone, pendingEmail (verification flow)
+   - Default address: `defaultZipCode`, `defaultStreet`, `defaultNumber`, `defaultComplement`, `defaultNeighborhood`, `defaultCity`, `defaultState`, `defaultLatitude`, `defaultLongitude`, `addressCompleted`
    - Soft delete: `deletedAt`, `deletedReason` (anonymized)
-   - Phone completion flag for OAuth users
+   - Phone + address completion flags for OAuth users
 
 8. **Notification**: Real-time alerts
    - Types: CAMPAIGN_READY_TO_SEND, CAMPAIGN_STATUS_CHANGED, CAMPAIGN_ARCHIVED, NEW_MESSAGE
@@ -208,7 +210,8 @@ npm run build --workspace=backend
 - **Components**: ui/, features/, layout/, shared/
 - **Notifications**: react-hot-toast
 - **Security**: DOMPurify (`lib/sanitize.ts`)
-- **Testing**: Vitest + React Testing Library, 164 passing tests
+- **Maps**: Leaflet + OpenStreetMap for pickup location display
+- **Testing**: Vitest + React Testing Library, 568 passing tests
 
 ---
 
@@ -325,7 +328,8 @@ frontend/src/api/
     ├── notification.service.ts
     ├── feedback.service.ts
     ├── analytics.service.ts
-    └── validation.service.ts
+    ├── validation.service.ts
+    └── geocoding.service.ts
 ```
 
 **Principles**:
@@ -456,7 +460,7 @@ useEffect(() => {
 1. Find by googleId (primary), fallback to email
 2. If soft-deleted: reactivate (clear deletedAt/deletedReason, update email/name)
 3. If email exists without googleId: link accounts
-4. If new: create (password: null, phoneCompleted: false, capitalizeName, queue welcome email)
+4. If new: create (password: null, phoneCompleted: false, addressCompleted: false, capitalizeName, queue welcome email)
 
 **Benefits**: googleId as source of truth, prevents account takeover, seamless reactivation, non-blocking email.
 
@@ -546,13 +550,20 @@ npm run validate:financial
 
 ### Auth (`/api/auth`)
 - POST `/register`, `/login`, `/google`, `/logout`
+- PATCH `/complete-address` - Complete user address (zip, street, number, complement, neighborhood, city, state)
 - GET `/me`
 
 ### Campaigns (`/api/campaigns`)
-- GET `/`, `/:id`
+- GET `/` - List campaigns (filters: nearZipCode, maxDistance for proximity search)
+- GET `/:id`
+- GET `/:idOrSlug/distance?fromZipCode=X` - Calculate distance from zip code to campaign pickup location
 - POST `/`
 - PATCH `/:id`
 - DELETE `/:id`
+
+### Geocoding (`/api/geocoding`)
+- GET `/cep/:cep` - Lookup address by CEP (ViaCEP + BrasilAPI fallback)
+- GET `/cep/:cep/coordinates` - Lookup address + coordinates by CEP (Nominatim/OpenStreetMap)
 
 ### Products (`/api/products`)
 - GET `/?campaignId=xxx`
@@ -639,6 +650,9 @@ npm run validate:financial
 - **Email Verification**: Token-based flow for email changes (pendingEmail → verify → update)
 - **Avatar Upload**: Reuses ImageUploadService with folder="avatars", max 5MB, JPEG/PNG/WebP
 - **Audit Logs**: All admin actions tracked with IP address + user agent
+- **Geocoding**: Multi-provider (ViaCEP + BrasilAPI + Nominatim/OpenStreetMap), Haversine distance calculation, bounding box optimization for proximity queries
+- **Pickup Location**: Campaigns can have pickup address with auto-geocoding on create/update
+- **Proximity Search**: Filter campaigns by nearZipCode + maxDistance (km), uses bounding box pre-filter + Haversine post-filter
 
 ### Frontend (CRITICAL)
 - **Mobile-First MANDATORY**: 320px-640px base, progressive enhancement
@@ -662,7 +676,7 @@ npm run validate:financial
 ## Testing Architecture
 
 ### Frontend (Vitest 4.0.15 + RTL)
-**Stats**: 607 tests, 50+ files, ~13s, 100% pass. Mock factories in `src/__tests__/mock-data.ts`.
+**Stats**: 568 tests, 50+ files, ~13s, 100% pass. Mock factories in `src/__tests__/mock-data.ts`.
 
 **Patterns**:
 1. Multiple elements: `getAllByText()[0]` (mobile+desktop views)
@@ -682,18 +696,24 @@ npm run validate:financial
 
 **Commands**: `npm test --workspace=backend`, `npm run test:coverage --workspace=backend`
 
-**Total**: 662 tests (607 frontend + 55 backend), 100% success
+**Total**: 623 tests (568 frontend + 55 backend), 100% success
 
 ---
 
 ## Recent Updates
 
-### January 2026 - Profile, Email, Admin & OAuth Enhancements
-**Features**: User profile (avatar, email verification, soft delete, LGPD export), email system (Bull queue, Resend/Gmail, tracking), admin panel (dashboard, user/campaign/message moderation, audit logs), enhanced Google OAuth (googleId-first lookup, account linking, soft-delete reactivation).
+### January 2026 - Pickup Location, Proximity Search, Profile, Email, Admin & OAuth
+**Pickup & Proximity (latest)**: Campaign pickup address (9 fields: zip, street, number, complement, neighborhood, city, state, lat, lng), user default address (9 fields + addressCompleted flag), geocoding service (ViaCEP + BrasilAPI + Nominatim/OpenStreetMap), Haversine distance calculation, proximity search (nearZipCode + maxDistance), Leaflet/OpenStreetMap maps, CEP input with auto-lookup, multi-step CompleteProfile (phone + address), distance badges on campaign cards.
 
-**Components**: Profile (6 components), Avatar UI, CompleteProfile flow, EmailPreferences, 6 admin pages, AdminRoute.
+**New Components**: CepInput, AddressForm, Map, DistanceBadge (ui/), ProximitySearch (campaign/), ProfileAddressSection (profile/), CampaignLocationSection, CampaignLocationMap (campaign-detail/), geocoding.service.ts (api/).
 
-**Tests**: 662 total (607 frontend + 55 backend), 100% pass. Added passport.test.ts (13), nameFormatter.test.ts (11), notification tests (42).
+**New Backend**: geocodingService.ts, distance.ts utils, geocoding routes, pickup fields in Campaign schema, address fields in User schema, complete-address auth endpoint, proximity query filters, auto-geocoding on campaign create/update.
+
+**Profile & Admin**: User profile (avatar, email verification, soft delete, LGPD export), email system (Bull queue, Resend/Gmail, tracking), admin panel (dashboard, user/campaign/message moderation, audit logs), enhanced Google OAuth (googleId-first lookup, account linking, soft-delete reactivation, addressCompleted: false).
+
+**Components**: Profile (6 components), Avatar UI, CompleteProfile flow (multi-step: phone + address), EmailPreferences, 6 admin pages, AdminRoute.
+
+**Tests**: 623 total (568 frontend + 55 backend), 100% pass. Fixed vitest.config.ts with React plugin. Added passport.test.ts (13), nameFormatter.test.ts (11), notification tests (42).
 
 **Mobile Fix**: NotificationDropdown now uses `fixed` positioning + z-[100] + buttonRef for proper mobile display.
 

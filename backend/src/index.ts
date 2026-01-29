@@ -19,6 +19,7 @@ import validationRoutes from "./routes/validation";
 import feedbackRoutes from "./routes/feedback";
 import notificationRoutes from "./routes/notifications";
 import emailPreferenceRoutes from "./routes/emailPreferences";
+import geocodingRoutes from "./routes/geocoding";
 import { errorHandler } from "./middleware/errorHandler";
 import { startCampaignScheduler } from "./services/campaignScheduler";
 import { initializeSocket } from "./services/socketService";
@@ -98,6 +99,7 @@ app.use("/api/validation", validationRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/email-preferences", emailPreferenceRoutes);
+app.use("/api/geocoding", geocodingRoutes);
 
 // Error handling
 app.use(errorHandler);

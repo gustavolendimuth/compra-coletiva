@@ -403,7 +403,7 @@ describe('CampaignList', () => {
       await waitFor(() => {
         const links = screen.getAllByRole('link');
         expect(links.length).toBeGreaterThan(0);
-        expect(links[0]).toHaveAttribute('href', '/campaigns/campaign-1');
+        expect(links[0]).toHaveAttribute('href', '/campanhas/campaign-1');
       });
     });
   });

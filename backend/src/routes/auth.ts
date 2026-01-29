@@ -13,6 +13,7 @@ import {
 } from "../utils/cookieConfig";
 import { capitalizeName } from "../utils/nameFormatter";
 import { queueWelcomeEmail, queuePasswordResetEmail } from "../services/email/emailQueue";
+import { geocodingService } from "../services/geocodingService";
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -223,6 +224,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
         password: hashedPassword,
         phone,
         phoneCompleted: true, // Email/password users provide phone during registration
+        addressCompleted: false, // Users need to complete address after first login
         role: "CUSTOMER", // Default role
       },
     });
@@ -514,8 +516,17 @@ router.get(
           email: req.user.email,
           phone: req.user.phone,
           phoneCompleted: req.user.phoneCompleted,
+          addressCompleted: req.user.addressCompleted,
           role: req.user.role,
           createdAt: req.user.createdAt,
+          defaultZipCode: req.user.defaultZipCode,
+          defaultAddress: req.user.defaultAddress,
+          defaultAddressNumber: req.user.defaultAddressNumber,
+          defaultNeighborhood: req.user.defaultNeighborhood,
+          defaultCity: req.user.defaultCity,
+          defaultState: req.user.defaultState,
+          defaultLatitude: req.user.defaultLatitude,
+          defaultLongitude: req.user.defaultLongitude,
         },
       });
     } catch (error) {
@@ -594,7 +605,8 @@ router.get(
           `userName=${encodeURIComponent(user.name)}&` +
           `userEmail=${encodeURIComponent(user.email)}&` +
           `userRole=${user.role}&` +
-          `phoneCompleted=${user.phoneCompleted || false}`
+          `phoneCompleted=${user.phoneCompleted || false}&` +
+          `addressCompleted=${user.addressCompleted || false}`
       );
     } catch (error) {
       console.error("Erro no callback do Google:", error);
@@ -931,6 +943,103 @@ router.patch(
       res.status(500).json({
         error: "INTERNAL_ERROR",
         message: "Erro ao cadastrar telefone",
+      });
+    }
+  }
+);
+
+/**
+ * PATCH /api/auth/complete-address
+ * Completa o cadastro de endereço para usuários (obrigatório no primeiro login)
+ */
+const completeAddressSchema = z.object({
+  zipCode: z.string().regex(/^\d{5}-?\d{3}$/, "CEP deve ter o formato XXXXX-XXX"),
+  address: z.string().min(1, "Endereço é obrigatório"),
+  addressNumber: z.string().min(1, "Número é obrigatório"),
+  neighborhood: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+});
+
+router.patch(
+  "/complete-address",
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const data = completeAddressSchema.parse(req.body);
+
+      // Geocodificar para obter coordenadas e dados completos
+      let latitude: number | null = null;
+      let longitude: number | null = null;
+      let neighborhood = data.neighborhood;
+      let city = data.city;
+      let state = data.state;
+
+      try {
+        const geoResult = await geocodingService.geocodeCEP(
+          data.zipCode,
+          data.addressNumber
+        );
+        latitude = geoResult.latitude;
+        longitude = geoResult.longitude;
+        neighborhood = neighborhood || geoResult.neighborhood;
+        city = city || geoResult.city;
+        state = state || geoResult.state;
+      } catch (geoError) {
+        console.warn("[CompleteAddress] Falha na geocodificação:", geoError);
+      }
+
+      const updatedUser = await prisma.user.update({
+        where: { id: req.user!.id },
+        data: {
+          defaultZipCode: geocodingService.formatCEP(data.zipCode),
+          defaultAddress: data.address,
+          defaultAddressNumber: data.addressNumber,
+          defaultNeighborhood: neighborhood,
+          defaultCity: city,
+          defaultState: state,
+          defaultLatitude: latitude,
+          defaultLongitude: longitude,
+          addressCompleted: true,
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          phone: true,
+          role: true,
+          phoneCompleted: true,
+          addressCompleted: true,
+          defaultZipCode: true,
+          defaultAddress: true,
+          defaultAddressNumber: true,
+          defaultNeighborhood: true,
+          defaultCity: true,
+          defaultState: true,
+          defaultLatitude: true,
+          defaultLongitude: true,
+        },
+      });
+
+      res.json({
+        message: "Endereço cadastrado com sucesso",
+        user: updatedUser,
+      });
+    } catch (error) {
+      console.error("[CompleteAddress] Erro ao completar endereço:", error);
+
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          error: "VALIDATION_ERROR",
+          message: "Dados de endereço inválidos",
+          details: error.errors,
+        });
+        return;
+      }
+
+      res.status(500).json({
+        error: "INTERNAL_ERROR",
+        message: "Erro ao cadastrar endereço",
       });
     }
   }

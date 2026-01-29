@@ -10,7 +10,8 @@ import type {
   CampaignListResponse,
   CreateCampaignDto,
   UpdateCampaignDto,
-  CloneCampaignDto
+  CloneCampaignDto,
+  DistanceResult
 } from '../types';
 
 export const campaignService = {
@@ -146,4 +147,14 @@ export const campaignService = {
    */
   deleteImage: (idOrSlug: string) =>
     apiClient.delete(`/campaigns/${idOrSlug}/image`).then(res => res.data),
+
+  /**
+   * Calculate distance from a CEP to a campaign's pickup location
+   */
+  getDistance: (idOrSlug: string, fromZipCode: string) =>
+    apiClient
+      .get<DistanceResult>(`/campaigns/${idOrSlug}/distance`, {
+        params: { fromZipCode: fromZipCode.replace(/\D/g, '') },
+      })
+      .then((res) => res.data),
 };

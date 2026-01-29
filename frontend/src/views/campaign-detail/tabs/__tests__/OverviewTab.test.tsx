@@ -6,6 +6,7 @@ import {
   createMockFullProduct,
   createMockOrder,
   createMockAnalytics,
+  createMockCampaignFull,
 } from "@/__tests__/mock-data";
 
 // Mock CampaignChat component
@@ -24,6 +25,13 @@ vi.mock("@/components/IconButton", () => ({
     <button onClick={onClick} title={title} {...props}>
       {children}
     </button>
+  ),
+}));
+
+// Mock CampaignLocationSection component
+vi.mock("../../CampaignLocationSection", () => ({
+  CampaignLocationSection: () => (
+    <div data-testid="campaign-location-section">Location Section</div>
   ),
 }));
 
@@ -80,15 +88,21 @@ describe("OverviewTab", () => {
     ],
   });
 
+  const mockCampaign = createMockCampaignFull({
+    id: "campaign-1",
+    slug: "campaign-1",
+    name: "Test Campaign",
+    status: "ACTIVE",
+  });
+
   const mockCallbacks = {
-    onAddProduct: vi.fn(),
-    onAddOrder: vi.fn(),
     onViewOrder: vi.fn(),
     onTogglePayment: vi.fn(),
     onAddToOrder: vi.fn(),
   };
 
   const defaultProps = {
+    campaign: mockCampaign,
     campaignId: "campaign-1",
     analytics: mockAnalytics,
     products: mockProducts,
@@ -109,47 +123,21 @@ describe("OverviewTab", () => {
       expect(screen.getByText("Visão Geral")).toBeInTheDocument();
     });
 
-    it("should render action buttons when campaign is active", () => {
-      render(<OverviewTab {...defaultProps} isActive={true} />);
+    it("should render campaign location section when pickupAddress is set", () => {
+      const campaignWithPickup = createMockCampaignFull({
+        id: "campaign-1",
+        slug: "campaign-1",
+        pickupAddress: "Rua Test",
+      });
+      render(<OverviewTab {...defaultProps} campaign={campaignWithPickup} />);
 
-      expect(
-        screen.getByRole("button", { name: /adicionar pedido/i })
-      ).toBeInTheDocument();
+      expect(screen.getByTestId("campaign-location-section")).toBeInTheDocument();
     });
 
-    it("should render add product button for campaign editors", () => {
-      render(
-        <OverviewTab {...defaultProps} isActive={true} canEditCampaign={true} />
-      );
+    it("should not render location section when no pickupAddress", () => {
+      render(<OverviewTab {...defaultProps} />);
 
-      expect(
-        screen.getByRole("button", { name: /adicionar produto/i })
-      ).toBeInTheDocument();
-    });
-
-    it("should not render add product button for non-editors", () => {
-      render(
-        <OverviewTab
-          {...defaultProps}
-          isActive={true}
-          canEditCampaign={false}
-        />
-      );
-
-      expect(
-        screen.queryByRole("button", { name: /adicionar produto/i })
-      ).not.toBeInTheDocument();
-    });
-
-    it("should not render action buttons when campaign is not active", () => {
-      render(<OverviewTab {...defaultProps} isActive={false} />);
-
-      expect(
-        screen.queryByRole("button", { name: /adicionar produto/i })
-      ).not.toBeInTheDocument();
-      expect(
-        screen.queryByRole("button", { name: /adicionar pedido/i })
-      ).not.toBeInTheDocument();
+      expect(screen.queryByTestId("campaign-location-section")).not.toBeInTheDocument();
     });
   });
 
@@ -412,30 +400,14 @@ describe("OverviewTab", () => {
   });
 
   describe("Action Callbacks", () => {
-    it("should call onAddProduct when add product button is clicked", async () => {
-      const user = userEvent.setup();
-      render(
-        <OverviewTab {...defaultProps} isActive={true} canEditCampaign={true} />
-      );
-
-      const addProductButton = screen.getByRole("button", {
-        name: /adicionar produto/i,
-      });
-      await user.click(addProductButton);
-
-      expect(mockCallbacks.onAddProduct).toHaveBeenCalledTimes(1);
-    });
-
-    it("should call onAddOrder when add order button is clicked", async () => {
+    it("should call onAddToOrder when product order button is clicked", async () => {
       const user = userEvent.setup();
       render(<OverviewTab {...defaultProps} isActive={true} />);
 
-      const addOrderButton = screen.getByRole("button", {
-        name: /adicionar pedido/i,
-      });
-      await user.click(addOrderButton);
+      const orderButtons = screen.getAllByRole("button", { name: /pedir/i });
+      await user.click(orderButtons[0]);
 
-      expect(mockCallbacks.onAddOrder).toHaveBeenCalledTimes(1);
+      expect(mockCallbacks.onAddToOrder).toHaveBeenCalledTimes(1);
     });
   });
 

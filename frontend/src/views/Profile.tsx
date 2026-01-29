@@ -12,6 +12,7 @@ import { PasswordSection } from './profile/PasswordSection';
 import { EmailSection } from './profile/EmailSection';
 import { EmailPreferencesSection } from './profile/EmailPreferencesSection';
 import { DeleteAccountSection } from './profile/DeleteAccountSection';
+import { ProfileAddressSection } from '@/components/profile/ProfileAddressSection';
 import type { StoredUser } from '@/api/types';
 
 export function Profile() {
@@ -58,6 +59,8 @@ export function Profile() {
       <PasswordSection hasPassword={hasPassword} />
 
       <EmailPreferencesSection />
+
+      <ProfileAddressSection />
 
       <DeleteAccountSection hasPassword={hasPassword} />
     </div>

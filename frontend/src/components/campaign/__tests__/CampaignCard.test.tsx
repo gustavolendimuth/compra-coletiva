@@ -24,7 +24,7 @@ describe('CampaignCard', () => {
       renderWithProviders(<CampaignCard campaign={mockCampaign} />);
 
       const link = screen.getByRole('link');
-      expect(link).toHaveAttribute('href', '/campaigns/campaign-1');
+      expect(link).toHaveAttribute('href', '/campanhas/campaign-1');
     });
 
     it('should render with proper article structure', () => {

@@ -4,6 +4,7 @@ import { useEffect } from 'react';
  * Custom hook to lock/unlock body scroll
  * Prevents background scrolling when modals/menus are open
  */
+
 export const useBodyScrollLock = (isLocked: boolean) => {
   useEffect(() => {
     if (isLocked) {

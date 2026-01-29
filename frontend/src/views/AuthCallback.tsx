@@ -37,6 +37,7 @@ export default function AuthCallback() {
       const userEmail = searchParams?.get('userEmail');
       const userRole = searchParams?.get('userRole');
       const phoneCompleted = searchParams?.get('phoneCompleted');
+      const addressCompleted = searchParams?.get('addressCompleted');
 
       if (!accessToken || !refreshToken || !userId || !userName || !userEmail || !userRole) {
         toast.error('Dados de autenticação incompletos');
@@ -51,14 +52,15 @@ export default function AuthCallback() {
         email: decodeURIComponent(userEmail),
         role: userRole as 'ADMIN' | 'CAMPAIGN_CREATOR' | 'CUSTOMER',
         phoneCompleted: phoneCompleted === 'true',
+        addressCompleted: addressCompleted === 'true',
       });
 
       // Reconnect socket with new token
       reconnectSocket();
 
-      // Check if user needs to complete phone registration
-      if (phoneCompleted === 'false') {
-        console.log('[AuthCallback] Usuário precisa completar telefone, redirecionando...');
+      // Check if user needs to complete phone or address registration
+      if (phoneCompleted === 'false' || addressCompleted === 'false') {
+        console.log('[AuthCallback] Usuário precisa completar perfil, redirecionando...');
         if (!hasShownToast.current) {
           toast.success(`Bem-vindo, ${decodeURIComponent(userName)}!`);
           hasShownToast.current = true;

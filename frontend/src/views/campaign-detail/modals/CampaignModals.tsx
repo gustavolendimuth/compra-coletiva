@@ -1,4 +1,5 @@
 import { Modal, Button, Input, Textarea, CurrencyInput } from "@/components/ui";
+import { AddressForm, type AddressData } from "@/components/ui/AddressForm";
 import DateTimeInput from "@/components/DateTimeInput";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { Campaign, PixKeyType } from "@/api";
@@ -326,6 +327,61 @@ export function PixModal({
               Remover PIX
             </Button>
           )}
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onClose}
+            className="whitespace-nowrap"
+          >
+            Cancelar
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+interface AddressModalProps {
+  isOpen: boolean;
+  addressData: AddressData;
+  addressErrors: Partial<Record<keyof AddressData, string>>;
+  isPending: boolean;
+  onClose: () => void;
+  onChange: (data: AddressData) => void;
+  onSubmit: (e: React.FormEvent) => void;
+}
+
+export function AddressModal({
+  isOpen,
+  addressData,
+  addressErrors,
+  isPending,
+  onClose,
+  onChange,
+  onSubmit,
+}: AddressModalProps) {
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Endereço de Retirada">
+      <form onSubmit={onSubmit} className="space-y-4">
+        <p className="text-sm text-gray-600">
+          Informe o local onde os compradores poderão retirar os produtos.
+        </p>
+
+        <AddressForm
+          value={addressData}
+          onChange={onChange}
+          errors={addressErrors}
+          disabled={isPending}
+        />
+
+        <div className="flex gap-3 pt-4">
+          <Button
+            type="submit"
+            disabled={isPending}
+            className="flex-1 whitespace-nowrap"
+          >
+            {isPending ? "Salvando..." : "Salvar Endereço"}
+          </Button>
           <Button
             type="button"
             variant="secondary"

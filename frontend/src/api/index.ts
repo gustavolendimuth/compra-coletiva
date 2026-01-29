@@ -25,6 +25,7 @@ export { emailPreferenceService } from './services/emailPreference.service';
 export { feedbackService } from './services/feedback.service';
 export { analyticsService } from './services/analytics.service';
 export { validationService } from './services/validation.service';
+export { geocodingService } from './services/geocoding.service';
 
 // Legacy exports for backward compatibility
 export { authService as authApi } from './services/auth.service';

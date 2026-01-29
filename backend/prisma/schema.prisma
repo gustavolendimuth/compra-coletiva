@@ -32,6 +32,17 @@ model User {
   pendingEmailToken   String?   @unique // Token de verificação
   pendingEmailExpires DateTime? // Expiração do token
 
+  // Endereço padrão do usuário (para cálculo de distância)
+  addressCompleted     Boolean  @default(false) // Flag para modal obrigatório (padrão phoneCompleted)
+  defaultZipCode       String?   // CEP padrão do usuário
+  defaultAddress       String?   // Rua (ex: "Av. Paulista")
+  defaultAddressNumber String?   // Número (ex: "1000")
+  defaultNeighborhood  String?   // Bairro
+  defaultCity          String?   // Cidade
+  defaultState         String?   // Estado (sigla)
+  defaultLatitude      Float?
+  defaultLongitude     Float?
+
   // Soft Delete
   deletedAt     DateTime? // Timestamp de exclusão (soft delete)
   deletedReason String?   // Motivo opcional da exclusão
@@ -150,6 +161,17 @@ model Campaign {
   pixName             String?         // Nome do titular da conta PIX
   pixVisibleAtStatus  CampaignStatus  @default(ACTIVE) // Status em que o PIX deve ser exibido
 
+  // Endereço de Retirada
+  pickupZipCode       String?   // CEP (formato: XXXXX-XXX)
+  pickupAddress       String?   // Rua (ex: "Av. Paulista")
+  pickupAddressNumber String?   // Número (ex: "1000")
+  pickupComplement    String?   // Complemento (ex: "Apto 42")
+  pickupNeighborhood  String?   // Bairro
+  pickupCity          String?   // Cidade
+  pickupState         String?   // Estado (sigla: SP, RJ)
+  pickupLatitude      Float?    // Coordenada para busca (geocodificada com endereço completo)
+  pickupLongitude     Float?    // Coordenada para busca
+
   // Auth - NULLABLE durante migração
   creatorId   String?
   creator     User?     @relation("CampaignCreator", fields: [creatorId], references: [id])
@@ -162,6 +184,8 @@ model Campaign {
   @@index([creatorId])
   @@index([status])
   @@index([slug])
+  @@index([pickupLatitude, pickupLongitude])
+  @@index([pickupCity])
 }
 
 model Product {

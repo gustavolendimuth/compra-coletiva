@@ -1,4 +1,6 @@
+import { MapPin } from 'lucide-react';
 import { CampaignWithProducts } from '@/api';
+import { DistanceBadge } from '@/components/ui/DistanceBadge';
 
 interface CampaignCardHeaderProps {
   campaign: CampaignWithProducts;
@@ -47,6 +49,29 @@ export function CampaignCardHeader({ campaign }: CampaignCardHeaderProps) {
         <p className="hidden md:block text-sm text-gray-500">
           por <span className="font-medium text-gray-700">{campaign.creator.name}</span>
         </p>
+      )}
+
+      {/* Localização - distância e/ou cidade */}
+      {(campaign.distance != null || campaign.pickupCity) && (
+        <div className="hidden md:flex items-center gap-1.5 text-xs text-gray-500">
+          {campaign.distance != null ? (
+            <>
+              <DistanceBadge distanceKm={campaign.distance} />
+              {campaign.pickupCity && (
+                <span>
+                  • {campaign.pickupCity}{campaign.pickupState ? ` - ${campaign.pickupState}` : ''}
+                </span>
+              )}
+            </>
+          ) : (
+            <>
+              <MapPin className="w-3 h-3 text-gray-400" />
+              <span>
+                {campaign.pickupCity}{campaign.pickupState ? ` - ${campaign.pickupState}` : ''}
+              </span>
+            </>
+          )}
+        </div>
       )}
     </div>
   );

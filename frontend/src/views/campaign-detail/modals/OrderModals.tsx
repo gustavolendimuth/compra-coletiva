@@ -5,9 +5,10 @@ import { OrderChat } from "@/components/campaign";
 import { formatCurrency } from "@/lib/utils";
 import { getImageUrl } from "@/lib/imageUrl";
 import { Order, Product } from "@/api";
+import type { OrderFormItem } from "@/api/types";
 
 interface OrderForm {
-  items: Array<{ productId: string; quantity: number | "" }>;
+  items: OrderFormItem[];
 }
 
 function formatRelativeTime(date: Date): string {

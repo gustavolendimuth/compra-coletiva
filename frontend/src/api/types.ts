@@ -13,8 +13,17 @@ export interface StoredUser {
   name: string;
   phone?: string;
   phoneCompleted?: boolean;
+  addressCompleted?: boolean;
   role: "ADMIN" | "CAMPAIGN_CREATOR" | "CUSTOMER";
   googleId?: string;
+  defaultZipCode?: string | null;
+  defaultAddress?: string | null;
+  defaultAddressNumber?: string | null;
+  defaultNeighborhood?: string | null;
+  defaultCity?: string | null;
+  defaultState?: string | null;
+  defaultLatitude?: number | null;
+  defaultLongitude?: number | null;
 }
 
 export interface RegisterRequest {
@@ -66,6 +75,15 @@ export interface Campaign {
   pixType?: PixKeyType;
   pixName?: string;
   pixVisibleAtStatus: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED";
+  pickupZipCode?: string;
+  pickupAddress?: string;
+  pickupAddressNumber?: string;
+  pickupComplement?: string;
+  pickupNeighborhood?: string;
+  pickupCity?: string;
+  pickupState?: string;
+  pickupLatitude?: number | null;
+  pickupLongitude?: number | null;
   createdAt: string;
   updatedAt: string;
   _count?: {
@@ -86,6 +104,7 @@ export interface CampaignWithProducts extends Campaign {
     name: string;
   };
   products?: ProductPreview[];
+  distance?: number;
 }
 
 export interface CampaignListParams {
@@ -115,6 +134,13 @@ export interface CreateCampaignDto {
   pixType?: PixKeyType;
   pixName?: string;
   pixVisibleAtStatus?: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED";
+  pickupZipCode?: string;
+  pickupAddress?: string;
+  pickupAddressNumber?: string;
+  pickupComplement?: string;
+  pickupNeighborhood?: string;
+  pickupCity?: string;
+  pickupState?: string;
 }
 
 export interface UpdateCampaignDto {
@@ -127,6 +153,13 @@ export interface UpdateCampaignDto {
   pixType?: PixKeyType | null;
   pixName?: string | null;
   pixVisibleAtStatus?: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED";
+  pickupZipCode?: string;
+  pickupAddress?: string;
+  pickupAddressNumber?: string;
+  pickupComplement?: string;
+  pickupNeighborhood?: string;
+  pickupCity?: string;
+  pickupState?: string;
 }
 
 export interface CloneCampaignDto {
@@ -200,6 +233,16 @@ export interface Order {
 export interface CreateOrderDto {
   campaignId: string;
   items: Array<{ productId: string; quantity: number }>;
+}
+
+export interface OrderFormItem {
+  productId: string;
+  quantity: number | "";
+}
+
+export interface OrderForm {
+  campaignId: string;
+  items: OrderFormItem[];
 }
 
 export interface UpdateOrderDto {
@@ -790,4 +833,84 @@ export interface AuditStats {
     } | null;
     count: number;
   }>;
+}
+
+// ============================================================================
+// Geocoding Types
+// ============================================================================
+
+export interface GeocodingResult {
+  zipCode: string;
+  street: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  latitude: number;
+  longitude: number;
+}
+
+// ============================================================================
+// Pickup Location Types
+// ============================================================================
+
+export interface PickupLocation {
+  pickupZipCode: string;
+  pickupAddress: string;
+  pickupAddressNumber: string;
+  pickupComplement?: string;
+  pickupNeighborhood: string;
+  pickupCity: string;
+  pickupState: string;
+  pickupLatitude: number | null;
+  pickupLongitude: number | null;
+}
+
+// ============================================================================
+// User Address Types
+// ============================================================================
+
+export interface UserAddress {
+  defaultZipCode: string | null;
+  defaultAddress: string | null;
+  defaultAddressNumber: string | null;
+  defaultNeighborhood: string | null;
+  defaultCity: string | null;
+  defaultState: string | null;
+  defaultLatitude: number | null;
+  defaultLongitude: number | null;
+  addressCompleted: boolean;
+}
+
+export interface CompleteAddressRequest {
+  zipCode: string;
+  address: string;
+  addressNumber: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+}
+
+// ============================================================================
+// Distance Types
+// ============================================================================
+
+export interface DistanceResult {
+  campaignId: string;
+  from: {
+    zipCode: string;
+    city: string;
+    state: string;
+    latitude: number;
+    longitude: number;
+  };
+  to: {
+    zipCode: string;
+    address: string;
+    number: string;
+    city: string;
+    state: string;
+    latitude: number;
+    longitude: number;
+  };
+  distanceKm: number;
 }

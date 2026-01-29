@@ -41,6 +41,7 @@ export const createMockCampaign = (
     deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     shippingCost: 50.0,
     creatorId: 'user-1',
+    pixVisibleAtStatus: 'CLOSED',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     _count: {
@@ -254,22 +255,29 @@ export const createMockAnalytics = (
 // Full Campaign Factory (without products array, just Campaign interface)
 export const createMockCampaignFull = (
   overrides: Partial<Campaign> = {}
-): Campaign => ({
-  id: `campaign-${Math.random().toString(36).substring(7)}`,
-  name: 'Test Campaign',
-  description: 'This is a test campaign description',
-  status: 'ACTIVE',
-  deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-  shippingCost: 50.0,
-  creatorId: 'user-1',
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  _count: {
-    products: 5,
-    orders: 10,
-  },
-  ...overrides,
-});
+): Campaign => {
+  const id = overrides.id || `campaign-${Math.random().toString(36).substring(7)}`;
+  const slug = overrides.slug || id;
+
+  return {
+    id,
+    slug,
+    name: 'Test Campaign',
+    description: 'This is a test campaign description',
+    status: 'ACTIVE',
+    deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    shippingCost: 50.0,
+    creatorId: 'user-1',
+    pixVisibleAtStatus: 'CLOSED',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    _count: {
+      products: 5,
+      orders: 10,
+    },
+    ...overrides,
+  };
+};
 
 // Notification Factory
 export const createMockNotification = (
