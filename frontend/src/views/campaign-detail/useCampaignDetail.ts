@@ -508,6 +508,172 @@ export function useCampaignDetail() {
     }
   };
 
+  const handleTogglePayment = (order: Order) => {
+    // Se está marcando como pago, abre modal para upload
+    if (!order.isPaid) {
+      setOrderForPayment(order);
+      setIsPaymentProofModalOpen(true);
+    } else {
+      // Se está desmarcando, apenas atualiza (sem arquivo)
+      updatePaymentMutation.mutate({
+        orderId: order.id,
+        isPaid: false,
+      });
+    }
+  };
+
+  const handlePaymentProofSubmit = (file: File) => {
+    if (!orderForPayment) return;
+    updatePaymentMutation.mutate({
+      orderId: orderForPayment.id,
+      isPaid: true,
+      file,
+    });
+  };
+
+  const handleAddToOrder = async (product: Product) => {
+    requireAuth(async () => {
+      const existingOrder = orders?.find((o) => o.userId === user?.id);
+
+      if (existingOrder) {
+        // Se o usuário já tem um pedido, adiciona o produto e salva automaticamente
+        const items = existingOrder.items.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+        }));
+
+        const existingItemIndex = items.findIndex(
+          (item) => item.productId === product.id
+        );
+        if (existingItemIndex >= 0) {
+          items[existingItemIndex].quantity++;
+          toast.success(`Quantidade de "${product.name}" aumentada!`);
+        } else {
+          items.push({ productId: product.id, quantity: 1 });
+          toast.success(`"${product.name}" adicionado ao pedido!`);
+        }
+
+        // Atualiza o formulário de edição ANTES da mutação
+        setEditOrderForm({
+          campaignId: campaignId || "",
+          items: items,
+        });
+        setEditingOrder(existingOrder);
+
+        // Define a flag para indicar que veio do botão "Pedir"
+        // Isso evita que o modal seja fechado automaticamente no onSuccess
+        isAddingFromButtonRef.current = true;
+
+        // Abre o modal imediatamente
+        setIsEditOrderModalOpen(true);
+
+        // Faz a mutação em background
+        updateOrderWithItemsMutation.mutate({
+          orderId: existingOrder.id,
+          data: { items },
+        });
+      } else {
+        // Se o usuário NÃO tem pedido, cria automaticamente com o produto
+        if (!user?.name) {
+          toast.error("Erro: Nome de usuário não encontrado");
+          return;
+        }
+
+        toast.success(`Pedido criado com "${product.name}"!`);
+
+        // Prepara os dados para criar o pedido (API não aceita customerName)
+        const createOrderData = {
+          campaignId: campaignId || "",
+          items: [{ productId: product.id, quantity: 1 }],
+        };
+
+        // Define a flag para indicar que veio do botão "Pedir"
+        isAddingFromButtonRef.current = true;
+
+        // Cria o pedido
+        createOrderMutation.mutate(createOrderData, {
+          onSuccess: async () => {
+            // Aguarda as queries serem atualizadas
+            await queryClient.invalidateQueries({
+              queryKey: ["orders", campaignId],
+            });
+
+            // Aguarda um pouco para garantir que a query foi atualizada
+            setTimeout(() => {
+              // Busca o pedido recém-criado
+              queryClient
+                .refetchQueries({ queryKey: ["orders", campaignId] })
+                .then(() => {
+                  const newOrder = orders?.find((o) => o.userId === user?.id);
+                  if (newOrder) {
+                    isAddingFromButtonRef.current = true;
+                    openEditOrderModal(newOrder);
+                  }
+                });
+            }, 300);
+          },
+        });
+      }
+    });
+  };
+
+  const handleAddOrder = () => {
+    requireAuth(async () => {
+      // Verifica se usuário já tem pedido
+      const existingOrder = orders?.find((o) => o.userId === user?.id);
+
+      if (existingOrder) {
+        // Se já tem pedido, abre modal de edição
+        setEditingOrder(existingOrder);
+        setEditOrderForm({
+          campaignId: campaignId || "",
+          items: existingOrder.items.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+          })),
+        });
+        setIsEditOrderModalOpen(true);
+      } else {
+        // Se não tem pedido, cria pedido vazio primeiro
+        if (!user?.name) {
+          toast.error("Erro: Nome de usuário não encontrado");
+          return;
+        }
+
+        // Prepara os dados para criar o pedido (API não aceita customerName)
+        const createOrderData = {
+          campaignId: campaignId || "",
+          items: [], // Pedido vazio - autosave vai adicionar items
+        };
+
+        // Cria o pedido vazio
+        createOrderMutation.mutate(createOrderData, {
+          onSuccess: async (newOrder) => {
+            // Aguarda as queries serem atualizadas
+            await queryClient.invalidateQueries({
+              queryKey: ["orders", campaignId],
+            });
+
+            // Abre modal de edição com o pedido vazio
+            setEditingOrder(newOrder);
+            setEditOrderForm({
+              campaignId: campaignId || "",
+              items: [],
+            });
+            setIsEditOrderModalOpen(true);
+          },
+        });
+      }
+    });
+  };
+
+  const handleEditOrderFromView = () => {
+    if (viewingOrder) {
+      setIsViewOrderModalOpen(false);
+      openEditOrderModal(viewingOrder);
+    }
+  };
+
   const handleReopenCampaign = () => {
     const hasOrders = orders && orders.length > 0;
     const newStatus = hasOrders ? "CLOSED" : "ACTIVE";
