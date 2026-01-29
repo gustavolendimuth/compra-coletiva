@@ -840,9 +840,12 @@ export function useCampaignDetail() {
               (o) => o.userId === user?.id
             );
             if (newOrder) {
-              isAddingFromButtonRef.current = true;
               openEditOrderModal(newOrder);
             }
+
+            // Reseta a flag após abrir o modal para não bloquear o autosave.
+            // O isFirstEditRenderRef já cuida de ignorar o primeiro render.
+            isAddingFromButtonRef.current = false;
           },
         });
       }
