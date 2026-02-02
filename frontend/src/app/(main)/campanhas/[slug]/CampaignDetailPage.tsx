@@ -53,6 +53,7 @@ export function CampaignDetailPage({ slug }: CampaignDetailPageProps) {
           onImageUpload={() => hook.setIsImageUploadModalOpen(true)}
           onAddProduct={() => hook.setIsProductModalOpen(true)}
           onAddOrder={hook.handleAddOrder}
+          onEditAddress={hook.handleOpenAddressModal}
         />
       </div>
 
@@ -77,6 +78,7 @@ export function CampaignDetailPage({ slug }: CampaignDetailPageProps) {
           }}
           onTogglePayment={hook.handleTogglePayment}
           onAddToOrder={hook.handleAddToOrder}
+          onEditAddress={hook.handleOpenAddressModal}
         />
       )}
 

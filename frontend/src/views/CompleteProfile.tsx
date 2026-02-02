@@ -15,7 +15,7 @@ import toast from 'react-hot-toast';
  * Step 2: Address (if addressCompleted === false)
  */
 export function CompleteProfile() {
-  const { user, setUser } = useAuth();
+  const { user, setUser, isLoading } = useAuth();
   const isMountedRef = useRef(true);
 
   // Determine current step
@@ -43,6 +43,7 @@ export function CompleteProfile() {
   const [addressErrors, setAddressErrors] = useState<Partial<Record<keyof AddressData, string>>>({});
 
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
     };
@@ -134,7 +135,16 @@ export function CompleteProfile() {
     window.location.href = returnTo;
   };
 
-  if (!user) return null;
+  if (isLoading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   // If neither phone nor address is needed, redirect
   if (!needsPhone && !needsAddress) {

@@ -79,6 +79,8 @@ services:
       CHOKIDAR_USEPOLLING: "true"
       # Desabilita telemetria do Next.js
       NEXT_TELEMETRY_DISABLED: "1"
+      # URL interna do backend para chamadas server-side (SSR/RSC)
+      INTERNAL_API_URL: "http://backend:3000"
     volumes:
       - ./frontend:/app
       - /app/node_modules

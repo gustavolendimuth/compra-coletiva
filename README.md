@@ -84,10 +84,9 @@ Sistema web profissional para gerenciamento de compras coletivas, desenvolvido c
 
 ### Frontend
 - **React 18** + **TypeScript**: Biblioteca UI com tipos
-- **Vite**: Build tool ultrarrápido
+- **Next.js 14**: Framework React com App Router e SSR
 - **TailwindCSS**: Framework CSS utility-first
 - **React Query**: Gerenciamento de estado do servidor
-- **React Router**: Roteamento client-side
 - **Socket.IO Client**: Real-time updates
 - **DOMPurify**: Sanitização XSS
 - **Axios**: HTTP client

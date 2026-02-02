@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuth } from '../contexts/AuthContext';
 import { authStorage } from '../lib/authStorage';
 import { reconnectSocket } from '../lib/socket';
 import toast from 'react-hot-toast';
@@ -9,6 +10,7 @@ import toast from 'react-hot-toast';
 export default function AuthCallback() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { setUser } = useAuth();
   const hasShownToast = useRef(false);
   const hasProcessedCallback = useRef(false);
 
@@ -46,14 +48,18 @@ export default function AuthCallback() {
       }
 
       // Save auth data to localStorage
-      authStorage.setAuth(accessToken, refreshToken, {
+      const userData = {
         id: userId,
         name: decodeURIComponent(userName),
         email: decodeURIComponent(userEmail),
         role: userRole as 'ADMIN' | 'CAMPAIGN_CREATOR' | 'CUSTOMER',
         phoneCompleted: phoneCompleted === 'true',
         addressCompleted: addressCompleted === 'true',
-      });
+      };
+      authStorage.setAuth(accessToken, refreshToken, userData);
+
+      // Update React auth state (AuthContext) so downstream pages have user data
+      setUser(userData);
 
       // Reconnect socket with new token
       reconnectSocket();
@@ -86,7 +92,7 @@ export default function AuthCallback() {
     };
 
     handleCallback();
-  }, [searchParams, router]);
+  }, [searchParams, router, setUser]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">

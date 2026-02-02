@@ -3,6 +3,8 @@
  *
  * All monetary values are represented in BRL (Brazilian Real) with 2 decimal places.
  * This utility ensures consistent rounding and prevents floating-point precision errors.
+ *
+ * @module Money - Testando hook de Stop
  */
 export class Money {
   /**

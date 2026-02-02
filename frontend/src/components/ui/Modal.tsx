@@ -90,6 +90,7 @@ export const Modal = ({
           role="dialog"
           aria-modal="true"
           aria-labelledby="modal-title"
+          onClick={(e) => e.stopPropagation()}
         >
           {/* Header - Sticky on mobile for better UX */}
           <div className="sticky top-0 bg-white border-b border-gray-200 z-10">

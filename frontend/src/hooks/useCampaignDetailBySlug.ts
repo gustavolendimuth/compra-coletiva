@@ -12,6 +12,7 @@ import {
 } from '@/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { removeMask, applyPixMask } from '@/lib/pixMasks';
+import type { AddressData } from '@/components/ui/AddressForm';
 
 interface ProductForm {
   campaignId: string;
@@ -54,6 +55,19 @@ export function useCampaignDetailBySlug(slug: string) {
   const [isImageUploadModalOpen, setIsImageUploadModalOpen] = useState(false);
   const [isPixModalOpen, setIsPixModalOpen] = useState(false);
   const [isPaymentProofModalOpen, setIsPaymentProofModalOpen] = useState(false);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+
+  // Address form state
+  const [addressData, setAddressData] = useState<AddressData>({
+    zipCode: '',
+    address: '',
+    addressNumber: '',
+    complement: '',
+    neighborhood: '',
+    city: '',
+    state: '',
+  });
+  const [addressErrors, setAddressErrors] = useState<Partial<Record<keyof AddressData, string>>>({});
 
   // Editing states
   const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
@@ -605,6 +619,44 @@ export function useCampaignDetailBySlug(slug: string) {
     setIsCloneModalOpen(true);
   };
 
+  const handleOpenAddressModal = () => {
+    if (campaign) {
+      setAddressData({
+        zipCode: campaign.pickupZipCode || '',
+        address: campaign.pickupAddress || '',
+        addressNumber: campaign.pickupAddressNumber || '',
+        complement: campaign.pickupComplement || '',
+        neighborhood: campaign.pickupNeighborhood || '',
+        city: campaign.pickupCity || '',
+        state: campaign.pickupState || '',
+      });
+      setAddressErrors({});
+    }
+    setIsAddressModalOpen(true);
+  };
+
+  const handleUpdateAddress = (e: React.FormEvent) => {
+    e.preventDefault();
+    const errors: Partial<Record<keyof AddressData, string>> = {};
+    if (!addressData.zipCode) errors.zipCode = 'CEP obrigatório';
+    if (!addressData.address) errors.address = 'Endereço obrigatório';
+    if (!addressData.addressNumber) errors.addressNumber = 'Número obrigatório';
+    if (Object.keys(errors).length > 0) {
+      setAddressErrors(errors);
+      return;
+    }
+    updateCampaignMutation.mutate({
+      pickupZipCode: addressData.zipCode.replace(/\D/g, ''),
+      pickupAddress: addressData.address,
+      pickupAddressNumber: addressData.addressNumber,
+      pickupComplement: addressData.complement || undefined,
+      pickupNeighborhood: addressData.neighborhood,
+      pickupCity: addressData.city,
+      pickupState: addressData.state,
+    });
+    setIsAddressModalOpen(false);
+  };
+
   // Autosave effect for edit product
   useEffect(() => {
     if (!isEditProductModalOpen || !editingProduct) return;
@@ -760,6 +812,18 @@ export function useCampaignDetailBySlug(slug: string) {
     handleOpenEditDeadline,
     handleOpenPixModal,
     handleOpenCloneModal,
+    handleOpenAddressModal,
+    handleUpdateAddress,
+
+    // Address modal
+    isAddressModalOpen,
+    setIsAddressModalOpen,
+    addressData,
+    setAddressData,
+    addressErrors,
+
+    // Address mutation (reuses campaign mutation)
+    updateAddressMutation: updateCampaignMutation,
 
     // Mutations loading states
     isCreatingProduct: createProductMutation.isPending,

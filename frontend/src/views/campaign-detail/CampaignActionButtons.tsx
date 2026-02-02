@@ -7,6 +7,7 @@ import {
   Send,
   Package,
   ShoppingBag,
+  MapPin,
 } from "lucide-react";
 import IconButton from "@/components/IconButton";
 import { Campaign, campaignApi } from "@/api";
@@ -23,6 +24,7 @@ interface CampaignActionButtonsProps {
   onCloneCampaign: () => void;
   onAddProduct?: () => void;
   onAddOrder?: () => void;
+  onEditAddress?: () => void;
 }
 
 export function CampaignActionButtons({
@@ -36,6 +38,7 @@ export function CampaignActionButtons({
   onCloneCampaign,
   onAddProduct,
   onAddOrder,
+  onEditAddress,
 }: CampaignActionButtonsProps) {
   const isActive = campaign.status === "ACTIVE";
   const isClosed = campaign.status === "CLOSED";
@@ -95,6 +98,19 @@ export function CampaignActionButtons({
           >
             <span className="hidden sm:inline">Configurar PIX</span>
             <span className="sm:hidden">PIX</span>
+          </IconButton>
+        )}
+
+        {canEditCampaign && onEditAddress && (
+          <IconButton
+            size="sm"
+            variant="secondary"
+            icon={<MapPin className="w-4 h-4" />}
+            onClick={onEditAddress}
+            className="text-xs sm:text-sm whitespace-nowrap"
+          >
+            <span className="hidden sm:inline">Endereço de Retirada</span>
+            <span className="sm:hidden">Endereço</span>
           </IconButton>
         )}
 

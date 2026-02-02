@@ -7,20 +7,9 @@
       "Bash(echo $env:LOCALAPPDATA)",
       "Bash(powershell -Command:*)",
       "Bash(pwsh:*)",
-      "Bash(npm run build:*)"
-    ]
-  },
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "prompt",
-            "prompt": "Analise o transcript da sessão para verificar se o Claude fez alterações de código (usou Edit ou Write em arquivos .ts, .tsx, .js, .jsx, .json, .css, .prisma). Se SIM, verifique se AMBOS os agentes obrigatórios foram executados: 1) test-guardian (Task tool com subagent_type='test-guardian') - deve ter rodado testes e todos passaram; 2) documentation-updater (Task tool com subagent_type='documentation-updater') - deve ter atualizado a documentação. Se código foi alterado mas algum dos agentes NÃO foi executado ou os testes falharam, retorne {\"ok\": false, \"reason\": \"OBRIGATÓRIO: Execute o agente [nome do agente faltante] antes de finalizar. Conforme CLAUDE.md, após qualquer alteração de código você DEVE rodar test-guardian e depois documentation-updater.\"}. Se nenhum código foi alterado OU ambos agentes foram executados com sucesso, retorne {\"ok\": true}.",
-            "timeout": 60
-          }
-        ]
-      }
+      "Bash(npm run build:*)",
+      "Bash(echo $env:APPDATA)",
+      "Bash(npm test:*)"
     ]
   }
 }

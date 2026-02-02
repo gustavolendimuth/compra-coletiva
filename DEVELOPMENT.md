@@ -11,9 +11,9 @@ O projeto está configurado com hot reload completo para desenvolvimento:
 - **Volume mapping**: Código local sincronizado com container
 - Qualquer mudança em `backend/src/**/*.ts` recarrega automaticamente
 
-### Frontend (Vite HMR)
-- **Hot Module Replacement**: Ativado por padrão no Vite
-- **Polling**: Configurado via `usePolling: true` no vite.config.ts
+### Frontend (Next.js Fast Refresh)
+- **Fast Refresh**: Ativado por padrão no Next.js
+- **Polling**: Configurado via `WATCHPACK_POLLING=true` no docker-compose.yml
 - Mudanças em componentes React atualizam instantaneamente no browser
 
 ## Como Funciona
@@ -53,7 +53,7 @@ WATCHPACK_POLLING: "true"     # Alternativa para webpack-based tools
 3. O browser atualiza automaticamente (sem refresh completo)
 4. Observe no log:
    ```
-   compra-coletiva-frontend | [vite] hmr update /src/...
+   compra-coletiva-frontend | ○ Compiling /...
    ```
 
 ## Comandos Úteis
@@ -143,16 +143,12 @@ docker-compose up --build
 
 Se o hot reload estiver lento, pode ser devido ao polling:
 
-**Opção 1**: Reduzir intervalo de polling (frontend)
+**Opção 1**: Ajustar polling do Watchpack (frontend)
 
-Edite `frontend/vite.config.ts`:
-```ts
-server: {
-  watch: {
-    usePolling: true,
-    interval: 100  // Padrão é 100ms, pode aumentar para 300-500ms
-  }
-}
+Edite `docker-compose.yml` na seção do frontend:
+```yaml
+environment:
+  WATCHPACK_POLLING: "true"  # Necessário para Docker no Windows/Mac
 ```
 
 **Opção 2**: Usar host networking (apenas Linux)
@@ -196,9 +192,8 @@ compra-coletiva/
 │   │   │   ├── types.ts  # Tipos compartilhados (OrderForm, OrderFormItem)
 │   │   │   ├── client.ts
 │   │   │   └── services/ # Domain services
-│   │   ├── pages/
-│   │   ├── lib/
-│   │   └── main.tsx
+│   │   ├── app/          # Next.js App Router (layouts, pages)
+│   │   └── lib/
 │   └── package.json
 └── docker-compose.yml
 ```

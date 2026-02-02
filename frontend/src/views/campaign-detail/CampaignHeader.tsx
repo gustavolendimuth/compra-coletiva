@@ -31,6 +31,7 @@ interface CampaignHeaderProps {
   onImageUpload: () => void;
   onAddProduct?: () => void;
   onAddOrder?: () => void;
+  onEditAddress?: () => void;
 }
 
 export function CampaignHeader({
@@ -47,6 +48,7 @@ export function CampaignHeader({
   onImageUpload,
   onAddProduct,
   onAddOrder,
+  onEditAddress,
 }: CampaignHeaderProps) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
@@ -384,6 +386,7 @@ export function CampaignHeader({
           onCloneCampaign={onCloneCampaign}
           onAddProduct={onAddProduct}
           onAddOrder={onAddOrder}
+          onEditAddress={onEditAddress}
         />
       </div>
 

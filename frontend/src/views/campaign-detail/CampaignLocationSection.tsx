@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CepInput } from '@/components/ui/CepInput';
 import { DistanceBadge } from '@/components/ui/DistanceBadge';
 import { CampaignLocationMap } from './CampaignLocationMap';
@@ -19,9 +19,11 @@ interface CampaignLocationSectionProps {
     pickupLatitude?: number | null;
     pickupLongitude?: number | null;
   };
+  canEditCampaign?: boolean;
+  onEditAddress?: () => void;
 }
 
-export function CampaignLocationSection({ campaign }: CampaignLocationSectionProps) {
+export function CampaignLocationSection({ campaign, canEditCampaign, onEditAddress }: CampaignLocationSectionProps) {
   const { user } = useAuth();
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
@@ -33,14 +35,15 @@ export function CampaignLocationSection({ campaign }: CampaignLocationSectionPro
   const hasAddress = campaign.pickupAddress;
 
   // Auto-calculate from user's saved address
-  useState(() => {
+  useEffect(() => {
     if (user?.defaultLatitude && user?.defaultLongitude && hasLocation) {
       calculateDistanceFromCoords(
         user.defaultLatitude,
         user.defaultLongitude
       );
     }
-  });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function calculateDistance(zipCode: string) {
     if (!campaign.slug) return;
@@ -94,7 +97,30 @@ export function CampaignLocationSection({ campaign }: CampaignLocationSectionPro
     navigator.clipboard.writeText(full);
   };
 
-  if (!hasAddress) return null;
+  if (!hasAddress) {
+    if (!canEditCampaign || !onEditAddress) {
+      return null;
+    }
+    return (
+      <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4 md:p-6">
+        <div className="text-center py-4">
+          <svg className="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <p className="text-sm text-gray-600 mb-4">
+            Adicione um endereço de retirada para que os compradores saibam onde buscar os produtos.
+          </p>
+          <button
+            onClick={onEditAddress}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium min-h-[44px]"
+          >
+            Adicionar Endereço de Retirada
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4 md:p-6">
@@ -105,6 +131,14 @@ export function CampaignLocationSection({ campaign }: CampaignLocationSectionPro
         </svg>
         Local de Retirada
         {distanceKm !== null && <DistanceBadge distanceKm={distanceKm} />}
+        {canEditCampaign && onEditAddress && (
+          <button
+            onClick={onEditAddress}
+            className="ml-auto text-sm text-blue-600 hover:text-blue-700 font-medium min-h-[44px] px-2"
+          >
+            Editar
+          </button>
+        )}
       </h3>
 
       {/* Address */}

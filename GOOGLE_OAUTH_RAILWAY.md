@@ -127,7 +127,7 @@ Ou use um gerador online: https://www.random.org/strings/
 Railway Dashboard → Frontend Service → Variables:
 
 ```env
-VITE_API_URL=https://seu-backend.up.railway.app
+NEXT_PUBLIC_API_URL=https://seu-backend.up.railway.app
 ```
 
 ### 2.3 Redeploy
@@ -135,7 +135,7 @@ VITE_API_URL=https://seu-backend.up.railway.app
 1. Salve as variáveis
 2. Redeploy do **Backend** (importante!)
 3. Aguarde conclusão (~2-3 minutos)
-4. **Não precisa** redeploy do frontend (a menos que tenha alterado `VITE_API_URL`)
+4. **Não precisa** redeploy do frontend (a menos que tenha alterado `NEXT_PUBLIC_API_URL`)
 
 ## 🧪 Passo 3: Testar
 
@@ -234,7 +234,7 @@ Se ver `⚠️ WARNING: CORS_ORIGIN is not set!`:
 **Causa**: Frontend não está recebendo resposta do backend
 
 **Solução**:
-1. Verifique `VITE_API_URL` no frontend
+1. Verifique `NEXT_PUBLIC_API_URL` no frontend
 2. Abra DevTools → Console
 3. Procure por erros JavaScript
 4. Verifique se `https://seu-backend.up.railway.app` está acessível
@@ -277,7 +277,7 @@ Se ver `⚠️ WARNING: CORS_ORIGIN is not set!`:
 
 ### Checklist Railway Frontend
 
-- [ ] `VITE_API_URL` aponta para backend
+- [ ] `NEXT_PUBLIC_API_URL` aponta para backend
 - [ ] Frontend deployado com sucesso
 - [ ] Página carrega sem erros
 - [ ] Botão "Continuar com Google" aparece

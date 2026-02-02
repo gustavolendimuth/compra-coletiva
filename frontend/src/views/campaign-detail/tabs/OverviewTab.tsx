@@ -33,6 +33,7 @@ interface OverviewTabProps {
   onViewOrder: (order: Order) => void;
   onTogglePayment: (order: Order) => void;
   onAddToOrder: (product: Product) => void;
+  onEditAddress?: () => void;
 }
 
 export function OverviewTab({
@@ -46,6 +47,7 @@ export function OverviewTab({
   onViewOrder,
   onTogglePayment,
   onAddToOrder,
+  onEditAddress,
 }: OverviewTabProps) {
   const { user } = useAuth();
 
@@ -64,8 +66,12 @@ export function OverviewTab({
   return (
     <div className="space-y-6 pb-20 md:pb-0">
       {/* Localização de Retirada */}
-      {campaign.pickupAddress && (
-        <CampaignLocationSection campaign={campaign} />
+      {(campaign.pickupAddress || canEditCampaign) && (
+        <CampaignLocationSection
+          campaign={campaign}
+          canEditCampaign={canEditCampaign}
+          onEditAddress={onEditAddress}
+        />
       )}
 
       <div className="mb-6">

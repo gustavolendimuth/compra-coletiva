@@ -21,7 +21,7 @@ Comprehensive test suite for frontend components and hooks using Vitest + React 
 ## Test Infrastructure
 
 ### Configuration
-- **Test Runner**: Vitest (configured in `vite.config.ts`)
+- **Test Runner**: Vitest (configured in `vitest.config.ts`)
 - **Testing Library**: @testing-library/react v16.3.0
 - **User Events**: @testing-library/user-event v14.6.1
 - **DOM Assertions**: @testing-library/jest-dom v6.9.1

@@ -37,35 +37,6 @@ Monorepo for managing collective purchases with group management, product catalo
 
 ---
 
-## Automated Quality Assurance (CRITICAL)
-
-**MANDATORY**: After ANY code change:
-
-### 1. Test Guardian (ALWAYS RUN FIRST)
-```
-Task tool → subagent_type='test-guardian'
-```
-- Creates/updates tests
-- Runs full test suite
-- Fix code to pass tests
-- NO EXCEPTIONS
-
-### 2. Documentation Updater (RUN AFTER TESTS PASS)
-```
-Task tool → subagent_type='documentation-updater'
-```
-- Updates CLAUDE.md, DEVELOPMENT.md, README.md
-- NO EXCEPTIONS
-
-### 3. Execution Order
-```
-1. Complete coding task
-2. Run test-guardian (REQUIRED)
-3. Wait for tests to pass
-4. Run documentation-updater (REQUIRED)
-5. Report completion
-```
-
 **ABSOLUTE RULES:**
 - ❌ NEVER skip test-guardian
 - ❌ NEVER skip documentation-updater
@@ -126,7 +97,7 @@ npm run build --workspace=backend
 ### Monorepo
 - **Root**: npm workspaces (backend, frontend)
 - **Backend**: Express + Prisma + Socket.IO
-- **Frontend**: React + Vite + Socket.IO client
+- **Frontend**: React + Next.js + Socket.IO client
 
 ### Core Business Entities
 
@@ -205,7 +176,7 @@ npm run build --workspace=backend
 ### Frontend Stack
 - **State**: React Query for server state
 - **API**: Modular services in `src/api/` (see API Architecture)
-- **Routing**: React Router
+- **Routing**: Next.js App Router
 - **Styling**: TailwindCSS with design system
 - **Components**: ui/, features/, layout/, shared/
 - **Notifications**: react-hot-toast
@@ -562,7 +533,7 @@ REDIS_URL=redis://redis:6379
 
 ### Frontend (.env)
 ```
-VITE_API_URL=localhost:3000
+NEXT_PUBLIC_API_URL=localhost:3000
 ```
 
 ---

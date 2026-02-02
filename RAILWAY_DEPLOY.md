@@ -130,11 +130,11 @@ No Railway Dashboard → Frontend Service → Settings → Source:
 No Railway Dashboard → Frontend Service → Variables:
 
 ```env
-VITE_API_URL=https://seu-backend.up.railway.app
+NEXT_PUBLIC_API_URL=https://seu-backend.up.railway.app
 ```
 
 **Importante:**
-- `VITE_API_URL`: Substitua pela URL do seu backend no Railway
+- `NEXT_PUBLIC_API_URL`: Substitua pela URL do seu backend no Railway
 
 #### Deployment
 O frontend usa:
@@ -168,7 +168,7 @@ Após o primeiro deploy, você terá as URLs dos serviços:
 **Atualize as variáveis:**
 
 1. No **Backend**, atualize `CORS_ORIGIN` com a URL do frontend
-2. No **Frontend**, atualize `VITE_API_URL` com a URL do backend
+2. No **Frontend**, atualize `NEXT_PUBLIC_API_URL` com a URL do backend
 3. Faça redeploy de ambos os serviços
 
 ## Verificação
@@ -211,7 +211,7 @@ railway run --service backend node -e "const redis = require('ioredis'); const c
 
 ### Frontend: Erro ao chamar API
 
-- Verifique se `VITE_API_URL` aponta para a URL correta do backend
+- Verifique se `NEXT_PUBLIC_API_URL` aponta para a URL correta do backend
 - Verifique se `CORS_ORIGIN` no backend permite a origem do frontend
 - Abra o DevTools do navegador para ver erros de CORS
 
@@ -287,6 +287,6 @@ railway run --service backend npx prisma migrate deploy
 ## Notas Importantes
 
 1. **Migrations**: Apenas o backend executa migrations - o frontend nunca deve executar comandos Prisma
-2. **Variáveis de Ambiente**: Variáveis `VITE_*` são incorporadas no build do frontend - sempre faça redeploy após alterá-las
+2. **Variáveis de Ambiente**: Variáveis `NEXT_PUBLIC_*` são incorporadas no build do frontend - sempre faça redeploy após alterá-las
 3. **CORS**: Certifique-se de que o backend permite requisições da origem do frontend
 4. **Nginx**: O frontend usa nginx para servir a SPA com suporte a client-side routing

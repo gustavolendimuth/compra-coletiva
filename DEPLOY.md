@@ -1,6 +1,6 @@
 # Guia de Deploy - Compra Coletiva
 
-Deploy do frontend Next.js (migrado do Vite) no **Railway**.
+Deploy do frontend Next.js no **Railway**.
 
 ## 🚂 Railway (Recomendado)
 

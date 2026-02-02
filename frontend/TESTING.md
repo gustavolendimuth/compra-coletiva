@@ -11,7 +11,7 @@ Este guia documenta a infraestrutura de testes do projeto.
 
 ### Frontend (Vitest + React Testing Library)
 - **Framework**: Vitest 4.0.15 + React Testing Library
-- **Configuração**: `frontend/vite.config.ts`
+- **Configuração**: `frontend/vitest.config.ts`
 - **Setup**: `frontend/src/__tests__/setup.ts`
 
 ## Executando Testes
@@ -367,7 +367,7 @@ import {
 **Solução**: O arquivo `setup.ts` não deve ter extensão `.test.ts`
 
 ### Problema: Timeouts em testes de componentes
-**Solução**: Aumentar timeout em `vite.config.ts` ou usar `waitFor` do Testing Library
+**Solução**: Aumentar timeout em `vitest.config.ts` ou usar `waitFor` do Testing Library
 
 ### Problema: Mocks não funcionando
 **Solução**: Verificar ordem dos mocks (devem vir antes dos imports)

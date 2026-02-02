@@ -5,6 +5,7 @@ import {
   ShippingModal,
   DeadlineModal,
   PixModal,
+  AddressModal,
   CloseConfirmDialog,
   ReopenConfirmDialog,
   SentConfirmDialog,
@@ -70,7 +71,7 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
           hook.setIsPaymentProofModalOpen(false);
           hook.setOrderForPayment(null);
         }}
-        onSubmit={hook.orderModal.handlePaymentProofSubmit}
+        onSubmit={hook.handlePaymentProofSubmit}
       />
 
       <ShippingModal
@@ -147,6 +148,16 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
         onClose={() => hook.setIsImageUploadModalOpen(false)}
         campaignSlug={hook.campaign?.slug || ''}
         currentImageUrl={hook.campaign?.imageUrl}
+      />
+
+      <AddressModal
+        isOpen={hook.isAddressModalOpen}
+        addressData={hook.addressData}
+        addressErrors={hook.addressErrors}
+        isPending={hook.updateAddressMutation?.isPending || false}
+        onClose={() => hook.setIsAddressModalOpen(false)}
+        onChange={hook.setAddressData}
+        onSubmit={hook.handleUpdateAddress}
       />
     </>
   );

@@ -57,7 +57,7 @@ CORS_ORIGIN=https://frontend-production-abcd.up.railway.app/  ❌ (barra final)
 Railway → **Frontend Service** → **Variables**:
 
 ```env
-VITE_API_URL=https://backend-production-80f6.up.railway.app
+NEXT_PUBLIC_API_URL=https://backend-production-80f6.up.railway.app
 ```
 
 ⚠️ **IMPORTANTE**:
@@ -66,13 +66,13 @@ VITE_API_URL=https://backend-production-80f6.up.railway.app
 
 **Exemplo correto**:
 ```env
-VITE_API_URL=https://backend-production-80f6.up.railway.app
+NEXT_PUBLIC_API_URL=https://backend-production-80f6.up.railway.app
 ```
 
 **Errado**:
 ```env
-VITE_API_URL=https://backend-production-80f6.up.railway.app/api  ❌
-VITE_API_URL=https://backend-production-80f6.up.railway.app/  ❌
+NEXT_PUBLIC_API_URL=https://backend-production-80f6.up.railway.app/api  ❌
+NEXT_PUBLIC_API_URL=https://backend-production-80f6.up.railway.app/  ❌
 ```
 
 ---
@@ -82,7 +82,7 @@ VITE_API_URL=https://backend-production-80f6.up.railway.app/  ❌
 1. **Backend** → Clique em **Redeploy** → Aguarde (~2-3 min)
 2. **Frontend** → Clique em **Redeploy** → Aguarde (~2-3 min)
 
-> **Por que redeploy?** Variáveis `VITE_*` são incorporadas no build!
+> **Por que redeploy?** Variáveis `NEXT_PUBLIC_*` são incorporadas no build!
 
 ---
 
@@ -152,7 +152,7 @@ Railway → Backend → Logs
 - [ ] `/health` retorna 200
 
 ### Frontend ✓
-- [ ] `VITE_API_URL` = URL do backend
+- [ ] `NEXT_PUBLIC_API_URL` = URL do backend
 - [ ] Redeploy feito
 - [ ] Página carrega
 

@@ -47,6 +47,7 @@ export default function CampaignDetail() {
           onImageUpload={() => hook.setIsImageUploadModalOpen(true)}
           onAddProduct={() => hook.setIsProductModalOpen(true)}
           onAddOrder={hook.orderModal.handleAddOrder}
+          onEditAddress={hook.handleOpenAddressModal}
         />
       </div>
 
@@ -71,6 +72,7 @@ export default function CampaignDetail() {
           }}
           onTogglePayment={hook.orderModal.handleTogglePayment}
           onAddToOrder={hook.orderModal.handleAddToOrder}
+          onEditAddress={hook.handleOpenAddressModal}
         />
       )}
 

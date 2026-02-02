@@ -15,6 +15,7 @@ import { Order } from "@/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { removeMask, applyPixMask } from "@/lib/pixMasks";
 import { useOrderModal } from "@/hooks/useOrderModal";
+import type { AddressData } from "@/components/ui/AddressForm";
 
 interface ProductForm {
   campaignId: string;
@@ -50,6 +51,19 @@ export function useCampaignDetail() {
   const [isCloneModalOpen, setIsCloneModalOpen] = useState(false);
   const [isImageUploadModalOpen, setIsImageUploadModalOpen] = useState(false);
   const [isPixModalOpen, setIsPixModalOpen] = useState(false);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+
+  // Address form state
+  const [addressData, setAddressData] = useState<AddressData>({
+    zipCode: '',
+    address: '',
+    addressNumber: '',
+    complement: '',
+    neighborhood: '',
+    city: '',
+    state: '',
+  });
+  const [addressErrors, setAddressErrors] = useState<Partial<Record<keyof AddressData, string>>>({});
 
   // Editing states (non-order)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -138,7 +152,7 @@ export function useCampaignDetail() {
   const isActive = campaign?.status === "ACTIVE";
   const isClosed = campaign?.status === "CLOSED";
   const isSent = campaign?.status === "SENT";
-  const canEditCampaign = campaign?.creatorId === user?.id;
+  const canEditCampaign = campaign?.creatorId === user?.id || user?.role === 'ADMIN';
 
   // Alphabetical products for modal dropdown
   const alphabeticalProducts = useMemo(() => {
@@ -163,13 +177,6 @@ export function useCampaignDetail() {
     orderForPayment,
     setOrderForPayment,
     updatePaymentMutation,
-    // Order-related helpers
-    setEditOrderForm,
-    setEditingOrder,
-    setIsEditOrderModalOpen,
-    updateOrderWithItemsMutation,
-    createOrderMutation,
-    openEditOrderModal,
     setIsViewOrderModalOpen,
     setViewingOrder,
   } = orderModal;
@@ -194,8 +201,8 @@ export function useCampaignDetail() {
       const order = orders.find((o) => o.id === state.orderId);
 
       if (order) {
-        orderModal.setViewingOrder(order);
-        orderModal.setIsViewOrderModalOpen(true);
+        setViewingOrder(order);
+        setIsViewOrderModalOpen(true);
         sessionStorage.removeItem('campaignNavigationState');
       }
     }
@@ -327,6 +334,24 @@ export function useCampaignDetail() {
       setIsPixModalOpen(false);
     },
     onError: () => toast.error("Erro ao atualizar PIX"),
+  });
+
+  const updateAddressMutation = useMutation({
+    mutationFn: (data: {
+      pickupZipCode: string;
+      pickupAddress: string;
+      pickupAddressNumber: string;
+      pickupComplement?: string;
+      pickupNeighborhood: string;
+      pickupCity: string;
+      pickupState: string;
+    }) => campaignApi.update(slug!, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["campaign", slug] });
+      toast.success("Endereço de retirada atualizado!");
+      setIsAddressModalOpen(false);
+    },
+    onError: () => toast.error("Erro ao atualizar endereço de retirada"),
   });
 
   const updateStatusMutation = useMutation({
@@ -529,56 +554,6 @@ export function useCampaignDetail() {
     }
   };
 
-  const handleAddOrder = () => {
-    requireAuth(async () => {
-      // Verifica se usuário já tem pedido
-      const existingOrder = orders?.find((o) => o.userId === user?.id);
-
-      if (existingOrder) {
-        // Se já tem pedido, abre modal de edição
-        setEditingOrder(existingOrder);
-        setEditOrderForm({
-          campaignId: campaignId || "",
-          items: existingOrder.items.map((item) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-          })),
-        });
-        setIsEditOrderModalOpen(true);
-      } else {
-        // Se não tem pedido, cria pedido vazio primeiro
-        if (!user?.name) {
-          toast.error("Erro: Nome de usuário não encontrado");
-          return;
-        }
-
-        // Prepara os dados para criar o pedido (API não aceita customerName)
-        const createOrderData = {
-          campaignId: campaignId || "",
-          items: [], // Pedido vazio - autosave vai adicionar items
-        };
-
-        // Cria o pedido vazio
-        createOrderMutation.mutate(createOrderData, {
-          onSuccess: async (newOrder) => {
-            // Aguarda as queries serem atualizadas
-            await queryClient.invalidateQueries({
-              queryKey: ["orders", campaignId],
-            });
-
-            // Abre modal de edição com o pedido vazio
-            setEditingOrder(newOrder);
-            setEditOrderForm({
-              campaignId: campaignId || "",
-              items: [],
-            });
-            setIsEditOrderModalOpen(true);
-          },
-        });
-      }
-    });
-  };
-
   const handleReopenCampaign = () => {
     const hasOrders = orders && orders.length > 0;
     const newStatus = hasOrders ? "CLOSED" : "ACTIVE";
@@ -626,6 +601,43 @@ export function useCampaignDetail() {
         setCloneDescription(campaign.description || "");
         setIsCloneModalOpen(true);
       }
+    });
+  };
+
+  const handleOpenAddressModal = () => {
+    if (campaign) {
+      setAddressData({
+        zipCode: campaign.pickupZipCode || '',
+        address: campaign.pickupAddress || '',
+        addressNumber: campaign.pickupAddressNumber || '',
+        complement: campaign.pickupComplement || '',
+        neighborhood: campaign.pickupNeighborhood || '',
+        city: campaign.pickupCity || '',
+        state: campaign.pickupState || '',
+      });
+      setAddressErrors({});
+    }
+    setIsAddressModalOpen(true);
+  };
+
+  const handleUpdateAddress = (e: React.FormEvent) => {
+    e.preventDefault();
+    const errors: Partial<Record<keyof AddressData, string>> = {};
+    if (!addressData.zipCode) errors.zipCode = 'CEP obrigatório';
+    if (!addressData.address) errors.address = 'Endereço obrigatório';
+    if (!addressData.addressNumber) errors.addressNumber = 'Número obrigatório';
+    if (Object.keys(errors).length > 0) {
+      setAddressErrors(errors);
+      return;
+    }
+    updateAddressMutation.mutate({
+      pickupZipCode: addressData.zipCode,
+      pickupAddress: addressData.address,
+      pickupAddressNumber: addressData.addressNumber,
+      pickupComplement: addressData.complement || undefined,
+      pickupNeighborhood: addressData.neighborhood,
+      pickupCity: addressData.city,
+      pickupState: addressData.state,
     });
   };
 
@@ -762,8 +774,17 @@ export function useCampaignDetail() {
     handleReopenCampaign,
     handleOpenEditDeadline,
     handleOpenPixModal,
+    handleOpenAddressModal,
+    handleUpdateAddress,
     handleOpenCloneModal,
     handleCloneCampaign,
+
+    // Address Modal
+    isAddressModalOpen,
+    setIsAddressModalOpen,
+    addressData,
+    setAddressData,
+    addressErrors,
 
     // Mutations
     createProductMutation,
@@ -773,5 +794,6 @@ export function useCampaignDetail() {
     updatePixMutation,
     updateStatusMutation,
     cloneCampaignMutation,
+    updateAddressMutation,
   };
 }

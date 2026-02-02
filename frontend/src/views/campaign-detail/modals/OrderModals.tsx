@@ -7,7 +7,8 @@ import { getImageUrl } from "@/lib/imageUrl";
 import { Order, Product } from "@/api";
 import type { OrderFormItem } from "@/api/types";
 
-interface OrderForm {
+// Order form for modal component (without campaignId)
+interface OrderModalForm {
   items: OrderFormItem[];
 }
 
@@ -23,10 +24,10 @@ function formatRelativeTime(date: Date): string {
 
 interface OrderModalBaseProps {
   isOpen: boolean;
-  form: OrderForm;
+  form: OrderModalForm;
   products: Product[];
   onClose: () => void;
-  onChange: (form: OrderForm) => void;
+  onChange: (form: OrderModalForm) => void;
 }
 
 interface AddOrderModalProps extends OrderModalBaseProps {

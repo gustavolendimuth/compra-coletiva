@@ -64,7 +64,7 @@ CORS_ORIGIN=http://frontend-production-abcd.up.railway.app
 No **Railway Dashboard** → **Frontend Service** → **Variables**:
 
 ```env
-VITE_API_URL=https://backend-production-80f6.up.railway.app
+NEXT_PUBLIC_API_URL=https://backend-production-80f6.up.railway.app
 ```
 
 **⚠️ IMPORTANTE**: 
@@ -74,11 +74,11 @@ VITE_API_URL=https://backend-production-80f6.up.railway.app
 
 ```env
 # ✅ CORRETO
-VITE_API_URL=https://backend-production-80f6.up.railway.app
+NEXT_PUBLIC_API_URL=https://backend-production-80f6.up.railway.app
 
 # ❌ ERRADO
-VITE_API_URL=https://backend-production-80f6.up.railway.app/api
-VITE_API_URL=https://backend-production-80f6.up.railway.app/
+NEXT_PUBLIC_API_URL=https://backend-production-80f6.up.railway.app/api
+NEXT_PUBLIC_API_URL=https://backend-production-80f6.up.railway.app/
 ```
 
 ### Passo 4: Obter URLs Corretas
@@ -105,12 +105,12 @@ VITE_API_URL=https://backend-production-80f6.up.railway.app/
 #### No Frontend:
 
 1. Railway Dashboard → Frontend Service → Variables
-2. Edite `VITE_API_URL`:
+2. Edite `NEXT_PUBLIC_API_URL`:
    ```env
-   VITE_API_URL=https://backend-production-80f6.up.railway.app
+   NEXT_PUBLIC_API_URL=https://backend-production-80f6.up.railway.app
    ```
 3. ⚠️ **IMPORTANTE**: Clique em **Redeploy** (não apenas salvar)
-   - Variáveis `VITE_*` são incorporadas no build!
+   - Variáveis `NEXT_PUBLIC_*` são incorporadas no build!
 
 ### Passo 6: Aguardar Deploy
 
@@ -209,7 +209,7 @@ fetch('https://backend-production-80f6.up.railway.app/health')
 
 ### Frontend
 - [ ] Serviço está rodando
-- [ ] `VITE_API_URL` aponta para backend (sem `/api` no final)
+- [ ] `NEXT_PUBLIC_API_URL` aponta para backend (sem `/api` no final)
 - [ ] Build completado com sucesso
 - [ ] Nginx está servindo os arquivos
 - [ ] Página carrega sem erro 404
@@ -249,7 +249,7 @@ SESSION_SECRET=seu_session_secret_minimo_32_caracteres
 Railway Dashboard → Frontend → Variables:
 
 ```env
-VITE_API_URL=https://backend-production-80f6.up.railway.app
+NEXT_PUBLIC_API_URL=https://backend-production-80f6.up.railway.app
 ```
 
 ### 3. Redeploy Ambos
@@ -309,7 +309,7 @@ Se nada funcionar:
 
 2. **Compartilhe variáveis** (sem secrets):
    - Backend: NODE_ENV, PORT, CORS_ORIGIN
-   - Frontend: VITE_API_URL
+   - Frontend: NEXT_PUBLIC_API_URL
 
 3. **Compartilhe URLs**:
    - URL do backend

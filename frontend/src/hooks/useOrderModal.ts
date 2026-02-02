@@ -20,7 +20,6 @@ export function useOrderModal({
   user,
   isActive,
   requireAuth,
-  products,
 }: UseOrderModalOptions) {
   const queryClient = useQueryClient();
 
@@ -53,11 +52,15 @@ export function useOrderModal({
   // Mutations
   const createOrderMutation = useMutation({
     mutationFn: orderApi.create,
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('[createOrderMutation] onSuccess global - pedido criado:', data?.id);
       queryClient.invalidateQueries({ queryKey: ['orders', campaignId] });
       queryClient.invalidateQueries({ queryKey: ['analytics', campaignId] });
     },
-    onError: () => toast.error('Erro ao criar pedido'),
+    onError: (err) => {
+      console.error('[createOrderMutation] onError:', err);
+      toast.error('Erro ao criar pedido');
+    },
   });
 
   const updateOrderWithItemsMutation = useMutation({
@@ -68,8 +71,10 @@ export function useOrderModal({
       orderId: string;
       data: { items?: Array<{ productId: string; quantity: number }> };
       isAutosave?: boolean;
+      silent?: boolean;
     }) => orderApi.updateWithItems(orderId, data),
     onSuccess: async (_result, variables) => {
+      console.log('[updateMutation] onSuccess - isAutosave:', variables.isAutosave, 'silent:', variables.silent, 'isEditOrderModalOpen:', isEditOrderModalOpen);
       await queryClient.invalidateQueries({ queryKey: ['orders', campaignId] });
       await queryClient.invalidateQueries({ queryKey: ['analytics', campaignId] });
 
@@ -78,8 +83,12 @@ export function useOrderModal({
         return;
       }
 
+      // Skip modal close when called from handleAddToOrder (which handles its own modal opening)
+      if (variables.silent) return;
+
       // Manual save (form submit) - close modal
       if (isEditOrderModalOpen) {
+        console.log('[updateMutation] Fechando modal via onSuccess global');
         toast.success('Pedido atualizado!');
         closeEditOrderModal();
       }
@@ -126,6 +135,7 @@ export function useOrderModal({
 
   // Helpers
   const closeEditOrderModal = useCallback(() => {
+    console.log('[closeEditOrderModal] Chamado - fechando modal');
     setIsEditOrderModalOpen(false);
     setEditingOrder(null);
     setEditOrderForm({ campaignId: '', items: [] });
@@ -170,6 +180,7 @@ export function useOrderModal({
           orderId: existingOrder.id,
           data: { items },
           isAutosave: false,
+          silent: true,
         }, {
           onSuccess: (updatedOrder: Order) => {
             // 2. Abre modal com dados frescos DEPOIS do sucesso
@@ -217,10 +228,14 @@ export function useOrderModal({
   }, [orders, user, campaignId, requireAuth, createOrderMutation, updateOrderWithItemsMutation]);
 
   const handleAddOrder = useCallback(() => {
+    console.log('[handleAddOrder] Chamado');
     requireAuth(async () => {
+      console.log('[handleAddOrder] Auth OK, user:', user?.id);
       const existingOrder = orders?.find((o) => o.userId === user?.id);
+      console.log('[handleAddOrder] existingOrder:', existingOrder?.id || 'NENHUM');
 
       if (existingOrder) {
+        console.log('[handleAddOrder] Abrindo modal de edição para pedido existente');
         openEditOrderModal(existingOrder);
       } else {
         if (!user?.name) {
@@ -233,8 +248,10 @@ export function useOrderModal({
           items: [],
         };
 
+        console.log('[handleAddOrder] Criando pedido vazio...');
         createOrderMutation.mutate(createOrderData, {
           onSuccess: (newOrder: Order) => {
+            console.log('[handleAddOrder] Pedido criado:', newOrder.id, '- abrindo modal');
             setEditingOrder(newOrder);
             setEditOrderForm({
               campaignId: campaignId || '',

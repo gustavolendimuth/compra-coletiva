@@ -1,4 +1,17 @@
-import { Map } from '@/components/ui/Map';
+import dynamic from 'next/dynamic';
+
+// Dynamic import to avoid SSR issues with Leaflet
+const Map = dynamic(
+  () => import('@/components/ui/Map').then((mod) => ({ default: mod.Map })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[200px] md:h-[300px] w-full rounded-lg bg-gray-100 flex items-center justify-center">
+        <p className="text-gray-500">Carregando mapa...</p>
+      </div>
+    )
+  }
+);
 
 interface CampaignLocationMapProps {
   pickupCoords: [number, number];

@@ -54,10 +54,10 @@ const createCampaignSchema = z.object({
   pixType: z.enum(["CPF", "CNPJ", "EMAIL", "PHONE", "RANDOM"]).optional(),
   pixName: z.string().optional(),
   pixVisibleAtStatus: z.enum(["ACTIVE", "CLOSED", "SENT", "ARCHIVED"]).default("ACTIVE"),
-  // Endereço de retirada (obrigatório para novas campanhas)
-  pickupZipCode: z.string().regex(/^\d{5}-?\d{3}$/, "CEP deve ter o formato XXXXX-XXX"),
-  pickupAddress: z.string().min(1, "Endereço é obrigatório"),
-  pickupAddressNumber: z.string().min(1, "Número é obrigatório"),
+  // Endereço de retirada (opcional na criação - pode ser adicionado depois)
+  pickupZipCode: z.string().regex(/^\d{5}-?\d{3}$/, "CEP deve ter o formato XXXXX-XXX").optional(),
+  pickupAddress: z.string().min(1, "Endereço é obrigatório").optional(),
+  pickupAddressNumber: z.string().min(1, "Número é obrigatório").optional(),
   pickupComplement: z.string().optional(),
   pickupNeighborhood: z.string().optional(),
   pickupCity: z.string().optional(),

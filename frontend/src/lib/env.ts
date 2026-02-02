@@ -40,8 +40,12 @@ export function processEnvUrl(url: string | undefined, fallback: string): string
 
 /**
  * Get the API URL from environment variables with automatic protocol handling
+ *
+ * Server-side: Uses INTERNAL_API_URL for Docker inter-container communication
+ * Client-side: Uses NEXT_PUBLIC_API_URL for browser access
  */
-export const API_URL = processEnvUrl(
-  process.env.NEXT_PUBLIC_API_URL,
-  'http://localhost:3000'
-);
+const isServer = typeof window === 'undefined';
+
+export const API_URL = isServer
+  ? processEnvUrl(process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL, 'http://localhost:3000')
+  : processEnvUrl(process.env.NEXT_PUBLIC_API_URL, 'http://localhost:3000');
