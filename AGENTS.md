@@ -60,3 +60,12 @@ npm test --workspace=frontend
 
 - Use `.env.example` templates; never commit secrets.
 - Prisma workflows: `npx prisma generate` and `npx prisma migrate dev --name <name>` in `backend/`.
+
+## Documentation Rules
+
+- Crie e mantenha docs em `docs/`; evite novos `.md` na raiz, exceto `README.md`, `AGENTS.md` e `CLAUDE.md`.
+- Antes de criar um novo doc, procure conteúdo existente e atualize o arquivo correto para evitar duplicação.
+- Mantenha `README.md` curto (visão geral + quickstart + links). Detalhes vão para `docs/`.
+- Evite informações voláteis: contagens de arquivos/testes, datas, linhas, logs e listas longas de arquivos/funções.
+- Quando adicionar/remover/renomear docs, atualize os links em `README.md`.
+- Prefira linguagem objetiva e tópicos estáveis; use exemplos apenas quando necessários.
