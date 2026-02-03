@@ -28,7 +28,6 @@ export function CampaignLocationSection({ campaign, canEditCampaign, onEditAddre
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
   const [customCep, setCustomCep] = useState('');
-  const [showMap, setShowMap] = useState(false);
   const [fromCoords, setFromCoords] = useState<[number, number] | null>(null);
 
   const hasLocation = campaign.pickupLatitude && campaign.pickupLongitude;
@@ -155,14 +154,6 @@ export function CampaignLocationSection({ campaign, canEditCampaign, onEditAddre
 
       {/* Action buttons */}
       <div className="flex flex-wrap gap-2 mb-4">
-        {hasLocation && (
-          <button
-            onClick={() => setShowMap(!showMap)}
-            className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 min-h-[44px]"
-          >
-            {showMap ? 'Ocultar mapa' : 'Ver no mapa'}
-          </button>
-        )}
         <button
           onClick={copyAddress}
           className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-50 rounded-lg hover:bg-gray-100 min-h-[44px]"
@@ -172,7 +163,7 @@ export function CampaignLocationSection({ campaign, canEditCampaign, onEditAddre
       </div>
 
       {/* Map */}
-      {showMap && hasLocation && (
+      {hasLocation && (
         <div className="mb-4">
           <CampaignLocationMap
             pickupCoords={[campaign.pickupLatitude!, campaign.pickupLongitude!]}
