@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCampaignDetailBySlug } from '@/hooks/useCampaignDetailBySlug';
+import { useCampaignDetail } from '@/views/campaign-detail';
 import { LoadingSkeleton } from '@/views/campaign-detail/LoadingSkeleton';
 import { CampaignHeader } from '@/views/campaign-detail';
 import { TabNavigation } from '@/views/campaign-detail';
@@ -13,16 +13,12 @@ import { ShippingTab } from '@/views/campaign-detail/tabs/ShippingTab';
 import { QuestionsTab } from '@/views/campaign-detail/tabs/QuestionsTab';
 import { CampaignModals } from '@/views/campaign-detail/CampaignModals';
 
-interface CampaignDetailPageProps {
-  slug: string;
-}
-
-export function CampaignDetailPage({ slug }: CampaignDetailPageProps) {
+export function CampaignDetailPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<
     'overview' | 'products' | 'orders' | 'shipping' | 'questions'
   >('overview');
-  const hook = useCampaignDetailBySlug(slug);
+  const hook = useCampaignDetail();
 
   // Handle navigation from notifications
   useEffect(() => {
@@ -63,11 +59,12 @@ export function CampaignDetailPage({ slug }: CampaignDetailPageProps) {
         canEditCampaign={hook.canEditCampaign}
       />
 
-      {activeTab === 'overview' && hook.analytics && (
+      {activeTab === 'overview' && (
         <OverviewTab
           campaign={hook.campaign}
           campaignId={hook.campaign.id}
           analytics={hook.analytics}
+          isAnalyticsLoading={hook.isAnalyticsLoading}
           products={hook.products || []}
           orders={hook.orders || []}
           isActive={hook.isActive}

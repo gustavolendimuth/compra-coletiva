@@ -25,7 +25,10 @@ interface Analytics {
 // GET /api/analytics/campaign/:campaignId - Analytics de uma campanha
 router.get('/campaign/:campaignId', asyncHandler(async (req, res) => {
   const { campaignId } = req.params;
+  const requestId = Math.random().toString(36).slice(2, 8);
+  const totalStart = Date.now();
 
+  const fetchStart = Date.now();
   const campaign = await prisma.campaign.findUnique({
     where: { id: campaignId },
     include: {
@@ -46,8 +49,13 @@ router.get('/campaign/:campaignId', asyncHandler(async (req, res) => {
       }
     }
   });
+  const fetchMs = Date.now() - fetchStart;
 
   if (!campaign) {
+    const totalMs = Date.now() - totalStart;
+    console.log(
+      `[Perf] GET /api/analytics/campaign/${campaignId} not_found fetchMs=${fetchMs} totalMs=${totalMs} req=${requestId}`
+    );
     throw new AppError(404, 'Campaign not found');
   }
 
@@ -63,6 +71,8 @@ router.get('/campaign/:campaignId', asyncHandler(async (req, res) => {
 
   const productMap = new Map<string, { name: string; quantity: number }>();
   const customerMap = new Map<string, { total: number; isPaid: boolean }>();
+  let itemsCount = 0;
+  const computeStart = Date.now();
 
   for (const order of campaign.orders) {
     analytics.totalWithoutShipping += order.subtotal;
@@ -91,6 +101,7 @@ router.get('/campaign/:campaignId', asyncHandler(async (req, res) => {
     // Agrega por produto
     for (const item of order.items) {
       analytics.totalQuantity += item.quantity;
+      itemsCount += 1;
 
       if (!productMap.has(item.productId)) {
         productMap.set(item.productId, {
@@ -115,6 +126,12 @@ router.get('/campaign/:campaignId', asyncHandler(async (req, res) => {
     total: data.total,
     isPaid: data.isPaid
   }));
+
+  const computeMs = Date.now() - computeStart;
+  const totalMs = Date.now() - totalStart;
+  console.log(
+    `[Perf] GET /api/analytics/campaign/${campaignId} orders=${campaign.orders.length} items=${itemsCount} products=${analytics.byProduct.length} customers=${analytics.byCustomer.length} fetchMs=${fetchMs} computeMs=${computeMs} totalMs=${totalMs} req=${requestId}`
+  );
 
   res.json(analytics);
 }));

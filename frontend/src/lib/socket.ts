@@ -3,22 +3,68 @@ import { API_URL } from './env';
 import { authStorage } from './authStorage';
 
 let socket: Socket | null = null;
+let connectScheduled = false;
+let hasConnectedOnce = false;
 
-export const getSocket = (): Socket => {
+const CONNECT_TIMEOUT_MS = 4000;
+const IDLE_CONNECT_TIMEOUT_MS = 2000;
+const isDevelopment = process.env.NODE_ENV !== 'production';
+
+type SocketConnectMode = 'idle' | 'immediate';
+
+const scheduleSocketConnect = (mode: SocketConnectMode) => {
+  if (connectScheduled) return;
+  connectScheduled = true;
+
+  const connect = () => {
+    connectScheduled = false;
+    if (!socket) return;
+    if (socket.connected || socket.active) return;
+    socket.connect();
+  };
+
+  if (mode === 'immediate') {
+    setTimeout(connect, 0);
+    return;
+  }
+
+  if (typeof window === 'undefined') {
+    connect();
+    return;
+  }
+
+  if ('requestIdleCallback' in window) {
+    (window as Window & { requestIdleCallback: (cb: () => void, opts?: { timeout?: number }) => void })
+      .requestIdleCallback(connect, { timeout: IDLE_CONNECT_TIMEOUT_MS });
+    return;
+  }
+
+  if (document.readyState === 'complete') {
+    setTimeout(connect, 0);
+  } else {
+    window.addEventListener('load', connect, { once: true });
+  }
+};
+
+export const getSocket = (options?: { connect?: SocketConnectMode }): Socket => {
   if (!socket) {
     const token = authStorage.getAccessToken();
 
     socket = io(API_URL, {
-      transports: ['websocket', 'polling'],
+      transports: isDevelopment ? ['polling'] : ['polling', 'websocket'],
+      upgrade: !isDevelopment,
+      autoConnect: false,
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: 5,
+      timeout: CONNECT_TIMEOUT_MS,
       auth: {
         token: token || undefined,
       },
     });
 
     socket.on('connect', () => {
+      hasConnectedOnce = true;
       console.log('🔌 Connected to WebSocket server');
     });
 
@@ -27,10 +73,15 @@ export const getSocket = (): Socket => {
     });
 
     socket.on('connect_error', (error) => {
+      if (!hasConnectedOnce && (error as Error)?.message === 'timeout') {
+        console.warn('🟠 WebSocket connection timeout (will retry):', error);
+        return;
+      }
       console.error('🔴 WebSocket connection error:', error);
     });
   }
 
+  scheduleSocketConnect(options?.connect ?? 'idle');
   return socket;
 };
 
@@ -64,7 +115,7 @@ export const reconnectSocket = () => {
     socket.disconnect();
     socket = null;
   }
-  return getSocket();
+  return getSocket({ connect: 'immediate' });
 };
 
 export default getSocket;

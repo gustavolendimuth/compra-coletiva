@@ -83,7 +83,7 @@ describe('OrderModals', () => {
       it('should render close button', () => {
         render(<AddOrderModal {...defaultProps} />);
 
-        expect(screen.getAllByRole('button', { name: /fechar/i })[0]).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /^fechar$/i })).toBeInTheDocument();
       });
     });
 
@@ -252,8 +252,31 @@ describe('OrderModals', () => {
         const user = userEvent.setup();
         render(<AddOrderModal {...defaultProps} />);
 
-        const closeButton = screen.getAllByRole('button', { name: /fechar/i })[0];
+        const closeButton = screen.getByRole('button', { name: /^fechar$/i });
         await user.click(closeButton);
+
+        expect(mockOnClose).toHaveBeenCalledTimes(1);
+      });
+
+      it('should call onClose when X button is clicked', async () => {
+        const user = userEvent.setup();
+        render(<AddOrderModal {...defaultProps} />);
+
+        const xButton = screen.getByLabelText(/fechar modal/i);
+        await user.click(xButton);
+
+        expect(mockOnClose).toHaveBeenCalledTimes(1);
+      });
+
+      it('should call onClose when backdrop is clicked', async () => {
+        const user = userEvent.setup();
+        render(<AddOrderModal {...defaultProps} />);
+
+        const backdrop = document.querySelector('[aria-hidden="true"]') as HTMLElement | null;
+        expect(backdrop).toBeTruthy();
+        if (!backdrop) return;
+
+        await user.click(backdrop);
 
         expect(mockOnClose).toHaveBeenCalledTimes(1);
       });
@@ -432,7 +455,7 @@ describe('OrderModals', () => {
       it('should show close button', () => {
         render(<ViewOrderModal {...defaultProps} />);
 
-        expect(screen.getAllByRole('button', { name: /fechar/i })[0]).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /^fechar$/i })).toBeInTheDocument();
       });
 
       it('should call onEdit when edit button is clicked', async () => {
@@ -449,7 +472,7 @@ describe('OrderModals', () => {
         const user = userEvent.setup();
         render(<ViewOrderModal {...defaultProps} />);
 
-        const closeButton = screen.getAllByRole('button', { name: /fechar/i })[0];
+        const closeButton = screen.getByRole('button', { name: /^fechar$/i });
         await user.click(closeButton);
 
         expect(mockOnClose).toHaveBeenCalledTimes(1);

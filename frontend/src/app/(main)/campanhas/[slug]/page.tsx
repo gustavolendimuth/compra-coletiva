@@ -157,7 +157,7 @@ export default async function CampanhaDetailPage({ params }: PageProps) {
           ))}
         </>
       )}
-      <CampaignDetailPage slug={slug} />
+      <CampaignDetailPage />
     </>
   );
 }

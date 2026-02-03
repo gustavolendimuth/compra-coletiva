@@ -42,7 +42,6 @@ export function CampaignLocationSection({ campaign, canEditCampaign, onEditAddre
         user.defaultLongitude
       );
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function calculateDistance(zipCode: string) {
@@ -65,8 +64,8 @@ export function CampaignLocationSection({ campaign, canEditCampaign, onEditAddre
     const R = 6371;
     const dLat = (campaign.pickupLatitude - lat) * Math.PI / 180;
     const dLon = (campaign.pickupLongitude - lng) * Math.PI / 180;
-    const a = Math.sin(dLat/2)**2 + Math.cos(lat*Math.PI/180) * Math.cos(campaign.pickupLatitude*Math.PI/180) * Math.sin(dLon/2)**2;
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat * Math.PI / 180) * Math.cos(campaign.pickupLatitude * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     setDistanceKm(Math.round(R * c * 10) / 10);
     setFromCoords([lat, lng]);
   }

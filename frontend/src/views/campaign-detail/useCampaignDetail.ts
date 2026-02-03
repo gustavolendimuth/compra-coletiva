@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useParams, usePathname, useRouter } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import {
   campaignApi,
@@ -39,6 +39,7 @@ export function useCampaignDetail() {
   const slug = params?.slug as string;
   const { user, requireAuth } = useAuth();
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
 
   // Modal states (non-order)
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -119,19 +120,19 @@ export function useCampaignDetail() {
 
   const campaignId = campaign?.id;
 
-  const { data: products } = useQuery({
+  const { data: products, isLoading: isProductsLoading } = useQuery({
     queryKey: ["products", campaignId],
     queryFn: () => productApi.getByCampaign(campaignId!),
     enabled: !!campaignId,
   });
 
-  const { data: orders } = useQuery({
+  const { data: orders, isLoading: isOrdersLoading } = useQuery({
     queryKey: ["orders", campaignId],
     queryFn: () => orderApi.getByCampaign(campaignId!),
     enabled: !!campaignId,
   });
 
-  const { data: analytics } = useQuery({
+  const { data: analytics, isLoading: isAnalyticsLoading } = useQuery({
     queryKey: ["analytics", campaignId],
     queryFn: () => analyticsApi.getByCampaign(campaignId!),
     enabled: !!campaignId,
@@ -152,7 +153,7 @@ export function useCampaignDetail() {
   const isActive = campaign?.status === "ACTIVE";
   const isClosed = campaign?.status === "CLOSED";
   const isSent = campaign?.status === "SENT";
-  const canEditCampaign = campaign?.creatorId === user?.id || user?.role === 'ADMIN';
+  const canEditCampaign = campaign?.creatorId === user?.id;
 
   // Alphabetical products for modal dropdown
   const alphabeticalProducts = useMemo(() => {
@@ -183,6 +184,12 @@ export function useCampaignDetail() {
 
   // State for handling navigation from notifications
   const [shouldOpenQuestionsTab, setShouldOpenQuestionsTab] = useState(false);
+
+  useEffect(() => {
+    if (searchParams?.get('openQuestions') === 'true') {
+      setShouldOpenQuestionsTab(true);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const storedState = typeof window !== 'undefined'
@@ -659,9 +666,12 @@ export function useCampaignDetail() {
     products,
     orders,
     analytics,
+    isAnalyticsLoading,
     sortedProducts,
     filteredOrders,
     alphabeticalProducts,
+    isProductsLoading,
+    isOrdersLoading,
 
     // Computed state
     isActive,

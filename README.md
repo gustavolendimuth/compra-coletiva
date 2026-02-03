@@ -116,10 +116,10 @@ compra-coletiva/
 ├── frontend/                   # App React
 │   ├── src/
 │   │   ├── components/        # 90 componentes (ui/, features/, layout/, shared/)
-│   │   ├── hooks/             # 6 custom hooks
-│   │   │   ├── useCampaignDetail.ts (~828 linhas, consolidado)
-│   │   │   ├── useOrderModal.ts (352 linhas, modal management)
+│   │   ├── hooks/             # Custom hooks
+│   │   │   ├── useOrderModal.ts (order modal management)
 │   │   │   ├── useOrderAutosave.ts (~113 linhas, simplificado)
+│   │   │   ├── useNotifications.ts
 │   │   │   └── ... (outros hooks)
 │   │   ├── api/               # 13 serviços de API com tipos compartilhados
 │   │   ├── pages/             # 54 páginas

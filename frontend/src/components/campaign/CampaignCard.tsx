@@ -32,6 +32,8 @@ export function CampaignCard({
                 src={imageUrl}
                 alt={campaign.name}
                 className="w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
                 onError={(e) => {
                   // Fallback se a imagem falhar ao carregar
                   e.currentTarget.style.display = 'none';

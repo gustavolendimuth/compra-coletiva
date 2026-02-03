@@ -41,6 +41,8 @@ const addItemSchema = z.object({
 // Opcional auth: Se autenticado e não for admin/criador, mostra apenas seus pedidos
 router.get('/', optionalAuth, asyncHandler(async (req, res) => {
   const { campaignId } = req.query;
+  const requestId = Math.random().toString(36).slice(2, 8);
+  const totalStart = Date.now();
 
   if (!campaignId || typeof campaignId !== 'string') {
     throw new AppError(400, 'campaignId is required');
@@ -64,6 +66,7 @@ router.get('/', optionalAuth, asyncHandler(async (req, res) => {
     }
   }
 
+  const fetchStart = Date.now();
   const orders = await prisma.order.findMany({
     where: whereClause,
     include: {
@@ -82,6 +85,13 @@ router.get('/', optionalAuth, asyncHandler(async (req, res) => {
     },
     orderBy: { createdAt: 'asc' }
   });
+  const fetchMs = Date.now() - fetchStart;
+
+  const itemsCount = orders.reduce((sum, order) => sum + (order.items?.length || 0), 0);
+  const totalMs = Date.now() - totalStart;
+  console.log(
+    `[Perf] GET /api/orders campaignId=${campaignId} user=${req.user?.id || 'anon'} role=${req.user?.role || 'anon'} orders=${orders.length} items=${itemsCount} fetchMs=${fetchMs} totalMs=${totalMs} req=${requestId}`
+  );
 
   res.json(orders);
 }));

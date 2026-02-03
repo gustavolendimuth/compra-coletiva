@@ -535,12 +535,30 @@ router.get(
   "/:idOrSlug",
   asyncHandler(async (req, res) => {
     const { idOrSlug } = req.params;
+    const requestId = Math.random().toString(36).slice(2, 8);
+    const totalStart = Date.now();
+    const hasAuthHeader = Boolean(req.headers.authorization);
 
+    const fetchStart = Date.now();
     const campaign = await findCampaignByIdOrSlug(idOrSlug);
+    const fetchMs = Date.now() - fetchStart;
 
     if (!campaign) {
+      const totalMs = Date.now() - totalStart;
+      console.log(
+        `[Perf] GET /api/campaigns/${idOrSlug} auth=${hasAuthHeader} not_found fetchMs=${fetchMs} totalMs=${totalMs} req=${requestId}`
+      );
       throw new AppError(404, "Campaign not found");
     }
+
+    const ordersCount = campaign.orders?.length || 0;
+    const itemsCount =
+      campaign.orders?.reduce((sum: number, order: any) => sum + (order.items?.length || 0), 0) || 0;
+    const productsCount = campaign.products?.length || 0;
+    const totalMs = Date.now() - totalStart;
+    console.log(
+      `[Perf] GET /api/campaigns/${idOrSlug} auth=${hasAuthHeader} orders=${ordersCount} items=${itemsCount} products=${productsCount} fetchMs=${fetchMs} totalMs=${totalMs} req=${requestId}`
+    );
 
     res.json(campaign);
   })

@@ -18,6 +18,7 @@ export const apiClient: AxiosInstance = axios.create(apiConfig);
  * Separate axios instance for auth endpoints to avoid circular dependencies
  */
 export const authClient: AxiosInstance = axios.create(apiConfig);
+authClient.defaults.timeout = 8000;
 
 // ============================================================================
 // Error Logging Interceptor: Suppress expected 401s
@@ -34,7 +35,10 @@ authClient.interceptors.response.use(
 
     if (!is401OnAuthMe) {
       // Log other errors normally
-      console.error('API Error:', error);
+      console.error('API Error:', error, {
+        url: error.config?.url,
+        method: error.config?.method,
+      });
     }
 
     return Promise.reject(error);

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { Package, RefreshCw, Lightbulb, Megaphone } from 'lucide-react';
-import { campaignApi } from '@/api';
+import { campaignApi, type CampaignListResponse } from '@/api';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useIntersectionObserver } from '@/hooks/useIntersectionObserver';
 import {
@@ -14,10 +14,20 @@ import {
 } from '@/components/campaign';
 import { Card } from '@/components/ui';
 
-export function CampaignListPage() {
+interface CampaignListPageProps {
+  initialData?: CampaignListResponse | null;
+}
+
+export function CampaignListPage({ initialData }: CampaignListPageProps) {
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<CampaignFiltersState>({});
   const debouncedSearch = useDebounce(search, 300);
+  const isDefaultQuery =
+    !debouncedSearch && Object.keys(filters).length === 0;
+  const initialQueryData =
+    isDefaultQuery && initialData
+      ? { pages: [initialData], pageParams: [undefined] }
+      : undefined;
 
   // Query com infinite scroll
   const {
@@ -43,6 +53,8 @@ export function CampaignListPage() {
       }),
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     initialPageParam: undefined as string | undefined,
+    initialData: initialQueryData,
+    initialDataUpdatedAt: initialQueryData ? Date.now() : undefined,
   });
 
   // Ref para trigger do infinite scroll

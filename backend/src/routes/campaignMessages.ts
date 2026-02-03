@@ -48,6 +48,8 @@ const answerQuestionSchema = z.object({
  */
 router.get('/', asyncHandler(async (req, res) => {
   const { campaignId, limit = '20', offset = '0' } = req.query;
+  const requestId = Math.random().toString(36).slice(2, 8);
+  const totalStart = Date.now();
 
   if (!campaignId || typeof campaignId !== 'string') {
     throw new AppError(400, 'campaignId é obrigatório');
@@ -60,6 +62,7 @@ router.get('/', asyncHandler(async (req, res) => {
     throw new AppError(400, 'Parâmetros de paginação inválidos');
   }
 
+  const fetchStart = Date.now();
   const [messages, total] = await Promise.all([
     prisma.campaignMessage.findMany({
       where: {
@@ -91,6 +94,11 @@ router.get('/', asyncHandler(async (req, res) => {
       }
     })
   ]);
+  const fetchMs = Date.now() - fetchStart;
+  const totalMs = Date.now() - totalStart;
+  console.log(
+    `[Perf] GET /api/campaign-messages campaignId=${campaignId} public=true count=${messages.length} total=${total} fetchMs=${fetchMs} totalMs=${totalMs} req=${requestId}`
+  );
 
   res.json({
     messages,
@@ -288,11 +296,14 @@ router.patch('/:id', requireAuth, asyncHandler(async (req, res) => {
 router.get('/mine', requireAuth, asyncHandler(async (req, res) => {
   const { campaignId } = req.query;
   const userId = req.user!.id;
+  const requestId = Math.random().toString(36).slice(2, 8);
+  const totalStart = Date.now();
 
   if (!campaignId || typeof campaignId !== 'string') {
     throw new AppError(400, 'campaignId é obrigatório');
   }
 
+  const fetchStart = Date.now();
   const messages = await prisma.campaignMessage.findMany({
     where: {
       campaignId,
@@ -308,6 +319,11 @@ router.get('/mine', requireAuth, asyncHandler(async (req, res) => {
     },
     orderBy: { createdAt: 'desc' }
   });
+  const fetchMs = Date.now() - fetchStart;
+  const totalMs = Date.now() - totalStart;
+  console.log(
+    `[Perf] GET /api/campaign-messages/mine campaignId=${campaignId} user=${userId} count=${messages.length} fetchMs=${fetchMs} totalMs=${totalMs} req=${requestId}`
+  );
 
   res.json(messages);
 }));

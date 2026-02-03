@@ -88,7 +88,7 @@ npm run build --workspace=backend
 ### Frontend
 - **90 Components**: 12 UI primitives (Avatar, CepInput, AddressForm, Map, DistanceBadge added), 4 auth, 22 campaign (ProximitySearch added), 17 campaign-detail modules (CampaignLocationSection, CampaignLocationMap added), 11 profile components (ProfileAddressSection added), 6 admin components, 18 other
 - **54 Pages**: Home, CampaignDetail, NewCampaign, Profile, CompleteProfile, VerifyEmailChange, EmailPreferences + admin/ (AdminLayout, Dashboard, Users, UserDetail, Campaigns, Messages, Audit)
-- **6 Custom Hooks**: useCampaignDetail (~828 lines), useCampaignQuestions, useCampaignChat, useOrderChat, useOrderModal (352 lines), useOrderAutosave (~113 lines)
+- **8 Custom Hooks**: useOrderModal (352 lines), useOrderAutosave (~113 lines), useNotifications, useBodyScrollLock, useFocusTrap, useDebounce, useIntersectionObserver, useRealtimeUpdates (campaign-detail hook lives in `views/campaign-detail/useCampaignDetail.ts`)
 - **13 API Services**: auth, campaign, product, order, message, notification, feedback, analytics, validation, profile, emailPreference, admin, geocoding
 - **Test Suite**: 50+ test files, 607 passing tests (100% success), ~13s execution time
 

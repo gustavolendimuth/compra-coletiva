@@ -180,13 +180,15 @@ compra-coletiva/
 │   │   │   ├── features/ # Componentes específicos de feature
 │   │   │   ├── layout/   # Layout components
 │   │   │   └── shared/   # Componentes de negócio compartilhados
-│   │   ├── hooks/        # Custom React hooks (6 hooks)
-│   │   │   ├── useCampaignDetail.ts       (~828 linhas)
-│   │   │   ├── useCampaignQuestions.ts
-│   │   │   ├── useCampaignChat.ts
-│   │   │   ├── useOrderChat.ts
+│   │   ├── hooks/        # Custom React hooks
 │   │   │   ├── useOrderModal.ts           (352 linhas) ⭐
-│   │   │   └── useOrderAutosave.ts        (~113 linhas) ⭐
+│   │   │   ├── useOrderAutosave.ts        (~113 linhas) ⭐
+│   │   │   ├── useNotifications.ts
+│   │   │   ├── useBodyScrollLock.ts
+│   │   │   ├── useFocusTrap.ts
+│   │   │   ├── useDebounce.ts
+│   │   │   ├── useIntersectionObserver.ts
+│   │   │   └── useRealtimeUpdates.ts
 │   │   ├── api/          # API services (13 serviços)
 │   │   │   ├── config.ts
 │   │   │   ├── types.ts  # Tipos compartilhados (OrderForm, OrderFormItem)

@@ -57,11 +57,12 @@ export default function CampaignDetail() {
         canEditCampaign={hook.canEditCampaign}
       />
 
-      {activeTab === "overview" && hook.analytics && (
+      {activeTab === "overview" && (
         <OverviewTab
           campaign={hook.campaign}
           campaignId={hook.campaign.id}
           analytics={hook.analytics}
+          isAnalyticsLoading={hook.isAnalyticsLoading}
           products={hook.products || []}
           orders={hook.orders || []}
           isActive={hook.isActive}

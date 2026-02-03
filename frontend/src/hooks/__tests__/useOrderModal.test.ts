@@ -28,15 +28,29 @@ vi.mock('@/api', () => ({
 // Import after mock
 import { orderApi } from '@/api';
 
+interface AutosaveOptions {
+  orderId: string | null;
+  items: Array<{ productId: string; quantity: number }>;
+  isEnabled: boolean;
+  onSave: (orderId: string, validItems: Array<{ productId: string; quantity: number }>) => void;
+}
+
+const autosaveState = {
+  isAutosaving: false,
+  lastSaved: null,
+  reset: vi.fn(),
+  _markSaved: vi.fn(),
+  _markError: vi.fn(),
+};
+
+let lastAutosaveOptions: AutosaveOptions | null = null;
+
 // Mock useOrderAutosave
 vi.mock('../useOrderAutosave', () => ({
-  useOrderAutosave: () => ({
-    isAutosaving: false,
-    lastSaved: null,
-    reset: vi.fn(),
-    _markSaved: vi.fn(),
-    _markError: vi.fn(),
-  }),
+  useOrderAutosave: (options: AutosaveOptions) => {
+    lastAutosaveOptions = options;
+    return autosaveState;
+  },
 }));
 
 describe('useOrderModal', () => {
@@ -75,6 +89,7 @@ describe('useOrderModal', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    lastAutosaveOptions = null;
     vi.mocked(orderApi.create).mockResolvedValue(createMockOrder({ id: 'new-order' }));
     vi.mocked(orderApi.updateWithItems).mockResolvedValue(createMockOrder({ id: 'order-1' }));
     vi.mocked(orderApi.delete).mockResolvedValue(undefined);
@@ -254,6 +269,51 @@ describe('useOrderModal', () => {
       expect(result.current.editOrderForm.items).toEqual([
         { productId: 'product-1', quantity: 3 },
       ]);
+    });
+  });
+
+  describe('closeEditOrderModal', () => {
+    it('should close modal and reset edit form state', () => {
+      const wrapper = createWrapper();
+      const { result } = renderHook(() => useOrderModal(defaultOptions), { wrapper });
+      const order = createMockOrder({ id: 'order-edit' });
+
+      act(() => {
+        result.current.openEditOrderModal(order);
+      });
+
+      act(() => {
+        result.current.closeEditOrderModal();
+      });
+
+      expect(result.current.isEditOrderModalOpen).toBe(false);
+      expect(result.current.editingOrder).toBeNull();
+      expect(result.current.editOrderForm).toEqual({ campaignId: '', items: [] });
+    });
+  });
+
+  describe('Autosave Integration', () => {
+    it('should call updateWithItems when autosave onSave is invoked', async () => {
+      const wrapper = createWrapper();
+      const { result } = renderHook(() => useOrderModal(defaultOptions), { wrapper });
+
+      act(() => {
+        result.current.openEditOrderModal(mockOrders[0]);
+      });
+
+      expect(lastAutosaveOptions?.isEnabled).toBe(true);
+
+      act(() => {
+        lastAutosaveOptions?.onSave('order-1', [
+          { productId: 'product-1', quantity: 2 },
+        ]);
+      });
+
+      await waitFor(() => {
+        expect(orderApi.updateWithItems).toHaveBeenCalledWith('order-1', {
+          items: [{ productId: 'product-1', quantity: 2 }],
+        });
+      });
     });
   });
 
