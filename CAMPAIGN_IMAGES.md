@@ -15,7 +15,7 @@ Cada campanha pode ter uma imagem principal que representa o produto da campanha
 
 **Storage Strategy**: S3-first com fallback local
 - **Preferência**: AWS S3 (quando configurado)
-- **Fallback**: Armazenamento local (`uploads/campaigns/`)
+- **Fallback**: Armazenamento local
 - **Automático**: Detecta configuração do S3 e escolhe automaticamente
 
 **Configuração AWS S3** (.env):
@@ -34,33 +34,13 @@ AWS_S3_REGION=us-east-1  # default
 **Validações**:
 - Formatos: JPEG, JPG, PNG, WebP
 - Tamanho máximo: 5MB
-- Middleware: Multer com memoryStorage
 
-**Banco de Dados** (Campaign model):
-```prisma
-model Campaign {
-  imageUrl         String?              // URL completa (S3 ou local)
-  imageKey         String?              // Chave/nome do arquivo
-  imageStorageType ImageStorageType?    // S3 ou LOCAL
-}
-
-enum ImageStorageType {
-  S3
-  LOCAL
-}
-```
-
-**Serviços**:
-- `ImageUploadService`: Gerencia upload/delete S3 e local
-- `uploadMiddleware`: Validação e configuração Multer
+**Campos no Banco** (Campaign):
+- `imageUrl`: URL completa (S3 ou local)
+- `imageKey`: Chave/nome do arquivo
+- `imageStorageType`: S3 ou LOCAL
 
 ### Frontend
-
-**Componentes**:
-- `ImageUpload` (ui/): Componente reutilizável de upload
-- `ImageUploadModal`: Modal para upload em campanhas existentes
-- `CampaignCard`: Exibe imagem na lista
-- `CampaignHeader`: Exibe imagem na página de detalhes
 
 **Funcionalidades**:
 - Preview em tempo real
@@ -68,12 +48,6 @@ enum ImageStorageType {
 - Upload no formulário de nova campanha
 - Upload/substituição/remoção em campanhas existentes
 - Fallback visual para campanhas sem imagem
-
-**API Service** (`campaignService`):
-```typescript
-uploadImage(idOrSlug: string, file: File)
-deleteImage(idOrSlug: string)
-```
 
 ## 🚀 Fluxo de Upload
 
@@ -101,38 +75,17 @@ deleteImage(idOrSlug: string)
 ## 📊 Detalhes Técnicos
 
 ### S3 Upload
-```typescript
-// Usa @aws-sdk/client-s3 e @aws-sdk/lib-storage
-const upload = new Upload({
-  client: s3Client,
-  params: {
-    Bucket: S3_BUCKET,
-    Key: key,
-    Body: file.buffer,
-    ContentType: file.mimetype,
-    ACL: "public-read",
-  },
-});
-
-// URL pública: https://{bucket}.s3.{region}.amazonaws.com/{key}
-```
+- Usa AWS SDK v3
+- URL pública: `https://{bucket}.s3.{region}.amazonaws.com/{key}`
+- ACL: public-read
 
 ### Local Fallback
-```typescript
-// Salva em: uploads/campaigns/{timestamp}-{random}-{filename}
-fs.writeFileSync(localPath, file.buffer);
-
-// URL servida por Express: /uploads/campaigns/{filename}
-```
+- Salva em: `uploads/campaigns/{timestamp}-{random}-{filename}`
+- Servido pelo Express como static files
 
 ### Cliente - Construção de URL
-```typescript
-const getImageUrl = (imageUrl?: string) => {
-  if (!imageUrl) return null;
-  if (imageUrl.startsWith('http')) return imageUrl; // S3
-  return `${apiUrl}${imageUrl}`; // Local
-};
-```
+- URLs que começam com `http` são retornadas diretamente (S3)
+- URLs locais são prefixadas com a URL da API
 
 ## 🎨 UI/UX
 
@@ -206,15 +159,15 @@ O sistema detecta automaticamente o storage disponível. Para migrar:
 1. Verificar console do navegador (erro 404?)
 2. Backend: verificar `storageType` do registro
 3. Se S3: confirmar bucket público e URL correta
-4. Se LOCAL: confirmar `express.static` configurado
+4. Se LOCAL: confirmar static files configurado
 5. Verificar CORS (se S3)
 
 ### Upload falha
 1. Verificar tamanho do arquivo (<5MB)
 2. Verificar formato (JPEG/PNG/WebP)
-3. Backend: logs do ImageUploadService
+3. Backend: verificar logs
 4. Se S3: verificar credenciais e permissões
-5. Se LOCAL: verificar permissões de escrita em `uploads/`
+5. Se LOCAL: verificar permissões de escrita
 
 ### S3 configurado mas usa local
 - Verificar se TODAS as variáveis S3 estão definidas

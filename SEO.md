@@ -4,7 +4,7 @@ Este documento descreve todas as otimizações de SEO implementadas no projeto e
 
 ## ✅ Implementações Atuais
 
-### 1. **Sitemap Dinâmico** ([sitemap.ts](frontend/src/app/sitemap.ts))
+### 1. **Sitemap Dinâmico**
 
 **Status**: ✅ Implementado e otimizado
 
@@ -34,7 +34,7 @@ Este documento descreve todas as otimizações de SEO implementadas no projeto e
 - ✅ Informa frequência de atualização ao Google
 - ✅ Escala até 500 campanhas por sitemap
 
-### 2. **Robots.txt** ([robots.ts](frontend/src/app/robots.ts))
+### 2. **Robots.txt**
 
 **Status**: ✅ Implementado
 
@@ -56,7 +56,7 @@ Sitemap: https://compracoletiva.app/sitemap.xml
 
 ### 3. **Structured Data (JSON-LD)**
 
-#### 3.1. **Dados Globais** ([layout.tsx](frontend/src/app/layout.tsx))
+#### 3.1. **Dados Globais** (Layout)
 
 **Organization Schema**:
 ```json
@@ -88,7 +88,7 @@ Sitemap: https://compracoletiva.app/sitemap.xml
 - ✅ Habilita busca direta nos resultados do Google (sitelinks search box)
 - ✅ Melhora a apresentação nos resultados de busca
 
-#### 3.2. **Dados por Página de Campanha** ([campanhas/[slug]/page.tsx](frontend/src/app/(main)/campanhas/[slug]/page.tsx))
+#### 3.2. **Dados por Página de Campanha**
 
 **Product Schema**:
 ```json
@@ -136,7 +136,7 @@ Sitemap: https://compracoletiva.app/sitemap.xml
 
 ### 4. **Metadata Completa**
 
-#### 4.1. **Metadata Global** ([layout.tsx](frontend/src/app/layout.tsx))
+#### 4.1. **Metadata Global**
 
 - **Title template**: "Página | Compra Coletiva"
 - **Description**: Descrição completa da plataforma
@@ -160,25 +160,12 @@ Cada campanha gera metadata específica:
 - ✅ Imagens corretas no WhatsApp, Facebook, Twitter
 - ✅ Google entende o conteúdo de cada página
 
-### 5. **Componente Reutilizável** ([StructuredData.tsx](frontend/src/components/seo/StructuredData.tsx))
+### 5. **Componente Reutilizável**
 
-Componente para adicionar structured data facilmente:
-
-```tsx
-// Uso básico
-<StructuredData type="organization" data={{
-  name: "Compra Coletiva",
-  url: "https://compracoletiva.app"
-}} />
-
-// Breadcrumb
-<StructuredData type="breadcrumb" data={{
-  itemListElement: [...]
-}} />
-
-// Dados customizados
-<StructuredData type="custom" data={{ ... }} />
-```
+Componente para adicionar structured data facilmente, suportando tipos:
+- `organization`: Dados da organização
+- `breadcrumb`: Navegação
+- `custom`: Dados personalizados
 
 ## 📊 Como o Google Indexa o Site
 

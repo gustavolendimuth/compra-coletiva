@@ -1,48 +1,3 @@
-# CLAUDE.md
-
-Guidance for Claude Code when working with this repository.
-
-## Project Overview
-
-Monorepo for managing collective purchases with group management, product catalog, order tracking, and automatic shipping distribution. Full-stack TypeScript with React frontend and Express backend.
-
-## ⚠️ CLAUDE.md Maintenance Rules
-
-**DO NOT add to this file:**
-- ❌ File/component/test counts (e.g., "90 components", "607 tests")
-- ❌ Specific line counts (e.g., "352 lines")
-- ❌ Dates or version history (e.g., "Jan 29, 2026 - refactored X")
-- ❌ Lists of specific file names (e.g., "useOrderModal.ts", "passport.ts")
-- ❌ Lists of specific function names that may be renamed/removed
-- ❌ Test statistics or coverage numbers
-- ❌ Code examples with specific imports/paths
-
-**WHY:** These references become outdated when code changes, causing confusion in future conversations.
-
-**DO add:**
-- ✅ Patterns and principles (stable rules)
-- ✅ Directory structure (general organization, not specific files)
-- ✅ API endpoints (routes are more stable)
-- ✅ Business entities (database schema)
-- ✅ Development commands
-
----
-
-### Modular Architecture
-
-**Component Organization**:
-```
-frontend/src/
-├── components/
-│   ├── ui/          # Reusable primitives
-│   ├── features/    # Feature-specific components
-│   ├── layout/      # Layout components
-│   └── shared/      # Shared business components
-├── hooks/           # Custom React hooks
-├── lib/             # Utilities
-└── pages/           # Page components
-```
-
 # Repository Guidelines
 
 ## Project Structure & Module Organization
@@ -105,4 +60,3 @@ npm test --workspace=frontend
 
 - Use `.env.example` templates; never commit secrets.
 - Prisma workflows: `npx prisma generate` and `npx prisma migrate dev --name <name>` in `backend/`.
-
