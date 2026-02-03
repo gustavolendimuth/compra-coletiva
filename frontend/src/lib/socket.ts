@@ -28,21 +28,29 @@ const scheduleSocketConnect = (mode: SocketConnectMode) => {
     return;
   }
 
-  if (typeof window === 'undefined') {
+  type BrowserGlobals = {
+    requestIdleCallback?: (cb: () => void, opts?: { timeout?: number }) => void;
+    addEventListener?: (type: "load", listener: () => void, options?: { once?: boolean }) => void;
+    document?: { readyState?: string };
+  };
+
+  const browserGlobals: BrowserGlobals | null =
+    typeof globalThis === "undefined" ? null : (globalThis as BrowserGlobals);
+
+  if (!browserGlobals?.document || typeof browserGlobals.addEventListener !== "function") {
     connect();
     return;
   }
 
-  if ('requestIdleCallback' in window) {
-    (window as Window & { requestIdleCallback: (cb: () => void, opts?: { timeout?: number }) => void })
-      .requestIdleCallback(connect, { timeout: IDLE_CONNECT_TIMEOUT_MS });
+  if (typeof browserGlobals.requestIdleCallback === "function") {
+    browserGlobals.requestIdleCallback(connect, { timeout: IDLE_CONNECT_TIMEOUT_MS });
     return;
   }
 
-  if (document.readyState === 'complete') {
+  if (browserGlobals.document.readyState === "complete") {
     setTimeout(connect, 0);
   } else {
-    window.addEventListener('load', connect, { once: true });
+    browserGlobals.addEventListener("load", connect, { once: true });
   }
 };
 
