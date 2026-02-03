@@ -30,62 +30,118 @@ export const configurePassport = () => {
               return done(new Error('No email found in Google profile'), undefined);
             }
 
+            const formattedName = capitalizeName(profile.displayName || email.split('@')[0]);
+
             // First, try to find user by googleId (handles deleted users trying to login again)
             let user = await prisma.user.findUnique({
               where: { googleId },
             });
 
             if (user) {
-              // User with this googleId exists
-              // If email changed (e.g., user was deleted and email was anonymized), update it
-              if (user.email !== email) {
-                user = await prisma.user.update({
-                  where: { id: user.id },
-                  data: {
-                    email,
-                    name: capitalizeName(profile.displayName || email.split('@')[0]),
-                    deletedAt: null, // Reactivate if was soft-deleted
-                    deletedReason: null,
-                  },
-                });
-                console.log(`[Google OAuth] Reactivated user ${user.id} with email ${email}`);
-              }
-            } else {
-              // No user with this googleId, check by email
-              user = await prisma.user.findUnique({
-                where: { email },
-              });
+              const emailChanged = user.email !== email;
+              const needsReactivation = !!user.deletedAt || !!user.deletedReason;
+              const needsNameUpdate = user.name !== formattedName;
 
-              if (user) {
-                // User exists with this email but no googleId - link the accounts
-                user = await prisma.user.update({
-                  where: { id: user.id },
-                  data: { googleId },
-                });
-                console.log(`[Google OAuth] Linked Google account to existing user ${user.id}`);
-              } else {
-                // Create new user
-                user = await prisma.user.create({
-                  data: {
-                    email,
-                    name: capitalizeName(profile.displayName || email.split('@')[0]),
-                    googleId,
-                    password: null, // No password for Google OAuth users
-                    role: 'CUSTOMER', // Default role
-                    phoneCompleted: false, // OAuth users need to complete phone
-                    addressCompleted: false, // OAuth users need to complete address
-                  },
+              if (emailChanged) {
+                const emailOwner = await prisma.user.findUnique({
+                  where: { email },
                 });
 
-                // Enfileirar email de boas-vindas (não bloqueia o OAuth flow)
-                try {
-                  await queueWelcomeEmail(user.id, user.name, user.email);
-                  console.log(`[Google OAuth] Welcome email queued for new user ${user.id}`);
-                } catch (emailError) {
-                  console.error('[Google OAuth] Failed to queue welcome email:', emailError);
-                  // Não falha o OAuth se o email falhar
+                if (emailOwner && emailOwner.id !== user.id) {
+                  if (emailOwner.googleId && emailOwner.googleId !== googleId) {
+                    return done(
+                      new Error('Email already linked to another Google account'),
+                      undefined
+                    );
+                  }
+
+                  // Email is already in use by another account; move googleId to that account
+                  user = await prisma.$transaction(async (tx) => {
+                    await tx.user.update({
+                      where: { id: user!.id },
+                      data: { googleId: null },
+                    });
+
+                    return tx.user.update({
+                      where: { id: emailOwner.id },
+                      data: {
+                        googleId,
+                        name: formattedName,
+                        deletedAt: null,
+                        deletedReason: null,
+                      },
+                    });
+                  });
+
+                  console.log(
+                    `[Google OAuth] Moved googleId to existing email owner ${user.id}`
+                  );
+                  return done(null, user);
                 }
               }
+
+              if (emailChanged || needsReactivation || needsNameUpdate) {
+                user = await prisma.user.update({
+                  where: { id: user.id },
+                  data: {
+                    ...(emailChanged && { email }),
+                    ...(needsNameUpdate && { name: formattedName }),
+                    ...(needsReactivation && { deletedAt: null, deletedReason: null }),
+                  },
+                });
+                console.log(`[Google OAuth] Updated user ${user.id} after login`);
+              }
+
+              return done(null, user);
+            }
+
+            // No user with this googleId, check by email
+            user = await prisma.user.findUnique({
+              where: { email },
+            });
+
+            if (user) {
+              if (user.googleId && user.googleId !== googleId) {
+                return done(
+                  new Error('Email already linked to another Google account'),
+                  undefined
+                );
+              }
+
+              // User exists with this email but no googleId - link the accounts
+              user = await prisma.user.update({
+                where: { id: user.id },
+                data: {
+                  googleId,
+                  name: formattedName,
+                  deletedAt: null,
+                  deletedReason: null,
+                },
+              });
+              console.log(`[Google OAuth] Linked Google account to existing user ${user.id}`);
+              return done(null, user);
+            }
+
+            // Create new user
+            user = await prisma.user.create({
+              data: {
+                email,
+                name: formattedName,
+                googleId,
+                password: null, // No password for Google OAuth users
+                role: 'CUSTOMER', // Default role
+                phoneCompleted: false, // OAuth users need to complete phone
+                addressCompleted: false, // OAuth users need to complete address
+              },
+            });
+
+            // Enfileirar email de boas-vindas (não bloqueia o OAuth flow)
+            try {
+              await queueWelcomeEmail(user.id, user.name, user.email);
+              console.log(`[Google OAuth] Welcome email queued for new user ${user.id}`);
+            } catch (emailError) {
+              console.error('[Google OAuth] Failed to queue welcome email:', emailError);
+              // Não falha o OAuth se o email falhar
             }
 
             return done(null, user);

@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 
@@ -36,6 +37,7 @@ export class TokenService {
   static generateRefreshToken(payload: TokenPayload): string {
     return jwt.sign(payload, JWT_REFRESH_SECRET, {
       expiresIn: JWT_REFRESH_EXPIRES_IN,
+      jwtid: crypto.randomBytes(16).toString('hex'),
     } as jwt.SignOptions);
   }
 
