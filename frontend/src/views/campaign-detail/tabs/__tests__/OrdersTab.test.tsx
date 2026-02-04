@@ -69,7 +69,6 @@ describe('OrdersTab', () => {
     filteredOrders: mockOrders,
     isActive: true,
     canEditCampaign: true,
-    currentUserId: 'user-1',
     orderSearch: '',
     sortField: 'customerName' as const,
     sortDirection: 'asc' as const,

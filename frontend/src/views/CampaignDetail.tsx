@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
 import { useCampaignDetail } from "./campaign-detail/useCampaignDetail";
 import { LoadingSkeleton } from "./campaign-detail/LoadingSkeleton";
 import { CampaignHeader } from "./campaign-detail";
@@ -12,7 +11,6 @@ import { QuestionsTab } from "./campaign-detail/tabs/QuestionsTab";
 import { CampaignModals } from "./campaign-detail/CampaignModals";
 
 export default function CampaignDetail() {
-  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<
     "overview" | "products" | "orders" | "shipping" | "questions"
   >("overview");
@@ -98,7 +96,6 @@ export default function CampaignDetail() {
           filteredOrders={hook.filteredOrders || []}
           isActive={hook.isActive}
           canEditCampaign={hook.canEditCampaign}
-          currentUserId={user?.id}
           orderSearch={hook.orderSearch}
           sortField={hook.orderSortField}
           sortDirection={hook.orderSortDirection}

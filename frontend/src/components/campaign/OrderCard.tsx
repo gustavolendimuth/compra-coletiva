@@ -16,7 +16,6 @@ interface OrderCardProps {
   order: Order;
   canEditCampaign: boolean;
   isActive: boolean;
-  currentUserId?: string;
   onView: () => void;
   onTogglePayment: () => void;
   onEdit: () => void;
@@ -27,14 +26,12 @@ export default function OrderCard({
   order,
   canEditCampaign,
   isActive,
-  currentUserId,
   onView,
   onTogglePayment,
   onEdit,
   onDelete,
 }: OrderCardProps) {
-  const canEdit =
-    isActive && (currentUserId === order.userId || canEditCampaign);
+  const canEdit = isActive && canEditCampaign;
   const canDelete = isActive && canEditCampaign;
 
   return (

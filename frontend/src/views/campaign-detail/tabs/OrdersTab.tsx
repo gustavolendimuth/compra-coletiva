@@ -23,7 +23,6 @@ interface OrdersTabProps {
   filteredOrders: Order[];
   isActive: boolean;
   canEditCampaign: boolean;
-  currentUserId?: string;
   orderSearch: string;
   sortField: "customerName" | "subtotal" | "shippingFee" | "total" | "isPaid";
   sortDirection: "asc" | "desc";
@@ -43,7 +42,6 @@ export function OrdersTab({
   filteredOrders,
   isActive,
   canEditCampaign,
-  currentUserId,
   orderSearch,
   sortField,
   sortDirection,
@@ -180,7 +178,6 @@ export function OrdersTab({
                 order={order}
                 canEditCampaign={!!canEditCampaign}
                 isActive={isActive}
-                currentUserId={currentUserId}
                 onView={() => onViewOrder(order)}
                 onTogglePayment={() => onTogglePayment(order)}
                 onEdit={() => onEditOrder(order)}
@@ -314,8 +311,7 @@ export function OrdersTab({
                             />
                           )}
                           {isActive &&
-                            (currentUserId === order.userId ||
-                              canEditCampaign) && (
+                            canEditCampaign && (
                               <IconButton
                                 size="sm"
                                 variant="secondary"

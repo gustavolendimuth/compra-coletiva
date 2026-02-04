@@ -38,7 +38,7 @@ const addItemSchema = z.object({
 });
 
 // GET /api/orders?campaignId=xxx - Lista pedidos de um grupo
-// Opcional auth: Se autenticado e não for admin/criador, mostra apenas seus pedidos
+// Opcional auth: compradores também veem todos os pedidos da campanha
 router.get('/', optionalAuth, asyncHandler(async (req, res) => {
   const { campaignId } = req.query;
   const requestId = Math.random().toString(36).slice(2, 8);
@@ -48,23 +48,7 @@ router.get('/', optionalAuth, asyncHandler(async (req, res) => {
     throw new AppError(400, 'campaignId is required');
   }
 
-  // Se usuário autenticado, verifica permissões
-  let whereClause: any = { campaignId };
-
-  if (req.user) {
-    // Admin e criador da campanha veem todos os pedidos
-    if (req.user.role !== 'ADMIN') {
-      const campaign = await prisma.campaign.findUnique({
-        where: { id: campaignId },
-        select: { creatorId: true },
-      });
-
-      // Se não for criador da campanha, mostra apenas seus próprios pedidos
-      if (campaign?.creatorId !== req.user.id) {
-        whereClause.userId = req.user.id;
-      }
-    }
-  }
+  const whereClause: any = { campaignId };
 
   const fetchStart = Date.now();
   const orders = await prisma.order.findMany({

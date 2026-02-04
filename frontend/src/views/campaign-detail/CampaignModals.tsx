@@ -1,4 +1,3 @@
-import { useAuth } from '@/contexts/AuthContext';
 import { AddProductModal, EditProductModal } from './modals/ProductModals';
 import { EditOrderModal, ViewOrderModal } from './modals/OrderModals';
 import {
@@ -19,8 +18,6 @@ interface CampaignModalsProps {
 }
 
 export function CampaignModals({ hook }: CampaignModalsProps) {
-  const { user } = useAuth();
-
   return (
     <>
       <AddProductModal
@@ -55,7 +52,7 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
         isOpen={hook.isViewOrderModalOpen}
         order={hook.viewingOrder}
         isActive={hook.isActive}
-        canEdit={!!(user?.id === hook.viewingOrder?.userId || hook.canEditCampaign)}
+        canEdit={hook.canEditCampaign}
         onClose={() => {
           hook.setIsViewOrderModalOpen(false);
           hook.setViewingOrder(null);
