@@ -137,7 +137,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }, 100);
       }
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Erro ao criar conta';
+      const details = error.response?.data?.details;
+      const detailMessage =
+        Array.isArray(details) && details.length > 0
+          ? details[0]?.message
+          : null;
+      const message = detailMessage || error.response?.data?.message || 'Erro ao criar conta';
       toast.error(message);
       throw error;
     }
