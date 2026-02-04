@@ -186,8 +186,26 @@ export function useCampaignDetail() {
   const [shouldOpenQuestionsTab, setShouldOpenQuestionsTab] = useState(false);
 
   useEffect(() => {
-    if (searchParams?.get('openQuestions') === 'true') {
+    const shouldOpenQuestions =
+      searchParams?.get("openQuestions") === "true" ||
+      searchParams?.get("tab") === "questions";
+
+    if (shouldOpenQuestions) {
       setShouldOpenQuestionsTab(true);
+    }
+
+    const shouldOpenOrderChat =
+      searchParams?.get("openChat") === "true" &&
+      !!searchParams?.get("orderId");
+
+    if (shouldOpenOrderChat && typeof window !== "undefined") {
+      sessionStorage.setItem(
+        "campaignNavigationState",
+        JSON.stringify({
+          openOrderChat: true,
+          orderId: searchParams?.get("orderId"),
+        })
+      );
     }
   }, [searchParams]);
 

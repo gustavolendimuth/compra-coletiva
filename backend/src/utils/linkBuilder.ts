@@ -45,15 +45,15 @@ export class LinkBuilder {
       case 'CAMPAIGN_STATUS_CHANGED':
       case 'CAMPAIGN_ARCHIVED':
         // Link direto para a campanha
-        return `${baseUrl}/campaigns/${campaignSlug}`;
+        return `${baseUrl}/campanhas/${campaignSlug}`;
 
       case 'NEW_MESSAGE':
         if (metadata.isQuestion) {
           // Link para tab de Q&A da campanha
-          return `${baseUrl}/campaigns/${campaignSlug}?tab=questions`;
+          return `${baseUrl}/campanhas/${campaignSlug}?openQuestions=true`;
         } else {
           // Link para chat do pedido
-          return `${baseUrl}/campaigns/${campaignSlug}?tab=orders&orderId=${metadata.orderId}&openChat=true`;
+          return `${baseUrl}/campanhas/${campaignSlug}?tab=orders&orderId=${metadata.orderId}&openChat=true`;
         }
 
       default:
@@ -139,7 +139,7 @@ export class LinkBuilder {
    */
   static buildCampaignLink(campaignSlug: string): string {
     const baseUrl = this.getBaseUrl();
-    return `${baseUrl}/campaigns/${campaignSlug}`;
+    return `${baseUrl}/campanhas/${campaignSlug}`;
   }
 
   /**
