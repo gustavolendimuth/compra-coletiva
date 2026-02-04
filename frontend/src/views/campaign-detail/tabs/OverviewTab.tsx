@@ -68,6 +68,13 @@ export function OverviewTab({
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold flex items-center gap-2">
+          <LayoutDashboard className="w-6 h-6 text-primary-600" />
+          Visão Geral
+        </h2>
+      </div>
+
       {/* Localização de Retirada */}
       {(campaign.pickupAddress || canEditCampaign) && (
         <CampaignLocationSection
@@ -76,13 +83,6 @@ export function OverviewTab({
           onEditAddress={onEditAddress}
         />
       )}
-
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold flex items-center gap-2">
-          <LayoutDashboard className="w-6 h-6 text-primary-600" />
-          Visão Geral
-        </h2>
-      </div>
 
       {/* PIX em Destaque */}
       {shouldShowPix && (

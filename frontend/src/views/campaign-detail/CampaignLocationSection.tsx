@@ -110,18 +110,6 @@ export function CampaignLocationSection({ campaign, canEditCampaign, onEditAddre
     }
   };
 
-  const copyAddress = () => {
-    const full = [
-      campaign.pickupAddress,
-      campaign.pickupAddressNumber,
-      campaign.pickupComplement,
-      campaign.pickupNeighborhood,
-      `${campaign.pickupCity} - ${campaign.pickupState}`,
-      campaign.pickupZipCode,
-    ].filter(Boolean).join(', ');
-    navigator.clipboard.writeText(full);
-  };
-
   if (!hasAddress) {
     if (!canEditCampaign || !onEditAddress) {
       return null;
@@ -177,16 +165,6 @@ export function CampaignLocationSection({ campaign, canEditCampaign, onEditAddre
           {campaign.pickupCity} - {campaign.pickupState}
         </p>
         <p className="text-gray-400 text-xs mt-1">CEP: {campaign.pickupZipCode}</p>
-      </div>
-
-      {/* Action buttons */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        <button
-          onClick={copyAddress}
-          className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-50 rounded-lg hover:bg-gray-100 min-h-[44px]"
-        >
-          Copiar endereço
-        </button>
       </div>
 
       {/* Map */}

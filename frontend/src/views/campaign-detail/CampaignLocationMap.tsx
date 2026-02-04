@@ -6,7 +6,7 @@ const Map = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-[260px] sm:h-[320px] md:h-[380px] lg:h-[420px] w-full rounded-lg bg-gray-100 flex items-center justify-center">
+      <div className="h-[380px] sm:h-[360px] md:h-[420px] lg:h-[480px] w-full rounded-lg bg-gray-100 flex items-center justify-center">
         <p className="text-gray-500">Carregando mapa...</p>
       </div>
     ),
@@ -47,7 +47,7 @@ export function CampaignLocationMap({
       markers={markers}
       routePath={routePath}
       showRoute={fromCoords ? { from: fromCoords, to: pickupCoords } : undefined}
-      className="h-[260px] sm:h-[320px] md:h-[380px] lg:h-[420px]"
+      className="h-[380px] sm:h-[360px] md:h-[420px] lg:h-[480px]"
     />
   );
 }
