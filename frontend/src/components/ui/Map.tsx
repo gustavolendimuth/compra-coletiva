@@ -16,6 +16,7 @@ interface MapProps {
     from: [number, number];
     to: [number, number];
   };
+  routePath?: Array<[number, number]>;
   className?: string;
 }
 
@@ -55,6 +56,7 @@ export function Map({
   zoom = 15,
   markers = [],
   showRoute,
+  routePath,
   className = "",
 }: MapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -84,8 +86,16 @@ export function Map({
       }
     });
 
-    // Add route line
-    if (showRoute) {
+    // Add route line (prefer detailed path when available)
+    if (routePath && routePath.length > 1) {
+      L.polyline(routePath, {
+        color: "#3b82f6",
+        weight: 4,
+      }).addTo(map);
+
+      const bounds = L.latLngBounds(routePath);
+      map.fitBounds(bounds, { padding: [50, 50] });
+    } else if (showRoute) {
       L.polyline([showRoute.from, showRoute.to], {
         color: "#3b82f6",
         weight: 3,
@@ -101,12 +111,12 @@ export function Map({
       map.remove();
       mapInstanceRef.current = null;
     };
-  }, [center, zoom, markers, showRoute]);
+  }, [center, zoom, markers, showRoute, routePath]);
 
   return (
     <div
       ref={mapRef}
-      className={`h-[200px] md:h-[300px] w-full rounded-lg overflow-hidden ${className}`}
+      className={`relative z-0 h-[200px] md:h-[300px] w-full rounded-lg overflow-hidden ${className}`}
     />
   );
 }

@@ -913,4 +913,8 @@ export interface DistanceResult {
     longitude: number;
   };
   distanceKm: number;
+  route?: {
+    coordinates: Array<[number, number]>;
+    durationMin?: number;
+  };
 }

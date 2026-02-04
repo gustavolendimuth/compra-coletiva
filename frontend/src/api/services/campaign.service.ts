@@ -149,12 +149,19 @@ export const campaignService = {
     apiClient.delete(`/campaigns/${idOrSlug}/image`).then(res => res.data),
 
   /**
-   * Calculate distance from a CEP to a campaign's pickup location
+   * Calculate distance to a campaign's pickup location
    */
-  getDistance: (idOrSlug: string, fromZipCode: string) =>
+  getDistance: (
+    idOrSlug: string,
+    params: { zipCode?: string; coords?: { lat: number; lng: number } }
+  ) =>
     apiClient
       .get<DistanceResult>(`/campaigns/${idOrSlug}/distance`, {
-        params: { fromZipCode: fromZipCode.replace(/\D/g, '') },
+        params: {
+          fromZipCode: params.zipCode ? params.zipCode.replace(/\D/g, "") : undefined,
+          fromLat: params.coords?.lat,
+          fromLng: params.coords?.lng,
+        },
       })
       .then((res) => res.data),
 };

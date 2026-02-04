@@ -15,6 +15,7 @@ import { generateUniqueSlug } from "../utils/slugify";
 import { uploadCampaignImage } from "../middleware/uploadMiddleware";
 import { ImageUploadService } from "../services/imageUploadService";
 import { geocodingService } from "../services/geocodingService";
+import { routingService } from "../services/routingService";
 import { haversineDistance, getBoundingBox } from "../utils/distance";
 
 const router = Router();
@@ -99,6 +100,21 @@ const cloneCampaignSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
 });
+
+const distanceQuerySchema = z
+  .object({
+    fromZipCode: z.string().regex(/^\d{5}-?\d{3}$/).optional(),
+    fromLat: z.coerce.number().min(-90).max(90).optional(),
+    fromLng: z.coerce.number().min(-180).max(180).optional(),
+  })
+  .refine(
+    (data) =>
+      Boolean(data.fromZipCode) ||
+      (data.fromLat !== undefined && data.fromLng !== undefined),
+    {
+      message: "fromZipCode ou fromLat/fromLng são obrigatórios",
+    }
+  );
 
 // Função auxiliar para buscar IDs de campanhas usando unaccent (busca sem acentos)
 async function searchCampaignIds(searchTerm: string): Promise<string[]> {
@@ -409,11 +425,7 @@ router.get(
   "/:idOrSlug/distance",
   asyncHandler(async (req, res) => {
     const { idOrSlug } = req.params;
-    const fromZipCode = typeof req.query.fromZipCode === "string" ? req.query.fromZipCode : "";
-
-    if (!fromZipCode) {
-      throw new AppError(400, "fromZipCode é obrigatório");
-    }
+    const { fromZipCode, fromLat, fromLng } = distanceQuerySchema.parse(req.query);
 
     // Buscar campanha
     let campaign = await prisma.campaign.findUnique({
@@ -454,15 +466,40 @@ router.get(
       throw new AppError(400, "Campanha não possui endereço de retirada com coordenadas");
     }
 
-    // Geocodificar CEP do usuário
-    const fromGeo = await geocodingService.geocodeCEP(fromZipCode);
+    // Geocodificar CEP do usuário (ou usar coordenadas informadas)
+    const fromGeo = fromZipCode
+      ? await geocodingService.geocodeCEP(fromZipCode)
+      : {
+          zipCode: "",
+          city: "",
+          state: "",
+          latitude: fromLat!,
+          longitude: fromLng!,
+        };
 
-    const distanceKm = haversineDistance(
-      fromGeo.latitude,
-      fromGeo.longitude,
-      campaign.pickupLatitude,
-      campaign.pickupLongitude
-    );
+    let distanceKm: number;
+    let route:
+      | { coordinates: Array<[number, number]>; durationMin?: number }
+      | undefined;
+    try {
+      const routeResult = await routingService.getRoute(
+        { latitude: fromGeo.latitude, longitude: fromGeo.longitude },
+        { latitude: campaign.pickupLatitude, longitude: campaign.pickupLongitude }
+      );
+      distanceKm = routeResult.distanceKm;
+      route = {
+        coordinates: routeResult.coordinates,
+        durationMin: routeResult.durationMin,
+      };
+    } catch (error) {
+      console.warn("[Campaign] Falha ao calcular rota, usando linha reta:", error);
+      distanceKm = haversineDistance(
+        fromGeo.latitude,
+        fromGeo.longitude,
+        campaign.pickupLatitude,
+        campaign.pickupLongitude
+      );
+    }
 
     res.json({
       campaignId: campaign.id,
@@ -483,6 +520,7 @@ router.get(
         longitude: campaign.pickupLongitude,
       },
       distanceKm,
+      route,
     });
   })
 );

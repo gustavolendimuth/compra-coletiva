@@ -26,47 +26,68 @@ interface CampaignLocationSectionProps {
 export function CampaignLocationSection({ campaign, canEditCampaign, onEditAddress }: CampaignLocationSectionProps) {
   const { user } = useAuth();
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
+  const [routePath, setRoutePath] = useState<Array<[number, number]> | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
   const [customCep, setCustomCep] = useState('');
   const [fromCoords, setFromCoords] = useState<[number, number] | null>(null);
 
-  const hasLocation = campaign.pickupLatitude && campaign.pickupLongitude;
+  const hasLocation = campaign.pickupLatitude != null && campaign.pickupLongitude != null;
   const hasAddress = campaign.pickupAddress;
 
   // Auto-calculate from user's saved address
   useEffect(() => {
-    if (user?.defaultLatitude && user?.defaultLongitude && hasLocation) {
-      calculateDistanceFromCoords(
-        user.defaultLatitude,
-        user.defaultLongitude
-      );
+    if (!hasLocation) return;
+
+    if (user?.defaultLatitude != null && user?.defaultLongitude != null) {
+      void calculateDistanceFromCoords(user.defaultLatitude, user.defaultLongitude);
+      return;
     }
-  }, []);
+
+    if (user?.defaultZipCode) {
+      void calculateDistance(user.defaultZipCode);
+    }
+  }, [hasLocation, user?.defaultLatitude, user?.defaultLongitude, user?.defaultZipCode]);
 
   async function calculateDistance(zipCode: string) {
     if (!campaign.slug) return;
     setIsCalculating(true);
     try {
-      const result = await campaignService.getDistance(campaign.slug, zipCode);
+      const result = await campaignService.getDistance(campaign.slug, { zipCode });
       setDistanceKm(result.distanceKm);
       setFromCoords([result.from.latitude, result.from.longitude]);
+      setRoutePath(result.route?.coordinates || null);
     } catch {
       // Silently fail
+      setRoutePath(null);
     } finally {
       setIsCalculating(false);
     }
   }
 
-  function calculateDistanceFromCoords(lat: number, lng: number) {
-    if (!campaign.pickupLatitude || !campaign.pickupLongitude) return;
-    // Simple Haversine in frontend for immediate display
-    const R = 6371;
-    const dLat = (campaign.pickupLatitude - lat) * Math.PI / 180;
-    const dLon = (campaign.pickupLongitude - lng) * Math.PI / 180;
-    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat * Math.PI / 180) * Math.cos(campaign.pickupLatitude * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    setDistanceKm(Math.round(R * c * 10) / 10);
-    setFromCoords([lat, lng]);
+  async function calculateDistanceFromCoords(lat: number, lng: number) {
+    if (campaign.pickupLatitude == null || campaign.pickupLongitude == null) return;
+    setIsCalculating(true);
+    try {
+      const result = await campaignService.getDistance(campaign.slug, {
+        coords: { lat, lng },
+      });
+      setDistanceKm(result.distanceKm);
+      setFromCoords([result.from.latitude, result.from.longitude]);
+      setRoutePath(result.route?.coordinates || null);
+      return;
+    } catch {
+      // Fallback to straight-line distance if routing fails
+      setRoutePath(null);
+      const R = 6371;
+      const dLat = (campaign.pickupLatitude - lat) * Math.PI / 180;
+      const dLon = (campaign.pickupLongitude - lng) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat * Math.PI / 180) * Math.cos(campaign.pickupLatitude * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      setDistanceKm(Math.round(R * c * 10) / 10);
+      setFromCoords([lat, lng]);
+    } finally {
+      setIsCalculating(false);
+    }
   }
 
   const handleCustomSearch = () => {
@@ -77,8 +98,14 @@ export function CampaignLocationSection({ campaign, canEditCampaign, onEditAddre
   };
 
   const handleUseMyAddress = () => {
-    if (user?.defaultLatitude && user?.defaultLongitude) {
-      calculateDistanceFromCoords(user.defaultLatitude, user.defaultLongitude);
+    if (user?.defaultLatitude != null && user?.defaultLongitude != null) {
+      void calculateDistanceFromCoords(user.defaultLatitude, user.defaultLongitude);
+      setCustomCep('');
+      return;
+    }
+
+    if (user?.defaultZipCode) {
+      void calculateDistance(user.defaultZipCode);
       setCustomCep('');
     }
   };
@@ -169,6 +196,7 @@ export function CampaignLocationSection({ campaign, canEditCampaign, onEditAddre
             pickupCoords={[campaign.pickupLatitude!, campaign.pickupLongitude!]}
             pickupLabel={`${campaign.pickupAddress}, ${campaign.pickupAddressNumber}`}
             fromCoords={fromCoords}
+            routePath={routePath || undefined}
           />
         </div>
       )}
@@ -193,7 +221,7 @@ export function CampaignLocationSection({ campaign, canEditCampaign, onEditAddre
               {isCalculating ? '...' : 'Calcular'}
             </button>
           </div>
-          {user?.defaultLatitude && customCep && (
+          {(user?.defaultZipCode || (user?.defaultLatitude != null && user?.defaultLongitude != null)) && customCep && (
             <button
               onClick={handleUseMyAddress}
               className="mt-2 text-xs text-blue-600 hover:text-blue-700 underline"

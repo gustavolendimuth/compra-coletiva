@@ -17,12 +17,14 @@ interface CampaignLocationMapProps {
   pickupCoords: [number, number];
   pickupLabel?: string;
   fromCoords?: [number, number] | null;
+  routePath?: Array<[number, number]>;
 }
 
 export function CampaignLocationMap({
   pickupCoords,
   pickupLabel = "Local de retirada",
   fromCoords,
+  routePath,
 }: CampaignLocationMapProps) {
   const markers: Array<{
     position: [number, number];
@@ -43,6 +45,7 @@ export function CampaignLocationMap({
       center={pickupCoords}
       zoom={fromCoords ? 12 : 15}
       markers={markers}
+      routePath={routePath}
       showRoute={fromCoords ? { from: fromCoords, to: pickupCoords } : undefined}
       className="h-[260px] sm:h-[320px] md:h-[380px] lg:h-[420px]"
     />
