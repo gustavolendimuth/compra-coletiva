@@ -1,0 +1,92 @@
+.showcase {
+  position: relative;
+}
+
+.showcase::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 8% 4%, rgba(37, 99, 235, 0.12), transparent 40%),
+    radial-gradient(circle at 92% 96%, rgba(22, 163, 74, 0.16), transparent 44%),
+    repeating-linear-gradient(
+      -45deg,
+      rgba(55, 65, 81, 0.06) 0,
+      rgba(55, 65, 81, 0.06) 1px,
+      transparent 1px,
+      transparent 10px
+    );
+}
+
+.sectionFrame {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.sectionFrame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    130deg,
+    transparent 30%,
+    rgba(37, 99, 235, 0.09) 45%,
+    transparent 62%
+  );
+  transform: translateX(-35%);
+  animation: sweep 8s ease-in-out infinite;
+}
+
+.meshBlue {
+  background: radial-gradient(circle at 18% 16%, rgba(37, 99, 235, 0.28), transparent 62%);
+}
+
+.meshGreen {
+  background: radial-gradient(circle at 84% 22%, rgba(22, 163, 74, 0.24), transparent 60%);
+}
+
+.meshNeutral {
+  background: radial-gradient(circle at 52% 100%, rgba(75, 85, 99, 0.2), transparent 58%);
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  animation: riseIn 620ms ease forwards;
+}
+
+.delay1 {
+  animation-delay: 120ms;
+}
+
+.delay2 {
+  animation-delay: 240ms;
+}
+
+.delay3 {
+  animation-delay: 320ms;
+}
+
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes sweep {
+  0%,
+  100% {
+    transform: translateX(-35%);
+  }
+  50% {
+    transform: translateX(35%);
+  }
+}

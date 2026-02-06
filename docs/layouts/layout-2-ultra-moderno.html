@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compra Coletiva — Ultra Moderno</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            dark: { 900: '#07090f', 800: '#0d1117', 700: '#151b27', 600: '#1c2333', 500: '#252d3f' },
+            neon: { 400: '#38bdf8', 500: '#0ea5e9', 600: '#0284c7' },
+            accent: { 400: '#a78bfa', 500: '#8b5cf6' }
+          },
+          fontFamily: {
+            display: ['Syne', 'sans-serif'],
+            body: ['Outfit', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Outfit', sans-serif; background: #07090f; color: #e2e8f0; overflow-x: hidden; }
+
+    /* Animated gradient mesh background */
+    .gradient-mesh {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(14,165,233,0.08) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 80% at 80% 20%, rgba(139,92,246,0.06) 0%, transparent 50%),
+        radial-gradient(ellipse 70% 50% at 50% 90%, rgba(14,165,233,0.05) 0%, transparent 50%);
+    }
+
+    /* Grid pattern */
+    .grid-pattern {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background-image:
+        linear-gradient(rgba(14,165,233,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(14,165,233,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      z-index: 0; pointer-events: none;
+      mask-image: radial-gradient(ellipse at center, black 0%, transparent 80%);
+      -webkit-mask-image: radial-gradient(ellipse at center, black 0%, transparent 80%);
+    }
+
+    /* Animated gradient text */
+    .gradient-text {
+      background: linear-gradient(135deg, #38bdf8 0%, #a78bfa 30%, #38bdf8 60%, #a78bfa 100%);
+      background-size: 300% 300%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: gradientShift 6s ease-in-out infinite;
+    }
+    @keyframes gradientShift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    /* Glow effect */
+    .glow-neon {
+      box-shadow: 0 0 20px rgba(14,165,233,0.15), 0 0 60px rgba(14,165,233,0.05);
+    }
+    .glow-neon-strong {
+      box-shadow: 0 0 30px rgba(14,165,233,0.25), 0 0 80px rgba(14,165,233,0.10), inset 0 0 20px rgba(14,165,233,0.05);
+    }
+
+    /* Glassmorphism card */
+    .glass-card {
+      background: rgba(13,17,23,0.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(14,165,233,0.10);
+      transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .glass-card:hover {
+      border-color: rgba(14,165,233,0.25);
+      transform: translateY(-4px);
+      box-shadow: 0 20px 60px -15px rgba(14,165,233,0.15), 0 0 30px rgba(14,165,233,0.05);
+    }
+
+    /* Gradient border */
+    .gradient-border {
+      position: relative;
+      background: rgba(13,17,23,0.8);
+      border-radius: 1.5rem;
+    }
+    .gradient-border::before {
+      content: '';
+      position: absolute; inset: 0;
+      border-radius: inherit;
+      padding: 1px;
+      background: linear-gradient(135deg, rgba(14,165,233,0.3), rgba(139,92,246,0.2), rgba(14,165,233,0.1));
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+    }
+
+    /* 3D card perspective */
+    .card-3d {
+      transform-style: preserve-3d;
+      perspective: 1000px;
+    }
+    .card-3d-inner {
+      transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .card-3d:hover .card-3d-inner {
+      transform: rotateY(-2deg) rotateX(2deg) translateZ(10px);
+    }
+
+    /* Stagger reveal */
+    .reveal {
+      opacity: 0; transform: translateY(40px);
+      animation: revealUp 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+    .reveal-d1 { animation-delay: 0.15s; }
+    .reveal-d2 { animation-delay: 0.3s; }
+    .reveal-d3 { animation-delay: 0.45s; }
+    .reveal-d4 { animation-delay: 0.6s; }
+    .reveal-d5 { animation-delay: 0.75s; }
+    @keyframes revealUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Floating orbs */
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      animation: orbFloat 20s ease-in-out infinite;
+    }
+    @keyframes orbFloat {
+      0%, 100% { transform: translate(0, 0); }
+      33% { transform: translate(40px, -30px); }
+      66% { transform: translate(-20px, 20px); }
+    }
+
+    /* Neon line */
+    .neon-line {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(14,165,233,0.5), rgba(139,92,246,0.3), transparent);
+    }
+
+    /* Pulse ring */
+    .pulse-ring {
+      position: relative;
+    }
+    .pulse-ring::after {
+      content: '';
+      position: absolute; inset: -3px;
+      border-radius: inherit;
+      border: 1px solid rgba(14,165,233,0.3);
+      animation: ringPulse 3s ease-in-out infinite;
+    }
+    @keyframes ringPulse {
+      0%, 100% { opacity: 0; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.05); }
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #07090f; }
+    ::-webkit-scrollbar-thumb { background: rgba(14,165,233,0.3); border-radius: 3px; }
+
+    /* Counter animation */
+    .counter { font-variant-numeric: tabular-nums; }
+
+    /* Navbar glass */
+    .navbar-glass {
+      background: rgba(7,9,15,0.7);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(14,165,233,0.06);
+    }
+
+    /* Button glow */
+    .btn-glow {
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-glow::before {
+      content: '';
+      position: absolute; top: 50%; left: 50%;
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, rgba(14,165,233,0.2) 0%, transparent 60%);
+      transform: translate(-50%, -50%) scale(0);
+      transition: transform 0.5s;
+      border-radius: 50%;
+    }
+    .btn-glow:hover::before {
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    /* Geometric shapes */
+    .geo-shape {
+      position: absolute;
+      border: 1px solid rgba(14,165,233,0.08);
+      animation: geoSpin 30s linear infinite;
+    }
+    @keyframes geoSpin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="gradient-mesh"></div>
+  <div class="grid-pattern"></div>
+
+  <!-- Floating orbs -->
+  <div class="orb w-96 h-96 bg-neon-500/10 -top-48 -left-48" style="animation-delay:-5s"></div>
+  <div class="orb w-80 h-80 bg-accent-500/8 top-1/3 -right-40" style="animation-delay:-10s"></div>
+
+  <!-- Navbar -->
+  <nav class="navbar-glass fixed top-0 left-0 right-0 z-50">
+    <div class="max-w-7xl mx-auto px-5 sm:px-8 py-4 flex items-center justify-between">
+      <a href="#" class="flex items-center gap-3 group">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-neon-400 to-accent-500 flex items-center justify-center relative pulse-ring">
+          <svg class="w-4.5 h-4.5 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/></svg>
+        </div>
+        <span class="font-display text-lg font-bold tracking-tight text-white">Compra<span class="text-neon-400">Coletiva</span></span>
+      </a>
+      <div class="hidden md:flex items-center gap-8">
+        <a href="#" class="text-sm font-medium text-slate-400 hover:text-neon-400 transition-colors">Campanhas</a>
+        <a href="#" class="text-sm font-medium text-slate-400 hover:text-neon-400 transition-colors">Recursos</a>
+        <a href="#" class="text-sm font-medium text-slate-400 hover:text-neon-400 transition-colors">Comunidade</a>
+        <div class="h-4 w-px bg-slate-700"></div>
+        <a href="#" class="text-sm font-medium text-slate-400 hover:text-white transition-colors">Entrar</a>
+        <a href="#" class="btn-glow relative px-5 py-2.5 bg-gradient-to-r from-neon-500 to-neon-600 text-white text-sm font-semibold rounded-xl glow-neon transition-all hover:glow-neon-strong">
+          <span class="relative z-10">Começar agora</span>
+        </a>
+      </div>
+      <button class="md:hidden w-10 h-10 flex items-center justify-center rounded-xl border border-slate-700 hover:border-neon-500/30 transition-colors">
+        <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="relative min-h-screen flex items-center justify-center pt-20">
+    <!-- Geometric decorations -->
+    <div class="geo-shape w-64 h-64 top-1/4 left-[10%] rounded-3xl opacity-40" style="animation-duration:40s"></div>
+    <div class="geo-shape w-40 h-40 bottom-1/4 right-[15%] rounded-full opacity-30" style="animation-direction:reverse;animation-duration:35s"></div>
+
+    <div class="max-w-5xl mx-auto px-5 sm:px-8 text-center relative z-10">
+      <!-- Badge -->
+      <div class="reveal reveal-d1 inline-flex items-center gap-2 px-4 py-2 rounded-full glass-card mb-10">
+        <span class="w-2 h-2 rounded-full bg-neon-400 animate-pulse shadow-lg shadow-neon-400/50"></span>
+        <span class="text-sm font-medium text-neon-400">23 campanhas ativas agora</span>
+        <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
+      </div>
+
+      <!-- Heading -->
+      <h1 class="reveal reveal-d2 font-display text-5xl sm:text-7xl lg:text-8xl font-extrabold leading-[1.05] tracking-tight mb-8">
+        <span class="text-white">O poder da</span><br>
+        <span class="gradient-text">compra coletiva</span>
+      </h1>
+
+      <p class="reveal reveal-d3 text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto mb-12 font-light leading-relaxed">
+        Junte forças com a vizinhança. Preços de atacado, frete dividido, produtos direto do produtor. Economia real, sem complicação.
+      </p>
+
+      <!-- CTA -->
+      <div class="reveal reveal-d4 flex flex-col sm:flex-row gap-4 justify-center mb-16">
+        <a href="#" class="btn-glow relative inline-flex items-center justify-center gap-2 px-10 py-4 bg-gradient-to-r from-neon-500 to-neon-600 text-white font-semibold rounded-2xl glow-neon-strong text-base transition-all hover:scale-[1.02]">
+          <span class="relative z-10 flex items-center gap-2">
+            Explorar campanhas
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
+          </span>
+        </a>
+        <a href="#" class="inline-flex items-center justify-center gap-2 px-10 py-4 glass-card text-white font-semibold rounded-2xl text-base hover:border-neon-500/30 transition-all">
+          Como funciona
+        </a>
+      </div>
+
+      <!-- 3D floating cards preview -->
+      <div class="reveal reveal-d5 flex flex-col sm:flex-row gap-4 justify-center items-center max-w-3xl mx-auto">
+        <div class="card-3d w-full sm:w-72">
+          <div class="card-3d-inner gradient-border rounded-3xl p-6">
+            <div class="flex items-center gap-3 mb-4">
+              <span class="text-3xl">🍊</span>
+              <div>
+                <h3 class="font-display font-bold text-white text-sm">Cítricos do Vale</h3>
+                <p class="text-xs text-slate-500">Encerra em 3 dias</p>
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-neon-400 font-display font-bold text-xl">R$ 4<span class="text-sm text-slate-500">/kg</span></span>
+              <span class="px-2.5 py-1 bg-neon-500/10 text-neon-400 text-xs font-semibold rounded-full border border-neon-500/20">34 pedidos</span>
+            </div>
+            <div class="neon-line mt-4 mb-3"></div>
+            <div class="w-full bg-dark-600 rounded-full h-1.5">
+              <div class="bg-gradient-to-r from-neon-400 to-accent-400 h-1.5 rounded-full" style="width:68%"></div>
+            </div>
+            <p class="text-xs text-slate-500 mt-1.5">68% da meta atingida</p>
+          </div>
+        </div>
+
+        <div class="card-3d w-full sm:w-72 sm:translate-y-6">
+          <div class="card-3d-inner gradient-border rounded-3xl p-6">
+            <div class="flex items-center gap-3 mb-4">
+              <span class="text-3xl">🧀</span>
+              <div>
+                <h3 class="font-display font-bold text-white text-sm">Queijos Artesanais</h3>
+                <p class="text-xs text-slate-500">Encerra em 5 dias</p>
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-accent-400 font-display font-bold text-xl">R$ 32<span class="text-sm text-slate-500">/kg</span></span>
+              <span class="px-2.5 py-1 bg-accent-500/10 text-accent-400 text-xs font-semibold rounded-full border border-accent-500/20">18 pedidos</span>
+            </div>
+            <div class="neon-line mt-4 mb-3"></div>
+            <div class="w-full bg-dark-600 rounded-full h-1.5">
+              <div class="bg-gradient-to-r from-accent-400 to-neon-400 h-1.5 rounded-full" style="width:45%"></div>
+            </div>
+            <p class="text-xs text-slate-500 mt-1.5">45% da meta atingida</p>
+          </div>
+        </div>
+
+        <div class="card-3d w-full sm:w-72">
+          <div class="card-3d-inner gradient-border rounded-3xl p-6">
+            <div class="flex items-center gap-3 mb-4">
+              <span class="text-3xl">☕</span>
+              <div>
+                <h3 class="font-display font-bold text-white text-sm">Café Especial</h3>
+                <p class="text-xs text-slate-500">Encerra em 7 dias</p>
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-neon-400 font-display font-bold text-xl">R$ 28<span class="text-sm text-slate-500">/kg</span></span>
+              <span class="px-2.5 py-1 bg-neon-500/10 text-neon-400 text-xs font-semibold rounded-full border border-neon-500/20">67 pedidos</span>
+            </div>
+            <div class="neon-line mt-4 mb-3"></div>
+            <div class="w-full bg-dark-600 rounded-full h-1.5">
+              <div class="bg-gradient-to-r from-neon-400 to-accent-400 h-1.5 rounded-full" style="width:92%"></div>
+            </div>
+            <p class="text-xs text-slate-500 mt-1.5">92% da meta atingida</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Neon divider -->
+  <div class="neon-line max-w-4xl mx-auto my-4"></div>
+
+  <!-- Stats -->
+  <section class="py-20 relative z-10">
+    <div class="max-w-6xl mx-auto px-5 sm:px-8">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="gradient-border rounded-3xl p-6 text-center">
+          <div class="counter font-display text-4xl font-extrabold text-white mb-1">1.2k+</div>
+          <div class="text-sm text-slate-500">Usuários ativos</div>
+        </div>
+        <div class="gradient-border rounded-3xl p-6 text-center">
+          <div class="counter font-display text-4xl font-extrabold text-neon-400 mb-1">340+</div>
+          <div class="text-sm text-slate-500">Campanhas criadas</div>
+        </div>
+        <div class="gradient-border rounded-3xl p-6 text-center">
+          <div class="counter font-display text-4xl font-extrabold text-accent-400 mb-1">R$ 89k</div>
+          <div class="text-sm text-slate-500">Economizados</div>
+        </div>
+        <div class="gradient-border rounded-3xl p-6 text-center">
+          <div class="counter font-display text-4xl font-extrabold text-white mb-1">47</div>
+          <div class="text-sm text-slate-500">Bairros ativos</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="py-20 sm:py-28 relative z-10">
+    <div class="max-w-6xl mx-auto px-5 sm:px-8">
+      <div class="text-center mb-16">
+        <span class="inline-flex items-center gap-2 px-4 py-1.5 glass-card rounded-full mb-6">
+          <span class="w-1.5 h-1.5 rounded-full bg-accent-400"></span>
+          <span class="text-xs font-semibold text-accent-400 uppercase tracking-wider">Processo</span>
+        </span>
+        <h2 class="font-display text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
+          Três passos.<br><span class="gradient-text">Zero complicação.</span>
+        </h2>
+      </div>
+
+      <div class="grid sm:grid-cols-3 gap-6">
+        <div class="glass-card rounded-3xl p-8 relative group">
+          <div class="absolute top-6 right-6 font-display text-6xl font-extrabold text-neon-400/5 group-hover:text-neon-400/10 transition-colors">01</div>
+          <div class="w-14 h-14 rounded-2xl bg-neon-500/10 border border-neon-500/20 flex items-center justify-center mb-6 group-hover:glow-neon transition-all">
+            <svg class="w-6 h-6 text-neon-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+          </div>
+          <h3 class="font-display font-bold text-white text-xl mb-3">Descubra</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">Navegue por campanhas ativas na sua vizinhança. Filtre por proximidade, categoria ou prazo.</p>
+        </div>
+
+        <div class="glass-card rounded-3xl p-8 relative group">
+          <div class="absolute top-6 right-6 font-display text-6xl font-extrabold text-accent-400/5 group-hover:text-accent-400/10 transition-colors">02</div>
+          <div class="w-14 h-14 rounded-2xl bg-accent-500/10 border border-accent-500/20 flex items-center justify-center mb-6 group-hover:shadow-[0_0_20px_rgba(139,92,246,0.15)] transition-all">
+            <svg class="w-6 h-6 text-accent-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
+          </div>
+          <h3 class="font-display font-bold text-white text-xl mb-3">Participe</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">Faça seu pedido com um clique. Pague via PIX e acompanhe tudo em tempo real pelo chat.</p>
+        </div>
+
+        <div class="glass-card rounded-3xl p-8 relative group">
+          <div class="absolute top-6 right-6 font-display text-6xl font-extrabold text-neon-400/5 group-hover:text-neon-400/10 transition-colors">03</div>
+          <div class="w-14 h-14 rounded-2xl bg-neon-500/10 border border-neon-500/20 flex items-center justify-center mb-6 group-hover:glow-neon transition-all">
+            <svg class="w-6 h-6 text-neon-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <h3 class="font-display font-bold text-white text-xl mb-3">Economize</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">Receba produtos frescos com preço de atacado e frete rateado automaticamente.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="py-20 sm:py-28 relative z-10">
+    <div class="max-w-6xl mx-auto px-5 sm:px-8">
+      <div class="text-center mb-16">
+        <span class="inline-flex items-center gap-2 px-4 py-1.5 glass-card rounded-full mb-6">
+          <span class="w-1.5 h-1.5 rounded-full bg-neon-400"></span>
+          <span class="text-xs font-semibold text-neon-400 uppercase tracking-wider">Recursos</span>
+        </span>
+        <h2 class="font-display text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
+          Tecnologia a favor da <span class="gradient-text">comunidade</span>
+        </h2>
+      </div>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="glass-card rounded-3xl p-7 group">
+          <div class="w-12 h-12 rounded-xl bg-neon-500/10 border border-neon-500/15 flex items-center justify-center mb-5 group-hover:glow-neon transition-all">
+            <svg class="w-5 h-5 text-neon-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
+          </div>
+          <h3 class="font-display font-bold text-white mb-2">Geolocalização</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">Campanhas ranqueadas por distância. Encontre o mais perto de você automaticamente.</p>
+        </div>
+
+        <div class="glass-card rounded-3xl p-7 group">
+          <div class="w-12 h-12 rounded-xl bg-accent-500/10 border border-accent-500/15 flex items-center justify-center mb-5 group-hover:shadow-[0_0_20px_rgba(139,92,246,0.15)] transition-all">
+            <svg class="w-5 h-5 text-accent-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.076-4.076a1.526 1.526 0 011.037-.443 48.282 48.282 0 005.68-.494c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
+          </div>
+          <h3 class="font-display font-bold text-white mb-2">Chat ao vivo</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">Mensagens em tempo real com Socket.IO. Tire dúvidas direto na campanha.</p>
+        </div>
+
+        <div class="glass-card rounded-3xl p-7 group">
+          <div class="w-12 h-12 rounded-xl bg-neon-500/10 border border-neon-500/15 flex items-center justify-center mb-5 group-hover:glow-neon transition-all">
+            <svg class="w-5 h-5 text-neon-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/></svg>
+          </div>
+          <h3 class="font-display font-bold text-white mb-2">Frete inteligente</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">Rateio automático de frete. Quanto mais gente, menos cada um paga.</p>
+        </div>
+
+        <div class="glass-card rounded-3xl p-7 group">
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/15 flex items-center justify-center mb-5 group-hover:shadow-[0_0_20px_rgba(16,185,129,0.15)] transition-all">
+            <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z"/></svg>
+          </div>
+          <h3 class="font-display font-bold text-white mb-2">PIX instantâneo</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">Pagamento rápido e seguro via PIX. Confirmação em segundos.</p>
+        </div>
+
+        <div class="glass-card rounded-3xl p-7 group">
+          <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/15 flex items-center justify-center mb-5 group-hover:shadow-[0_0_20px_rgba(245,158,11,0.15)] transition-all">
+            <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/></svg>
+          </div>
+          <h3 class="font-display font-bold text-white mb-2">Alertas inteligentes</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">Notificações customizáveis por e-mail quando surgem campanhas do seu interesse.</p>
+        </div>
+
+        <div class="glass-card rounded-3xl p-7 group">
+          <div class="w-12 h-12 rounded-xl bg-rose-500/10 border border-rose-500/15 flex items-center justify-center mb-5 group-hover:shadow-[0_0_20px_rgba(244,63,94,0.15)] transition-all">
+            <svg class="w-5 h-5 text-rose-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>
+          </div>
+          <h3 class="font-display font-bold text-white mb-2">100% transparente</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">Rastreamento completo de pedidos, pagamentos e entrega para total confiança.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="py-20 sm:py-28 relative z-10">
+    <div class="max-w-4xl mx-auto px-5 sm:px-8">
+      <div class="gradient-border rounded-[2rem] p-10 sm:p-16 text-center relative overflow-hidden">
+        <div class="orb w-60 h-60 bg-neon-500/15 -top-20 -right-20"></div>
+        <div class="orb w-40 h-40 bg-accent-500/10 -bottom-10 -left-10"></div>
+        <div class="relative z-10">
+          <h2 class="font-display text-4xl sm:text-5xl font-extrabold text-white tracking-tight mb-6">
+            Comece a economizar <span class="gradient-text">hoje</span>
+          </h2>
+          <p class="text-lg text-slate-400 max-w-lg mx-auto mb-10">
+            Cadastro gratuito. Sem taxas escondidas. Apenas economia real para você e sua comunidade.
+          </p>
+          <a href="#" class="btn-glow relative inline-flex items-center justify-center gap-3 px-12 py-5 bg-gradient-to-r from-neon-500 to-accent-500 text-white font-bold rounded-2xl text-lg glow-neon-strong transition-all hover:scale-[1.02]">
+            <span class="relative z-10 flex items-center gap-3">
+              Criar conta gratuita
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
+            </span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800/50 py-14 relative z-10">
+    <div class="max-w-7xl mx-auto px-5 sm:px-8">
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
+        <div>
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-neon-400 to-accent-500 flex items-center justify-center">
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/></svg>
+            </div>
+            <span class="font-display font-bold text-white">CompraColetiva</span>
+          </div>
+          <p class="text-sm text-slate-500 leading-relaxed">Plataforma de compra coletiva que conecta vizinhos para economizar juntos.</p>
+        </div>
+        <div>
+          <h4 class="font-display font-bold text-sm mb-4 text-slate-300">Plataforma</h4>
+          <ul class="space-y-2.5 text-sm text-slate-500">
+            <li><a href="#" class="hover:text-neon-400 transition-colors">Campanhas</a></li>
+            <li><a href="#" class="hover:text-neon-400 transition-colors">Como funciona</a></li>
+            <li><a href="#" class="hover:text-neon-400 transition-colors">Criar campanha</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-display font-bold text-sm mb-4 text-slate-300">Suporte</h4>
+          <ul class="space-y-2.5 text-sm text-slate-500">
+            <li><a href="#" class="hover:text-neon-400 transition-colors">Ajuda</a></li>
+            <li><a href="#" class="hover:text-neon-400 transition-colors">Contato</a></li>
+            <li><a href="#" class="hover:text-neon-400 transition-colors">GitHub</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-display font-bold text-sm mb-4 text-slate-300">Legal</h4>
+          <ul class="space-y-2.5 text-sm text-slate-500">
+            <li><a href="#" class="hover:text-neon-400 transition-colors">Termos de uso</a></li>
+            <li><a href="#" class="hover:text-neon-400 transition-colors">Privacidade</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="neon-line mb-8"></div>
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <p class="text-sm text-slate-600">&copy; 2026 Compra Coletiva. Todos os direitos reservados.</p>
+        <a href="#" class="w-9 h-9 rounded-full glass-card flex items-center justify-center hover:border-neon-500/30 transition-all">
+          <svg class="w-4 h-4 text-slate-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+        </a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

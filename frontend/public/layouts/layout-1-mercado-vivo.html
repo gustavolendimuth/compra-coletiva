@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compra Coletiva — Mercado Vivo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            sky: {
+              50: '#f0f9ff', 100: '#e0f2fe', 200: '#bae6fd', 300: '#7dd3fc',
+              400: '#38bdf8', 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1',
+              800: '#075985', 900: '#0c4a6e'
+            },
+            amber: {
+              50: '#fffbeb', 100: '#fef3c7', 200: '#fde68a', 300: '#fcd34d',
+              400: '#fbbf24', 500: '#f59e0b', 600: '#d97706', 700: '#b45309'
+            },
+            terracotta: { 400: '#e07a5f', 500: '#d4644a', 600: '#c04d33' },
+            cream: { 50: '#fefdf8', 100: '#fdf9ed', 200: '#faf0d7' }
+          },
+          fontFamily: {
+            display: ['Fraunces', 'serif'],
+            body: ['DM Sans', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'DM Sans', sans-serif; background: #fefdf8; overflow-x: hidden; }
+
+    /* Organic blob shapes */
+    .blob-1 {
+      position: absolute;
+      width: 600px; height: 600px;
+      background: radial-gradient(ellipse at 30% 40%, rgba(14,165,233,0.12) 0%, rgba(251,191,36,0.08) 50%, transparent 70%);
+      border-radius: 60% 40% 55% 45% / 50% 60% 40% 50%;
+      animation: blobFloat 18s ease-in-out infinite;
+      filter: blur(40px);
+    }
+    .blob-2 {
+      position: absolute;
+      width: 500px; height: 500px;
+      background: radial-gradient(ellipse at 60% 50%, rgba(251,191,36,0.10) 0%, rgba(224,122,95,0.06) 50%, transparent 70%);
+      border-radius: 45% 55% 50% 50% / 55% 45% 55% 45%;
+      animation: blobFloat 22s ease-in-out infinite reverse;
+      filter: blur(30px);
+    }
+    @keyframes blobFloat {
+      0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+      25% { transform: translate(30px, -20px) rotate(5deg) scale(1.05); }
+      50% { transform: translate(-20px, 20px) rotate(-3deg) scale(0.95); }
+      75% { transform: translate(15px, 10px) rotate(4deg) scale(1.02); }
+    }
+
+    /* Floating card animation */
+    .float-card {
+      animation: floatCard 6s ease-in-out infinite;
+    }
+    .float-card-delay { animation-delay: -2s; }
+    .float-card-delay-2 { animation-delay: -4s; }
+    @keyframes floatCard {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-12px) rotate(1deg); }
+    }
+
+    /* Stagger reveal */
+    .reveal {
+      opacity: 0; transform: translateY(30px);
+      animation: revealUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+    .reveal-d1 { animation-delay: 0.1s; }
+    .reveal-d2 { animation-delay: 0.2s; }
+    .reveal-d3 { animation-delay: 0.35s; }
+    .reveal-d4 { animation-delay: 0.5s; }
+    .reveal-d5 { animation-delay: 0.65s; }
+    .reveal-d6 { animation-delay: 0.8s; }
+    @keyframes revealUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Wavy divider */
+    .wave-divider {
+      position: relative;
+      width: 100%;
+      overflow: hidden;
+      line-height: 0;
+    }
+    .wave-divider svg {
+      display: block;
+      width: calc(100% + 1.3px);
+      height: 80px;
+    }
+
+    /* Campaign card hover */
+    .campaign-card {
+      transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.4s ease;
+    }
+    .campaign-card:hover {
+      transform: translateY(-6px) scale(1.01);
+      box-shadow: 0 20px 60px -15px rgba(14,165,233,0.15), 0 8px 24px -8px rgba(0,0,0,0.08);
+    }
+
+    /* Grain texture overlay */
+    .grain::after {
+      content: '';
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 9999; opacity: 0.5;
+    }
+
+    /* Navbar scroll */
+    .navbar {
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    .navbar.scrolled {
+      background: rgba(254,253,248,0.92);
+      box-shadow: 0 1px 12px rgba(0,0,0,0.06);
+    }
+
+    /* Handdrawn underline */
+    .hand-underline {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 12'%3E%3Cpath d='M2 8 Q50 2 100 7 T198 5' stroke='%23fbbf24' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: bottom center;
+      background-size: 100% 12px;
+      padding-bottom: 8px;
+    }
+
+    /* Badge pulse */
+    .pulse-badge::before {
+      content: '';
+      position: absolute; top: -2px; right: -2px;
+      width: 10px; height: 10px;
+      background: #f59e0b;
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.6); opacity: 0; }
+    }
+
+    /* Scroll indicator */
+    .scroll-indicator {
+      animation: scrollBounce 2s ease-in-out infinite;
+    }
+    @keyframes scrollBounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(8px); }
+    }
+  </style>
+</head>
+<body class="grain">
+
+  <!-- Navbar -->
+  <nav class="navbar fixed top-0 left-0 right-0 z-50 bg-transparent" id="navbar">
+    <div class="max-w-7xl mx-auto px-5 sm:px-8 py-4 flex items-center justify-between">
+      <a href="#" class="flex items-center gap-3 group">
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-400 to-sky-600 flex items-center justify-center shadow-lg shadow-sky-200/50 group-hover:shadow-sky-300/60 transition-shadow">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/></svg>
+        </div>
+        <span class="font-display text-xl font-bold text-sky-900 tracking-tight">Compra Coletiva</span>
+      </a>
+      <div class="hidden md:flex items-center gap-8">
+        <a href="#" class="text-sm font-medium text-sky-800/70 hover:text-sky-900 transition-colors">Campanhas</a>
+        <a href="#" class="text-sm font-medium text-sky-800/70 hover:text-sky-900 transition-colors">Como funciona</a>
+        <a href="#" class="text-sm font-medium text-sky-800/70 hover:text-sky-900 transition-colors">Comunidade</a>
+        <div class="h-5 w-px bg-sky-200"></div>
+        <a href="#" class="text-sm font-medium text-sky-800/70 hover:text-sky-900 transition-colors">Entrar</a>
+        <a href="#" class="px-5 py-2.5 bg-gradient-to-r from-sky-500 to-sky-600 text-white text-sm font-semibold rounded-full shadow-lg shadow-sky-300/40 hover:shadow-sky-400/50 hover:from-sky-600 hover:to-sky-700 transition-all">
+          Criar campanha
+        </a>
+      </div>
+      <button class="md:hidden w-10 h-10 flex items-center justify-center rounded-xl hover:bg-sky-50 transition-colors">
+        <svg class="w-5 h-5 text-sky-800" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="relative min-h-screen flex items-center pt-20 overflow-hidden">
+    <div class="blob-1 -top-40 -right-40"></div>
+    <div class="blob-2 top-1/3 -left-60"></div>
+
+    <div class="max-w-7xl mx-auto px-5 sm:px-8 w-full relative z-10">
+      <div class="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+        <!-- Left: Text -->
+        <div class="max-w-xl">
+          <div class="reveal reveal-d1 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-100/80 border border-amber-200/60 mb-8">
+            <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+            <span class="text-sm font-medium text-amber-800">23 campanhas ativas na sua região</span>
+          </div>
+          <h1 class="reveal reveal-d2 font-display text-5xl sm:text-6xl lg:text-7xl font-bold text-sky-950 leading-[1.08] tracking-tight mb-6">
+            Compre <span class="hand-underline">junto</span>,<br>
+            pague <span class="text-terracotta-500">menos</span>.
+          </h1>
+          <p class="reveal reveal-d3 text-lg sm:text-xl text-sky-800/60 leading-relaxed mb-10 max-w-md font-light">
+            Junte-se à vizinhança e economize comprando em grupo. Produtos frescos, direto do produtor, com preço justo para todos.
+          </p>
+          <div class="reveal reveal-d4 flex flex-col sm:flex-row gap-4">
+            <a href="#" class="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-sky-500 to-sky-600 text-white font-semibold rounded-2xl shadow-xl shadow-sky-300/30 hover:shadow-sky-400/40 hover:from-sky-600 hover:to-sky-700 transition-all text-base">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+              Explorar campanhas
+            </a>
+            <a href="#" class="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/70 border border-sky-200/60 text-sky-800 font-semibold rounded-2xl hover:bg-white hover:border-sky-300 transition-all text-base">
+              Como funciona
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
+            </a>
+          </div>
+
+          <!-- Trust badges -->
+          <div class="reveal reveal-d5 mt-12 flex items-center gap-6 text-sm text-sky-700/50">
+            <div class="flex -space-x-2">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-br from-amber-300 to-amber-500 border-2 border-cream-50 flex items-center justify-center text-xs font-bold text-white">A</div>
+              <div class="w-8 h-8 rounded-full bg-gradient-to-br from-sky-300 to-sky-500 border-2 border-cream-50 flex items-center justify-center text-xs font-bold text-white">M</div>
+              <div class="w-8 h-8 rounded-full bg-gradient-to-br from-terracotta-400 to-terracotta-600 border-2 border-cream-50 flex items-center justify-center text-xs font-bold text-white">J</div>
+              <div class="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-300 to-emerald-500 border-2 border-cream-50 flex items-center justify-center text-xs font-bold text-white">+</div>
+            </div>
+            <span>+1.200 vizinhos já economizam juntos</span>
+          </div>
+        </div>
+
+        <!-- Right: Floating cards -->
+        <div class="relative hidden lg:block h-[540px]">
+          <!-- Card 1 -->
+          <div class="float-card absolute top-4 right-8 w-72 bg-white rounded-3xl shadow-xl shadow-sky-100/50 border border-sky-100/40 overflow-hidden">
+            <div class="h-40 bg-gradient-to-br from-amber-100 via-amber-50 to-sky-50 flex items-center justify-center">
+              <span class="text-6xl">🍊</span>
+            </div>
+            <div class="p-5">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="px-2.5 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-full">Ativa</span>
+                <span class="text-xs text-sky-500/50">Encerra em 3 dias</span>
+              </div>
+              <h3 class="font-display font-bold text-sky-900 text-lg">Cítricos do Vale</h3>
+              <p class="text-sm text-sky-700/50 mt-1 mb-3">Laranjas, limões e bergamotas orgânicas</p>
+              <div class="flex items-center justify-between">
+                <div>
+                  <span class="text-2xl font-display font-bold text-sky-900">R$ 4</span>
+                  <span class="text-sm text-sky-700/50">/kg</span>
+                </div>
+                <div class="flex items-center gap-1 text-sm text-amber-600">
+                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
+                  <span class="font-semibold">34 pedidos</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2 -->
+          <div class="float-card float-card-delay absolute top-48 left-0 w-64 bg-white rounded-3xl shadow-xl shadow-sky-100/50 border border-sky-100/40 overflow-hidden">
+            <div class="h-36 bg-gradient-to-br from-sky-100 via-sky-50 to-emerald-50 flex items-center justify-center">
+              <span class="text-5xl">🧀</span>
+            </div>
+            <div class="p-5">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="px-2.5 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-full">Ativa</span>
+              </div>
+              <h3 class="font-display font-bold text-sky-900">Queijos Artesanais</h3>
+              <p class="text-sm text-sky-700/50 mt-1">Serra da Canastra</p>
+              <div class="mt-3 flex items-center gap-1 text-sm text-amber-600">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
+                <span class="font-semibold">18 pedidos</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3 - Notification style -->
+          <div class="float-card float-card-delay-2 absolute bottom-12 right-16 w-80 bg-white rounded-2xl shadow-xl shadow-sky-100/50 border border-sky-100/40 p-4 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-100 to-emerald-200 flex items-center justify-center flex-shrink-0">
+              <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-sky-900">Campanha concluída!</p>
+              <p class="text-xs text-sky-700/50 mt-0.5">Hortifruti do Bairro — 52 vizinhos participaram</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scroll indicator -->
+    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 scroll-indicator">
+      <div class="w-6 h-10 rounded-full border-2 border-sky-300/50 flex justify-center pt-2">
+        <div class="w-1 h-2.5 rounded-full bg-sky-400/60"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Wave divider -->
+  <div class="wave-divider">
+    <svg viewBox="0 0 1440 80" preserveAspectRatio="none">
+      <path d="M0,50 C360,10 720,80 1440,30 L1440,80 L0,80 Z" fill="#f0f9ff"/>
+    </svg>
+  </div>
+
+  <!-- How it works -->
+  <section class="py-20 sm:py-28 bg-sky-50/50 relative">
+    <div class="max-w-7xl mx-auto px-5 sm:px-8">
+      <div class="text-center mb-16">
+        <span class="inline-block px-4 py-1.5 bg-sky-100 text-sky-700 text-sm font-semibold rounded-full mb-4">Simples assim</span>
+        <h2 class="font-display text-4xl sm:text-5xl font-bold text-sky-950 tracking-tight">
+          Como funciona?
+        </h2>
+      </div>
+
+      <div class="grid sm:grid-cols-3 gap-8 max-w-4xl mx-auto">
+        <!-- Step 1 -->
+        <div class="relative bg-white rounded-3xl p-8 shadow-sm border border-sky-100/50 text-center group hover:shadow-lg hover:shadow-sky-100/30 transition-all">
+          <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-200 to-amber-400 mx-auto mb-5 flex items-center justify-center shadow-lg shadow-amber-200/30 group-hover:scale-110 transition-transform">
+            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+          </div>
+          <div class="absolute top-6 left-6 w-7 h-7 rounded-full bg-sky-100 flex items-center justify-center">
+            <span class="font-display font-bold text-sky-600 text-sm">1</span>
+          </div>
+          <h3 class="font-display font-bold text-sky-900 text-lg mb-2">Encontre</h3>
+          <p class="text-sm text-sky-700/50 leading-relaxed">Descubra campanhas ativas perto de você com produtos que precisa.</p>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="relative bg-white rounded-3xl p-8 shadow-sm border border-sky-100/50 text-center group hover:shadow-lg hover:shadow-sky-100/30 transition-all">
+          <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-sky-300 to-sky-500 mx-auto mb-5 flex items-center justify-center shadow-lg shadow-sky-200/30 group-hover:scale-110 transition-transform">
+            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
+          </div>
+          <div class="absolute top-6 left-6 w-7 h-7 rounded-full bg-sky-100 flex items-center justify-center">
+            <span class="font-display font-bold text-sky-600 text-sm">2</span>
+          </div>
+          <h3 class="font-display font-bold text-sky-900 text-lg mb-2">Participe</h3>
+          <p class="text-sm text-sky-700/50 leading-relaxed">Faça seu pedido e junte-se ao grupo de compra da vizinhança.</p>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="relative bg-white rounded-3xl p-8 shadow-sm border border-sky-100/50 text-center group hover:shadow-lg hover:shadow-sky-100/30 transition-all">
+          <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-terracotta-400 to-terracotta-600 mx-auto mb-5 flex items-center justify-center shadow-lg shadow-terracotta-400/20 group-hover:scale-110 transition-transform">
+            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/></svg>
+          </div>
+          <div class="absolute top-6 left-6 w-7 h-7 rounded-full bg-sky-100 flex items-center justify-center">
+            <span class="font-display font-bold text-sky-600 text-sm">3</span>
+          </div>
+          <h3 class="font-display font-bold text-sky-900 text-lg mb-2">Economize</h3>
+          <p class="text-sm text-sky-700/50 leading-relaxed">Receba seus produtos com frete dividido e preços de atacado.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Campaigns Grid -->
+  <section class="py-20 sm:py-28 relative">
+    <div class="blob-2 -bottom-40 -right-40 opacity-50"></div>
+    <div class="max-w-7xl mx-auto px-5 sm:px-8 relative z-10">
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between mb-12 gap-4">
+        <div>
+          <span class="inline-block px-4 py-1.5 bg-amber-100 text-amber-700 text-sm font-semibold rounded-full mb-4">Destaque</span>
+          <h2 class="font-display text-4xl sm:text-5xl font-bold text-sky-950 tracking-tight">
+            Campanhas populares
+          </h2>
+        </div>
+        <a href="#" class="inline-flex items-center gap-2 text-sky-600 font-semibold hover:text-sky-700 transition-colors group">
+          Ver todas
+          <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
+        </a>
+      </div>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Campaign 1 -->
+        <div class="campaign-card bg-white rounded-3xl overflow-hidden border border-sky-100/50 shadow-sm">
+          <div class="h-48 bg-gradient-to-br from-amber-100 via-amber-50 to-sky-50 flex items-center justify-center relative">
+            <span class="text-7xl">🥬</span>
+            <span class="absolute top-4 left-4 px-3 py-1 bg-emerald-500 text-white text-xs font-bold rounded-full shadow-lg shadow-emerald-200/50">Ativa</span>
+            <span class="absolute top-4 right-4 px-3 py-1 bg-white/90 text-sky-700 text-xs font-semibold rounded-full backdrop-blur-sm">2,3 km</span>
+          </div>
+          <div class="p-6">
+            <h3 class="font-display font-bold text-sky-900 text-xl mb-1">Hortifruti Orgânico</h3>
+            <p class="text-sm text-sky-700/50 mb-4">Feira semanal de orgânicos certificados do produtor local.</p>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="flex -space-x-1.5">
+                  <div class="w-6 h-6 rounded-full bg-sky-200 border-2 border-white"></div>
+                  <div class="w-6 h-6 rounded-full bg-amber-200 border-2 border-white"></div>
+                  <div class="w-6 h-6 rounded-full bg-terracotta-400/30 border-2 border-white"></div>
+                </div>
+                <span class="text-xs text-sky-700/40 font-medium">+42 vizinhos</span>
+              </div>
+              <span class="text-xs text-amber-600 font-semibold bg-amber-50 px-2.5 py-1 rounded-full">Encerra em 2d</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Campaign 2 -->
+        <div class="campaign-card bg-white rounded-3xl overflow-hidden border border-sky-100/50 shadow-sm">
+          <div class="h-48 bg-gradient-to-br from-sky-100 via-sky-50 to-emerald-50 flex items-center justify-center relative">
+            <span class="text-7xl">🐟</span>
+            <span class="absolute top-4 left-4 px-3 py-1 bg-emerald-500 text-white text-xs font-bold rounded-full shadow-lg shadow-emerald-200/50">Ativa</span>
+            <span class="absolute top-4 right-4 px-3 py-1 bg-white/90 text-sky-700 text-xs font-semibold rounded-full backdrop-blur-sm">5,1 km</span>
+          </div>
+          <div class="p-6">
+            <h3 class="font-display font-bold text-sky-900 text-xl mb-1">Pescados Frescos</h3>
+            <p class="text-sm text-sky-700/50 mb-4">Direto da colônia de pescadores. Camarão, tainha e mais.</p>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="flex -space-x-1.5">
+                  <div class="w-6 h-6 rounded-full bg-emerald-200 border-2 border-white"></div>
+                  <div class="w-6 h-6 rounded-full bg-sky-200 border-2 border-white"></div>
+                </div>
+                <span class="text-xs text-sky-700/40 font-medium">+28 vizinhos</span>
+              </div>
+              <span class="text-xs text-amber-600 font-semibold bg-amber-50 px-2.5 py-1 rounded-full">Encerra em 5d</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Campaign 3 -->
+        <div class="campaign-card bg-white rounded-3xl overflow-hidden border border-sky-100/50 shadow-sm">
+          <div class="h-48 bg-gradient-to-br from-terracotta-400/20 via-amber-50 to-cream-100 flex items-center justify-center relative">
+            <span class="text-7xl">☕</span>
+            <span class="absolute top-4 left-4 px-3 py-1 bg-emerald-500 text-white text-xs font-bold rounded-full shadow-lg shadow-emerald-200/50">Ativa</span>
+            <span class="absolute top-4 right-4 px-3 py-1 bg-white/90 text-sky-700 text-xs font-semibold rounded-full backdrop-blur-sm">1,8 km</span>
+          </div>
+          <div class="p-6">
+            <h3 class="font-display font-bold text-sky-900 text-xl mb-1">Café Especial</h3>
+            <p class="text-sm text-sky-700/50 mb-4">Grãos torrados artesanalmente da região serrana mineira.</p>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="flex -space-x-1.5">
+                  <div class="w-6 h-6 rounded-full bg-amber-200 border-2 border-white"></div>
+                  <div class="w-6 h-6 rounded-full bg-sky-200 border-2 border-white"></div>
+                  <div class="w-6 h-6 rounded-full bg-emerald-200 border-2 border-white"></div>
+                  <div class="w-6 h-6 rounded-full bg-terracotta-400/30 border-2 border-white"></div>
+                </div>
+                <span class="text-xs text-sky-700/40 font-medium">+67 vizinhos</span>
+              </div>
+              <span class="text-xs text-sky-600 font-semibold bg-sky-50 px-2.5 py-1 rounded-full">Encerra em 7d</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats / Community band -->
+  <section class="py-16 bg-gradient-to-r from-sky-500 via-sky-600 to-sky-700 relative overflow-hidden">
+    <div class="absolute inset-0 opacity-10">
+      <svg width="100%" height="100%"><defs><pattern id="dots" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.5" fill="white"/></pattern></defs><rect width="100%" height="100%" fill="url(#dots)"/></svg>
+    </div>
+    <div class="max-w-7xl mx-auto px-5 sm:px-8 relative z-10">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center text-white">
+        <div>
+          <div class="font-display text-4xl sm:text-5xl font-bold mb-1">1.2k+</div>
+          <div class="text-sky-100/80 text-sm font-medium">Vizinhos cadastrados</div>
+        </div>
+        <div>
+          <div class="font-display text-4xl sm:text-5xl font-bold mb-1">340+</div>
+          <div class="text-sky-100/80 text-sm font-medium">Campanhas realizadas</div>
+        </div>
+        <div>
+          <div class="font-display text-4xl sm:text-5xl font-bold mb-1">R$ 89k</div>
+          <div class="text-sky-100/80 text-sm font-medium">Economizados juntos</div>
+        </div>
+        <div>
+          <div class="font-display text-4xl sm:text-5xl font-bold mb-1">47</div>
+          <div class="text-sky-100/80 text-sm font-medium">Bairros conectados</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="py-20 sm:py-28 bg-cream-50 relative">
+    <div class="max-w-7xl mx-auto px-5 sm:px-8">
+      <div class="text-center mb-16">
+        <span class="inline-block px-4 py-1.5 bg-terracotta-400/10 text-terracotta-500 text-sm font-semibold rounded-full mb-4">Recursos</span>
+        <h2 class="font-display text-4xl sm:text-5xl font-bold text-sky-950 tracking-tight mb-4">
+          Tudo para comprar melhor
+        </h2>
+        <p class="text-sky-700/50 max-w-lg mx-auto">Ferramentas que facilitam a organização de compras coletivas no seu bairro.</p>
+      </div>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="bg-white rounded-3xl p-7 border border-sky-100/50 shadow-sm hover:shadow-md transition-shadow group">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-100 to-sky-200 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+            <svg class="w-6 h-6 text-sky-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
+          </div>
+          <h3 class="font-display font-bold text-sky-900 text-lg mb-2">Busca por proximidade</h3>
+          <p class="text-sm text-sky-700/50 leading-relaxed">Encontre campanhas perto de você com busca por localização em tempo real.</p>
+        </div>
+
+        <div class="bg-white rounded-3xl p-7 border border-sky-100/50 shadow-sm hover:shadow-md transition-shadow group">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+            <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/></svg>
+          </div>
+          <h3 class="font-display font-bold text-sky-900 text-lg mb-2">Chat em tempo real</h3>
+          <p class="text-sm text-sky-700/50 leading-relaxed">Converse com os organizadores e participantes de cada campanha.</p>
+        </div>
+
+        <div class="bg-white rounded-3xl p-7 border border-sky-100/50 shadow-sm hover:shadow-md transition-shadow group">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-100 to-emerald-200 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+            <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/></svg>
+          </div>
+          <h3 class="font-display font-bold text-sky-900 text-lg mb-2">Frete dividido</h3>
+          <p class="text-sm text-sky-700/50 leading-relaxed">Cálculo automático de frete rateado entre todos os participantes.</p>
+        </div>
+
+        <div class="bg-white rounded-3xl p-7 border border-sky-100/50 shadow-sm hover:shadow-md transition-shadow group">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-100 to-violet-200 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+            <svg class="w-6 h-6 text-violet-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z"/></svg>
+          </div>
+          <h3 class="font-display font-bold text-sky-900 text-lg mb-2">Pagamento via PIX</h3>
+          <p class="text-sm text-sky-700/50 leading-relaxed">Pague com PIX de forma rápida e segura, sem complicação.</p>
+        </div>
+
+        <div class="bg-white rounded-3xl p-7 border border-sky-100/50 shadow-sm hover:shadow-md transition-shadow group">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-100 to-rose-200 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+            <svg class="w-6 h-6 text-rose-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/></svg>
+          </div>
+          <h3 class="font-display font-bold text-sky-900 text-lg mb-2">Notificações</h3>
+          <p class="text-sm text-sky-700/50 leading-relaxed">Fique por dentro de novas campanhas, prazos e atualizações.</p>
+        </div>
+
+        <div class="bg-white rounded-3xl p-7 border border-sky-100/50 shadow-sm hover:shadow-md transition-shadow group">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-terracotta-400/20 to-terracotta-400/30 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+            <svg class="w-6 h-6 text-terracotta-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>
+          </div>
+          <h3 class="font-display font-bold text-sky-900 text-lg mb-2">Seguro e confiável</h3>
+          <p class="text-sm text-sky-700/50 leading-relaxed">Transparência total nos pedidos, preços e rastreamento de entregas.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="py-20 sm:py-28 relative overflow-hidden">
+    <div class="blob-1 top-0 left-1/4"></div>
+    <div class="max-w-4xl mx-auto px-5 sm:px-8 text-center relative z-10">
+      <h2 class="font-display text-4xl sm:text-5xl lg:text-6xl font-bold text-sky-950 tracking-tight mb-6">
+        Pronto para economizar <br class="hidden sm:block">com a vizinhança?
+      </h2>
+      <p class="text-lg text-sky-700/50 max-w-lg mx-auto mb-10">
+        Cadastre-se gratuitamente e comece a participar de campanhas de compra coletiva hoje mesmo.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <a href="#" class="inline-flex items-center justify-center gap-2 px-10 py-4 bg-gradient-to-r from-sky-500 to-sky-600 text-white font-semibold rounded-2xl shadow-xl shadow-sky-300/30 hover:shadow-sky-400/40 hover:from-sky-600 hover:to-sky-700 transition-all text-lg">
+          Criar conta gratuita
+        </a>
+        <a href="#" class="inline-flex items-center justify-center gap-2 px-10 py-4 bg-amber-100 text-amber-800 font-semibold rounded-2xl hover:bg-amber-200 transition-all text-lg">
+          Criar uma campanha
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-sky-950 text-white py-16">
+    <div class="max-w-7xl mx-auto px-5 sm:px-8">
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
+        <div>
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-9 h-9 rounded-xl bg-sky-600 flex items-center justify-center">
+              <svg class="w-4.5 h-4.5 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/></svg>
+            </div>
+            <span class="font-display font-bold text-lg">Compra Coletiva</span>
+          </div>
+          <p class="text-sky-300/60 text-sm leading-relaxed">Conectando vizinhos para comprar melhor, economizar mais e fortalecer a comunidade local.</p>
+        </div>
+        <div>
+          <h4 class="font-display font-bold text-sm mb-4 text-sky-200">Plataforma</h4>
+          <ul class="space-y-2.5 text-sm text-sky-300/60">
+            <li><a href="#" class="hover:text-white transition-colors">Campanhas</a></li>
+            <li><a href="#" class="hover:text-white transition-colors">Como funciona</a></li>
+            <li><a href="#" class="hover:text-white transition-colors">Criar campanha</a></li>
+            <li><a href="#" class="hover:text-white transition-colors">Preços</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-display font-bold text-sm mb-4 text-sky-200">Suporte</h4>
+          <ul class="space-y-2.5 text-sm text-sky-300/60">
+            <li><a href="#" class="hover:text-white transition-colors">Central de ajuda</a></li>
+            <li><a href="#" class="hover:text-white transition-colors">Contato</a></li>
+            <li><a href="#" class="hover:text-white transition-colors">Feedback</a></li>
+            <li><a href="#" class="hover:text-white transition-colors">GitHub</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-display font-bold text-sm mb-4 text-sky-200">Legal</h4>
+          <ul class="space-y-2.5 text-sm text-sky-300/60">
+            <li><a href="#" class="hover:text-white transition-colors">Termos de uso</a></li>
+            <li><a href="#" class="hover:text-white transition-colors">Privacidade</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="border-t border-sky-800/50 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <p class="text-sm text-sky-400/50">&copy; 2026 Compra Coletiva. Feito com amor pela comunidade.</p>
+        <div class="flex items-center gap-4">
+          <a href="#" class="w-9 h-9 rounded-full bg-sky-800/50 flex items-center justify-center hover:bg-sky-700/50 transition-colors">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Navbar scroll effect
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 40);
+    });
+  </script>
+</body>
+</html>
