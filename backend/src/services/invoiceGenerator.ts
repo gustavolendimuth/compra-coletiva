@@ -1,5 +1,4 @@
 import PDFDocument from 'pdfkit';
-import { Readable } from 'stream';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -16,6 +15,7 @@ interface ProductTotal {
 
 interface InvoiceData {
   campaignId: string;
+  campaignSlug: string | null;
   campaignName: string;
   campaignDeadline: Date | null;
   products: ProductTotal[];
@@ -26,6 +26,37 @@ interface InvoiceData {
 }
 
 export class InvoiceGenerator {
+  private static readonly gramsPerKilogram = 1000;
+
+  private static readonly currencyFormatter = new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  });
+
+  private static readonly numberFormatter = new Intl.NumberFormat('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+  private static formatCurrency(value: number): string {
+    return this.currencyFormatter.format(value);
+  }
+
+  private static formatWeightFromGrams(weightInGrams: number): string {
+    const weightInKilograms = weightInGrams / this.gramsPerKilogram;
+    return `${this.numberFormatter.format(weightInKilograms)} kg`;
+  }
+
+  private static buildPlatformUrl(): string {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    return frontendUrl.replace(/\/$/, '');
+  }
+
+  private static buildCampaignUrl(platformUrl: string, campaignSlug: string | null, campaignId: string): string {
+    const campaignIdentifier = campaignSlug || campaignId;
+    return `${platformUrl}/campanhas/${campaignIdentifier}`;
+  }
+
   /**
    * Generates a supplier invoice for a campaign
    * Aggregates all products sold with quantities and totals
@@ -53,6 +84,7 @@ export class InvoiceGenerator {
 
     const invoiceData: InvoiceData = {
       campaignId: campaign.id,
+      campaignSlug: campaign.slug,
       campaignName: campaign.name,
       campaignDeadline: campaign.deadline,
       products: productTotals,
@@ -120,12 +152,21 @@ export class InvoiceGenerator {
         doc.moveDown();
 
         // Campaign info
-        doc.fontSize(12).font('Helvetica-Bold').text(`Grupo: ${data.campaignName}`);
-        doc.fontSize(10).font('Helvetica').text(`ID: ${data.campaignId}`);
+        const platformUrl = this.buildPlatformUrl();
+        const campaignUrl = this.buildCampaignUrl(platformUrl, data.campaignSlug, data.campaignId);
+        doc.fontSize(12).font('Helvetica-Bold').text('Campanha: ', { continued: true });
+        doc.fillColor('blue').text(data.campaignName, { link: campaignUrl, underline: true });
+        doc.fillColor('black');
+        doc.fontSize(10).font('Helvetica');
         if (data.campaignDeadline) {
           doc.text(`Prazo: ${new Date(data.campaignDeadline).toLocaleDateString('pt-BR')}`);
         }
         doc.text(`Data de emissão: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}`);
+        doc.moveDown(0.4);
+        doc.font('Helvetica-Bold').text('Link: ', { continued: true });
+        doc.font('Helvetica');
+        doc.fillColor('blue').text(campaignUrl, { link: campaignUrl, underline: true });
+        doc.fillColor('black');
         doc.moveDown(2);
 
         // Table header
@@ -163,9 +204,9 @@ export class InvoiceGenerator {
 
           doc.text(productName, colProduct, yPosition, { width: 220 });
           doc.text(product.totalQuantity.toString(), colQuantity, yPosition);
-          doc.text(`R$ ${product.unitPrice.toFixed(2)}`, colUnitPrice, yPosition);
-          doc.text(`${product.totalWeight.toFixed(2)}`, colWeight, yPosition);
-          doc.text(`R$ ${product.totalValue.toFixed(2)}`, colTotal, yPosition);
+          doc.text(this.formatCurrency(product.unitPrice), colUnitPrice, yPosition);
+          doc.text(this.formatWeightFromGrams(product.totalWeight), colWeight, yPosition);
+          doc.text(this.formatCurrency(product.totalValue), colTotal, yPosition);
 
           yPosition += 20;
 
@@ -187,19 +228,19 @@ export class InvoiceGenerator {
         doc.font('Helvetica-Bold');
         doc.text('Peso Total:', 350, yPosition);
         doc.font('Helvetica');
-        doc.text(`${data.totalWeight.toFixed(2)} kg`, colTotal, yPosition);
+        doc.text(this.formatWeightFromGrams(data.totalWeight), colTotal, yPosition);
         yPosition += 20;
 
         doc.font('Helvetica-Bold');
         doc.text('Subtotal Produtos:', 350, yPosition);
         doc.font('Helvetica');
-        doc.text(`R$ ${data.grandTotal.toFixed(2)}`, colTotal, yPosition);
+        doc.text(this.formatCurrency(data.grandTotal), colTotal, yPosition);
         yPosition += 20;
 
         doc.font('Helvetica-Bold');
         doc.text('Custo de Envio:', 350, yPosition);
         doc.font('Helvetica');
-        doc.text(`R$ ${data.shippingCost.toFixed(2)}`, colTotal, yPosition);
+        doc.text(this.formatCurrency(data.shippingCost), colTotal, yPosition);
         yPosition += 20;
 
         doc.moveTo(350, yPosition).lineTo(550, yPosition).stroke();
@@ -207,15 +248,16 @@ export class InvoiceGenerator {
 
         doc.font('Helvetica-Bold').fontSize(12);
         doc.text('TOTAL:', 350, yPosition);
-        doc.text(`R$ ${data.finalTotal.toFixed(2)}`, colTotal, yPosition);
+        doc.text(this.formatCurrency(data.finalTotal), colTotal, yPosition);
 
         // Footer
-        doc.fontSize(8).font('Helvetica').text(
-          'Documento gerado automaticamente pelo sistema de Compra Coletiva',
-          50,
-          750,
-          { align: 'center' }
-        );
+        doc.fontSize(8).font('Helvetica');
+        const footerText = 'Documento gerado automaticamente pelo sistema de Compra Coletiva';
+        const footerWidth = doc.widthOfString(footerText);
+        const footerX = (doc.page.width - footerWidth) / 2;
+        doc.text('Documento gerado automaticamente pelo sistema de ', footerX, 750, { continued: true });
+        doc.fillColor('blue').text('Compra Coletiva', { link: platformUrl, underline: true });
+        doc.fillColor('black');
 
         doc.end();
       } catch (error) {

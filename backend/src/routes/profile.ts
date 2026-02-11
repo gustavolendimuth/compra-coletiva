@@ -4,7 +4,6 @@ import { z } from "zod";
 import crypto from "crypto";
 import { requireAuth } from "../middleware/authMiddleware";
 import { AuthService } from "../services/authService";
-import { TokenService } from "../services/tokenService";
 import { ImageUploadService } from "../services/imageUploadService";
 import { uploadAvatar, handleUploadError } from "../middleware/uploadMiddleware";
 import { capitalizeName } from "../utils/nameFormatter";

@@ -4,7 +4,6 @@ import { prisma } from "../index";
 import { asyncHandler, AppError } from "../middleware/errorHandler";
 import {
   requireAuth,
-  requireRole,
   requireCampaignOwnership,
   optionalAuth,
 } from "../middleware/authMiddleware";

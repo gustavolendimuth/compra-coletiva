@@ -213,7 +213,7 @@ router.post(
   ...adminAuth(AuditAction.USER_BAN, AuditTargetType.USER),
   asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { reason } = banUserSchema.parse(req.body);
+    banUserSchema.parse(req.body);
 
     // Check if user exists
     const user = await prisma.user.findUnique({

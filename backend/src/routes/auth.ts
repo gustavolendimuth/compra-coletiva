@@ -101,10 +101,6 @@ const loginSchema = z.object({
   password: z.string().min(1, "Senha é obrigatória"),
 });
 
-const refreshSchema = z.object({
-  refreshToken: z.string().min(1, "Refresh token é obrigatório"),
-});
-
 const requestPasswordResetSchema = z.object({
   email: z.preprocess(normalizeEmail, z.string().email("Email inválido")),
 });
@@ -433,7 +429,7 @@ router.post("/refresh", async (req: Request, res: Response): Promise<void> => {
     let payload;
     try {
       payload = TokenService.verifyRefreshToken(refreshToken);
-    } catch (error) {
+    } catch {
       res.status(401).json({
         error: "INVALID_REFRESH_TOKEN",
         message: "Refresh token inválido",

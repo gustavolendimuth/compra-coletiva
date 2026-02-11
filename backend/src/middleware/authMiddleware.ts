@@ -92,13 +92,13 @@ export const optionalAuth = async (
         if (user) {
           req.user = user;
         }
-      } catch (error) {
+      } catch {
         // Ignora erros de token em auth opcional
       }
     }
 
     next();
-  } catch (error) {
+  } catch {
     // Em caso de erro, apenas continua sem autenticar
     next();
   }

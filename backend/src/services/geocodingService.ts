@@ -90,7 +90,7 @@ async function getAddressFromCEP(cep: string): Promise<AddressFromCEP> {
 
     cepCache.set(normalized, result);
     return result;
-  } catch (viaCepError) {
+  } catch {
     // Fallback: BrasilAPI
     try {
       const response = await fetch(

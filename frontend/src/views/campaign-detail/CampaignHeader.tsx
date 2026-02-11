@@ -194,15 +194,14 @@ export function CampaignHeader({
           {/* Deadline - Hidden on mobile in this section, shown below */}
           {campaign.deadline && (
             <div
-              className={`hidden md:inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium mt-2 ${
-                new Date(campaign.deadline) < new Date()
-                  ? "bg-red-100 text-red-800 border border-red-300"
-                  : new Date(campaign.deadline).getTime() -
-                      new Date().getTime() <
-                    24 * 60 * 60 * 1000
+              className={`hidden md:inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium mt-2 ${new Date(campaign.deadline) < new Date()
+                ? "bg-red-100 text-red-800 border border-red-300"
+                : new Date(campaign.deadline).getTime() -
+                  new Date().getTime() <
+                  24 * 60 * 60 * 1000
                   ? "bg-yellow-100 text-yellow-800 border border-yellow-300"
                   : "bg-blue-100 text-blue-800 border border-blue-300"
-              }`}
+                }`}
             >
               <Clock className="w-4 h-4" />
               <span className="text-sm">
@@ -297,15 +296,14 @@ export function CampaignHeader({
         {/* Deadline on mobile */}
         {campaign.deadline && (
           <div
-            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium ${
-              new Date(campaign.deadline) < new Date()
-                ? "bg-red-100 text-red-800 border border-red-300"
-                : new Date(campaign.deadline).getTime() -
-                    new Date().getTime() <
-                  24 * 60 * 60 * 1000
+            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium ${new Date(campaign.deadline) < new Date()
+              ? "bg-red-100 text-red-800 border border-red-300"
+              : new Date(campaign.deadline).getTime() -
+                new Date().getTime() <
+                24 * 60 * 60 * 1000
                 ? "bg-yellow-100 text-yellow-800 border border-yellow-300"
                 : "bg-blue-100 text-blue-800 border border-blue-300"
-            }`}
+              }`}
           >
             <Clock className="w-4 h-4" />
             <span className="text-sm">
@@ -393,33 +391,29 @@ export function CampaignHeader({
       {/* Alert Banner */}
       {!isActive && (
         <div
-          className={`rounded-lg p-4 mb-4 flex items-start gap-3 ${
-            isClosed
-              ? "bg-yellow-50 border border-yellow-200"
-              : "bg-blue-50 border border-blue-200"
-          }`}
+          className={`rounded-lg p-4 mb-4 flex items-start gap-3 ${isClosed
+            ? "bg-yellow-50 border border-yellow-200"
+            : "bg-blue-50 border border-blue-200"
+            }`}
         >
           <AlertCircle
-            className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
-              isClosed ? "text-yellow-600" : "text-blue-600"
-            }`}
+            className={`w-5 h-5 flex-shrink-0 mt-0.5 ${isClosed ? "text-yellow-600" : "text-blue-600"
+              }`}
           />
           <div>
             <h3
-              className={`font-semibold mb-1 ${
-                isClosed ? "text-yellow-900" : "text-blue-900"
-              }`}
+              className={`font-semibold mb-1 ${isClosed ? "text-yellow-900" : "text-blue-900"
+                }`}
             >
               {isClosed ? "Campanha Fechada" : "Campanha Enviada"}
             </h3>
             <p
-              className={`text-sm ${
-                isClosed ? "text-yellow-800" : "text-blue-800"
-              }`}
+              className={`text-sm ${isClosed ? "text-yellow-800" : "text-blue-800"
+                }`}
             >
               {isClosed
-                ? "Esta campanha está fechada. Não é possível adicionar ou alterar produtos e pedidos."
-                : "Esta campanha foi marcada como enviada. Não é possível adicionar ou alterar produtos e pedidos."}
+                ? "Esta campanha foi fechada. A fatura será enviada ao fornecedor. Não é possível adicionar ou alterar produtos e pedidos."
+                : "Esta campanha foi marcada como enviada. A fatura foi enviada ao fornecedor. Não é possível adicionar ou alterar produtos e pedidos."}
             </p>
           </div>
         </div>

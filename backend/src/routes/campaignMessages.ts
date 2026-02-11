@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../index';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
-import { requireAuth, requireCampaignOwnership } from '../middleware/authMiddleware';
+import { requireAuth } from '../middleware/authMiddleware';
 import { SpamDetectionService } from '../services/spamDetectionService';
 import { NotificationService } from '../services/notificationService';
 import {

@@ -4,7 +4,6 @@
  */
 
 import { Router } from 'express';
-import { z } from 'zod';
 import { prisma } from '../../index';
 import { asyncHandler } from '../../middleware/errorHandler';
 import { requireAuth } from '../../middleware/authMiddleware';

@@ -48,6 +48,9 @@ Se existir conteúdo em `backend/prisma/migrations_pending`, mova as pastas para
 - Frontend: `npm test --workspace=frontend`
 - Todos: `npm test --workspaces`
 
+## Lint
+- Backend: `npm run lint --workspace=backend`
+
 ## Rodar sem Docker (opcional)
 - Backend: `npm run dev --workspace=backend`
 - Frontend: `npm run dev --workspace=frontend`
