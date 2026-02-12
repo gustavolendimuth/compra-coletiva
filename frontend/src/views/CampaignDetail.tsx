@@ -34,6 +34,7 @@ export default function CampaignDetail() {
         <CampaignHeader
           campaign={hook.campaign}
           canEditCampaign={hook.canEditCampaign}
+          canGenerateOrdersSummary={hook.canGenerateOrdersSummary}
           ordersCount={hook.orders?.length || 0}
           onEditDeadline={hook.handleOpenEditDeadline}
           onEditPix={hook.handleOpenPixModal}

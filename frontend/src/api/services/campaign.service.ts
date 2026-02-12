@@ -11,7 +11,8 @@ import type {
   CreateCampaignDto,
   UpdateCampaignDto,
   CloneCampaignDto,
-  DistanceResult
+  DistanceResult,
+  CampaignOrdersSummaryResponse
 } from '../types';
 
 export const campaignService = {
@@ -110,6 +111,15 @@ export const campaignService = {
     link.remove();
     window.URL.revokeObjectURL(url);
   },
+
+  /**
+   * Get a plain-text summary of all campaign orders for sharing
+   * @param idOrSlug - Campaign ID or slug
+   */
+  getOrdersSummary: (idOrSlug: string) =>
+    apiClient
+      .get<CampaignOrdersSummaryResponse>(`/campaigns/${idOrSlug}/orders-summary`)
+      .then((res) => res.data),
 
   /**
    * Clone a campaign with all its products

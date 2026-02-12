@@ -154,6 +154,7 @@ export function useCampaignDetail() {
   const isClosed = campaign?.status === "CLOSED";
   const isSent = campaign?.status === "SENT";
   const canEditCampaign = campaign?.creatorId === user?.id;
+  const canGenerateOrdersSummary = canEditCampaign || user?.role === "ADMIN";
 
   // Alphabetical products for modal dropdown
   const alphabeticalProducts = useMemo(() => {
@@ -696,6 +697,7 @@ export function useCampaignDetail() {
     isClosed,
     isSent,
     canEditCampaign,
+    canGenerateOrdersSummary,
 
     // Navigation state
     shouldOpenQuestionsTab,

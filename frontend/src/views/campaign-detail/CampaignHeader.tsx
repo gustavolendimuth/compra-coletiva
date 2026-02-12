@@ -20,6 +20,7 @@ import { CampaignActionButtons } from "./CampaignActionButtons";
 interface CampaignHeaderProps {
   campaign: Campaign;
   canEditCampaign: boolean;
+  canGenerateOrdersSummary: boolean;
   ordersCount: number;
   onEditDeadline: () => void;
   onEditPix: () => void;
@@ -37,6 +38,7 @@ interface CampaignHeaderProps {
 export function CampaignHeader({
   campaign,
   canEditCampaign,
+  canGenerateOrdersSummary,
   ordersCount,
   onEditDeadline,
   onEditPix,
@@ -376,6 +378,7 @@ export function CampaignHeader({
         <CampaignActionButtons
           campaign={campaign}
           canEditCampaign={canEditCampaign}
+          canGenerateOrdersSummary={canGenerateOrdersSummary}
           ordersCount={ordersCount}
           onEditPix={onEditPix}
           onCloseCampaign={onCloseCampaign}

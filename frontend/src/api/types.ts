@@ -167,6 +167,16 @@ export interface CloneCampaignDto {
   description?: string;
 }
 
+export interface CampaignOrdersSummaryResponse {
+  campaignId: string;
+  campaignName: string;
+  campaignSlug: string | null;
+  generatedAt: string;
+  ordersCount: number;
+  totalAmount: number;
+  summaryText: string;
+}
+
 // ============================================================================
 // Product Types
 // ============================================================================

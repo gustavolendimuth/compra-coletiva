@@ -9,6 +9,7 @@ import {
 } from "../middleware/authMiddleware";
 import { z } from "zod";
 import { InvoiceGenerator } from "../services/invoiceGenerator";
+import { OrderSummaryGenerator } from "../services/orderSummaryGenerator";
 import { ShippingCalculator } from "../services/shippingCalculator";
 import { generateUniqueSlug } from "../utils/slugify";
 import { uploadCampaignImage } from "../middleware/uploadMiddleware";
@@ -921,6 +922,107 @@ router.get(
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     res.send(pdfBuffer);
+  })
+);
+
+// GET /api/campaigns/:idOrSlug/orders-summary - Gera resumo textual dos pedidos para compartilhar
+router.get(
+  "/:idOrSlug/orders-summary",
+  requireAuth,
+  requireCampaignOwnership,
+  asyncHandler(async (req, res) => {
+    const { idOrSlug } = req.params;
+
+    let campaign = await prisma.campaign.findUnique({
+      where: { slug: idOrSlug },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        orders: {
+          orderBy: { createdAt: "asc" },
+          select: {
+            subtotal: true,
+            shippingFee: true,
+            total: true,
+            isPaid: true,
+            customer: {
+              select: {
+                name: true,
+              },
+            },
+            items: {
+              select: {
+                quantity: true,
+                product: {
+                  select: {
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!campaign) {
+      campaign = await prisma.campaign.findUnique({
+        where: { id: idOrSlug },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          orders: {
+            orderBy: { createdAt: "asc" },
+            select: {
+              subtotal: true,
+              shippingFee: true,
+              total: true,
+              isPaid: true,
+              customer: {
+                select: {
+                  name: true,
+                },
+              },
+              items: {
+                select: {
+                  quantity: true,
+                  product: {
+                    select: {
+                      name: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+    }
+
+    if (!campaign) {
+      throw new AppError(404, "Campaign not found");
+    }
+
+    const summary = OrderSummaryGenerator.generate({
+      campaignId: campaign.id,
+      campaignName: campaign.name,
+      campaignSlug: campaign.slug,
+      orders: campaign.orders.map((order) => ({
+        customerName: order.customer?.name || "Sem nome",
+        subtotal: order.subtotal,
+        shippingFee: order.shippingFee,
+        total: order.total,
+        isPaid: order.isPaid,
+        items: order.items.map((item) => ({
+          quantity: item.quantity,
+          productName: item.product?.name || "Produto removido",
+        })),
+      })),
+    });
+
+    res.json(summary);
   })
 );
 
