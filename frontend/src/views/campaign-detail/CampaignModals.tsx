@@ -88,10 +88,7 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
         onClose={() => hook.setIsEditDeadlineModalOpen(false)}
         onChange={hook.setDeadlineForm}
         onSubmit={hook.handleUpdateDeadline}
-        onRemove={() => {
-          hook.setDeadlineForm('');
-          hook.handleUpdateDeadline({ preventDefault: () => {} } as React.FormEvent);
-        }}
+        onRemove={hook.handleRemoveDeadline}
       />
 
       <PixModal
@@ -118,8 +115,14 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
 
       <ReopenConfirmDialog
         isOpen={hook.isReopenConfirmOpen}
+        campaign={hook.campaign}
+        deadlineForm={hook.reopenDeadlineForm || ''}
+        shouldRemoveDeadline={hook.shouldRemoveDeadlineOnReopen || false}
+        isPending={hook.reopenCampaignMutation?.isPending || false}
         onClose={() => hook.setIsReopenConfirmOpen(false)}
-        onConfirm={hook.handleReopenCampaign}
+        onChangeDeadline={hook.handleReopenDeadlineChange}
+        onToggleRemoveDeadline={hook.handleToggleRemoveDeadlineOnReopen}
+        onSubmit={hook.handleReopenCampaign}
       />
 
       <SentConfirmDialog

@@ -165,26 +165,105 @@ export function CloseConfirmDialog({
 
 interface ReopenConfirmDialogProps {
   isOpen: boolean;
+  campaign: Campaign | null;
+  deadlineForm: string;
+  shouldRemoveDeadline: boolean;
+  isPending: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onChangeDeadline: (deadline: string) => void;
+  onToggleRemoveDeadline: (removeDeadline: boolean) => void;
+  onSubmit: (e: React.FormEvent) => void;
 }
 
 export function ReopenConfirmDialog({
   isOpen,
+  campaign,
+  deadlineForm,
+  shouldRemoveDeadline,
+  isPending,
   onClose,
-  onConfirm,
+  onChangeDeadline,
+  onToggleRemoveDeadline,
+  onSubmit,
 }: ReopenConfirmDialogProps) {
+  const currentDeadline = campaign?.deadline
+    ? new Date(campaign.deadline).toLocaleString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      })
+    : null;
+
   return (
-    <ConfirmDialog
-      isOpen={isOpen}
-      onClose={onClose}
-      onConfirm={onConfirm}
-      title="Reabrir Campanha"
-      message="Deseja reabrir esta campanha? Será possível adicionar e alterar pedidos e produtos novamente. A data limite será resetada."
-      confirmText="Reabrir"
-      cancelText="Cancelar"
-      variant="info"
-    />
+    <Modal isOpen={isOpen} onClose={onClose} title="Reabrir Campanha">
+      <form onSubmit={onSubmit} className="space-y-4">
+        <p className="text-sm text-gray-600">
+          Ao reabrir, será possível adicionar e alterar pedidos e produtos novamente.
+        </p>
+
+        {currentDeadline ? (
+          <div className="space-y-3">
+            <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-3">
+              <p className="text-sm text-yellow-900">
+                Data limite atual: <strong>{currentDeadline}</strong>
+              </p>
+              <p className="text-sm text-yellow-800 mt-1">
+                Para reabrir, defina uma nova data limite posterior à atual ou remova a data limite.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Nova data e hora limite
+              </label>
+              <DateTimeInput
+                value={shouldRemoveDeadline ? "" : deadlineForm}
+                onChange={onChangeDeadline}
+                autoFocus
+              />
+            </div>
+
+            <label className="flex items-start gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                checked={shouldRemoveDeadline}
+                onChange={(e) => onToggleRemoveDeadline(e.target.checked)}
+              />
+              Remover data limite ao reabrir
+            </label>
+          </div>
+        ) : (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Data e hora limite (opcional)
+            </label>
+            <DateTimeInput value={deadlineForm} onChange={onChangeDeadline} autoFocus />
+            <p className="text-sm text-gray-500 mt-2">
+              Se preenchida, a campanha será fechada automaticamente nessa data.
+            </p>
+          </div>
+        )}
+
+        <div className="flex gap-3 pt-4">
+          <Button type="submit" disabled={isPending} className="flex-1 whitespace-nowrap">
+            {isPending ? "Reabrindo..." : "Reabrir"}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onClose}
+            disabled={isPending}
+            className="whitespace-nowrap"
+          >
+            Cancelar
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 

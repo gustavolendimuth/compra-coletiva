@@ -41,7 +41,7 @@ export function CampaignDetailPage() {
           onEditDeadline={hook.handleOpenEditDeadline}
           onEditPix={hook.handleOpenPixModal}
           onCloseCampaign={() => hook.setIsCloseConfirmOpen(true)}
-          onReopenCampaign={() => hook.setIsReopenConfirmOpen(true)}
+          onReopenCampaign={hook.handleOpenReopenModal}
           onMarkAsSent={() => hook.setIsSentConfirmOpen(true)}
           onUpdateCampaign={hook.handleUpdateCampaign}
           onCloneCampaign={hook.handleOpenCloneModal}

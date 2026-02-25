@@ -146,7 +146,7 @@ export interface CreateCampaignDto {
 export interface UpdateCampaignDto {
   name?: string;
   description?: string;
-  deadline?: string;
+  deadline?: string | null;
   shippingCost?: number;
   status?: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED";
   pixKey?: string | null;

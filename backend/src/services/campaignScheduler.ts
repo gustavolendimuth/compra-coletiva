@@ -26,7 +26,7 @@ export async function closeExpiredCampaigns() {
     return result.count;
   } catch (error) {
     console.error('[CampaignScheduler] Error closing expired campaigns:', error);
-    throw error;
+    return 0;
   }
 }
 
@@ -38,11 +38,11 @@ export function startCampaignScheduler(intervalMs: number = 60000) {
   console.log('[CampaignScheduler] Starting scheduler...');
 
   // Executa imediatamente ao iniciar
-  closeExpiredCampaigns();
+  void closeExpiredCampaigns();
 
   // Configura intervalo para execução periódica
   const interval = setInterval(() => {
-    closeExpiredCampaigns();
+    void closeExpiredCampaigns();
   }, intervalMs);
 
   // Retorna função para parar o scheduler

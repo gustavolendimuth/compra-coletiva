@@ -87,6 +87,8 @@ export function useCampaignDetail() {
 
   const [shippingCost, setShippingCost] = useState("");
   const [deadlineForm, setDeadlineForm] = useState("");
+  const [reopenDeadlineForm, setReopenDeadlineForm] = useState("");
+  const [shouldRemoveDeadlineOnReopen, setShouldRemoveDeadlineOnReopen] = useState(false);
   const [cloneName, setCloneName] = useState("");
   const [cloneDescription, setCloneDescription] = useState("");
   const [pixKey, setPixKey] = useState("");
@@ -117,6 +119,18 @@ export function useCampaignDetail() {
     queryFn: () => campaignApi.getBySlug(slug!),
     enabled: !!slug,
   });
+
+  const formatDateTimeForInput = (isoDateTime: string) => {
+    const dt = new Date(isoDateTime);
+    const year = dt.getFullYear();
+    const month = (dt.getMonth() + 1).toString().padStart(2, "0");
+    const day = dt.getDate().toString().padStart(2, "0");
+    const hours = dt.getHours().toString().padStart(2, "0");
+    const minutes = dt.getMinutes().toString().padStart(2, "0");
+    const seconds = dt.getSeconds().toString().padStart(2, "0");
+
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+  };
 
   const campaignId = campaign?.id;
 
@@ -338,7 +352,7 @@ export function useCampaignDetail() {
 
   const updateDeadlineMutation = useMutation({
     mutationFn: (deadline: string | null) =>
-      campaignApi.update(slug!, { deadline: deadline || undefined }),
+      campaignApi.update(slug!, { deadline }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["campaign", slug] });
       toast.success("Data limite atualizada!");
@@ -392,6 +406,34 @@ export function useCampaignDetail() {
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || "Erro ao atualizar status");
+    },
+  });
+
+  const reopenCampaignMutation = useMutation({
+    mutationFn: async ({
+      status,
+      deadline,
+    }: {
+      status: "ACTIVE" | "CLOSED";
+      deadline?: string | null;
+    }) => {
+      if (deadline !== undefined) {
+        await campaignApi.update(slug!, { deadline });
+      }
+
+      return campaignApi.updateStatus(slug!, status);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["campaign", slug] });
+      queryClient.invalidateQueries({ queryKey: ["orders", campaignId] });
+      queryClient.invalidateQueries({ queryKey: ["analytics", campaignId] });
+      toast.success("Campanha reaberta com sucesso!");
+      setIsReopenConfirmOpen(false);
+      setReopenDeadlineForm("");
+      setShouldRemoveDeadlineOnReopen(false);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || "Erro ao reabrir campanha");
     },
   });
 
@@ -475,6 +517,10 @@ export function useCampaignDetail() {
   const handleUpdateDeadline = (e: React.FormEvent) => {
     e.preventDefault();
     updateDeadlineMutation.mutate(deadlineForm || null);
+  };
+
+  const handleRemoveDeadline = () => {
+    updateDeadlineMutation.mutate(null);
   };
 
   const handleUpdatePix = (e: React.FormEvent) => {
@@ -580,26 +626,85 @@ export function useCampaignDetail() {
     }
   };
 
-  const handleReopenCampaign = () => {
-    const hasOrders = orders && orders.length > 0;
-    const newStatus = hasOrders ? "CLOSED" : "ACTIVE";
-    handleUpdateStatus(newStatus);
+  const handleReopenDeadlineChange = (value: string) => {
+    setReopenDeadlineForm(value);
+    if (value) {
+      setShouldRemoveDeadlineOnReopen(false);
+    }
+  };
+
+  const handleToggleRemoveDeadlineOnReopen = (removeDeadline: boolean) => {
+    setShouldRemoveDeadlineOnReopen(removeDeadline);
+    if (removeDeadline) {
+      setReopenDeadlineForm("");
+    }
+  };
+
+  const handleReopenCampaign = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!campaign) return;
+
+    const hasCurrentDeadline = Boolean(campaign.deadline);
+    const parsedReopenDeadline = reopenDeadlineForm ? new Date(reopenDeadlineForm) : null;
+    const now = new Date();
+
+    if (parsedReopenDeadline && Number.isNaN(parsedReopenDeadline.getTime())) {
+      toast.error("Informe uma data limite válida.");
+      return;
+    }
+
+    if (hasCurrentDeadline) {
+      if (!shouldRemoveDeadlineOnReopen && !parsedReopenDeadline) {
+        toast.error("Defina uma nova data limite posterior ou remova a data limite para reabrir.");
+        return;
+      }
+
+      if (!shouldRemoveDeadlineOnReopen && parsedReopenDeadline) {
+        const currentDeadline = new Date(campaign.deadline!);
+
+        if (parsedReopenDeadline <= currentDeadline) {
+          toast.error("A nova data limite deve ser posterior à data limite atual.");
+          return;
+        }
+
+        if (parsedReopenDeadline <= now) {
+          toast.error("A nova data limite deve ser uma data futura.");
+          return;
+        }
+      }
+    } else if (parsedReopenDeadline && parsedReopenDeadline <= now) {
+      toast.error("A data limite deve ser uma data futura.");
+      return;
+    }
+
+    const newStatus = campaign.status === "SENT" ? "CLOSED" : "ACTIVE";
+    let deadlineToPersist: string | null | undefined = undefined;
+
+    if (shouldRemoveDeadlineOnReopen) {
+      deadlineToPersist = null;
+    } else if (parsedReopenDeadline) {
+      deadlineToPersist = reopenDeadlineForm;
+    }
+
+    reopenCampaignMutation.mutate({
+      status: newStatus,
+      deadline: deadlineToPersist,
+    });
   };
 
   const handleOpenEditDeadline = () => {
     setIsEditDeadlineModalOpen(true);
     if (campaign?.deadline) {
-      const dt = new Date(campaign.deadline);
-      const year = dt.getFullYear();
-      const month = (dt.getMonth() + 1).toString().padStart(2, "0");
-      const day = dt.getDate().toString().padStart(2, "0");
-      const hours = dt.getHours().toString().padStart(2, "0");
-      const minutes = dt.getMinutes().toString().padStart(2, "0");
-      const seconds = dt.getSeconds().toString().padStart(2, "0");
-      setDeadlineForm(`${year}-${month}-${day}T${hours}:${minutes}:${seconds}`);
+      setDeadlineForm(formatDateTimeForInput(campaign.deadline));
     } else {
       setDeadlineForm("");
     }
+  };
+
+  const handleOpenReopenModal = () => {
+    setIsReopenConfirmOpen(true);
+    setShouldRemoveDeadlineOnReopen(false);
+    setReopenDeadlineForm(campaign?.deadline ? formatDateTimeForInput(campaign.deadline) : "");
   };
 
   const handleOpenPixModal = () => {
@@ -729,6 +834,10 @@ export function useCampaignDetail() {
     setIsEditDeadlineModalOpen,
     deadlineForm,
     setDeadlineForm,
+    reopenDeadlineForm,
+    setReopenDeadlineForm,
+    shouldRemoveDeadlineOnReopen,
+    setShouldRemoveDeadlineOnReopen,
 
     // PIX Modal State
     isPixModalOpen,
@@ -787,6 +896,7 @@ export function useCampaignDetail() {
     handleDeleteProduct,
     handleUpdateShipping,
     handleUpdateDeadline,
+    handleRemoveDeadline,
     handleUpdatePix,
     handleRemovePix,
     handleUpdateStatus,
@@ -802,7 +912,10 @@ export function useCampaignDetail() {
     handleSort,
     handleProductSort,
     handleReopenCampaign,
+    handleReopenDeadlineChange,
+    handleToggleRemoveDeadlineOnReopen,
     handleOpenEditDeadline,
+    handleOpenReopenModal,
     handleOpenPixModal,
     handleOpenAddressModal,
     handleUpdateAddress,
@@ -821,6 +934,7 @@ export function useCampaignDetail() {
     updateProductMutation,
     updateShippingMutation,
     updateDeadlineMutation,
+    reopenCampaignMutation,
     updatePixMutation,
     updateStatusMutation,
     cloneCampaignMutation,

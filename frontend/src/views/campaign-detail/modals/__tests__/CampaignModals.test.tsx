@@ -411,12 +411,23 @@ describe('CampaignModals', () => {
 
   describe('ReopenConfirmDialog', () => {
     const mockOnClose = vi.fn();
-    const mockOnConfirm = vi.fn();
+    const mockOnChangeDeadline = vi.fn();
+    const mockOnToggleRemoveDeadline = vi.fn();
+    const mockOnSubmit = vi.fn();
+    const mockCampaign = createMockCampaign({
+      deadline: '2024-12-31T23:59:59.000Z',
+    });
 
     const defaultProps = {
       isOpen: true,
+      campaign: mockCampaign,
+      deadlineForm: '2025-01-10T10:00:00',
+      shouldRemoveDeadline: false,
+      isPending: false,
       onClose: mockOnClose,
-      onConfirm: mockOnConfirm,
+      onChangeDeadline: mockOnChangeDeadline,
+      onToggleRemoveDeadline: mockOnToggleRemoveDeadline,
+      onSubmit: mockOnSubmit,
     };
 
     beforeEach(() => {
@@ -427,7 +438,7 @@ describe('CampaignModals', () => {
       it('should render dialog when isOpen is true', () => {
         render(<ReopenConfirmDialog {...defaultProps} />);
 
-        expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument();
+        expect(screen.getByText('Reabrir Campanha')).toBeInTheDocument();
       });
 
       it('should display correct title', () => {
@@ -439,7 +450,7 @@ describe('CampaignModals', () => {
       it('should display reopen message', () => {
         render(<ReopenConfirmDialog {...defaultProps} />);
 
-        expect(screen.getByText(/deseja reabrir esta campanha/i)).toBeInTheDocument();
+        expect(screen.getByText(/ao reabrir, será possível adicionar e alterar pedidos/i)).toBeInTheDocument();
       });
 
       it('should render action buttons', () => {
@@ -448,17 +459,23 @@ describe('CampaignModals', () => {
         expect(screen.getByRole('button', { name: /reabrir/i })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /cancelar/i })).toBeInTheDocument();
       });
+
+      it('should render remove deadline checkbox when campaign has deadline', () => {
+        render(<ReopenConfirmDialog {...defaultProps} />);
+
+        expect(screen.getByRole('checkbox')).toBeInTheDocument();
+      });
     });
 
     describe('Dialog Actions', () => {
-      it('should call onConfirm when confirm button is clicked', async () => {
+      it('should call onSubmit when confirm button is clicked', async () => {
         const user = userEvent.setup();
         render(<ReopenConfirmDialog {...defaultProps} />);
 
         const confirmButton = screen.getByRole('button', { name: /reabrir/i });
         await user.click(confirmButton);
 
-        expect(mockOnConfirm).toHaveBeenCalledTimes(1);
+        expect(mockOnSubmit).toHaveBeenCalledTimes(1);
       });
 
       it('should call onClose when cancel button is clicked', async () => {
@@ -469,6 +486,16 @@ describe('CampaignModals', () => {
         await user.click(cancelButton);
 
         expect(mockOnClose).toHaveBeenCalledTimes(1);
+      });
+
+      it('should call onToggleRemoveDeadline when checkbox is clicked', async () => {
+        const user = userEvent.setup();
+        render(<ReopenConfirmDialog {...defaultProps} />);
+
+        const checkbox = screen.getByRole('checkbox');
+        await user.click(checkbox);
+
+        expect(mockOnToggleRemoveDeadline).toHaveBeenCalledWith(true);
       });
     });
   });
