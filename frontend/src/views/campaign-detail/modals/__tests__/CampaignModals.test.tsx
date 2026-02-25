@@ -460,10 +460,11 @@ describe('CampaignModals', () => {
         expect(screen.getByRole('button', { name: /cancelar/i })).toBeInTheDocument();
       });
 
-      it('should render remove deadline checkbox when campaign has deadline', () => {
+      it('should render reopen option cards when campaign has deadline', () => {
         render(<ReopenConfirmDialog {...defaultProps} />);
 
-        expect(screen.getByRole('checkbox')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /definir nova data limite/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /remover data limite/i })).toBeInTheDocument();
       });
     });
 
@@ -488,14 +489,29 @@ describe('CampaignModals', () => {
         expect(mockOnClose).toHaveBeenCalledTimes(1);
       });
 
-      it('should call onToggleRemoveDeadline when checkbox is clicked', async () => {
+      it('should call onToggleRemoveDeadline when remove option is clicked', async () => {
         const user = userEvent.setup();
         render(<ReopenConfirmDialog {...defaultProps} />);
 
-        const checkbox = screen.getByRole('checkbox');
-        await user.click(checkbox);
+        const removeOption = screen.getByRole('button', { name: /remover data limite/i });
+        await user.click(removeOption);
 
         expect(mockOnToggleRemoveDeadline).toHaveBeenCalledWith(true);
+      });
+
+      it('should call onToggleRemoveDeadline with false when choose new deadline option', async () => {
+        const user = userEvent.setup();
+        render(
+          <ReopenConfirmDialog
+            {...defaultProps}
+            shouldRemoveDeadline={true}
+          />
+        );
+
+        const newDeadlineOption = screen.getByRole('button', { name: /definir nova data limite/i });
+        await user.click(newDeadlineOption);
+
+        expect(mockOnToggleRemoveDeadline).toHaveBeenCalledWith(false);
       });
     });
   });

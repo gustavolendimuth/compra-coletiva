@@ -205,36 +205,66 @@ export function ReopenConfirmDialog({
         </p>
 
         {currentDeadline ? (
-          <div className="space-y-3">
-            <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-3">
-              <p className="text-sm text-yellow-900">
+          <div className="space-y-4">
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+              <p className="text-sm text-red-800">
                 Data limite atual: <strong>{currentDeadline}</strong>
               </p>
-              <p className="text-sm text-yellow-800 mt-1">
+              <p className="text-sm text-red-700 mt-1">
                 Para reabrir, defina uma nova data limite posterior à atual ou remova a data limite.
               </p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Nova data e hora limite
-              </label>
-              <DateTimeInput
-                value={shouldRemoveDeadline ? "" : deadlineForm}
-                onChange={onChangeDeadline}
-                autoFocus
-              />
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-gray-700">Escolha como reabrir</p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => onToggleRemoveDeadline(false)}
+                  className={`w-full rounded-lg border p-3 text-left transition-colors ${
+                    !shouldRemoveDeadline
+                      ? "border-blue-300 bg-blue-50 text-blue-800 shadow-sm"
+                      : "border-gray-300 bg-white text-gray-700"
+                  }`}
+                  aria-pressed={!shouldRemoveDeadline}
+                >
+                  <p className="text-sm font-semibold">Definir nova data limite</p>
+                  <p className="text-xs mt-1">
+                    Informe uma data futura para manter o fechamento automático.
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onToggleRemoveDeadline(true)}
+                  className={`w-full rounded-lg border p-3 text-left transition-colors ${
+                    shouldRemoveDeadline
+                      ? "border-green-300 bg-green-50 text-green-800 shadow-sm"
+                      : "border-gray-300 bg-white text-gray-700"
+                  }`}
+                  aria-pressed={shouldRemoveDeadline}
+                >
+                  <p className="text-sm font-semibold">Remover data limite</p>
+                  <p className="text-xs mt-1">
+                    A campanha ficará aberta sem prazo automático.
+                  </p>
+                </button>
+              </div>
             </div>
 
-            <label className="flex items-start gap-2 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                className="mt-1 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                checked={shouldRemoveDeadline}
-                onChange={(e) => onToggleRemoveDeadline(e.target.checked)}
-              />
-              Remover data limite ao reabrir
-            </label>
+            {!shouldRemoveDeadline ? (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nova data e hora limite
+                </label>
+                <DateTimeInput value={deadlineForm} onChange={onChangeDeadline} autoFocus />
+              </div>
+            ) : (
+              <div className="rounded-lg border border-green-200 bg-green-50 p-3">
+                <p className="text-sm text-green-800">
+                  A data limite atual será removida ao confirmar a reabertura.
+                </p>
+              </div>
+            )}
           </div>
         ) : (
           <div>
