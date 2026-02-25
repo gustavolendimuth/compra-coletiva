@@ -69,7 +69,7 @@ export const RegisterForm = ({
         id="register-name"
         type="text"
         label="Nome"
-        placeholder="Nome Sobrenome"
+        placeholder="Nome e Sobrenome"
         value={name}
         onChange={(e) => setName(e.target.value)}
         required
@@ -119,11 +119,11 @@ export const RegisterForm = ({
       />
 
       <div className="space-y-3">
-        <p className="text-xs text-gray-600 text-center">
+        <p className="text-xs text-sky-600 text-center">
           Ao criar uma conta, você concorda com nossos{' '}
           <Link
             href="/termos"
-            className="text-blue-600 hover:text-blue-700 font-medium"
+            className="text-sky-600 hover:text-sky-800 font-medium underline underline-offset-2"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -132,7 +132,7 @@ export const RegisterForm = ({
           {' '}e{' '}
           <Link
             href="/privacidade"
-            className="text-blue-600 hover:text-blue-700 font-medium"
+            className="text-sky-600 hover:text-sky-800 font-medium underline underline-offset-2"
             target="_blank"
             rel="noopener noreferrer"
           >

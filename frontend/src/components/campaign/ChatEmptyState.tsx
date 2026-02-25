@@ -22,7 +22,7 @@ export const ChatEmptyState = ({
   if (type === 'loading') {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-gray-500 text-sm md:text-base">Carregando mensagens...</div>
+        <div className="text-sky-600 text-sm md:text-base">Carregando mensagens...</div>
       </div>
     );
   }
@@ -30,7 +30,7 @@ export const ChatEmptyState = ({
   if (type === 'empty') {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-center text-gray-500">
+        <div className="text-center text-sky-600">
           <p className="text-sm md:text-base">Nenhuma mensagem ainda</p>
           <p className="text-xs md:text-sm mt-1">Envie a primeira mensagem abaixo</p>
         </div>
@@ -44,7 +44,7 @@ export const ChatEmptyState = ({
         <div className="text-center max-w-sm px-4">
           <div className="mb-4">
             <svg
-              className="mx-auto h-10 w-10 md:h-12 md:w-12 text-gray-400"
+              className="mx-auto h-10 w-10 md:h-12 md:w-12 text-sky-400"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -57,10 +57,10 @@ export const ChatEmptyState = ({
               />
             </svg>
           </div>
-          <h3 className="text-base md:text-lg font-medium text-gray-900 mb-2">
+          <h3 className="text-base md:text-lg font-medium text-sky-900 mb-2">
             Login Necessário
           </h3>
-          <p className="text-sm text-gray-500 mb-4">
+          <p className="text-sm text-sky-600 mb-4">
             Faça login para visualizar e enviar mensagens sobre este pedido
           </p>
           {onLogin && (
@@ -92,10 +92,10 @@ export const ChatEmptyState = ({
               />
             </svg>
           </div>
-          <h3 className="text-base md:text-lg font-medium text-gray-900 mb-2">
+          <h3 className="text-base md:text-lg font-medium text-sky-900 mb-2">
             Erro ao Carregar Mensagens
           </h3>
-          <p className="text-sm text-gray-500 mb-4">
+          <p className="text-sm text-sky-600 mb-4">
             {errorMessage || 'Ocorreu um erro ao carregar as mensagens'}
           </p>
           {onRetry && (

@@ -52,20 +52,24 @@ export function ProductsTab({
 
   const renderSortIcon = (field: typeof sortField) => {
     if (sortField !== field) {
-      return <ArrowUpDown className="w-4 h-4 text-gray-400" />;
+      return <ArrowUpDown className="w-4 h-4 text-sky-300" />;
     }
     return sortDirection === "asc" ? (
-      <ArrowUp className="w-4 h-4 text-primary-600" />
+      <ArrowUp className="w-4 h-4 text-sky-600" />
     ) : (
-      <ArrowDown className="w-4 h-4 text-primary-600" />
+      <ArrowDown className="w-4 h-4 text-sky-600" />
     );
   };
 
   return (
     <div className="pb-20 md:pb-0">
       <div className="flex justify-between items-center mb-4 gap-2">
-        <h2 className="text-2xl font-bold flex items-center gap-2">
-          <Package className="w-6 h-6 text-primary-600" />
+        <h2 className="font-display text-2xl font-bold text-sky-900 flex items-center gap-2">
+          <span className="w-7 h-7 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+            <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+          </span>
           Produtos
         </h2>
         {isActive && canEditCampaign && (
@@ -83,7 +87,7 @@ export function ProductsTab({
       {products && products.length === 0 ? (
         <Card>
           <div className="text-center py-8">
-            <p className="text-gray-500">Nenhum produto cadastrado</p>
+            <p className="text-sky-600">Nenhum produto cadastrado</p>
           </div>
         </Card>
       ) : (
@@ -95,8 +99,8 @@ export function ProductsTab({
                 onClick={() => onSort("name")}
                 className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
                   sortField === "name"
-                    ? "bg-primary-100 text-primary-700"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    ? "bg-sky-100 text-sky-700"
+                    : "bg-sky-50/60 text-sky-700 hover:bg-sky-100/60"
                 }`}
               >
                 <span>Nome</span>
@@ -106,8 +110,8 @@ export function ProductsTab({
                 onClick={() => onSort("price")}
                 className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
                   sortField === "price"
-                    ? "bg-primary-100 text-primary-700"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    ? "bg-sky-100 text-sky-700"
+                    : "bg-sky-50/60 text-sky-700 hover:bg-sky-100/60"
                 }`}
               >
                 <span>Preço</span>
@@ -117,8 +121,8 @@ export function ProductsTab({
                 onClick={() => onSort("weight")}
                 className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
                   sortField === "weight"
-                    ? "bg-primary-100 text-primary-700"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    ? "bg-sky-100 text-sky-700"
+                    : "bg-sky-50/60 text-sky-700 hover:bg-sky-100/60"
                 }`}
               >
                 <span>Peso</span>
@@ -133,7 +137,7 @@ export function ProductsTab({
               <Card key={product.id}>
                 <div className="space-y-2">
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-semibold text-gray-900">
+                    <h3 className="font-semibold text-sky-900">
                       {product.name}
                     </h3>
                     {isActive && canEditCampaign && (
@@ -157,14 +161,14 @@ export function ProductsTab({
                   </div>
                   <div className="flex gap-4 text-sm">
                     <div>
-                      <span className="text-gray-500">Preço: </span>
-                      <span className="font-medium text-gray-900">
+                      <span className="text-sky-600">Preço:</span>
+                      <span className="font-medium text-sky-900">
                         {formatCurrency(product.price)}
                       </span>
                     </div>
                     <div>
-                      <span className="text-gray-500">Peso: </span>
-                      <span className="font-medium text-gray-900">
+                      <span className="text-sky-600">Peso:</span>
+                      <span className="font-medium text-sky-900">
                         {product.weight}g
                       </span>
                     </div>
@@ -181,7 +185,7 @@ export function ProductsTab({
                 <thead className="border-b">
                   <tr>
                     <th
-                      className="px-4 py-3 text-left text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-50 transition-colors"
+                      className="px-4 py-3 text-left text-sm font-medium text-sky-800 cursor-pointer hover:bg-sky-50/40 transition-colors"
                       onClick={() => onSort("name")}
                     >
                       <div className="flex items-center gap-2">
@@ -190,7 +194,7 @@ export function ProductsTab({
                       </div>
                     </th>
                     <th
-                      className="px-4 py-3 text-left text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-50 transition-colors"
+                      className="px-4 py-3 text-left text-sm font-medium text-sky-800 cursor-pointer hover:bg-sky-50/40 transition-colors"
                       onClick={() => onSort("price")}
                     >
                       <div className="flex items-center gap-2">
@@ -199,7 +203,7 @@ export function ProductsTab({
                       </div>
                     </th>
                     <th
-                      className="px-4 py-3 text-left text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-50 transition-colors"
+                      className="px-4 py-3 text-left text-sm font-medium text-sky-800 cursor-pointer hover:bg-sky-50/40 transition-colors"
                       onClick={() => onSort("weight")}
                     >
                       <div className="flex items-center gap-2">
@@ -208,7 +212,7 @@ export function ProductsTab({
                       </div>
                     </th>
                     {isActive && canEditCampaign && (
-                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">
+                      <th className="px-4 py-3 text-right text-sm font-medium text-sky-800">
                         Ações
                       </th>
                     )}
@@ -216,14 +220,14 @@ export function ProductsTab({
                 </thead>
                 <tbody className="divide-y">
                   {sortedProducts?.map((product) => (
-                    <tr key={product.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm text-gray-900">
+                    <tr key={product.id} className="hover:bg-sky-50/30">
+                      <td className="px-4 py-3 text-sm text-sky-900">
                         {product.name}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-900">
+                      <td className="px-4 py-3 text-sm text-sky-900">
                         {formatCurrency(product.price)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-900">
+                      <td className="px-4 py-3 text-sm text-sky-900">
                         {product.weight}g
                       </td>
                       {isActive && canEditCampaign && (
@@ -265,7 +269,7 @@ export function ProductsTab({
           productToDelete ? (
             <>
               <p>Tem certeza que deseja remover o produto <strong>{productToDelete.name}</strong>?</p>
-              <p className="mt-2 text-sm text-gray-600">Esta ação não pode ser desfeita.</p>
+              <p className="mt-2 text-sm text-sky-600">Esta ação não pode ser desfeita.</p>
             </>
           ) : (
             ""

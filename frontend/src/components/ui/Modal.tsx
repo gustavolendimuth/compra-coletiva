@@ -1,7 +1,6 @@
 import { ReactNode, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import Button from './Button';
 import { Portal } from './Portal';
 
 interface ModalProps {
@@ -13,15 +12,6 @@ interface ModalProps {
   className?: string;
 }
 
-/**
- * Modal Component - Design System Primitive
- *
- * Mobile-first modal that's centered on all screen sizes.
- * On mobile: centered with padding, rounded corners
- * On desktop: centered with max-width constraints
- * Follows design system colors, shadows, and spacing.
- * Handles body scroll locking and keyboard accessibility.
- */
 export const Modal = ({
   isOpen,
   onClose,
@@ -30,7 +20,6 @@ export const Modal = ({
   size = 'md',
   className
 }: ModalProps) => {
-  // Lock body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -43,7 +32,6 @@ export const Modal = ({
     };
   }, [isOpen]);
 
-  // Close on Escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
@@ -67,23 +55,23 @@ export const Modal = ({
 
   return (
     <Portal>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-0">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6">
         {/* Backdrop */}
         <div
-          className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+          className="absolute inset-0 bg-sky-950/40 backdrop-blur-sm animate-fade-in"
           onClick={onClose}
           aria-hidden="true"
         />
 
-        {/* Modal Content - Centered with max width on mobile, standard on desktop */}
+        {/* Modal container — overflow-hidden keeps scrollbar inside rounded corners */}
         <div
           className={cn(
-            'relative bg-white',
-            'w-full md:h-auto', // Full width with padding, auto height
-            'rounded-lg shadow-lg', // Rounded corners on all screens
-            'md:mx-4', // Margin on desktop
-            'max-h-[90vh]', // Max 90% viewport on all screens
-            'overflow-y-auto',
+            'relative flex flex-col',
+            'w-full max-h-[90vh]',
+            'bg-white rounded-3xl',
+            'shadow-2xl shadow-sky-300/20',
+            'overflow-hidden',
+            'animate-fade-in',
             sizeClasses[size],
             className
           )}
@@ -92,29 +80,29 @@ export const Modal = ({
           aria-labelledby="modal-title"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header - Sticky on mobile for better UX */}
-          <div className="sticky top-0 bg-white border-b border-gray-200 z-10">
-            <div className="flex items-center justify-between p-4 md:px-6 md:py-4">
+          {/* Close button — always floats top-right, layout-independent */}
+          <button
+            onClick={onClose}
+            aria-label="Fechar modal"
+            className="absolute top-3.5 right-3.5 z-20 w-8 h-8 flex items-center justify-center rounded-xl text-sky-400 hover:text-sky-700 hover:bg-sky-50 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+
+          {/* Title header — only when a non-empty title is passed */}
+          {title && (
+            <div className="flex-shrink-0 px-5 py-4 pr-12 md:px-6 md:py-5 border-b border-sky-100">
               <h2
                 id="modal-title"
-                className="text-lg md:text-xl font-semibold text-gray-900"
+                className="text-lg md:text-xl font-display font-bold text-sky-900"
               >
                 {title}
               </h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onClose}
-                className="min-h-[44px] min-w-[44px] -mr-2" // Touch-friendly close button
-                aria-label="Fechar modal"
-              >
-                <X className="w-5 h-5" />
-              </Button>
             </div>
-          </div>
+          )}
 
-          {/* Body */}
-          <div className="p-4 md:p-6">
+          {/* Scrollable body — scrollbar confined inside rounded-3xl */}
+          <div className="flex-1 overflow-y-auto p-5 md:p-6 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-sky-200 [&::-webkit-scrollbar-thumb:hover]:bg-sky-300">
             {children}
           </div>
         </div>

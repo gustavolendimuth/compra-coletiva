@@ -19,15 +19,15 @@ export default function IconButton({
   disabled,
   ...props
 }: IconButtonProps) {
-  const baseClasses = 'inline-flex items-center justify-center gap-2 font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap';
+  const baseClasses = 'inline-flex items-center justify-center gap-2 font-medium rounded-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap';
 
   const variants = {
-    primary: 'bg-primary-600 text-white hover:bg-primary-700 disabled:hover:bg-primary-600',
-    secondary: 'bg-gray-200 text-gray-900 hover:bg-gray-300 disabled:hover:bg-gray-200',
-    danger: 'bg-red-600 text-white hover:bg-red-700 disabled:hover:bg-red-600',
-    ghost: 'bg-transparent text-gray-700 hover:bg-gray-100 disabled:hover:bg-transparent',
-    warning: 'bg-orange-500 text-white hover:bg-orange-600 disabled:hover:bg-orange-500',
-    success: 'bg-green-600 text-white hover:bg-green-700 disabled:hover:bg-green-600'
+    primary: 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-sm shadow-sky-300/30 hover:shadow-md hover:shadow-sky-300/40 disabled:hover:shadow-sm',
+    secondary: 'bg-white/80 text-sky-800 border border-sky-200/60 hover:bg-sky-50 hover:border-sky-300 disabled:hover:bg-white/80',
+    danger: 'bg-red-500 text-white hover:bg-red-600 shadow-sm shadow-red-300/20 disabled:hover:bg-red-500',
+    ghost: 'bg-transparent text-sky-700 hover:bg-sky-50 disabled:hover:bg-transparent',
+    warning: 'bg-amber-500 text-white hover:bg-amber-600 shadow-sm shadow-amber-300/20 disabled:hover:bg-amber-500',
+    success: 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm shadow-emerald-300/20 disabled:hover:bg-emerald-500'
   };
 
   const sizes = {

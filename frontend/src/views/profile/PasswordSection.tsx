@@ -60,8 +60,8 @@ export function PasswordSection({ hasPassword }: PasswordSectionProps) {
   if (!hasPassword) {
     return (
       <Card className="p-4 md:p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-2">Senha</h2>
-        <p className="text-sm text-gray-500">
+        <h2 className="text-lg font-semibold text-sky-900 mb-2">Senha</h2>
+        <p className="text-sm text-sky-600">
           Sua conta foi criada via Google. Você não possui uma senha local.
         </p>
       </Card>
@@ -70,7 +70,7 @@ export function PasswordSection({ hasPassword }: PasswordSectionProps) {
 
   return (
     <Card className="p-4 md:p-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">Alterar Senha</h2>
+      <h2 className="text-lg font-semibold text-sky-900 mb-4">Alterar Senha</h2>
 
       {isEditing ? (
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -111,7 +111,7 @@ export function PasswordSection({ hasPassword }: PasswordSectionProps) {
         </form>
       ) : (
         <div className="flex justify-between items-center">
-          <p className="text-sm text-gray-500">••••••••</p>
+          <p className="text-sm text-sky-600">••••••••</p>
           <Button variant="secondary" onClick={() => setIsEditing(true)}>
             Alterar
           </Button>

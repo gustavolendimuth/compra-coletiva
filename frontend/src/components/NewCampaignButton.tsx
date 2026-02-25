@@ -184,7 +184,7 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-sky-800 mb-2">
               Imagem da Campanha (opcional)
             </label>
             <ImageUpload
@@ -214,7 +214,7 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
           />
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-sky-800 mb-2">
               Data Limite (opcional)
             </label>
             <DateTimeInput
@@ -223,7 +223,7 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
                 setFormData({ ...formData, deadline: value })
               }
             />
-            <p className="text-sm text-gray-500 mt-2">
+            <p className="text-sm text-sky-600/60 mt-2">
               A campanha será fechada automaticamente quando atingir esta data.
               Formato: dd/mm/aaaa HH:mm (24h)
             </p>
@@ -245,17 +245,17 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
             placeholder="0.00"
           />
 
-          <div className="border-t pt-4">
-            <h3 className="text-base font-semibold text-gray-900 mb-3">
+          <div className="border-t border-sky-100 pt-4">
+            <h3 className="text-base font-display font-bold text-sky-900 mb-3">
               Configuração PIX (opcional)
             </h3>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-sky-700/50 mb-4">
               Configure a chave PIX para que os compradores possam visualizar e realizar pagamentos.
             </p>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-sky-800 mb-2">
                   Tipo de Chave PIX
                 </label>
                 <select
@@ -266,7 +266,7 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
                       pixType: e.target.value as any,
                     })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                  className="w-full px-4 py-2.5 border border-sky-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:border-transparent text-base text-sky-900 bg-white transition-all"
                 >
                   <option value="">Selecione o tipo</option>
                   <option value="CPF">CPF</option>
@@ -300,7 +300,7 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
               />
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-sky-800 mb-2">
                   Mostrar PIX quando a campanha estiver
                 </label>
                 <select
@@ -311,24 +311,24 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
                       pixVisibleAtStatus: e.target.value as any,
                     })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                  className="w-full px-4 py-2.5 border border-sky-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:border-transparent text-base text-sky-900 bg-white transition-all"
                 >
                   <option value="ACTIVE">Ativa</option>
                   <option value="CLOSED">Fechada</option>
                   <option value="SENT">Enviada</option>
                 </select>
-                <p className="text-sm text-gray-500 mt-2">
+                <p className="text-sm text-sky-600/60 mt-2">
                   O PIX será exibido em destaque apenas quando a campanha atingir o status selecionado.
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="border-t pt-4">
-            <h3 className="text-base font-semibold text-gray-900 mb-3">
+          <div className="border-t border-sky-100 pt-4">
+            <h3 className="text-base font-display font-bold text-sky-900 mb-3">
               Endereço de Retirada (opcional)
             </h3>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-sky-700/50 mb-4">
               Informe o local onde os compradores poderão retirar os produtos.
             </p>
             <AddressForm

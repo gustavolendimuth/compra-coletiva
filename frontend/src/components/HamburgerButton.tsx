@@ -20,14 +20,14 @@ export const HamburgerButton: React.FC<HamburgerButtonProps> = ({
       onClick={() => {
         onClick();
       }}
-      className={`relative w-10 h-10 flex items-center justify-center rounded-lg hover:bg-primary-700 transition-colors ${className}`}
+      className={`relative w-10 h-10 flex items-center justify-center rounded-xl hover:bg-sky-50/50 transition-colors ${className}`}
       aria-label={isOpen ? 'Fechar menu' : 'Abrir menu'}
       aria-expanded={isOpen}
     >
       <div className="w-6 h-5 flex flex-col justify-between">
         {/* Top line */}
         <span
-          className={`block h-0.5 w-full bg-white rounded-full transition-all duration-300 ease-in-out ${isOpen ? 'rotate-45 translate-y-2' : ''
+          className={`block h-0.5 w-full bg-sky-800 rounded-full transition-all duration-300 ease-in-out ${isOpen ? 'rotate-45 translate-y-2' : ''
             }`}
         />
         {/* Middle line */}

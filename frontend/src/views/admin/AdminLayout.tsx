@@ -13,7 +13,7 @@ interface AdminLayoutProps {
 
 export function AdminLayout({ children }: AdminLayoutProps) {
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen" style={{ background: '#fefdf8' }}>
       <AdminSidebar />
       <main className="flex-1 p-4 md:p-8">
         {children}

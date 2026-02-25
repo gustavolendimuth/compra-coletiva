@@ -1,18 +1,3 @@
-import {
-  MessageCircle,
-  Package,
-  Eye,
-  CircleDollarSign,
-  BarChart3,
-  Users,
-  Hash,
-  TrendingUp,
-  Truck,
-  User,
-  LayoutDashboard,
-  Upload,
-  ShoppingBag,
-} from "lucide-react";
 import { Card, PixDisplay } from "@/components/ui";
 import IconButton from "@/components/IconButton";
 import { CampaignChat } from "@/components/campaign";
@@ -22,6 +7,7 @@ import { Order, Product, CampaignAnalytics, Campaign } from "@/api";
 import { getCustomerDisplayName } from "../utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { CampaignLocationSection } from "../CampaignLocationSection";
+import { Eye, Upload } from "lucide-react";
 
 interface OverviewTabProps {
   campaign: Campaign;
@@ -54,26 +40,25 @@ export function OverviewTab({
 }: OverviewTabProps) {
   const { user } = useAuth();
 
-  // Encontrar o pedido do usuário atual
   const userOrder = user ? orders.find(o => o.userId === user.id) : undefined;
 
-  // Verificar se deve mostrar o PIX baseado no status da campanha e se usuário tem pedido
-  // Só mostra se o usuário tiver um pedido e a campanha não estiver arquivada
   const shouldShowPix =
     campaign.pixKey &&
     campaign.pixType &&
     campaign.status !== "ARCHIVED" &&
     campaign.status === campaign.pixVisibleAtStatus &&
-    userOrder !== undefined; // Só mostra se o usuário tiver um pedido
+    userOrder !== undefined;
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold flex items-center gap-2">
-          <LayoutDashboard className="w-6 h-6 text-primary-600" />
-          Visão Geral
-        </h2>
-      </div>
+      <h2 className="font-display text-2xl font-bold text-sky-900 flex items-center gap-2">
+        <span className="w-7 h-7 rounded-xl bg-sky-100 flex items-center justify-center flex-shrink-0">
+          <svg className="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+          </svg>
+        </span>
+        Visão Geral
+      </h2>
 
       {/* Localização de Retirada */}
       {(campaign.pickupAddress || canEditCampaign) && (
@@ -99,8 +84,12 @@ export function OverviewTab({
       {products && products.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-              <Package className="w-5 h-5 text-primary-600" />
+            <h3 className="font-display text-xl font-semibold text-sky-900 flex items-center gap-2">
+              <span className="w-6 h-6 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <svg className="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+              </span>
               Produtos Disponíveis
             </h3>
           </div>
@@ -112,18 +101,20 @@ export function OverviewTab({
               .map((product) => (
                 <div
                   key={product.id}
-                  className="bg-white border border-gray-200 rounded-lg p-3 hover:border-primary-400 hover:shadow-md transition-all duration-200 flex flex-col"
+                  className="bg-white border border-sky-100/60 rounded-2xl p-3 hover:border-sky-300 hover:shadow-md hover:shadow-sky-100/50 transition-all duration-200 flex flex-col"
                 >
-                  <div className="bg-primary-100 p-2 rounded-lg mb-2 w-fit">
-                    <Package className="w-5 h-5 text-primary-600" />
+                  <div className="bg-amber-50 p-2 rounded-xl mb-2 w-fit">
+                    <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
                   </div>
 
-                  <h4 className="font-semibold text-gray-900 mb-1 line-clamp-2 text-sm md:text-base leading-tight min-h-[2.25rem] md:min-h-[3rem]">
+                  <h4 className="font-semibold text-sky-900 mb-1 line-clamp-2 text-sm md:text-base leading-tight min-h-[2.25rem] md:min-h-[3rem]">
                     {product.name}
                   </h4>
 
                   <div className="mt-auto mb-2">
-                    <span className="text-lg font-bold text-primary-600">
+                    <span className="text-lg font-bold text-sky-700">
                       {formatCurrency(product.price)}
                     </span>
                   </div>
@@ -131,7 +122,7 @@ export function OverviewTab({
                   {isActive && (
                     <button
                       onClick={() => onAddToOrder(product)}
-                      className="w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-1.5 px-3 rounded-lg transition-colors duration-200 text-sm"
+                      className="w-full bg-gradient-to-r from-sky-500 to-sky-600 hover:shadow-md hover:shadow-sky-300/30 text-white font-medium py-1.5 px-3 rounded-xl transition-all duration-200 text-sm"
                     >
                       Pedir
                     </button>
@@ -144,8 +135,12 @@ export function OverviewTab({
 
       {/* Resumo Financeiro */}
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <CircleDollarSign className="w-5 h-5 text-primary-600" />
+        <h3 className="font-display text-lg font-semibold text-sky-900 mb-4 flex items-center gap-2">
+          <span className="w-6 h-6 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+            <svg className="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </span>
           Resumo Financeiro
         </h3>
         {isAnalyticsLoading ? (
@@ -164,70 +159,86 @@ export function OverviewTab({
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <Card>
               <div className="flex items-center gap-2 mb-2">
-                <Users className="w-4 h-4 text-primary-600" />
-                <div className="text-sm text-gray-500">Total de Pessoas</div>
+                <svg className="w-4 h-4 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <div className="text-sm text-sky-600">Total de Pessoas</div>
               </div>
-              <div className="text-2xl md:text-3xl font-bold text-gray-900">
+              <div className="text-2xl md:text-3xl font-bold text-sky-900">
                 {analytics.byCustomer.length}
               </div>
             </Card>
             <Card>
               <div className="flex items-center gap-2 mb-2">
-                <Hash className="w-4 h-4 text-primary-600" />
-                <div className="text-sm text-gray-500">Total de Itens</div>
+                <svg className="w-4 h-4 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                </svg>
+                <div className="text-sm text-sky-600">Total de Itens</div>
               </div>
-              <div className="text-2xl md:text-3xl font-bold text-gray-900">
+              <div className="text-2xl md:text-3xl font-bold text-sky-900">
                 {analytics.totalQuantity}
               </div>
             </Card>
             <Card>
               <div className="flex items-center gap-2 mb-2">
-                <ShoppingBag className="w-4 h-4 text-primary-600" />
-                <div className="text-sm text-gray-500">Total sem Frete</div>
+                <svg className="w-4 h-4 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+                <div className="text-sm text-sky-600">Total sem Frete</div>
               </div>
-              <div className="text-xl md:text-3xl font-bold text-gray-900">
+              <div className="text-xl md:text-3xl font-bold text-sky-900">
                 {formatCurrency(analytics.totalWithoutShipping)}
               </div>
             </Card>
             <Card>
               <div className="flex items-center gap-2 mb-2">
-                <Truck className="w-4 h-4 text-primary-600" />
-                <div className="text-sm text-gray-500">Total com Frete</div>
+                <svg className="w-4 h-4 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+                </svg>
+                <div className="text-sm text-sky-600">Total com Frete</div>
               </div>
-              <div className="text-xl md:text-3xl font-bold text-gray-900">
+              <div className="text-xl md:text-3xl font-bold text-sky-900">
                 {formatCurrency(analytics.totalWithShipping)}
               </div>
             </Card>
             <Card>
               <div className="flex items-center gap-2 mb-2">
-                <TrendingUp className="w-4 h-4 text-green-600" />
-                <div className="text-sm text-gray-500">Total Pago</div>
+                <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+                <div className="text-sm text-sky-600">Total Pago</div>
               </div>
-              <div className="text-xl md:text-3xl font-bold text-green-600">
+              <div className="text-xl md:text-3xl font-bold text-emerald-600">
                 {formatCurrency(analytics.totalPaid)}
               </div>
             </Card>
             <Card>
               <div className="flex items-center gap-2 mb-2">
-                <CircleDollarSign className="w-4 h-4 text-red-600" />
-                <div className="text-sm text-gray-500">Total Não Pago</div>
+                <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="text-sm text-sky-600">Total Não Pago</div>
               </div>
-              <div className="text-xl md:text-3xl font-bold text-red-600">
+              <div className="text-xl md:text-3xl font-bold text-red-500">
                 {formatCurrency(analytics.totalUnpaid)}
               </div>
             </Card>
           </div>
         ) : (
           <Card>
-            <p className="text-sm text-gray-500">Nenhum dado financeiro disponível.</p>
+            <p className="text-sm text-sky-600">Nenhum dado financeiro disponível.</p>
           </Card>
         )}
       </div>
 
       {/* Detalhes por Produto e Cliente */}
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <BarChart3 className="w-5 h-5 text-primary-600" />
+        <h3 className="font-display text-lg font-semibold text-sky-900 mb-4 flex items-center gap-2">
+          <span className="w-6 h-6 rounded-lg bg-sky-100 flex items-center justify-center flex-shrink-0">
+            <svg className="w-3.5 h-3.5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </span>
           Detalhamento
         </h3>
         {isAnalyticsLoading ? (
@@ -251,8 +262,10 @@ export function OverviewTab({
         ) : analytics ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
             <Card className="h-fit">
-              <h4 className="font-semibold mb-4 text-gray-800 flex items-center gap-2">
-                <User className="w-5 h-5 text-primary-600" />
+              <h4 className="font-semibold mb-4 text-sky-900 flex items-center gap-2">
+                <svg className="w-4 h-4 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
                 Por Pessoa
               </h4>
               <div className="space-y-3">
@@ -268,10 +281,10 @@ export function OverviewTab({
                     return (
                       <div
                         key={index}
-                        className="flex flex-col gap-2 pb-3 border-b last:border-b-0 last:pb-0"
+                        className="flex flex-col gap-2 pb-3 border-b border-sky-100 last:border-b-0 last:pb-0"
                       >
                         <div className="flex justify-between items-center gap-3">
-                          <span className="text-gray-900 font-medium flex-1 min-w-0">
+                          <span className="text-sky-900 font-medium flex-1 min-w-0">
                             {item.customerName}
                           </span>
 
@@ -305,14 +318,14 @@ export function OverviewTab({
                           <span
                             className={`px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap ${
                               item.isPaid
-                                ? "bg-green-100 text-green-700"
-                                : "bg-red-100 text-red-700"
+                                ? "bg-emerald-100 text-emerald-700"
+                                : "bg-red-100 text-red-600"
                             }`}
                           >
                             {item.isPaid ? "Pago" : "Pendente"}
                           </span>
 
-                          <span className="font-semibold text-gray-900 whitespace-nowrap">
+                          <span className="font-semibold text-sky-900 whitespace-nowrap">
                             {formatCurrency(item.total)}
                           </span>
                         </div>
@@ -323,8 +336,10 @@ export function OverviewTab({
             </Card>
 
             <Card className="h-fit">
-              <h4 className="font-semibold mb-4 text-gray-800 flex items-center gap-2">
-                <Package className="w-5 h-5 text-primary-600" />
+              <h4 className="font-semibold mb-4 text-sky-900 flex items-center gap-2">
+                <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
                 Por Produto
               </h4>
               <div className="space-y-2">
@@ -333,10 +348,10 @@ export function OverviewTab({
                     key={item.productId}
                     className="flex justify-between items-center gap-3"
                   >
-                    <span className="text-gray-600 truncate flex-1 min-w-0">
+                    <span className="text-sky-700 truncate flex-1 min-w-0">
                       {item.productName}
                     </span>
-                    <span className="font-medium text-gray-900 whitespace-nowrap flex-shrink-0">
+                    <span className="font-medium text-sky-900 whitespace-nowrap flex-shrink-0">
                       {item.quantity}{" "}
                       <span className="hidden sm:inline">unidades</span>
                       <span className="sm:hidden">un.</span>
@@ -348,19 +363,23 @@ export function OverviewTab({
           </div>
         ) : (
           <Card>
-            <p className="text-sm text-gray-500">Nenhum dado de detalhamento disponível.</p>
+            <p className="text-sm text-sky-600">Nenhum dado de detalhamento disponível.</p>
           </Card>
         )}
       </div>
 
       {/* Seção de Perguntas e Respostas */}
-      <div className="mt-8">
-        <div className="mb-6">
-          <h3 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
-            <MessageCircle className="w-6 h-6 text-primary-600" />
+      <div>
+        <div className="mb-4">
+          <h3 className="font-display text-xl font-bold text-sky-900 mb-2 flex items-center gap-2">
+            <span className="w-7 h-7 rounded-xl bg-sky-100 flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+              </svg>
+            </span>
             Perguntas e Respostas
           </h3>
-          <p className="text-gray-600 text-sm">
+          <p className="text-sky-600 text-sm">
             Faça perguntas sobre os produtos e a campanha. O criador responderá
             em breve.
           </p>

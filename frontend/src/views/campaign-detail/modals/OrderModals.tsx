@@ -70,7 +70,7 @@ export function AddOrderModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-sky-700 mb-2">
             Produtos *
           </label>
           {form.items.map((item, index) => (
@@ -200,16 +200,16 @@ export function ViewOrderModal({
       {order && (
         <div className="space-y-4">
           {/* Informações do Pedido */}
-          <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+          <div className="bg-sky-50 rounded-2xl p-4 space-y-3">
             <div>
-              <span className="text-sm text-gray-500">Cliente</span>
-              <p className="font-semibold text-gray-900">
+              <span className="text-sm text-sky-600">Cliente</span>
+              <p className="font-semibold text-sky-900">
                 {order.customer.name}
               </p>
             </div>
 
             <div>
-              <span className="text-sm text-gray-500">Status de Pagamento</span>
+              <span className="text-sm text-sky-600">Status de Pagamento</span>
               <p
                 className={`font-medium ${
                   order.isPaid ? "text-green-600" : "text-red-600"
@@ -222,22 +222,22 @@ export function ViewOrderModal({
 
           {/* Produtos do Pedido */}
           <div>
-            <h4 className="font-semibold text-gray-900 mb-2">Produtos</h4>
-            <div className="border rounded-lg divide-y">
+            <h4 className="font-semibold text-sky-900 mb-2">Produtos</h4>
+            <div className="border border-sky-100 rounded-2xl divide-y divide-sky-100">
               {order.items.map((item, index) => (
                 <div
                   key={index}
                   className="p-3 flex justify-between items-center"
                 >
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900">
+                    <p className="font-medium text-sky-900">
                       {item.product.name}
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-sky-600">
                       {item.quantity}x {formatCurrency(item.unitPrice)}
                     </p>
                   </div>
-                  <p className="font-semibold text-gray-900">
+                  <p className="font-semibold text-sky-900">
                     {formatCurrency(item.subtotal)}
                   </p>
                 </div>
@@ -246,22 +246,22 @@ export function ViewOrderModal({
           </div>
 
           {/* Resumo Financeiro */}
-          <div className="bg-primary-50 rounded-lg p-4 space-y-2">
+          <div className="bg-sky-50 rounded-2xl p-4 space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Subtotal</span>
-              <span className="font-medium text-gray-900">
+              <span className="text-sky-600">Subtotal</span>
+              <span className="font-medium text-sky-900">
                 {formatCurrency(order.subtotal)}
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Frete</span>
-              <span className="font-medium text-gray-900">
+              <span className="text-sky-600">Frete</span>
+              <span className="font-medium text-sky-900">
                 {formatCurrency(order.shippingFee)}
               </span>
             </div>
-            <div className="flex justify-between text-lg font-bold pt-2 border-t border-primary-200">
-              <span className="text-gray-900">Total</span>
-              <span className="text-primary-600">
+            <div className="flex justify-between text-lg font-bold pt-2 border-t border-sky-200">
+              <span className="text-sky-900">Total</span>
+              <span className="text-sky-600">
                 {formatCurrency(order.total)}
               </span>
             </div>
@@ -270,7 +270,7 @@ export function ViewOrderModal({
           {/* Comprovante de Pagamento */}
           {order.paymentProofUrl && (
             <div>
-              <h4 className="font-semibold text-gray-900 mb-2">
+              <h4 className="font-semibold text-sky-900 mb-2">
                 Comprovante de Pagamento
               </h4>
               <div className="border rounded-lg overflow-hidden">

@@ -86,10 +86,11 @@ export const AuthModal = ({
       size="sm"
       className="md:max-w-md"
     >
-      <div className="-mt-4">
+      <div className="-mt-5 -mx-5 md:-mt-6 md:-mx-6">
         <AuthTabs activeTab={activeTab} onTabChange={setActiveTab} />
+      </div>
 
-        <div className="pt-6">
+      <div className="pt-6">
           {activeTab === "login" ? (
             <LoginForm
               onSubmit={handleLogin}
@@ -104,7 +105,6 @@ export const AuthModal = ({
             />
           )}
         </div>
-      </div>
     </Modal>
   );
 };
