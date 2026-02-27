@@ -120,10 +120,10 @@ export function EmailPreferencesSection({ standalone = false }: EmailPreferences
       {/* Header (apenas em standalone) */}
       {standalone && (
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+          <h1 className="text-2xl md:text-3xl font-bold text-sky-900">
             Preferências de Email
           </h1>
-          <p className="mt-2 text-sm md:text-base text-gray-600">
+          <p className="mt-2 text-sm md:text-base text-sky-700">
             Gerencie como e quando você recebe notificações por email
           </p>
         </div>
@@ -133,10 +133,10 @@ export function EmailPreferencesSection({ standalone = false }: EmailPreferences
       <Card className="p-4 md:p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
-            <h2 className="text-lg font-semibold text-gray-900">
+            <h2 className="text-lg font-semibold text-sky-900">
               Receber Emails
             </h2>
-            <p className="mt-1 text-sm text-gray-600">
+            <p className="mt-1 text-sm text-sky-700">
               {isEmailDisabled
                 ? 'Você não receberá nenhum email de notificação'
                 : 'Receba notificações importantes por email'}
@@ -149,7 +149,7 @@ export function EmailPreferencesSection({ standalone = false }: EmailPreferences
               onChange={() => handleToggle('emailEnabled')}
               className="sr-only peer"
             />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            <div className="w-11 h-6 bg-sky-200 peer-focus:ring-2 peer-focus:ring-sky-400 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-sky-200 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-500"></div>
           </label>
         </div>
 
@@ -160,7 +160,7 @@ export function EmailPreferencesSection({ standalone = false }: EmailPreferences
               <button
                 onClick={handleResubscribe}
                 disabled={resubscribeMutation.isPending}
-                className="font-medium text-blue-600 hover:text-blue-700 underline"
+                className="font-medium text-sky-600 hover:text-sky-800 underline"
               >
                 Reativar emails
               </button>
@@ -171,7 +171,7 @@ export function EmailPreferencesSection({ standalone = false }: EmailPreferences
 
       {/* Notification Types */}
       <Card className="p-4 md:p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        <h2 className="text-lg font-semibold text-sky-900 mb-4">
           Tipos de Notificação
         </h2>
 
@@ -216,7 +216,7 @@ export function EmailPreferencesSection({ standalone = false }: EmailPreferences
 
       {/* Digest Settings */}
       <Card className="p-4 md:p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        <h2 className="text-lg font-semibold text-sky-900 mb-4">
           Resumo Periódico
         </h2>
 
@@ -230,7 +230,7 @@ export function EmailPreferencesSection({ standalone = false }: EmailPreferences
 
         {formData.digestEnabled && (
           <div className="mt-4 pl-4 md:pl-6 space-y-2">
-            <p className="text-sm font-medium text-gray-700 mb-2">
+            <p className="text-sm font-medium text-sky-800 mb-2">
               Frequência do resumo:
             </p>
             <div className="space-y-2">
@@ -308,8 +308,8 @@ function NotificationToggle({
       }`}
     >
       <div className="flex-1">
-        <p className="text-sm md:text-base font-medium text-gray-900">{label}</p>
-        <p className="text-xs md:text-sm text-gray-600 mt-0.5">{description}</p>
+        <p className="text-sm md:text-base font-medium text-sky-900">{label}</p>
+        <p className="text-xs md:text-sm text-sky-700 mt-0.5">{description}</p>
       </div>
       <label className="relative inline-flex items-center cursor-pointer">
         <input
@@ -319,7 +319,7 @@ function NotificationToggle({
           disabled={disabled}
           className="sr-only peer"
         />
-        <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 disabled:cursor-not-allowed"></div>
+        <div className="w-11 h-6 bg-sky-200 peer-focus:ring-2 peer-focus:ring-sky-400 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-sky-200 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50"></div>
       </label>
     </div>
   );
@@ -340,9 +340,9 @@ function FrequencyOption({ label, value, selected, onChange }: FrequencyOptionPr
         value={value}
         checked={selected}
         onChange={onChange}
-        className="w-4 h-4 text-blue-600 focus:ring-2 focus:ring-blue-500"
+        className="w-4 h-4 text-sky-600 focus:ring-2 focus:ring-sky-400"
       />
-      <span className="text-sm text-gray-700">{label}</span>
+      <span className="text-sm text-sky-800">{label}</span>
     </label>
   );
 }

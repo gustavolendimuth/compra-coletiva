@@ -82,9 +82,9 @@ export function AdminSidebar() {
   };
 
   return (
-    <nav className="w-64 bg-white border-r border-gray-200 min-h-screen p-4">
+    <nav className="w-64 bg-white border-r border-sky-100 min-h-screen p-4">
       <div className="mb-6">
-        <h2 className="text-lg font-bold text-gray-900 px-3">Painel Admin</h2>
+        <h2 className="font-display text-lg font-bold text-sky-900 px-3">Painel Admin</h2>
       </div>
 
       <ul className="space-y-1">
@@ -93,11 +93,11 @@ export function AdminSidebar() {
             <Link
               href={item.path}
               className={`
-                flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors
+                flex items-center gap-3 px-3 py-2.5 rounded-2xl font-medium transition-colors
                 ${
                   isActive(item.path)
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'text-gray-700 hover:bg-gray-50'
+                    ? 'bg-sky-100 text-sky-700'
+                    : 'text-sky-800/60 hover:bg-sky-50 hover:text-sky-900'
                 }
               `}
             >
@@ -108,10 +108,10 @@ export function AdminSidebar() {
         ))}
       </ul>
 
-      <div className="mt-8 pt-6 border-t border-gray-200">
+      <div className="mt-8 pt-6 border-t border-sky-100">
         <Link
           href="/campanhas"
-          className="flex items-center gap-3 px-3 py-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-50 font-medium transition-colors"
+          className="flex items-center gap-3 px-3 py-2.5 text-sky-700/60 hover:text-sky-900 rounded-2xl hover:bg-sky-50 font-medium transition-colors"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />

@@ -76,17 +76,17 @@ export function CampaignListPage({ initialData }: CampaignListPageProps) {
   if (isError) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-          <Megaphone className="w-8 h-8 text-primary-600" />
+        <h1 className="text-3xl font-display font-bold text-sky-900 flex items-center gap-3">
+          <Megaphone className="w-8 h-8 text-sky-600" />
           Campanhas
         </h1>
         <Card>
           <div className="text-center py-12">
             <Package className="w-16 h-16 mx-auto text-red-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <h3 className="text-lg font-medium text-sky-900 mb-2">
               Erro ao carregar campanhas
             </h3>
-            <p className="text-gray-500 mb-4">
+            <p className="text-sky-600 mb-4">
               {error instanceof Error
                 ? error.message
                 : 'Tente novamente mais tarde'}
@@ -108,8 +108,8 @@ export function CampaignListPage({ initialData }: CampaignListPageProps) {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-          <Megaphone className="w-8 h-8 text-primary-600" />
+        <h1 className="text-3xl font-display font-bold text-sky-900 flex items-center gap-3">
+          <Megaphone className="w-8 h-8 text-sky-600" />
           Campanhas
         </h1>
       </div>
@@ -130,13 +130,13 @@ export function CampaignListPage({ initialData }: CampaignListPageProps) {
         // Estado vazio sem sugestões
         <Card>
           <div className="text-center py-12">
-            <Package className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <Package className="w-16 h-16 mx-auto text-sky-300 mb-4" />
+            <h3 className="text-lg font-medium text-sky-900 mb-2">
               {debouncedSearch || Object.keys(filters).length > 0
                 ? 'Nenhuma campanha encontrada'
                 : 'Nenhuma campanha criada'}
             </h3>
-            <p className="text-gray-500">
+            <p className="text-sky-600">
               {debouncedSearch || Object.keys(filters).length > 0
                 ? 'Tente ajustar os filtros ou termos de busca'
                 : 'Use o botão "Nova Campanha" na barra superior para criar sua primeira campanha de compra coletiva'}
@@ -160,7 +160,7 @@ export function CampaignListPage({ initialData }: CampaignListPageProps) {
                 className="h-16 flex items-center justify-center"
               >
                 {isFetchingNextPage && (
-                  <div className="flex items-center gap-2 text-gray-500">
+                  <div className="flex items-center gap-2 text-sky-500">
                     <RefreshCw className="w-5 h-5 animate-spin" />
                     <span>Carregando mais campanhas...</span>
                   </div>
@@ -168,7 +168,7 @@ export function CampaignListPage({ initialData }: CampaignListPageProps) {
                 {!hasNextPage &&
                   campaigns.length > 0 &&
                   !suggestions.length && (
-                    <p className="text-sm text-gray-400">
+                    <p className="text-sm text-sky-400">
                       Todas as campanhas foram carregadas
                     </p>
                   )}
@@ -181,8 +181,8 @@ export function CampaignListPage({ initialData }: CampaignListPageProps) {
             <div className="mt-8">
               {/* Divisor com texto */}
               <div className="flex items-center gap-4 mb-6">
-                <div className="flex-1 border-t border-gray-200"></div>
-                <div className="flex items-center gap-2 text-gray-500">
+                <div className="flex-1 border-t border-sky-100"></div>
+                <div className="flex items-center gap-2 text-sky-500">
                   <Lightbulb className="w-5 h-5" />
                   <span className="font-medium">
                     {campaigns.length === 0
@@ -190,7 +190,7 @@ export function CampaignListPage({ initialData }: CampaignListPageProps) {
                       : 'Campanhas relacionadas'}
                   </span>
                 </div>
-                <div className="flex-1 border-t border-gray-200"></div>
+                <div className="flex-1 border-t border-sky-100"></div>
               </div>
 
               {/* Grid de sugestões com visual diferenciado */}
@@ -202,7 +202,7 @@ export function CampaignListPage({ initialData }: CampaignListPageProps) {
 
               {/* Mensagem após sugestões */}
               {campaigns.length === 0 && (
-                <p className="text-center text-sm text-gray-400 mt-6">
+                <p className="text-center text-sm text-sky-400 mt-6">
                   Não encontrou o que procurava? Tente ajustar os termos de
                   busca
                 </p>

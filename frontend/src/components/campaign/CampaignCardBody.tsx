@@ -7,16 +7,16 @@ interface CampaignCardBodyProps {
 
 export function CampaignCardBody({ campaign }: CampaignCardBodyProps) {
   return (
-    <div className="space-y-3">
+    <div className="border-t border-sky-100/60 pt-3 space-y-2">
       {/* Descrição */}
       {campaign.description && (
-        <p className="text-sm text-gray-600 line-clamp-2">
+        <p className="text-sm text-sky-700 line-clamp-2">
           {campaign.description}
         </p>
       )}
 
       {/* Estatísticas */}
-      <div className="flex items-center gap-4 text-sm text-gray-500">
+      <div className="flex items-center gap-4 text-sm text-sky-600">
         <div className="flex items-center gap-1.5">
           <Package className="w-4 h-4" />
           <span>{campaign._count?.products || 0} produtos</span>

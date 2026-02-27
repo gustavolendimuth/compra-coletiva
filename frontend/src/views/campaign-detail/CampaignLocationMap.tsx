@@ -6,8 +6,8 @@ const Map = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-[380px] sm:h-[360px] md:h-[420px] lg:h-[480px] w-full rounded-lg bg-gray-100 flex items-center justify-center">
-        <p className="text-gray-500">Carregando mapa...</p>
+      <div className="h-[380px] sm:h-[360px] md:h-[420px] lg:h-[480px] w-full rounded-2xl bg-sky-50 flex items-center justify-center">
+        <p className="text-sky-600">Carregando mapa...</p>
       </div>
     ),
   }

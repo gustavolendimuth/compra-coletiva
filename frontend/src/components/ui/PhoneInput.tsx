@@ -10,16 +10,8 @@ interface PhoneInputProps
   onChange?: (value: string) => void;
 }
 
-/**
- * Formata número de telefone brasileiro
- * Entrada: "11999998888" ou "1199998888"
- * Saída: "11 99999-8888" ou "11 9999-8888"
- */
 const formatPhone = (value: string): string => {
-  // Remove tudo que não é dígito
   const digits = value.replace(/\D/g, "");
-
-  // Limita a 11 dígitos (DDD + 9 dígitos)
   const limited = digits.slice(0, 11);
 
   if (limited.length === 0) return "";
@@ -28,27 +20,15 @@ const formatPhone = (value: string): string => {
     return `${limited.slice(0, 2)} ${limited.slice(2)}`;
   }
   if (limited.length <= 10) {
-    // Telefone fixo: XX XXXX-XXXX
     return `${limited.slice(0, 2)} ${limited.slice(2, 6)}-${limited.slice(6)}`;
   }
-  // Celular: XX XXXXX-XXXX
   return `${limited.slice(0, 2)} ${limited.slice(2, 7)}-${limited.slice(7)}`;
 };
 
-/**
- * Remove formatação e retorna apenas dígitos
- */
 const unformatPhone = (value: string): string => {
   return value.replace(/\D/g, "");
 };
 
-/**
- * PhoneInput Component - Design System Primitive
- *
- * Input de telefone com máscara brasileira (XX XXXXX-XXXX).
- * Mobile-first com touch targets adequados.
- * Armazena valor sem formatação, exibe com formatação.
- */
 export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
   (
     { label, error, helperText, className, value = "", onChange, ...props },
@@ -56,7 +36,6 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
   ) => {
     const [displayValue, setDisplayValue] = useState(() => formatPhone(value));
 
-    // Sincroniza quando value externo muda
     useEffect(() => {
       setDisplayValue(formatPhone(value));
     }, [value]);
@@ -68,7 +47,6 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
 
       setDisplayValue(formatted);
 
-      // Passa o valor sem formatação para o parent
       if (onChange) {
         onChange(digits);
       }
@@ -77,7 +55,7 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
     return (
       <div className="w-full">
         {label && (
-          <label className="block mb-2 text-sm font-medium text-gray-700">
+          <label className="block mb-2 text-sm font-medium text-sky-800">
             {label}
           </label>
         )}
@@ -89,22 +67,22 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
           onChange={handleChange}
           placeholder="11 99999-8888"
           className={cn(
-            "w-full px-4 py-2",
-            "bg-white text-gray-900 placeholder:text-gray-400",
+            "w-full px-4 py-2.5",
+            "bg-white text-sky-900 placeholder:text-sky-400/60",
             "[color-scheme:light]",
-            "text-base", // 16px minimum to prevent iOS zoom
-            "border border-gray-300 rounded-lg",
-            "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent",
-            "disabled:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50",
-            "transition-colors",
-            error && "border-red-500 focus:ring-red-500",
+            "text-base",
+            "border border-sky-200 rounded-xl",
+            "focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent",
+            "disabled:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50",
+            "transition-all",
+            error && "border-red-400 focus:ring-red-400",
             className
           )}
           {...props}
         />
-        {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+        {error && <p className="mt-1.5 text-sm text-red-600">{error}</p>}
         {helperText && !error && (
-          <p className="mt-1 text-sm text-gray-500">{helperText}</p>
+          <p className="mt-1.5 text-sm text-sky-600/70">{helperText}</p>
         )}
       </div>
     );
@@ -114,4 +92,3 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
 PhoneInput.displayName = "PhoneInput";
 
 export default PhoneInput;
-

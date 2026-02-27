@@ -68,12 +68,12 @@ export function OrdersTab({
 
   const renderSortIcon = (field: typeof sortField) => {
     if (sortField !== field) {
-      return <ArrowUpDown className="w-4 h-4 text-gray-400" />;
+      return <ArrowUpDown className="w-4 h-4 text-sky-300" />;
     }
     return sortDirection === "asc" ? (
-      <ArrowUp className="w-4 h-4 text-primary-600" />
+      <ArrowUp className="w-4 h-4 text-sky-600" />
     ) : (
-      <ArrowDown className="w-4 h-4 text-primary-600" />
+      <ArrowDown className="w-4 h-4 text-sky-600" />
     );
   };
 
@@ -81,8 +81,12 @@ export function OrdersTab({
     <div className="pb-20 md:pb-0">
       <div className="mb-4 space-y-3">
         <div className="flex justify-between items-center gap-2">
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <ShoppingBag className="w-6 h-6 text-primary-600" />
+          <h2 className="font-display text-2xl font-bold text-sky-900 flex items-center gap-2">
+            <span className="w-7 h-7 rounded-xl bg-sky-100 flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
+            </span>
             Pedidos
           </h2>
           {isActive && (
@@ -98,7 +102,7 @@ export function OrdersTab({
           )}
         </div>
         <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-10" />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-sky-400 z-10" />
           <Input
             type="text"
             placeholder="Buscar por pessoa..."
@@ -110,7 +114,7 @@ export function OrdersTab({
             <button
               type="button"
               onClick={() => onSearchChange("")}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors z-10"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sky-400 hover:text-sky-600 transition-colors z-10"
               title="Limpar busca"
             >
               <X className="w-4 h-4" />
@@ -122,7 +126,7 @@ export function OrdersTab({
       {filteredOrders && filteredOrders.length === 0 ? (
         <Card>
           <div className="text-center py-8">
-            <p className="text-gray-500">
+            <p className="text-sky-600">
               {orderSearch
                 ? "Nenhum pedido encontrado"
                 : "Nenhum pedido criado"}
@@ -136,10 +140,10 @@ export function OrdersTab({
             <div className="flex gap-2 overflow-x-auto pb-2">
               <button
                 onClick={() => onSort("customerName")}
-                className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                className={`flex items-center gap-1 px-3 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
                   sortField === "customerName"
-                    ? "bg-primary-100 text-primary-700"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    ? "bg-sky-100 text-sky-700"
+                    : "bg-sky-50/60 text-sky-700 hover:bg-sky-100/60"
                 }`}
               >
                 <span>Pessoa</span>
@@ -147,10 +151,10 @@ export function OrdersTab({
               </button>
               <button
                 onClick={() => onSort("total")}
-                className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                className={`flex items-center gap-1 px-3 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
                   sortField === "total"
-                    ? "bg-primary-100 text-primary-700"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    ? "bg-sky-100 text-sky-700"
+                    : "bg-sky-50/60 text-sky-700 hover:bg-sky-100/60"
                 }`}
               >
                 <span>Total</span>
@@ -158,10 +162,10 @@ export function OrdersTab({
               </button>
               <button
                 onClick={() => onSort("isPaid")}
-                className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                className={`flex items-center gap-1 px-3 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
                   sortField === "isPaid"
-                    ? "bg-primary-100 text-primary-700"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    ? "bg-sky-100 text-sky-700"
+                    : "bg-sky-50/60 text-sky-700 hover:bg-sky-100/60"
                 }`}
               >
                 <span>Status</span>
@@ -193,7 +197,7 @@ export function OrdersTab({
                 <thead className="border-b">
                   <tr>
                     <th
-                      className="px-4 py-3 text-left text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-50 transition-colors"
+                      className="px-4 py-3 text-left text-sm font-medium text-sky-800 cursor-pointer hover:bg-sky-50/40 transition-colors"
                       onClick={() => onSort("isPaid")}
                     >
                       <div className="flex items-center gap-2">
@@ -202,7 +206,7 @@ export function OrdersTab({
                       </div>
                     </th>
                     <th
-                      className="px-4 py-3 text-left text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-50 transition-colors"
+                      className="px-4 py-3 text-left text-sm font-medium text-sky-800 cursor-pointer hover:bg-sky-50/40 transition-colors"
                       onClick={() => onSort("customerName")}
                     >
                       <div className="flex items-center gap-2">
@@ -210,11 +214,11 @@ export function OrdersTab({
                         {renderSortIcon("customerName")}
                       </div>
                     </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-900 min-w-[200px]">
+                    <th className="px-4 py-3 text-left text-sm font-medium text-sky-800 min-w-[200px]">
                       Produtos
                     </th>
                     <th
-                      className="px-4 py-3 text-right text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-50 transition-colors"
+                      className="px-4 py-3 text-right text-sm font-medium text-sky-800 cursor-pointer hover:bg-sky-50/40 transition-colors"
                       onClick={() => onSort("subtotal")}
                     >
                       <div className="flex items-center justify-end gap-2">
@@ -223,7 +227,7 @@ export function OrdersTab({
                       </div>
                     </th>
                     <th
-                      className="px-4 py-3 text-right text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-50 transition-colors"
+                      className="px-4 py-3 text-right text-sm font-medium text-sky-800 cursor-pointer hover:bg-sky-50/40 transition-colors"
                       onClick={() => onSort("shippingFee")}
                     >
                       <div className="flex items-center justify-end gap-2">
@@ -232,7 +236,7 @@ export function OrdersTab({
                       </div>
                     </th>
                     <th
-                      className="px-4 py-3 text-right text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-50 transition-colors"
+                      className="px-4 py-3 text-right text-sm font-medium text-sky-800 cursor-pointer hover:bg-sky-50/40 transition-colors"
                       onClick={() => onSort("total")}
                     >
                       <div className="flex items-center justify-end gap-2">
@@ -240,14 +244,14 @@ export function OrdersTab({
                         {renderSortIcon("total")}
                       </div>
                     </th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">
+                    <th className="px-4 py-3 text-right text-sm font-medium text-sky-800">
                       Ações
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
                   {filteredOrders?.map((order) => (
-                    <tr key={order.id} className="hover:bg-gray-50">
+                    <tr key={order.id} className="hover:bg-sky-50/30">
                       <td className="px-4 py-3 text-sm">
                         <span
                           className={`px-2 py-1 text-xs rounded-full whitespace-nowrap ${
@@ -259,18 +263,18 @@ export function OrdersTab({
                           {order.isPaid ? "Pago" : "Pendente"}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-900">
+                      <td className="px-4 py-3 text-sm text-sky-900">
                         {getCustomerDisplayName(order)}
                       </td>
                       <td className="px-4 py-3 text-sm">
                         <div className="flex flex-col gap-1 max-w-xs">
                           {order.items.map((item, idx) => (
                             <div key={idx} className="flex items-center gap-2">
-                              <span className="inline-flex items-center justify-center min-w-[24px] h-5 px-1.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">
+                              <span className="inline-flex items-center justify-center min-w-[24px] h-5 px-1.5 text-xs font-medium bg-sky-100 text-sky-700 rounded-md">
                                 {item.quantity}x
                               </span>
                               <span
-                                className="text-gray-700 truncate"
+                                className="text-sky-700/80 truncate"
                                 title={item.product.name}
                               >
                                 {item.product.name}
@@ -279,13 +283,13 @@ export function OrdersTab({
                           ))}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                      <td className="px-4 py-3 text-sm text-sky-900 text-right">
                         {formatCurrency(order.subtotal)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                      <td className="px-4 py-3 text-sm text-sky-900 text-right">
                         {formatCurrency(order.shippingFee)}
                       </td>
-                      <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">
+                      <td className="px-4 py-3 text-sm font-semibold text-sky-900 text-right">
                         {formatCurrency(order.total)}
                       </td>
                       <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
@@ -350,7 +354,7 @@ export function OrdersTab({
           orderToDelete ? (
             <>
               <p>Tem certeza que deseja remover o pedido de <strong>{getCustomerDisplayName(orderToDelete)}</strong>?</p>
-              <p className="mt-2 text-sm text-gray-600">Esta ação não pode ser desfeita.</p>
+              <p className="mt-2 text-sm text-sky-600">Esta ação não pode ser desfeita.</p>
             </>
           ) : (
             ""
