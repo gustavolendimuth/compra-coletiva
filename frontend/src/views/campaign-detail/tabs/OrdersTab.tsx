@@ -4,7 +4,7 @@ import {
   Search,
   X,
   Eye,
-  CircleDollarSign,
+  Upload,
   Edit,
   Trash2,
   ArrowUpDown,
@@ -301,29 +301,24 @@ export function OrdersTab({
                             onClick={() => onViewOrder(order)}
                             title="Visualizar pedido"
                           />
-                          {canEditCampaign && (
-                            <IconButton
-                              size="sm"
-                              variant={order.isPaid ? "success" : "secondary"}
-                              icon={<CircleDollarSign className="w-5 h-5" />}
-                              onClick={() => onTogglePayment(order)}
-                              title={
-                                order.isPaid
-                                  ? "Marcar como não pago"
-                                  : "Marcar como pago"
-                              }
-                            />
-                          )}
-                          {isActive &&
-                            canEditCampaign && (
-                              <IconButton
-                                size="sm"
-                                variant="secondary"
-                                icon={<Edit className="w-4 h-4" />}
-                                onClick={() => onEditOrder(order)}
-                                title="Editar pedido"
-                              />
-                            )}
+                          <IconButton
+                            size="sm"
+                            variant={order.isPaid ? "success" : "secondary"}
+                            icon={<Upload className="w-5 h-5" />}
+                            onClick={() => onTogglePayment(order)}
+                            title={
+                              order.isPaid
+                                ? "Marcar como não pago"
+                                : "Enviar comprovante de pagamento"
+                            }
+                          />
+                          <IconButton
+                            size="sm"
+                            variant="secondary"
+                            icon={<Edit className="w-4 h-4" />}
+                            onClick={() => onEditOrder(order)}
+                            title="Editar pedido"
+                          />
                           {isActive && canEditCampaign && (
                             <IconButton
                               size="sm"

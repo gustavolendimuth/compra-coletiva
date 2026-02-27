@@ -1,6 +1,6 @@
 import {
   Eye,
-  CircleDollarSign,
+  Upload,
   Edit,
   Trash2,
   Package,
@@ -31,7 +31,7 @@ export default function OrderCard({
   onEdit,
   onDelete,
 }: OrderCardProps) {
-  const canEdit = isActive && canEditCampaign;
+  const canEdit = true;
   const canDelete = isActive && canEditCampaign;
 
   return (
@@ -106,16 +106,14 @@ export default function OrderCard({
             title="Visualizar pedido"
             className="flex-1"
           />
-          {canEditCampaign && (
-            <IconButton
-              size="sm"
-              variant={order.isPaid ? "success" : "secondary"}
-              icon={<CircleDollarSign className="w-4 h-4" />}
-              onClick={onTogglePayment}
-              title={order.isPaid ? "Marcar como não pago" : "Marcar como pago"}
-              className="flex-1"
-            />
-          )}
+          <IconButton
+            size="sm"
+            variant={order.isPaid ? "success" : "secondary"}
+            icon={<Upload className="w-4 h-4" />}
+            onClick={onTogglePayment}
+            title={order.isPaid ? "Marcar como não pago" : "Enviar comprovante de pagamento"}
+            className="flex-1"
+          />
           {canEdit && (
             <IconButton
               size="sm"
