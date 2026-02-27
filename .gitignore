@@ -56,3 +56,5 @@ Thumbs.db
 #Ignore cursor AI rules
 .cursor/rules/codacy.mdc
 tmpclaude-*
+
+**/uploads/campaigns/*
