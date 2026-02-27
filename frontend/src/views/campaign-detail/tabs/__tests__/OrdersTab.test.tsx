@@ -302,8 +302,8 @@ describe('OrdersTab', () => {
       const user = userEvent.setup();
       render(<OrdersTab {...defaultProps} />);
 
-      // Find payment toggle buttons
-      const paymentButtons = screen.getAllByTitle(/marcar como/i);
+      // Find payment/upload buttons
+      const paymentButtons = screen.getAllByTitle(/marcar como|enviar comprovante/i);
       if (paymentButtons.length > 0) {
         await user.click(paymentButtons[0]);
         expect(mockCallbacks.onTogglePayment).toHaveBeenCalled();
@@ -373,16 +373,16 @@ describe('OrdersTab', () => {
   });
 
   describe('Permissions', () => {
-    it('should show payment toggle button only when user can edit campaign', () => {
+    it('should show payment toggle button when user can edit campaign', () => {
       render(<OrdersTab {...defaultProps} canEditCampaign={true} />);
 
-      expect(screen.queryAllByTitle(/marcar como/i).length).toBeGreaterThan(0);
+      expect(screen.queryAllByTitle(/marcar como|enviar comprovante/i).length).toBeGreaterThan(0);
     });
 
-    it('should not show payment toggle button when user cannot edit campaign', () => {
+    it('should show payment toggle button when user cannot edit campaign', () => {
       render(<OrdersTab {...defaultProps} canEditCampaign={false} />);
 
-      expect(screen.queryAllByTitle(/marcar como/i).length).toBe(0);
+      expect(screen.queryAllByTitle(/marcar como|enviar comprovante/i).length).toBeGreaterThan(0);
     });
 
     it('should show edit button only when campaign is active', () => {
@@ -391,10 +391,16 @@ describe('OrdersTab', () => {
       expect(screen.queryAllByTitle(/editar pedido/i).length).toBeGreaterThan(0);
     });
 
-    it('should not show edit button when campaign is not active', () => {
+    it('should show edit button even when user cannot edit campaign if campaign is active', () => {
+      render(<OrdersTab {...defaultProps} isActive={true} canEditCampaign={false} />);
+
+      expect(screen.queryAllByTitle(/editar pedido/i).length).toBeGreaterThan(0);
+    });
+
+    it('should show edit button when campaign is not active', () => {
       render(<OrdersTab {...defaultProps} isActive={false} />);
 
-      expect(screen.queryAllByTitle(/editar pedido/i).length).toBe(0);
+      expect(screen.queryAllByTitle(/editar pedido/i).length).toBeGreaterThan(0);
     });
 
     it('should show delete button only for campaign editors and when active', () => {

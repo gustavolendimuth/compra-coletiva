@@ -131,6 +131,8 @@ describe('useOrderModal', () => {
       expect(typeof result.current.handleAddToOrder).toBe('function');
       expect(typeof result.current.handleEditOrder).toBe('function');
       expect(typeof result.current.handleDeleteOrder).toBe('function');
+      expect(typeof result.current.handleOpenEditOrder).toBe('function');
+      expect(typeof result.current.handleViewOrder).toBe('function');
       expect(typeof result.current.handleEditOrderFromView).toBe('function');
       expect(typeof result.current.handleTogglePayment).toBe('function');
       expect(typeof result.current.handlePaymentProofSubmit).toBe('function');
@@ -406,7 +408,109 @@ describe('useOrderModal', () => {
     });
   });
 
+  describe('handleViewOrder', () => {
+    it('should require authentication before opening view order modal', () => {
+      const wrapper = createWrapper();
+      const { result } = renderHook(() => useOrderModal(defaultOptions), { wrapper });
+      const order = createMockOrder({ id: 'order-view' });
+
+      act(() => {
+        result.current.handleViewOrder(order);
+      });
+
+      expect(mockRequireAuth).toHaveBeenCalled();
+    });
+
+    it('should open view order modal when auth callback is executed', () => {
+      const wrapper = createWrapper();
+      const { result } = renderHook(() => useOrderModal(defaultOptions), { wrapper });
+      const order = createMockOrder({ id: 'order-view' });
+
+      act(() => {
+        result.current.handleViewOrder(order);
+      });
+
+      expect(result.current.isViewOrderModalOpen).toBe(true);
+      expect(result.current.viewingOrder).toEqual(order);
+    });
+
+    it('should not open view order modal when auth callback is not executed', () => {
+      const wrapper = createWrapper();
+      const requireAuthWithoutCallback = vi.fn();
+      const { result } = renderHook(
+        () => useOrderModal({ ...defaultOptions, requireAuth: requireAuthWithoutCallback }),
+        { wrapper }
+      );
+      const order = createMockOrder({ id: 'order-view' });
+
+      act(() => {
+        result.current.handleViewOrder(order);
+      });
+
+      expect(requireAuthWithoutCallback).toHaveBeenCalled();
+      expect(result.current.isViewOrderModalOpen).toBe(false);
+      expect(result.current.viewingOrder).toBeNull();
+    });
+  });
+
+  describe('handleOpenEditOrder', () => {
+    it('should require authentication before opening edit order modal', () => {
+      const wrapper = createWrapper();
+      const { result } = renderHook(() => useOrderModal(defaultOptions), { wrapper });
+      const order = createMockOrder({ id: 'order-edit' });
+
+      act(() => {
+        result.current.handleOpenEditOrder(order);
+      });
+
+      expect(mockRequireAuth).toHaveBeenCalled();
+    });
+
+    it('should open edit order modal when auth callback is executed', () => {
+      const wrapper = createWrapper();
+      const { result } = renderHook(() => useOrderModal(defaultOptions), { wrapper });
+      const order = createMockOrder({ id: 'order-edit' });
+
+      act(() => {
+        result.current.handleOpenEditOrder(order);
+      });
+
+      expect(result.current.isEditOrderModalOpen).toBe(true);
+      expect(result.current.editingOrder).toEqual(order);
+    });
+
+    it('should not open edit order modal when auth callback is not executed', () => {
+      const wrapper = createWrapper();
+      const requireAuthWithoutCallback = vi.fn();
+      const { result } = renderHook(
+        () => useOrderModal({ ...defaultOptions, requireAuth: requireAuthWithoutCallback }),
+        { wrapper }
+      );
+      const order = createMockOrder({ id: 'order-edit' });
+
+      act(() => {
+        result.current.handleOpenEditOrder(order);
+      });
+
+      expect(requireAuthWithoutCallback).toHaveBeenCalled();
+      expect(result.current.isEditOrderModalOpen).toBe(false);
+      expect(result.current.editingOrder).toBeNull();
+    });
+  });
+
   describe('handleTogglePayment', () => {
+    it('should require authentication before toggling payment', () => {
+      const wrapper = createWrapper();
+      const { result } = renderHook(() => useOrderModal(defaultOptions), { wrapper });
+      const unpaidOrder = createMockOrder({ id: 'order-unpaid', isPaid: false });
+
+      act(() => {
+        result.current.handleTogglePayment(unpaidOrder);
+      });
+
+      expect(mockRequireAuth).toHaveBeenCalled();
+    });
+
     it('should open payment proof modal for unpaid order', () => {
       const wrapper = createWrapper();
       const { result } = renderHook(() => useOrderModal(defaultOptions), { wrapper });
@@ -418,6 +522,24 @@ describe('useOrderModal', () => {
 
       expect(result.current.isPaymentProofModalOpen).toBe(true);
       expect(result.current.orderForPayment).toEqual(unpaidOrder);
+    });
+
+    it('should not open payment proof modal when auth callback is not executed', () => {
+      const wrapper = createWrapper();
+      const requireAuthWithoutCallback = vi.fn();
+      const { result } = renderHook(
+        () => useOrderModal({ ...defaultOptions, requireAuth: requireAuthWithoutCallback }),
+        { wrapper }
+      );
+      const unpaidOrder = createMockOrder({ id: 'order-unpaid', isPaid: false });
+
+      act(() => {
+        result.current.handleTogglePayment(unpaidOrder);
+      });
+
+      expect(requireAuthWithoutCallback).toHaveBeenCalled();
+      expect(result.current.isPaymentProofModalOpen).toBe(false);
+      expect(result.current.orderForPayment).toBeNull();
     });
 
     it('should trigger updatePayment mutation for paid order (toggle off)', async () => {

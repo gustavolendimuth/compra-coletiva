@@ -283,6 +283,12 @@ export function useOrderModal({
     deleteOrderMutation.mutate(orderId);
   }, [deleteOrderMutation]);
 
+  const handleOpenEditOrder = useCallback((order: Order) => {
+    requireAuth(() => {
+      openEditOrderModal(order);
+    });
+  }, [openEditOrderModal, requireAuth]);
+
   const handleEditOrderFromView = useCallback(() => {
     if (viewingOrder) {
       setIsViewOrderModalOpen(false);
@@ -290,17 +296,26 @@ export function useOrderModal({
     }
   }, [viewingOrder, openEditOrderModal]);
 
+  const handleViewOrder = useCallback((order: Order) => {
+    requireAuth(() => {
+      setViewingOrder(order);
+      setIsViewOrderModalOpen(true);
+    });
+  }, [requireAuth]);
+
   const handleTogglePayment = useCallback((order: Order) => {
-    if (!order.isPaid) {
-      setOrderForPayment(order);
-      setIsPaymentProofModalOpen(true);
-    } else {
-      updatePaymentMutation.mutate({
-        orderId: order.id,
-        isPaid: false,
-      });
-    }
-  }, [updatePaymentMutation]);
+    requireAuth(() => {
+      if (!order.isPaid) {
+        setOrderForPayment(order);
+        setIsPaymentProofModalOpen(true);
+      } else {
+        updatePaymentMutation.mutate({
+          orderId: order.id,
+          isPaid: false,
+        });
+      }
+    });
+  }, [requireAuth, updatePaymentMutation]);
 
   const handlePaymentProofSubmit = useCallback((file: File) => {
     if (!orderForPayment) return;
@@ -358,6 +373,8 @@ export function useOrderModal({
     handleAddToOrder,
     handleEditOrder,
     handleDeleteOrder,
+    handleOpenEditOrder,
+    handleViewOrder,
     handleEditOrderFromView,
     handleTogglePayment,
     handlePaymentProofSubmit,
