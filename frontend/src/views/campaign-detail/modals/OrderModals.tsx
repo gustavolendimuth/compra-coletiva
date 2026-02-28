@@ -36,6 +36,110 @@ interface AddOrderModalProps extends OrderModalBaseProps {
   lastSaved?: Date | null;
 }
 
+interface AdminCreateOrderModalProps {
+  isOpen: boolean;
+  form: {
+    mode: "self" | "customer";
+    name: string;
+    email: string;
+    phone: string;
+  };
+  isPending?: boolean;
+  onClose: () => void;
+  onChange: (form: { mode: "self" | "customer"; name: string; email: string; phone: string }) => void;
+  onSubmit: () => void;
+}
+
+export function AdminCreateOrderModal({
+  isOpen,
+  form,
+  isPending = false,
+  onClose,
+  onChange,
+  onSubmit,
+}: AdminCreateOrderModalProps) {
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Novo Pedido">
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-sky-700 mb-2">
+            Para quem e o pedido?
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              variant={form.mode === "self" ? "primary" : "secondary"}
+              onClick={() => onChange({ ...form, mode: "self" })}
+            >
+              Pedido para mim
+            </Button>
+            <Button
+              type="button"
+              variant={form.mode === "customer" ? "primary" : "secondary"}
+              onClick={() => onChange({ ...form, mode: "customer" })}
+            >
+              Para outro usuario
+            </Button>
+          </div>
+        </div>
+
+        {form.mode === "customer" && (
+          <>
+            <p className="text-sm text-sky-700">
+              Informe os dados do cliente. Se o email ja existir, o pedido sera vinculado ao usuario existente.
+            </p>
+
+            <div>
+              <label className="block text-sm font-medium text-sky-700 mb-2">
+                Nome do cliente *
+              </label>
+              <Input
+                type="text"
+                value={form.name}
+                onChange={(e) => onChange({ ...form, name: e.target.value })}
+                placeholder="Ex: Maria Silva"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-sky-700 mb-2">
+                Email do cliente *
+              </label>
+              <Input
+                type="email"
+                value={form.email}
+                onChange={(e) => onChange({ ...form, email: e.target.value })}
+                placeholder="cliente@email.com"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-sky-700 mb-2">
+                Telefone (opcional)
+              </label>
+              <Input
+                type="text"
+                value={form.phone}
+                onChange={(e) => onChange({ ...form, phone: e.target.value })}
+                placeholder="(11) 99999-9999"
+              />
+            </div>
+          </>
+        )}
+
+        <div className="flex gap-3 pt-2">
+          <Button type="button" variant="secondary" onClick={onClose} className="w-full">
+            Cancelar
+          </Button>
+          <Button type="button" onClick={onSubmit} className="w-full" disabled={isPending}>
+            {isPending ? "Criando..." : "Continuar"}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export function AddOrderModal({
   isOpen,
   form,

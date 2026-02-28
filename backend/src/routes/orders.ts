@@ -9,11 +9,19 @@ import { Money } from '../utils/money';
 import { CampaignStatusService } from '../services/campaignStatusService';
 import { uploadPaymentProof, handleUploadError } from '../middleware/uploadMiddleware';
 import { ImageUploadService } from '../services/imageUploadService';
+import { capitalizeName } from '../utils/nameFormatter';
+import { queueOrderCreatedEmail } from '../services/email/emailQueue';
 
 const router = Router();
 
 const createOrderSchema = z.object({
   campaignId: z.string(),
+  userId: z.string().optional(),
+  customer: z.object({
+    name: z.string().trim().min(2).max(100),
+    email: z.string().trim().toLowerCase().email(),
+    phone: z.string().trim().optional()
+  }).optional(),
   items: z.array(z.object({
     productId: z.string(),
     quantity: z.number().int().min(1)
@@ -112,6 +120,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
 // POST /api/orders - Cria um novo pedido ou adiciona itens a um existente
 router.post('/', requireAuth, asyncHandler(async (req, res) => {
   const data = createOrderSchema.parse(req.body);
+  const isAdmin = req.user!.role === 'ADMIN';
 
   // Verifica se o grupo está ativo
   const campaign = await prisma.campaign.findUnique({
@@ -121,6 +130,87 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
   if (!campaign) {
     throw new AppError(404, 'Campaign not found');
   }
+
+  const canCreateForAnotherUser = isAdmin || campaign.creatorId === req.user!.id;
+
+  if (!canCreateForAnotherUser && (data.userId || data.customer)) {
+    throw new AppError(403, 'Only admins or campaign creator can create orders for another user');
+  }
+
+  if (canCreateForAnotherUser && data.userId && data.customer) {
+    throw new AppError(400, 'Provide either userId or customer, not both');
+  }
+
+  const normalizePhone = (value?: string): string | undefined => {
+    if (!value) return undefined;
+    const digits = value.replace(/\D/g, '');
+    if (!digits) return undefined;
+    if (digits.length === 13 && digits.startsWith('55')) {
+      return digits.slice(2);
+    }
+    return digits;
+  };
+
+  const resolveTargetUserId = async (): Promise<string> => {
+    if (!canCreateForAnotherUser) return req.user!.id;
+
+    if (data.userId) {
+      const existingUser = await prisma.user.findUnique({
+        where: { id: data.userId },
+        select: { id: true, deletedAt: true }
+      });
+
+      if (!existingUser || existingUser.deletedAt) {
+        throw new AppError(404, 'User not found');
+      }
+
+      return existingUser.id;
+    }
+
+    if (!data.customer) return req.user!.id;
+
+    const existingByEmail = await prisma.user.findUnique({
+      where: { email: data.customer.email },
+      select: { id: true, deletedAt: true }
+    });
+
+    if (existingByEmail) {
+      if (existingByEmail.deletedAt) {
+        throw new AppError(400, 'Cannot create order for a deleted user');
+      }
+      return existingByEmail.id;
+    }
+
+    try {
+      const createdLegacyUser = await prisma.user.create({
+        data: {
+          name: capitalizeName(data.customer.name),
+          email: data.customer.email,
+          phone: normalizePhone(data.customer.phone),
+          phoneCompleted: !!normalizePhone(data.customer.phone),
+          addressCompleted: false,
+          role: 'CUSTOMER',
+          isLegacyUser: true
+        },
+        select: { id: true }
+      });
+
+      return createdLegacyUser.id;
+    } catch (error: any) {
+      if (error?.code === 'P2002') {
+        const user = await prisma.user.findUnique({
+          where: { email: data.customer.email },
+          select: { id: true, deletedAt: true }
+        });
+        if (user && !user.deletedAt) {
+          return user.id;
+        }
+      }
+      throw error;
+    }
+  };
+
+  const targetUserId = await resolveTargetUserId();
 
   if (campaign.status !== 'ACTIVE') {
     throw new AppError(400, 'Cannot create orders in a closed or sent group');
@@ -142,7 +232,7 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
   const existingOrder = await prisma.order.findFirst({
     where: {
       campaignId: data.campaignId,
-      userId: req.user!.id
+      userId: targetUserId
     },
     include: {
       items: true
@@ -188,7 +278,7 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
     order = await prisma.order.create({
       data: {
         campaignId: data.campaignId,
-        userId: req.user!.id, // Vincula ao usuário autenticado
+        userId: targetUserId,
         items: data.items && data.items.length > 0 ? {
           create: data.items.map(item => {
             const product = productMap.get(item.productId);
@@ -239,6 +329,21 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
   // Emite evento apropriado
   if (isNewOrder) {
     emitOrderCreated(data.campaignId, updatedOrder);
+
+    if (updatedOrder?.customer?.email && campaign.slug) {
+      try {
+        await queueOrderCreatedEmail(
+          updatedOrder.customer.id,
+          updatedOrder.customer.name,
+          updatedOrder.customer.email,
+          campaign.name,
+          campaign.slug,
+          updatedOrder.id
+        );
+      } catch (emailError) {
+        console.error('[Orders] Failed to queue order created email:', emailError);
+      }
+    }
   } else {
     emitOrderUpdated(data.campaignId, updatedOrder);
   }

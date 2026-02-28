@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders, mockAuthContext } from "@/__tests__/test-utils";
 import {
@@ -262,17 +262,19 @@ describe("CampaignDetail", () => {
 
       // Initially on Overview tab - check desktop version (first one)
       const overviewTabs = screen.getAllByRole("button", {
-        name: /visão geral/i,
+        name: /^visão geral$/i,
       });
-      expect(overviewTabs[0]).toHaveClass("text-primary-600");
+      expect(overviewTabs[0]).toHaveClass("text-sky-600");
+      expect(overviewTabs[0]).toHaveClass("border-sky-500");
 
       // Click Products tab (desktop version)
-      const productsTabs = screen.getAllByRole("button", { name: /produtos/i });
+      const productsTabs = screen.getAllByRole("button", { name: /^produtos$/i });
       await user.click(productsTabs[0]);
 
       // Products tab should be active
       await waitFor(() => {
-        expect(productsTabs[0]).toHaveClass("text-primary-600");
+        expect(productsTabs[0]).toHaveClass("text-sky-600");
+        expect(productsTabs[0]).toHaveClass("border-sky-500");
       });
     });
 
@@ -324,7 +326,7 @@ describe("CampaignDetail", () => {
       });
 
       // Click products tab (desktop version - first one)
-      const productsTabs = screen.getAllByRole("button", { name: /produtos/i });
+      const productsTabs = screen.getAllByRole("button", { name: /^produtos$/i });
       await user.click(productsTabs[0]);
 
       await waitFor(() => {
@@ -346,7 +348,7 @@ describe("CampaignDetail", () => {
       });
 
       // Click on the Products tab
-      const productsTabs = screen.getAllByRole("button", { name: /produtos/i });
+      const productsTabs = screen.getAllByRole("button", { name: /^produtos$/i });
       await user.click(productsTabs[0]);
 
       // Wait for the Products tab content to render - look for tab header
@@ -378,7 +380,7 @@ describe("CampaignDetail", () => {
         expect(screen.getAllByText("Test Campaign")[0]).toBeInTheDocument();
       });
 
-      const productsTabs = screen.getAllByRole("button", { name: /produtos/i });
+      const productsTabs = screen.getAllByRole("button", { name: /^produtos$/i });
       await user.click(productsTabs[0]);
 
       await waitFor(() => {
@@ -402,13 +404,67 @@ describe("CampaignDetail", () => {
         expect(screen.getAllByText("Test Campaign")[0]).toBeInTheDocument();
       });
 
-      const productsTabs = screen.getAllByRole("button", { name: /produtos/i });
+      const productsTabs = screen.getAllByRole("button", { name: /^produtos$/i });
       await user.click(productsTabs[0]);
 
       await waitFor(() => {
         expect(
           screen.getByText(/nenhum produto cadastrado/i)
         ).toBeInTheDocument();
+      });
+    });
+
+    it("should create product with campaignId from loaded campaign", async () => {
+      const user = userEvent.setup();
+      vi.mocked(productApi.create).mockResolvedValue(
+        createMockFullProduct({
+          id: "product-new",
+          campaignId: "campaign-1",
+          name: "Produto novo",
+          price: 10,
+          weight: 200,
+        })
+      );
+
+      renderWithProviders(<CampaignDetail />, {
+        authContext: mockAuthContext,
+      });
+
+      await waitFor(() => {
+        expect(screen.getAllByText("Test Campaign")[0]).toBeInTheDocument();
+      });
+
+      const productsTabs = screen.getAllByRole("button", { name: /^produtos$/i });
+      await user.click(productsTabs[0]);
+
+      await waitFor(() => {
+        expect(screen.getAllByRole("button", { name: /adicionar produto/i }).length).toBeGreaterThan(0);
+      });
+
+      const addProductButton = screen.getAllByRole("button", { name: /adicionar produto/i })[0];
+      await user.click(addProductButton);
+
+      await waitFor(() => {
+        expect(screen.getByRole("heading", { name: /adicionar produto/i })).toBeInTheDocument();
+      });
+
+      await user.type(screen.getByLabelText(/nome do produto/i), "Produto novo");
+      await user.type(screen.getByLabelText(/preço/i), "10");
+      await user.type(screen.getByLabelText(/peso/i), "200");
+
+      const addProductDialog = screen.getByRole("dialog", { name: /adicionar produto/i });
+      await user.click(within(addProductDialog).getByRole("button", { name: /^adicionar$/i }));
+
+      await waitFor(() => {
+        expect(productApi.create).toHaveBeenCalled();
+      });
+
+      const [firstPayload] = vi.mocked(productApi.create).mock.calls[0];
+      expect(firstPayload).toEqual({
+          campaignId: "campaign-1",
+          name: "Produto novo",
+          price: 10,
+          weight: 200,
       });
     });
   });
@@ -424,7 +480,7 @@ describe("CampaignDetail", () => {
         expect(screen.getAllByText("Test Campaign")[0]).toBeInTheDocument();
       });
 
-      const ordersTabs = screen.getAllByRole("button", { name: /pedidos/i });
+      const ordersTabs = screen.getAllByRole("button", { name: /^pedidos$/i });
       await user.click(ordersTabs[0]);
 
       // Just verify the orders tab was activated and content is rendered
@@ -450,7 +506,7 @@ describe("CampaignDetail", () => {
         expect(screen.getAllByText("Test Campaign")[0]).toBeInTheDocument();
       });
 
-      const ordersTabs = screen.getAllByRole("button", { name: /pedidos/i });
+      const ordersTabs = screen.getAllByRole("button", { name: /^pedidos$/i });
       await user.click(ordersTabs[0]);
 
       await waitFor(() => {
@@ -470,7 +526,7 @@ describe("CampaignDetail", () => {
         expect(screen.getAllByText("Test Campaign")[0]).toBeInTheDocument();
       });
 
-      const ordersTabs = screen.getAllByRole("button", { name: /pedidos/i });
+      const ordersTabs = screen.getAllByRole("button", { name: /^pedidos$/i });
       await user.click(ordersTabs[0]);
 
       // Wait for the search input to appear
@@ -503,7 +559,7 @@ describe("CampaignDetail", () => {
         expect(screen.getAllByText("Test Campaign")[0]).toBeInTheDocument();
       });
 
-      const ordersTabs = screen.getAllByRole("button", { name: /pedidos/i });
+      const ordersTabs = screen.getAllByRole("button", { name: /^pedidos$/i });
       await user.click(ordersTabs[0]);
 
       await waitFor(() => {
@@ -523,7 +579,7 @@ describe("CampaignDetail", () => {
         expect(screen.getAllByText("Test Campaign")[0]).toBeInTheDocument();
       });
 
-      const shippingTabs = screen.getAllByRole("button", { name: /frete/i });
+      const shippingTabs = screen.getAllByRole("button", { name: /^frete$/i });
       await user.click(shippingTabs[0]);
 
       await waitFor(() => {

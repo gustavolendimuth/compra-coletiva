@@ -11,6 +11,7 @@ import {
   renderNotificationEmail,
   renderWelcomeEmail,
   renderPasswordResetEmail,
+  renderOrderCreatedEmail,
   EmailTemplateData,
 } from './templates';
 import { prisma } from '../../index';
@@ -53,6 +54,13 @@ async function processEmailJob(job: Job<EmailJobData>): Promise<void> {
         data.userName,
         data.userId,
         data.resetToken
+      );
+    } else if (data.type === 'order-created' && data.campaignName && data.campaignSlug) {
+      emailContent = await renderOrderCreatedEmail(
+        data.userName,
+        data.userId,
+        data.campaignName,
+        data.campaignSlug
       );
     } else {
       throw new Error(`Invalid job type: ${data.type}`);

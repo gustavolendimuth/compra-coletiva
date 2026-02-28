@@ -4,6 +4,7 @@ interface ProductForm {
   name: string;
   price: string;
   weight: string;
+  imageUrl?: string;
 }
 
 interface AddProductModalProps {

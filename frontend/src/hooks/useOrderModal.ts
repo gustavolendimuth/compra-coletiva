@@ -8,7 +8,8 @@ import { useOrderAutosave } from './useOrderAutosave';
 interface UseOrderModalOptions {
   orders: Order[] | undefined;
   campaignId: string | undefined;
-  user: { id: string; name: string } | null;
+  user: { id: string; name: string; role?: "ADMIN" | "CAMPAIGN_CREATOR" | "CUSTOMER" } | null;
+  canCreateOrdersForOthers?: boolean;
   isActive: boolean;
   requireAuth: (callback: () => void) => void;
   products: Product[];
@@ -18,6 +19,7 @@ export function useOrderModal({
   orders,
   campaignId,
   user,
+  canCreateOrdersForOthers = false,
   isActive,
   requireAuth,
 }: UseOrderModalOptions) {
@@ -27,9 +29,16 @@ export function useOrderModal({
   const [isEditOrderModalOpen, setIsEditOrderModalOpen] = useState(false);
   const [isViewOrderModalOpen, setIsViewOrderModalOpen] = useState(false);
   const [isPaymentProofModalOpen, setIsPaymentProofModalOpen] = useState(false);
+  const [isAdminCustomerModalOpen, setIsAdminCustomerModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
   const [orderForPayment, setOrderForPayment] = useState<Order | null>(null);
+  const [adminCustomerForm, setAdminCustomerForm] = useState({
+    mode: 'self' as 'self' | 'customer',
+    name: '',
+    email: '',
+    phone: '',
+  });
   const [editOrderForm, setEditOrderForm] = useState<OrderForm>({
     campaignId: '',
     items: [],
@@ -230,6 +239,12 @@ export function useOrderModal({
   const handleAddOrder = useCallback(() => {
     console.log('[handleAddOrder] Chamado');
     requireAuth(async () => {
+      if (canCreateOrdersForOthers) {
+        setAdminCustomerForm({ mode: 'self', name: '', email: '', phone: '' });
+        setIsAdminCustomerModalOpen(true);
+        return;
+      }
+
       console.log('[handleAddOrder] Auth OK, user:', user?.id);
       const existingOrder = orders?.find((o) => o.userId === user?.id);
       console.log('[handleAddOrder] existingOrder:', existingOrder?.id || 'NENHUM');
@@ -262,7 +277,79 @@ export function useOrderModal({
         });
       }
     });
-  }, [orders, user, campaignId, requireAuth, openEditOrderModal, createOrderMutation]);
+  }, [canCreateOrdersForOthers, orders, user, campaignId, requireAuth, openEditOrderModal, createOrderMutation]);
+
+  const handleCreateAdminOrder = useCallback(() => {
+    requireAuth(() => {
+      if (adminCustomerForm.mode === 'self') {
+        const existingOwnOrder = orders?.find((o) => o.userId === user?.id);
+        if (existingOwnOrder) {
+          setIsAdminCustomerModalOpen(false);
+          setAdminCustomerForm({ mode: 'self', name: '', email: '', phone: '' });
+          openEditOrderModal(existingOwnOrder);
+          return;
+        }
+
+        createOrderMutation.mutate(
+          {
+            campaignId: campaignId || '',
+            items: [],
+          },
+          {
+            onSuccess: (newOrder: Order) => {
+              setIsAdminCustomerModalOpen(false);
+              setAdminCustomerForm({ mode: 'self', name: '', email: '', phone: '' });
+              setEditingOrder(newOrder);
+              setEditOrderForm({
+                campaignId: campaignId || '',
+                items: [],
+              });
+              setIsEditOrderModalOpen(true);
+            },
+          }
+        );
+        return;
+      }
+
+      const trimmedName = adminCustomerForm.name.trim();
+      const trimmedEmail = adminCustomerForm.email.trim().toLowerCase();
+      const trimmedPhone = adminCustomerForm.phone.trim();
+
+      if (!trimmedName) {
+        toast.error('Nome do cliente é obrigatório');
+        return;
+      }
+
+      if (!trimmedEmail) {
+        toast.error('Email do cliente é obrigatório');
+        return;
+      }
+
+      createOrderMutation.mutate(
+        {
+          campaignId: campaignId || '',
+          items: [],
+          customer: {
+            name: trimmedName,
+            email: trimmedEmail,
+            phone: trimmedPhone || undefined,
+          },
+        },
+        {
+          onSuccess: (newOrder: Order) => {
+            setIsAdminCustomerModalOpen(false);
+            setAdminCustomerForm({ mode: 'self', name: '', email: '', phone: '' });
+            setEditingOrder(newOrder);
+            setEditOrderForm({
+              campaignId: campaignId || '',
+              items: [],
+            });
+            setIsEditOrderModalOpen(true);
+          },
+        }
+      );
+    });
+  }, [adminCustomerForm.email, adminCustomerForm.mode, adminCustomerForm.name, adminCustomerForm.phone, campaignId, createOrderMutation, openEditOrderModal, orders, requireAuth, user?.id]);
 
   const handleEditOrder = useCallback((e: React.FormEvent) => {
     e.preventDefault();
@@ -361,8 +448,12 @@ export function useOrderModal({
     setViewingOrder,
     isPaymentProofModalOpen,
     setIsPaymentProofModalOpen,
+    isAdminCustomerModalOpen,
+    setIsAdminCustomerModalOpen,
     orderForPayment,
     setOrderForPayment,
+    adminCustomerForm,
+    setAdminCustomerForm,
 
     // Autosave
     isAutosaving: autosave.isAutosaving,
@@ -376,6 +467,7 @@ export function useOrderModal({
     handleOpenEditOrder,
     handleViewOrder,
     handleEditOrderFromView,
+    handleCreateAdminOrder,
     handleTogglePayment,
     handlePaymentProofSubmit,
     openEditOrderModal,

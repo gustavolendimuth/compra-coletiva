@@ -104,6 +104,7 @@ describe('useOrderModal', () => {
       expect(result.current.isEditOrderModalOpen).toBe(false);
       expect(result.current.isViewOrderModalOpen).toBe(false);
       expect(result.current.isPaymentProofModalOpen).toBe(false);
+      expect(result.current.isAdminCustomerModalOpen).toBe(false);
     });
 
     it('should return null for editing/viewing orders initially', () => {
@@ -364,6 +365,124 @@ describe('useOrderModal', () => {
         expect(callArgs[0]).toEqual({
           campaignId: 'campaign-1',
           items: [],
+        });
+      });
+    });
+
+    it('should open admin/customer modal when canCreateOrdersForOthers is true', () => {
+      const wrapper = createWrapper();
+      const { result } = renderHook(
+        () => useOrderModal({ ...defaultOptions, canCreateOrdersForOthers: true }),
+        { wrapper }
+      );
+
+      act(() => {
+        result.current.handleAddOrder();
+      });
+
+      expect(result.current.isAdminCustomerModalOpen).toBe(true);
+      expect(result.current.isEditOrderModalOpen).toBe(false);
+    });
+  });
+
+  describe('handleCreateAdminOrder', () => {
+    it('should create own order when mode is self and no existing order', async () => {
+      const wrapper = createWrapper();
+      const { result } = renderHook(
+        () =>
+          useOrderModal({
+            ...defaultOptions,
+            orders: [],
+            canCreateOrdersForOthers: true,
+          }),
+        { wrapper }
+      );
+
+      act(() => {
+        result.current.setAdminCustomerForm({
+          mode: 'self',
+          name: '',
+          email: '',
+          phone: '',
+        });
+      });
+
+      act(() => {
+        result.current.handleCreateAdminOrder();
+      });
+
+      await waitFor(() => {
+        expect(orderApi.create).toHaveBeenCalled();
+        expect(vi.mocked(orderApi.create).mock.calls[0][0]).toEqual({
+          campaignId: 'campaign-1',
+          items: [],
+        });
+      });
+    });
+
+    it('should open existing own order when mode is self and own order already exists', () => {
+      const wrapper = createWrapper();
+      const { result } = renderHook(
+        () =>
+          useOrderModal({
+            ...defaultOptions,
+            canCreateOrdersForOthers: true,
+          }),
+        { wrapper }
+      );
+
+      act(() => {
+        result.current.setAdminCustomerForm({
+          mode: 'self',
+          name: '',
+          email: '',
+          phone: '',
+        });
+      });
+
+      act(() => {
+        result.current.handleCreateAdminOrder();
+      });
+
+      expect(orderApi.create).not.toHaveBeenCalled();
+      expect(result.current.isEditOrderModalOpen).toBe(true);
+      expect(result.current.editingOrder?.id).toBe('order-1');
+    });
+
+    it('should create order for another user when mode is customer', async () => {
+      const wrapper = createWrapper();
+      const { result } = renderHook(
+        () =>
+          useOrderModal({
+            ...defaultOptions,
+            canCreateOrdersForOthers: true,
+          }),
+        { wrapper }
+      );
+
+      act(() => {
+        result.current.setAdminCustomerForm({
+          mode: 'customer',
+          name: 'Maria Silva',
+          email: 'maria@example.com',
+          phone: '(11) 99999-9999',
+        });
+      });
+
+      act(() => {
+        result.current.handleCreateAdminOrder();
+      });
+
+      await waitFor(() => {
+        expect(orderApi.create).toHaveBeenCalled();
+        expect(vi.mocked(orderApi.create).mock.calls[0][0]).toEqual({
+          campaignId: 'campaign-1',
+          items: [],
+          customer: {
+            name: 'Maria Silva',
+            email: 'maria@example.com',
+            phone: '(11) 99999-9999',
+          },
         });
       });
     });

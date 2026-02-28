@@ -16,6 +16,7 @@ import { NewMessage, NewMessageProps } from './notifications/NewMessage';
 import { CampaignArchived, CampaignArchivedProps } from './notifications/CampaignArchived';
 import { Welcome, WelcomeProps } from './system/Welcome';
 import { PasswordReset, PasswordResetProps } from './system/PasswordReset';
+import { OrderCreated, OrderCreatedProps } from './system/OrderCreated';
 
 export interface EmailTemplateData {
   userName: string;
@@ -165,6 +166,34 @@ export async function renderPasswordResetEmail(
   const html = await render(PasswordReset(props));
   const subject = '🔒 Redefinir sua senha';
   const templateName = 'password-reset';
+
+  return { html, subject, templateName };
+}
+
+/**
+ * Renderiza template de pedido criado
+ */
+export async function renderOrderCreatedEmail(
+  userName: string,
+  userId: string,
+  campaignName: string,
+  campaignSlug: string
+): Promise<RenderedEmail> {
+  const actionUrl = LinkBuilder.buildCampaignLink(campaignSlug);
+  const unsubscribeUrl = LinkBuilder.buildUnsubscribeLink(userId);
+  const preferencesUrl = LinkBuilder.buildPreferencesLink();
+
+  const props: OrderCreatedProps = {
+    userName,
+    campaignName,
+    actionUrl,
+    unsubscribeUrl,
+    preferencesUrl,
+  };
+
+  const html = await render(OrderCreated(props));
+  const subject = `🛒 Pedido criado em ${campaignName}`;
+  const templateName = 'order-created';
 
   return { html, subject, templateName };
 }

@@ -1,5 +1,5 @@
 import { AddProductModal, EditProductModal } from './modals/ProductModals';
-import { EditOrderModal, ViewOrderModal } from './modals/OrderModals';
+import { AdminCreateOrderModal, EditOrderModal, ViewOrderModal } from './modals/OrderModals';
 import {
   ShippingModal,
   DeadlineModal,
@@ -12,9 +12,10 @@ import {
 } from './modals/CampaignModals';
 import { ImageUploadModal } from './modals/ImageUploadModal';
 import { PaymentProofModal } from './modals/PaymentProofModal';
+import { useCampaignDetail } from './useCampaignDetail';
 
 interface CampaignModalsProps {
-  hook: any;
+  hook: ReturnType<typeof useCampaignDetail>;
 }
 
 export function CampaignModals({ hook }: CampaignModalsProps) {
@@ -25,7 +26,7 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
         form={hook.productForm}
         isPending={hook.createProductMutation?.isPending || false}
         onClose={() => hook.setIsProductModalOpen(false)}
-        onChange={hook.setProductForm}
+        onChange={(form) => hook.setProductForm(form)}
         onSubmit={hook.handleCreateProduct}
       />
 
@@ -34,7 +35,7 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
         form={hook.editProductForm}
         isPending={hook.updateProductMutation?.isPending || false}
         onClose={() => hook.setIsEditProductModalOpen(false)}
-        onChange={hook.setEditProductForm}
+        onChange={(form) => hook.setEditProductForm(form)}
         onSubmit={hook.handleEditProduct}
       />
 
@@ -43,9 +44,26 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
         form={hook.editOrderForm}
         products={hook.alphabeticalProducts || hook.products || []}
         onClose={hook.closeEditOrderModal}
-        onChange={hook.setEditOrderForm}
+        onChange={(form) =>
+          hook.setEditOrderForm((prev) => ({
+            ...prev,
+            items: form.items,
+          }))
+        }
         isAutosaving={hook.isAutosaving}
         lastSaved={hook.lastSaved}
+      />
+
+      <AdminCreateOrderModal
+        isOpen={hook.isAdminCustomerModalOpen}
+        form={hook.adminCustomerForm}
+        isPending={hook.createOrderMutation?.isPending || false}
+        onClose={() => {
+          hook.setIsAdminCustomerModalOpen(false);
+          hook.setAdminCustomerForm({ mode: "self", name: "", email: "", phone: "" });
+        }}
+        onChange={(form) => hook.setAdminCustomerForm(form)}
+        onSubmit={hook.handleCreateAdminOrder}
       />
 
       <ViewOrderModal
@@ -82,7 +100,7 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
 
       <DeadlineModal
         isOpen={hook.isEditDeadlineModalOpen}
-        campaign={hook.campaign}
+        campaign={hook.campaign ?? null}
         deadlineForm={hook.deadlineForm}
         isPending={hook.updateDeadlineMutation?.isPending || false}
         onClose={() => hook.setIsEditDeadlineModalOpen(false)}
@@ -115,7 +133,7 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
 
       <ReopenConfirmDialog
         isOpen={hook.isReopenConfirmOpen}
-        campaign={hook.campaign}
+        campaign={hook.campaign ?? null}
         deadlineForm={hook.reopenDeadlineForm || ''}
         shouldRemoveDeadline={hook.shouldRemoveDeadlineOnReopen || false}
         isPending={hook.reopenCampaignMutation?.isPending || false}
@@ -133,7 +151,7 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
 
       <CloneModal
         isOpen={hook.isCloneModalOpen}
-        campaign={hook.campaign}
+        campaign={hook.campaign ?? null}
         cloneName={hook.cloneName}
         cloneDescription={hook.cloneDescription}
         isPending={hook.cloneCampaignMutation?.isPending || false}

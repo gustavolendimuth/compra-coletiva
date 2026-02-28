@@ -10,6 +10,7 @@ import {
   orderApi,
   analyticsApi,
   Product,
+  CreateProductDto,
 } from "@/api";
 import { Order } from "@/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,7 +19,6 @@ import { useOrderModal } from "@/hooks/useOrderModal";
 import type { AddressData } from "@/components/ui/AddressForm";
 
 interface ProductForm {
-  campaignId: string;
   name: string;
   price: string;
   weight: string;
@@ -71,14 +71,13 @@ export function useCampaignDetail() {
 
   // Form states
   const [productForm, setProductForm] = useState<ProductForm>({
-    campaignId: "",
     name: "",
     price: "",
     weight: "",
     imageUrl: "",
   });
 
-  const [editProductForm, setEditProductForm] = useState({
+  const [editProductForm, setEditProductForm] = useState<ProductForm>({
     name: "",
     price: "",
     weight: "",
@@ -180,7 +179,8 @@ export function useCampaignDetail() {
   const orderModal = useOrderModal({
     orders,
     campaignId,
-    user: user ? { id: user.id, name: user.name } : null,
+    user: user ? { id: user.id, name: user.name, role: user.role } : null,
+    canCreateOrdersForOthers: !!canEditCampaign || user?.role === "ADMIN",
     isActive,
     requireAuth,
     products: alphabeticalProducts,
@@ -298,7 +298,6 @@ export function useCampaignDetail() {
       toast.success("Produto adicionado!");
       setIsProductModalOpen(false);
       setProductForm({
-        campaignId: campaignId || "",
         name: "",
         price: "",
         weight: "",
@@ -473,11 +472,19 @@ export function useCampaignDetail() {
   // Product handlers
   const handleCreateProduct = (e: React.FormEvent) => {
     e.preventDefault();
-    createProductMutation.mutate({
-      ...productForm,
+    if (!campaignId) {
+      toast.error("Campanha ainda não carregada");
+      return;
+    }
+
+    const payload: CreateProductDto = {
+      campaignId,
+      name: productForm.name,
       price: parseFloat(productForm.price) || 0,
       weight: parseFloat(productForm.weight) || 0,
-    });
+    };
+
+    createProductMutation.mutate(payload);
   };
 
   const handleEditProduct = (e: React.FormEvent) => {

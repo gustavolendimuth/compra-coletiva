@@ -243,6 +243,12 @@ export interface Order {
 export interface CreateOrderDto {
   campaignId: string;
   items: Array<{ productId: string; quantity: number }>;
+  userId?: string;
+  customer?: {
+    name: string;
+    email: string;
+    phone?: string;
+  };
 }
 
 export interface OrderFormItem {
