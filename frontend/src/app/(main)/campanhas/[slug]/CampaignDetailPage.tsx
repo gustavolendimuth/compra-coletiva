@@ -17,14 +17,15 @@ export function CampaignDetailPage() {
     'overview' | 'products' | 'orders' | 'shipping' | 'questions'
   >('overview');
   const hook = useCampaignDetail();
+  const { shouldOpenQuestionsTab, setShouldOpenQuestionsTab } = hook;
 
   // Handle navigation from notifications
   useEffect(() => {
-    if (hook.shouldOpenQuestionsTab) {
+    if (shouldOpenQuestionsTab) {
       setActiveTab('questions');
-      hook.setShouldOpenQuestionsTab(false);
+      setShouldOpenQuestionsTab(false);
     }
-  }, [hook.shouldOpenQuestionsTab, hook.setShouldOpenQuestionsTab]);
+  }, [shouldOpenQuestionsTab, setShouldOpenQuestionsTab]);
 
   if (!hook.campaign) {
     return <LoadingSkeleton />;

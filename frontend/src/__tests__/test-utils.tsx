@@ -26,7 +26,7 @@ vi.mock('next/navigation', () => ({
 
 // Mock next/link
 vi.mock('next/link', () => ({
-  default: ({ children, href, ...props }: { children: React.ReactNode; href: string; [key: string]: any }) => (
+  default: ({ children, href, ...props }: { children: React.ReactNode; href: string; [key: string]: unknown }) => (
     <a href={href} {...props}>{children}</a>
   ),
 }));
@@ -110,17 +110,17 @@ export function renderWithProviders(
 
 // Mock Socket.IO client
 export const createMockSocket = () => {
-  const listeners = new Map<string, Array<(...args: any[]) => void>>();
+  const listeners = new Map<string, Array<(...args: unknown[]) => void>>();
 
   return {
     connected: true,
-    on: vi.fn((event: string, handler: (...args: any[]) => void) => {
+    on: vi.fn((event: string, handler: (...args: unknown[]) => void) => {
       if (!listeners.has(event)) {
         listeners.set(event, []);
       }
       listeners.get(event)!.push(handler);
     }),
-    off: vi.fn((event: string, handler?: (...args: any[]) => void) => {
+    off: vi.fn((event: string, handler?: (...args: unknown[]) => void) => {
       if (handler) {
         const handlers = listeners.get(event);
         if (handlers) {
@@ -133,7 +133,7 @@ export const createMockSocket = () => {
         listeners.delete(event);
       }
     }),
-    emit: vi.fn((event: string, ...args: any[]) => {
+    emit: vi.fn((event: string, ...args: unknown[]) => {
       const handlers = listeners.get(event);
       if (handlers) {
         handlers.forEach(handler => handler(...args));
@@ -142,7 +142,7 @@ export const createMockSocket = () => {
     disconnect: vi.fn(),
     connect: vi.fn(),
     // Helper to trigger event from "server"
-    _triggerEvent: (event: string, ...args: any[]) => {
+    _triggerEvent: (event: string, ...args: unknown[]) => {
       const handlers = listeners.get(event);
       if (handlers) {
         handlers.forEach(handler => handler(...args));
@@ -154,8 +154,8 @@ export const createMockSocket = () => {
 
 // Mock notification data
 export const createMockNotification = (
-  overrides: Partial<any> = {}
-): any => ({
+  overrides: Partial<unknown> = {}
+): unknown => ({
   id: 'notif-1',
   userId: 'user-1',
   type: 'CAMPAIGN_READY_TO_SEND',
@@ -190,3 +190,4 @@ export const waitFor = (
     checkCondition();
   });
 };
+

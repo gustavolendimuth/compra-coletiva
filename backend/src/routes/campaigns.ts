@@ -363,7 +363,8 @@ router.get(
     });
 
     const hasMore = campaigns.length > limit;
-    let data: any[] = hasMore ? campaigns.slice(0, -1) : campaigns;
+    let data: Array<(typeof campaigns)[number] & { distance?: number | null }> =
+      hasMore ? campaigns.slice(0, -1) : campaigns;
     const nextCursor =
       hasMore && data.length > 0 ? data[data.length - 1].id : null;
 
@@ -373,7 +374,7 @@ router.get(
     if (userCoords) {
       const distanceLimit = maxDistance || 50;
       data = data
-        .map((campaign: any) => {
+        .map((campaign) => {
           if (campaign.pickupLatitude && campaign.pickupLongitude) {
             const dist = haversineDistance(
               userCoords!.latitude,
@@ -385,8 +386,8 @@ router.get(
           }
           return { ...campaign, distance: null };
         })
-        .filter((c: any) => c.distance !== null && c.distance <= distanceLimit)
-        .sort((a: any, b: any) => (a.distance || 0) - (b.distance || 0));
+        .filter((c) => c.distance !== null && c.distance <= distanceLimit)
+        .sort((a, b) => (a.distance || 0) - (b.distance || 0));
     }
 
     // Se temos resultados de busca mas poucos, adicionar sugestões
@@ -591,7 +592,7 @@ router.get(
 
     const ordersCount = campaign.orders?.length || 0;
     const itemsCount =
-      campaign.orders?.reduce((sum: number, order: any) => sum + (order.items?.length || 0), 0) || 0;
+      campaign.orders?.reduce((sum: number, order) => sum + (order.items?.length || 0), 0) || 0;
     const productsCount = campaign.products?.length || 0;
     const totalMs = Date.now() - totalStart;
     console.log(
@@ -610,10 +611,25 @@ router.post(
     const data = createCampaignSchema.parse(req.body);
 
     // Convert deadline string to Date object for Prisma
-    const prismaData: any = { ...data };
-    if (data.deadline) {
-      prismaData.deadline = new Date(data.deadline);
-    }
+    const prismaData: Prisma.CampaignUncheckedCreateInput = {
+      name: data.name,
+      description: data.description,
+      deadline: data.deadline ? new Date(data.deadline) : null,
+      shippingCost: data.shippingCost,
+      pixKey: data.pixKey,
+      pixType: data.pixType,
+      pixName: data.pixName,
+      pixVisibleAtStatus: data.pixVisibleAtStatus,
+      pickupZipCode: data.pickupZipCode,
+      pickupAddress: data.pickupAddress,
+      pickupAddressNumber: data.pickupAddressNumber,
+      pickupComplement: data.pickupComplement,
+      pickupNeighborhood: data.pickupNeighborhood,
+      pickupCity: data.pickupCity,
+      pickupState: data.pickupState,
+      creatorId: req.user!.id,
+      slug: ''
+    };
 
     // Geocodificar endereço de retirada para obter coordenadas
     if (data.pickupZipCode && data.pickupAddress) {
@@ -633,9 +649,6 @@ router.post(
         // Continua sem coordenadas - endereço ainda será salvo
       }
     }
-
-    // Adiciona o creatorId do usuário autenticado
-    prismaData.creatorId = req.user!.id;
 
     // Generate unique slug from campaign name
     prismaData.slug = await generateUniqueSlug(data.name);
@@ -778,7 +791,7 @@ router.patch(
     const campaignId = campaign.id;
 
     // Convert deadline string to Date object for Prisma
-    const prismaData: any = { ...data };
+    const prismaData: Prisma.CampaignUncheckedUpdateInput = { ...data };
     if (data.deadline !== undefined) {
       prismaData.deadline = data.deadline ? new Date(data.deadline) : null;
     }

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { SITE_URL, API_URL } from '@/api/config';
+import type { CampaignWithProducts } from '@/api/types';
 import { CampaignDetailPage } from './CampaignDetailPage';
 
 interface PageProps {
@@ -13,7 +14,7 @@ async function getCampaign(slug: string) {
       next: { revalidate: 60 }, // Revalidate every 60 seconds
     });
     if (!response.ok) return null;
-    return response.json();
+    return (await response.json()) as CampaignWithProducts;
   } catch {
     return null;
   }
@@ -71,7 +72,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 // Generate JSON-LD structured data for SEO
-function generateStructuredData(campaign: any, slug: string) {
+function generateStructuredData(campaign: CampaignWithProducts | null, slug: string) {
   if (!campaign) return null;
 
   const imageUrl = campaign.imageUrl
@@ -100,11 +101,11 @@ function generateStructuredData(campaign: any, slug: string) {
       name: campaign.creator?.name || 'Organizador',
     },
     // Add aggregated ratings if available
-    ...(campaign._count?.orders > 0 && {
+    ...((campaign._count?.orders ?? 0) > 0 && {
       aggregateRating: {
         '@type': 'AggregateRating',
         ratingValue: '4.5',
-        reviewCount: campaign._count.orders,
+        reviewCount: campaign._count?.orders ?? 0,
       },
     }),
   };
@@ -161,3 +162,4 @@ export default async function CampanhaDetailPage({ params }: PageProps) {
     </>
   );
 }
+

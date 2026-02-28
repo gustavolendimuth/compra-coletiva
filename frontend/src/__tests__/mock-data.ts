@@ -64,7 +64,7 @@ export const createMockCampaign = (
 // Mock Campaign List Response Factory
 export const createMockCampaignListResponse = (
   campaigns: CampaignWithProducts[] = [],
-  overrides: Partial<any> = {}
+  overrides: Partial<unknown> = {}
 ) => ({
   data: campaigns,
   suggestions: [],
@@ -333,3 +333,4 @@ export const mockMessageNotification = createMockNotification({
   isRead: false,
   metadata: { campaignSlug: 'test-campaign', orderId: 'order-1', isQuestion: false },
 });
+

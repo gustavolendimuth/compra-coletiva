@@ -29,8 +29,8 @@ export const requireAuth = async (
     let payload;
     try {
       payload = TokenService.verifyAccessToken(token);
-    } catch (error: any) {
-      if (error.message === 'TOKEN_EXPIRED') {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message === 'TOKEN_EXPIRED') {
         res.status(401).json({
           error: 'TOKEN_EXPIRED',
           message: 'Token expirado. Use o refresh token para obter um novo.',

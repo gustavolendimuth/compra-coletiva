@@ -15,6 +15,7 @@ import {
 import { Order } from "@/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { removeMask, applyPixMask } from "@/lib/pixMasks";
+import { getApiErrorMessage } from "@/lib/apiError";
 import { useOrderModal } from "@/hooks/useOrderModal";
 import type { AddressData } from "@/components/ui/AddressForm";
 
@@ -403,8 +404,8 @@ export function useCampaignDetail() {
       setIsReopenConfirmOpen(false);
       setIsSentConfirmOpen(false);
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Erro ao atualizar status");
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, "Erro ao atualizar status"));
     },
   });
 
@@ -431,8 +432,8 @@ export function useCampaignDetail() {
       setReopenDeadlineForm("");
       setShouldRemoveDeadlineOnReopen(false);
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Erro ao reabrir campanha");
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, "Erro ao reabrir campanha"));
     },
   });
 
@@ -948,3 +949,4 @@ export function useCampaignDetail() {
     updateAddressMutation,
   };
 }
+

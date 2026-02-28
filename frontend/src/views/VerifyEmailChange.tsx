@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { Card, Button } from '@/components/ui';
 import { profileService } from '@/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 type VerificationStatus = 'loading' | 'success' | 'error' | 'expired';
 
@@ -43,8 +44,8 @@ export function VerifyEmailChange({ token: propToken }: VerifyEmailChangeProps) 
         setMessage('Seu email foi alterado com sucesso!');
         // Refresh user data to get updated email
         await refreshUser();
-      } catch (error: any) {
-        const errorMessage = error?.response?.data?.message || 'Erro ao verificar email';
+      } catch (error: unknown) {
+        const errorMessage = getApiErrorMessage(error, 'Erro ao verificar email');
 
         if (errorMessage.toLowerCase().includes('expirado') ||
             errorMessage.toLowerCase().includes('expired')) {
@@ -146,3 +147,4 @@ export function VerifyEmailChange({ token: propToken }: VerifyEmailChangeProps) 
 }
 
 export default VerifyEmailChange;
+

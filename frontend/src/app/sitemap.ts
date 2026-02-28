@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next';
 import { API_URL, SITE_URL } from '@/api/config';
+import type { CampaignWithProducts } from '@/api/types';
 
 // Force dynamic generation to avoid build-time API calls
 export const dynamic = 'force-dynamic';
@@ -46,8 +47,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
 
     if (response.ok) {
-      const data = await response.json();
-      campaignPages = data.data.map((campaign: any) => {
+      const data = (await response.json()) as { data: CampaignWithProducts[] };
+      campaignPages = data.data.map((campaign) => {
         // Calculate priority based on campaign status and recency
         const isActive = campaign.status === 'ACTIVE';
         const updatedAt = new Date(campaign.updatedAt);
@@ -75,3 +76,4 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [...staticPages, ...campaignPages];
 }
+

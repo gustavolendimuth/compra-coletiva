@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/contexts/AuthContext';
 import { authService } from '@/api';
 import { authStorage } from '@/lib/authStorage';
+import { getApiErrorMessage } from '@/lib/apiError';
 import toast from 'react-hot-toast';
 
 export function ProfileAddressSection() {
@@ -42,8 +43,8 @@ export function ProfileAddressSection() {
       authStorage.setUser(updatedUser);
       toast.success('Endereço atualizado!');
       setIsEditing(false);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erro ao atualizar endereço');
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error, 'Erro ao atualizar endereço'));
     } finally {
       setIsLoading(false);
     }
@@ -109,3 +110,4 @@ export function ProfileAddressSection() {
     </div>
   );
 }
+

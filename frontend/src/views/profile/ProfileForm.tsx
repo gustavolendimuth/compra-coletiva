@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import { Card, Input, PhoneInput, Button } from '@/components/ui';
 import { profileService } from '@/api';
 import type { StoredUser } from '@/api/types';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 interface ProfileFormProps {
   user: StoredUser;
@@ -27,8 +28,8 @@ export function ProfileForm({ user, onUpdate }: ProfileFormProps) {
       toast.success('Perfil atualizado!');
       setIsEditing(false);
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.message || 'Erro ao atualizar';
+    onError: (error: unknown) => {
+      const message = getApiErrorMessage(error, 'Erro ao atualizar');
       toast.error(message);
     },
   });
@@ -101,3 +102,4 @@ export function ProfileForm({ user, onUpdate }: ProfileFormProps) {
 }
 
 export default ProfileForm;
+

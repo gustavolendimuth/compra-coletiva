@@ -6,7 +6,7 @@ import { createMockCampaign } from '@/__tests__/mock-data';
 
 // Mock IconButton component
 vi.mock('@/components/IconButton', () => ({
-  default: ({ onClick, children, icon, ...props }: any) => (
+  default: ({ onClick, children, icon, ...props }: unknown) => (
     <button onClick={onClick} {...props}>
       {children}
     </button>
@@ -230,7 +230,7 @@ describe('ShippingTab', () => {
 
   describe('Edge Cases', () => {
     it('should handle undefined shipping cost gracefully', () => {
-      const campaignWithUndefinedShipping = { ...mockCampaign, shippingCost: undefined as any };
+      const campaignWithUndefinedShipping = { ...mockCampaign, shippingCost: undefined as unknown };
       render(<ShippingTab {...defaultProps} campaign={campaignWithUndefinedShipping} />);
 
       // Should render NaN as R$ NaN (or handle it gracefully)
@@ -240,7 +240,7 @@ describe('ShippingTab', () => {
 
     it('should handle null campaign gracefully', () => {
       // This would be a programming error, but let's ensure it doesn't crash
-      const { container } = render(<ShippingTab {...defaultProps} campaign={null as any} />);
+      const { container } = render(<ShippingTab {...defaultProps} campaign={null as unknown} />);
       expect(container).toBeInTheDocument();
     });
 
@@ -283,3 +283,4 @@ describe('ShippingTab', () => {
     });
   });
 });
+

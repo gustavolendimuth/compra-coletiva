@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { orderApi, Order, Product } from '@/api';
 import type { OrderForm } from '@/api/types';
 import { useOrderAutosave } from './useOrderAutosave';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 interface UseOrderModalOptions {
   orders: Order[] | undefined;
@@ -137,8 +138,8 @@ export function useOrderModal({
       setIsPaymentProofModalOpen(false);
       setOrderForPayment(null);
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Erro ao atualizar pagamento');
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao atualizar pagamento'));
     },
   });
 
@@ -479,3 +480,4 @@ export function useOrderModal({
     updatePaymentMutation,
   };
 }
+

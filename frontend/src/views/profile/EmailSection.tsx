@@ -8,6 +8,7 @@ import { useMutation } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { Card, Input, Button } from '@/components/ui';
 import { profileService } from '@/api';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 interface EmailSectionProps {
   currentEmail: string;
@@ -26,8 +27,8 @@ export function EmailSection({ currentEmail, hasPassword }: EmailSectionProps) {
       setVerificationSent(true);
       toast.success('Email de verificação enviado!');
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.message || 'Erro ao solicitar troca';
+    onError: (error: unknown) => {
+      const message = getApiErrorMessage(error, 'Erro ao solicitar troca');
       toast.error(message);
     },
   });
@@ -118,3 +119,4 @@ export function EmailSection({ currentEmail, hasPassword }: EmailSectionProps) {
 }
 
 export default EmailSection;
+

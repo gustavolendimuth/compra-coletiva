@@ -1,5 +1,6 @@
 import passport from 'passport';
 import { Strategy as GoogleStrategy, Profile } from 'passport-google-oauth20';
+import { User } from '@prisma/client';
 import { prisma } from '../index';
 import { capitalizeName } from '../utils/nameFormatter';
 import { queueWelcomeEmail } from '../services/email/emailQueue';
@@ -156,7 +157,7 @@ export const configurePassport = () => {
   }
 
   // Serialize user for session (not used with JWT, but required by Passport)
-  passport.serializeUser((user: any, done) => {
+  passport.serializeUser((user: User, done) => {
     done(null, user.id);
   });
 

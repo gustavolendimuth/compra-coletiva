@@ -6,7 +6,7 @@ import { createMockFullProduct } from '@/__tests__/mock-data';
 
 // Mock IconButton component
 vi.mock('@/components/IconButton', () => ({
-  default: ({ onClick, children, icon, title, ...props }: any) => (
+  default: ({ onClick, children, icon, title, ...props }: unknown) => (
     <button onClick={onClick} title={title} {...props}>
       {children}
     </button>
@@ -387,3 +387,4 @@ describe('ProductsTab', () => {
     });
   });
 });
+

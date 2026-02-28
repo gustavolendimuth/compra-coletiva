@@ -4,6 +4,7 @@ import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
 import { ChatEmptyState } from './ChatEmptyState';
 import { useOrderChat } from './useOrderChat';
+import { getApiErrorMessage, getApiErrorStatus } from '@/lib/apiError';
 
 interface OrderChatProps {
   orderId: string;
@@ -51,7 +52,7 @@ export default function OrderChat({ orderId }: OrderChatProps) {
   };
 
   // Determine chat state
-  const errorStatus = (error as any)?.response?.status;
+  const errorStatus = getApiErrorStatus(error);
   const isAuthError = errorStatus === 401 || errorStatus === 403;
 
   return (
@@ -72,7 +73,7 @@ export default function OrderChat({ orderId }: OrderChatProps) {
         ) : isError ? (
           <ChatEmptyState
             type={isAuthError ? 'unauthenticated' : 'error'}
-            errorMessage={(error as any)?.response?.data?.message}
+            errorMessage={getApiErrorMessage(error, 'Erro ao carregar mensagens')}
             onRetry={handleRetry}
             onLogin={isAuthError ? handleLogin : undefined}
           />
@@ -97,3 +98,4 @@ export default function OrderChat({ orderId }: OrderChatProps) {
     </div>
   );
 }
+

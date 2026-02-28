@@ -8,6 +8,7 @@ import { useMutation } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { Card, Input, Button } from '@/components/ui';
 import { profileService } from '@/api';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 interface PasswordSectionProps {
   hasPassword: boolean;
@@ -25,8 +26,8 @@ export function PasswordSection({ hasPassword }: PasswordSectionProps) {
       toast.success('Senha alterada com sucesso!');
       handleCancel();
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.message || 'Erro ao alterar senha';
+    onError: (error: unknown) => {
+      const message = getApiErrorMessage(error, 'Erro ao alterar senha');
       toast.error(message);
     },
   });
@@ -122,3 +123,4 @@ export function PasswordSection({ hasPassword }: PasswordSectionProps) {
 }
 
 export default PasswordSection;
+

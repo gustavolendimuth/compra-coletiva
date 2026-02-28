@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { z } from "zod";
 import crypto from "crypto";
 import passport from "passport";
@@ -17,6 +17,7 @@ import { geocodingService } from "../services/geocodingService";
 
 const router = Router();
 const prisma = new PrismaClient();
+type OAuthUser = Prisma.UserGetPayload<{ select: { id: true; name: true; email: true; role: true; phoneCompleted: true; addressCompleted: true; } }>;
 
 // ========== HELPER FUNCTIONS ==========
 
@@ -595,7 +596,7 @@ router.get(
         return;
       }
 
-      const user = req.user as any;
+      const user = req.user as OAuthUser;
 
       // Gera tokens
       const tokens = TokenService.generateTokenPair({
@@ -811,7 +812,7 @@ router.patch(
       const { name, phone, currentPassword, newPassword } =
         updateProfileSchema.parse(req.body);
 
-      const updates: any = {};
+      const updates: Prisma.UserUpdateInput = {};
 
       // Atualiza telefone se fornecido
       if (phone) {

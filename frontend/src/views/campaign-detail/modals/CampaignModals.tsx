@@ -364,7 +364,7 @@ export function PixModal({
           </label>
           <select
             value={pixType || ''}
-            onChange={(e) => onChangePixType(e.target.value as any)}
+            onChange={(e) => onChangePixType(e.target.value as PixKeyType | "")}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
             autoFocus
           >
@@ -405,7 +405,11 @@ export function PixModal({
           </label>
           <select
             value={pixVisibleAtStatus || 'ACTIVE'}
-            onChange={(e) => onChangePixVisibleAtStatus(e.target.value as any)}
+            onChange={(e) =>
+              onChangePixVisibleAtStatus(
+                e.target.value as "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED"
+              )
+            }
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
           >
             <option value="ACTIVE">Ativa</option>
@@ -571,3 +575,4 @@ export function CloneModal({
     </Modal>
   );
 }
+

@@ -12,6 +12,7 @@ import toast from 'react-hot-toast';
 import { Card, Input, Button, ConfirmModal, Textarea } from '@/components/ui';
 import { profileService } from '@/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 interface DeleteAccountSectionProps {
   hasPassword: boolean;
@@ -32,8 +33,8 @@ export function DeleteAccountSection({ hasPassword }: DeleteAccountSectionProps)
       await logout();
       router.push('/');
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.message || 'Erro ao excluir conta';
+    onError: (error: unknown) => {
+      const message = getApiErrorMessage(error, 'Erro ao excluir conta');
       toast.error(message);
     },
   });
@@ -120,3 +121,4 @@ export function DeleteAccountSection({ hasPassword }: DeleteAccountSectionProps)
 }
 
 export default DeleteAccountSection;
+

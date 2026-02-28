@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { z } from "zod";
 import crypto from "crypto";
 import { requireAuth } from "../middleware/authMiddleware";
@@ -63,7 +63,7 @@ router.patch(
       const { name, phone, currentPassword, newPassword } =
         updateProfileSchema.parse(req.body);
 
-      const updates: any = {};
+      const updates: Prisma.UserUpdateInput = {};
 
       // Atualiza telefone se fornecido
       if (phone) {

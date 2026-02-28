@@ -12,7 +12,7 @@ import { createMockCampaign } from '@/__tests__/mock-data';
 
 // Mock DateTimeInput component
 vi.mock('@/components/DateTimeInput', () => ({
-  default: ({ value, onChange, className, autoFocus }: any) => (
+  default: ({ value, onChange, className, autoFocus }: unknown) => (
     <input
       data-testid="datetime-input"
       type="text"
@@ -26,7 +26,7 @@ vi.mock('@/components/DateTimeInput', () => ({
 
 // Mock ConfirmDialog component
 vi.mock('@/components/ConfirmDialog', () => ({
-  default: ({ isOpen, onClose, onConfirm, title, message, confirmText, cancelText }: any) =>
+  default: ({ isOpen, onClose, onConfirm, title, message, confirmText, cancelText }: unknown) =>
     isOpen ? (
       <div data-testid="confirm-dialog">
         <h2>{title}</h2>
@@ -582,3 +582,4 @@ describe('CampaignModals', () => {
     });
   });
 });
+

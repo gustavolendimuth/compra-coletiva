@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { messageApi, OrderMessage } from '@/api';
 import { getSocket } from '@/lib/socket';
+import { getApiErrorStatus } from '@/lib/apiError';
 import toast from 'react-hot-toast';
 
 /**
@@ -29,8 +30,9 @@ export const useOrderChat = (orderId: string, userId?: string) => {
     queryFn: () => messageApi.getByOrder(orderId),
     enabled: !!userId,
     refetchOnWindowFocus: false,
-    retry: (failureCount, error: any) => {
-      if (error?.response?.status === 401 || error?.response?.status === 403) {
+    retry: (failureCount, error: unknown) => {
+      const errorStatus = getApiErrorStatus(error);
+      if (errorStatus === 401 || errorStatus === 403) {
         return false;
       }
       return failureCount < 2;
@@ -116,3 +118,4 @@ export const useOrderChat = (orderId: string, userId?: string) => {
     sendMessageMutation
   };
 };
+

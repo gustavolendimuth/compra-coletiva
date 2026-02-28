@@ -31,7 +31,7 @@ function deleteCookie(name: string): void {
 
 export interface PendingActionData {
   type: string;
-  payload: any;
+  payload: unknown;
 }
 
 export interface StoredUser {
@@ -163,3 +163,4 @@ export const authStorage = {
     localStorage.removeItem(PENDING_ACTION_DATA_KEY);
   },
 };
+

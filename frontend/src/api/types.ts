@@ -12,6 +12,7 @@ export interface StoredUser {
   email: string;
   name: string;
   phone?: string;
+  hasPassword?: boolean;
   phoneCompleted?: boolean;
   addressCompleted?: boolean;
   role: "ADMIN" | "CAMPAIGN_CREATOR" | "CUSTOMER";
@@ -381,7 +382,7 @@ export interface Notification {
   title: string;
   message: string;
   isRead: boolean;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
 }
@@ -745,6 +746,7 @@ export interface ListCampaignsParams {
 export interface AdminMessage {
   id: string;
   message: string;
+  answer?: string;
   spamScore: number;
   createdAt: string;
   author: {
@@ -808,7 +810,7 @@ export interface AuditLog {
   action: AuditAction;
   targetType: AuditTargetType;
   targetId: string | null;
-  details: any;
+  details: unknown;
   ipAddress: string | null;
   userAgent: string | null;
   createdAt: string;
@@ -934,3 +936,4 @@ export interface DistanceResult {
     durationMin?: number;
   };
 }
+

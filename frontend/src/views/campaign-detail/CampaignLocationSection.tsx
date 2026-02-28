@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { CepInput } from '@/components/ui/CepInput';
 import { DistanceBadge } from '@/components/ui/DistanceBadge';
 import { CampaignLocationMap } from './CampaignLocationMap';
@@ -34,21 +34,7 @@ export function CampaignLocationSection({ campaign, canEditCampaign, onEditAddre
   const hasLocation = campaign.pickupLatitude != null && campaign.pickupLongitude != null;
   const hasAddress = campaign.pickupAddress;
 
-  // Auto-calculate from user's saved address
-  useEffect(() => {
-    if (!hasLocation) return;
-
-    if (user?.defaultLatitude != null && user?.defaultLongitude != null) {
-      void calculateDistanceFromCoords(user.defaultLatitude, user.defaultLongitude);
-      return;
-    }
-
-    if (user?.defaultZipCode) {
-      void calculateDistance(user.defaultZipCode);
-    }
-  }, [hasLocation, user?.defaultLatitude, user?.defaultLongitude, user?.defaultZipCode]);
-
-  async function calculateDistance(zipCode: string) {
+  const calculateDistance = useCallback(async (zipCode: string) => {
     if (!campaign.slug) return;
     setIsCalculating(true);
     try {
@@ -62,9 +48,9 @@ export function CampaignLocationSection({ campaign, canEditCampaign, onEditAddre
     } finally {
       setIsCalculating(false);
     }
-  }
+  }, [campaign.slug]);
 
-  async function calculateDistanceFromCoords(lat: number, lng: number) {
+  const calculateDistanceFromCoords = useCallback(async (lat: number, lng: number) => {
     if (campaign.pickupLatitude == null || campaign.pickupLongitude == null) return;
     setIsCalculating(true);
     try {
@@ -88,7 +74,28 @@ export function CampaignLocationSection({ campaign, canEditCampaign, onEditAddre
     } finally {
       setIsCalculating(false);
     }
-  }
+  }, [campaign.pickupLatitude, campaign.pickupLongitude, campaign.slug]);
+
+  // Auto-calculate from user's saved address
+  useEffect(() => {
+    if (!hasLocation) return;
+
+    if (user?.defaultLatitude != null && user?.defaultLongitude != null) {
+      void calculateDistanceFromCoords(user.defaultLatitude, user.defaultLongitude);
+      return;
+    }
+
+    if (user?.defaultZipCode) {
+      void calculateDistance(user.defaultZipCode);
+    }
+  }, [
+    calculateDistance,
+    calculateDistanceFromCoords,
+    hasLocation,
+    user?.defaultLatitude,
+    user?.defaultLongitude,
+    user?.defaultZipCode,
+  ]);
 
   const handleCustomSearch = () => {
     const digits = customCep.replace(/\D/g, '');

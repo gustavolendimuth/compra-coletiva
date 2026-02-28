@@ -146,7 +146,12 @@ router.post('/', requireAuth, requireCampaignOwnershipViaBody, asyncHandler(asyn
   }
 
   const product = await prisma.product.create({
-    data: data as any
+    data: {
+      campaignId: data.campaignId,
+      name: data.name,
+      price: data.price,
+      weight: data.weight,
+    }
   });
 
   res.status(201).json(product);

@@ -13,7 +13,7 @@ const fileFilter = (
   if (allowedMimes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new AppError(400, "Apenas imagens (JPEG, PNG, WebP) são permitidas") as any);
+    cb(new AppError(400, "Apenas imagens (JPEG, PNG, WebP) são permitidas"));
   }
 };
 
@@ -67,7 +67,6 @@ export const handleUploadError = (
 
   next(err);
 };
-
 
 
 

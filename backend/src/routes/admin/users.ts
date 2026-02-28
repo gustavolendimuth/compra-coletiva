@@ -9,7 +9,7 @@ import { prisma } from '../../index';
 import { asyncHandler, AppError } from '../../middleware/errorHandler';
 import { requireAuth } from '../../middleware/authMiddleware';
 import { adminAuth } from '../../middleware/adminMiddleware';
-import { AuditAction, AuditTargetType } from '@prisma/client';
+import { AuditAction, AuditTargetType, Prisma } from '@prisma/client';
 
 const router = Router();
 
@@ -40,7 +40,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const { page, limit, search, role, isBanned } = listUsersSchema.parse(req.query);
 
-    const where: any = {
+    const where: Prisma.UserWhereInput = {
       deletedAt: null,
     };
 

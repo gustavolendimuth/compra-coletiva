@@ -6,6 +6,7 @@ import { PhoneInput } from '@/components/ui/PhoneInput';
 import { AddressForm, type AddressData } from '@/components/ui/AddressForm';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { getApiErrorMessage } from '@/lib/apiError';
 import toast from 'react-hot-toast';
 
 /**
@@ -78,9 +79,9 @@ export function CompleteProfile() {
       } else {
         redirectToApp();
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (!isMountedRef.current) return;
-      toast.error(error.response?.data?.message || 'Erro ao cadastrar telefone');
+      toast.error(getApiErrorMessage(error, 'Erro ao cadastrar telefone'));
       setIsPhoneLoading(false);
     }
   };
@@ -122,9 +123,9 @@ export function CompleteProfile() {
       authStorage.setUser(updatedUser);
       toast.success('Endereço cadastrado com sucesso!');
       redirectToApp();
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (!isMountedRef.current) return;
-      toast.error(error.response?.data?.message || 'Erro ao cadastrar endereço');
+      toast.error(getApiErrorMessage(error, 'Erro ao cadastrar endereço'));
       setIsAddressLoading(false);
     }
   };
@@ -237,3 +238,4 @@ export function CompleteProfile() {
     </div>
   );
 }
+

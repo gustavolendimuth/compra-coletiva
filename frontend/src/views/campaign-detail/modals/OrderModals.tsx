@@ -1,4 +1,5 @@
 import { Plus, Trash2, Edit, Check, Loader } from "lucide-react";
+/* eslint-disable @next/next/no-img-element */
 import { Modal, Button, Input, Select, Badge } from "@/components/ui";
 import IconButton from "@/components/IconButton";
 import { OrderChat } from "@/components/campaign";

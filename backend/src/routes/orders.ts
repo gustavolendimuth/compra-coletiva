@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../index';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
 import { requireAuth, requireOrderOwnership, requireOrderOrCampaignOwnership, optionalAuth } from '../middleware/authMiddleware';
@@ -56,7 +57,7 @@ router.get('/', optionalAuth, asyncHandler(async (req, res) => {
     throw new AppError(400, 'campaignId is required');
   }
 
-  const whereClause: any = { campaignId };
+  const whereClause: Prisma.OrderWhereInput = { campaignId };
 
   const fetchStart = Date.now();
   const orders = await prisma.order.findMany({
@@ -196,8 +197,8 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
       });
 
       return createdLegacyUser.id;
-    } catch (error: any) {
-      if (error?.code === 'P2002') {
+    } catch (error: unknown) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         const user = await prisma.user.findUnique({
           where: { email: data.customer.email },
           select: { id: true, deletedAt: true }
@@ -217,7 +218,7 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
   }
 
   // Busca produtos para calcular preços (apenas se houver items)
-  let productMap = new Map<string, any>();
+  let productMap = new Map<string, { id: string; price: number }>();
   if (data.items && data.items.length > 0) {
     const productIds = data.items.map(item => item.productId);
     const products = await prisma.product.findMany({
@@ -628,7 +629,7 @@ router.patch('/:id/payment',
       throw new AppError(400, 'Comprovante de pagamento é obrigatório');
     }
 
-    let updateData: any = {
+    let updateData: Prisma.OrderUpdateInput = {
       isPaid: isPaid === 'true'
     };
 

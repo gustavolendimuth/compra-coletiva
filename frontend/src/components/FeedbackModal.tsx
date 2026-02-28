@@ -3,6 +3,7 @@ import { X, Send, Bug, Lightbulb, Wrench, MessageSquare } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { feedbackApi } from "../api";
+import { getApiErrorMessage } from "../lib/apiError";
 import { Input, Textarea } from "./ui";
 
 interface FeedbackModalProps {
@@ -54,8 +55,8 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
       resetForm();
       onClose();
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Erro ao enviar feedback");
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, "Erro ao enviar feedback"));
     },
   });
 
@@ -219,3 +220,4 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
     </div>
   );
 }
+

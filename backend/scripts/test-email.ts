@@ -5,6 +5,7 @@
 
 import { PrismaClient } from '@prisma/client';
 import { queueNotificationEmail } from '../src/services/email/emailQueue';
+import { NotificationMetadata } from '../src/utils/linkBuilder';
 
 const prisma = new PrismaClient();
 
@@ -82,7 +83,7 @@ async function main() {
       user.email,
       notification.title,
       notification.message,
-      notification.metadata as any
+      notification.metadata as NotificationMetadata | undefined
     );
 
     console.log('✅ Email enfileirado com sucesso!');

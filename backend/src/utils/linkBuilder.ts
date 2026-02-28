@@ -4,16 +4,18 @@
  */
 
 import crypto from 'crypto';
-import { NotificationType } from '@prisma/client';
+import { NotificationType, Prisma } from '@prisma/client';
 import { getEmailConfig } from '../config/email';
 
 export interface NotificationMetadata {
   campaignSlug?: string;
   campaignId?: string;
+  campaignName?: string;
   orderId?: string;
   isQuestion?: boolean;
   messageId?: string;
-  [key: string]: any;
+  senderName?: string;
+  [key: string]: Prisma.InputJsonValue | undefined;
 }
 
 export class LinkBuilder {

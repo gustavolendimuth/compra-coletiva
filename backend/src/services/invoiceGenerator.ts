@@ -1,5 +1,5 @@
 import PDFDocument from 'pdfkit';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -24,6 +24,17 @@ interface InvoiceData {
   shippingCost: number;
   finalTotal: number;
 }
+
+type CampaignWithOrdersAndItems = Prisma.CampaignGetPayload<{
+  include: {
+    products: true;
+    orders: {
+      include: {
+        items: true;
+      };
+    };
+  };
+}>;
 
 export class InvoiceGenerator {
   private static readonly gramsPerKilogram = 1000;
@@ -102,11 +113,11 @@ export class InvoiceGenerator {
   /**
    * Calculates product totals from campaign orders
    */
-  private static calculateProductTotals(campaign: any): ProductTotal[] {
+  private static calculateProductTotals(campaign: CampaignWithOrdersAndItems): ProductTotal[] {
     const productMap = new Map<string, ProductTotal>();
 
     // Initialize with all campaign products
-    campaign.products.forEach((product: any) => {
+    campaign.products.forEach((product) => {
       productMap.set(product.id, {
         productId: product.id,
         productName: product.name,
@@ -119,8 +130,8 @@ export class InvoiceGenerator {
     });
 
     // Aggregate quantities from all orders
-    campaign.orders.forEach((order: any) => {
-      order.items.forEach((item: any) => {
+    campaign.orders.forEach((order) => {
+      order.items.forEach((item) => {
         const productTotal = productMap.get(item.productId);
         if (productTotal) {
           productTotal.totalQuantity += item.quantity;

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { campaignMessageApi, CampaignMessage } from '@/api';
 import { getSocket } from '@/lib/socket';
+import { getApiErrorMessage } from '@/lib/apiError';
 import toast from 'react-hot-toast';
 
 /**
@@ -46,8 +47,8 @@ export const useCampaignChat = (campaignId: string, userId?: string) => {
       queryClient.invalidateQueries({ queryKey: ['my-campaign-messages', campaignId] });
       toast.success('Pergunta enviada! Aguarde a resposta do criador.');
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Erro ao enviar pergunta');
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao enviar pergunta'));
     }
   });
 
@@ -61,8 +62,8 @@ export const useCampaignChat = (campaignId: string, userId?: string) => {
       queryClient.invalidateQueries({ queryKey: ['my-campaign-messages', campaignId] });
       toast.success('Pergunta atualizada');
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Erro ao editar pergunta');
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao editar pergunta'));
     }
   });
 
@@ -76,7 +77,7 @@ export const useCampaignChat = (campaignId: string, userId?: string) => {
 
   // Socket.IO: Listen for published messages
   useEffect(() => {
-    const handleMessagePublished = (data: any) => {
+    const handleMessagePublished = (data: CampaignMessage) => {
       queryClient.invalidateQueries({ queryKey: ['campaign-messages', campaignId] });
       if (userId && data.sender?.id === userId) {
         queryClient.invalidateQueries({ queryKey: ['my-campaign-messages', campaignId] });
@@ -167,3 +168,4 @@ export const useCampaignChat = (campaignId: string, userId?: string) => {
     canEdit
   };
 };
+

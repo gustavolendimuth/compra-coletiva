@@ -139,82 +139,82 @@ export const getIO = (): Server => {
 };
 
 // Event emitters for different entities
-export const emitOrderStatusChanged = (campaignId: string, data: any) => {
+export const emitOrderStatusChanged = (campaignId: string, data: unknown) => {
   const io = getIO();
   io.to(`campaign-${campaignId}`).emit('order-status-changed', data);
   console.log(`📡 Emitted order-status-changed to campaign-${campaignId}`, data);
 };
 
-export const emitOrderCreated = (campaignId: string, data: any) => {
+export const emitOrderCreated = (campaignId: string, data: unknown) => {
   const io = getIO();
   io.to(`campaign-${campaignId}`).emit('order-created', data);
   console.log(`📡 Emitted order-created to campaign-${campaignId}`, data);
 };
 
-export const emitOrderDeleted = (campaignId: string, data: any) => {
+export const emitOrderDeleted = (campaignId: string, data: unknown) => {
   const io = getIO();
   io.to(`campaign-${campaignId}`).emit('order-deleted', data);
   console.log(`📡 Emitted order-deleted to campaign-${campaignId}`, data);
 };
 
-export const emitOrderUpdated = (campaignId: string, data: any) => {
+export const emitOrderUpdated = (campaignId: string, data: unknown) => {
   const io = getIO();
   io.to(`campaign-${campaignId}`).emit('order-updated', data);
   console.log(`📡 Emitted order-updated to campaign-${campaignId}`, data);
 };
 
-export const emitCampaignUpdated = (campaignId: string, data: any) => {
+export const emitCampaignUpdated = (campaignId: string, data: unknown) => {
   const io = getIO();
   io.to(`campaign-${campaignId}`).emit('campaign-updated', data);
   console.log(`📡 Emitted campaign-updated to campaign-${campaignId}`, data);
 };
 
-export const emitMessageSent = (orderId: string, data: any) => {
+export const emitMessageSent = (orderId: string, data: unknown) => {
   const io = getIO();
   io.to(`order-${orderId}`).emit('message-sent', data);
   console.log(`📡 Emitted message-sent to order-${orderId}`, data);
 };
 
 // Campaign Messages Events
-export const emitCampaignQuestionReceived = (creatorId: string, campaignId: string, data: any) => {
+export const emitCampaignQuestionReceived = (creatorId: string, campaignId: string, data: unknown) => {
   const io = getIO();
   // Emite apenas para o criador (via room específica)
   io.to(`user-${creatorId}`).emit('campaign-question-received', data);
   console.log(`📡 Emitted campaign-question-received to user-${creatorId} (campaign ${campaignId})`, data);
 };
 
-export const emitCampaignMessagePublished = (campaignId: string, data: any) => {
+export const emitCampaignMessagePublished = (campaignId: string, data: unknown) => {
   const io = getIO();
   // Emite para todos na room da campanha
   io.to(`campaign-${campaignId}`).emit('campaign-message-published', data);
   console.log(`📡 Emitted campaign-message-published to campaign-${campaignId}`, data);
 };
 
-export const emitCampaignMessageEdited = (creatorId: string, campaignId: string, data: any) => {
+export const emitCampaignMessageEdited = (creatorId: string, campaignId: string, data: unknown) => {
   const io = getIO();
   // Emite para o criador (se a pergunta ainda não foi respondida)
   io.to(`user-${creatorId}`).emit('campaign-message-edited', data);
   console.log(`📡 Emitted campaign-message-edited to user-${creatorId} (campaign ${campaignId})`, data);
 };
 
-export const emitCampaignMessageDeleted = (campaignId: string, data: any) => {
+export const emitCampaignMessageDeleted = (campaignId: string, data: unknown) => {
   const io = getIO();
   io.to(`campaign-${campaignId}`).emit('campaign-message-deleted', data);
   console.log(`📡 Emitted campaign-message-deleted to campaign-${campaignId}`, data);
 };
 
-export const emitUserTyping = (campaignId: string, data: any) => {
+export const emitUserTyping = (campaignId: string, data: unknown) => {
   const io = getIO();
   io.to(`campaign-${campaignId}`).emit('user-typing', data);
 };
 
-export const emitCreatorTyping = (userId: string, data: any) => {
+export const emitCreatorTyping = (userId: string, data: unknown) => {
   const io = getIO();
   io.to(`user-${userId}`).emit('creator-typing', data);
 };
 
 // Notification Events
-export const emitNotificationCreated = (userId: string, data: any) => {
+export const emitNotificationCreated = (userId: string, data: unknown) => {
   const io = getIO();
   io.to(`user-${userId}`).emit('notification-created', data);
   console.log(`📡 Emitted notification-created to user-${userId}`, data);

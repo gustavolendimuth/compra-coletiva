@@ -72,7 +72,7 @@ export function CepInput({
           onSearching?.(false);
         });
     }
-  }, [value]);
+  }, [value, onCepFound, onSearching]);
 
   const displayError = error || searchError;
 

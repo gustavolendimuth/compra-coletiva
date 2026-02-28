@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { authStorage, StoredUser, PendingActionData } from '../lib/authStorage';
 import { authApi, RegisterRequest, LoginRequest } from '../lib/authApi';
 import { reconnectSocket } from '../lib/socket';
+import { getApiErrorDetails, getApiErrorMessage } from '../lib/apiError';
 import toast from 'react-hot-toast';
 
 interface AuthContextType {
@@ -113,8 +114,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setPendingAction(null);
         }, 100);
       }
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Erro ao fazer login';
+    } catch (error: unknown) {
+      const message = getApiErrorMessage(error, 'Erro ao fazer login');
       toast.error(message);
       throw error;
     }
@@ -136,13 +137,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setPendingAction(null);
         }, 100);
       }
-    } catch (error: any) {
-      const details = error.response?.data?.details;
+    } catch (error: unknown) {
+      const details = getApiErrorDetails<Array<{ message?: string }>>(error);
       const detailMessage =
         Array.isArray(details) && details.length > 0
           ? details[0]?.message
           : null;
-      const message = detailMessage || error.response?.data?.message || 'Erro ao criar conta';
+      const message = detailMessage || getApiErrorMessage(error, 'Erro ao criar conta');
       toast.error(message);
       throw error;
     }
@@ -230,3 +231,4 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
+

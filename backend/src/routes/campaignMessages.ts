@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../index';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
@@ -161,7 +162,7 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
       spamScore: spamAnalysis.score,
       metadata: {
         factors: spamAnalysis.factors
-      } as any,
+      } as unknown as Prisma.InputJsonValue,
       isPublic: false
     },
     include: {

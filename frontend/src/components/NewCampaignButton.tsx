@@ -263,7 +263,7 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      pixType: e.target.value as any,
+                      pixType: e.target.value as "CPF" | "CNPJ" | "EMAIL" | "PHONE" | "RANDOM" | "",
                     })
                   }
                   className="w-full px-4 py-2.5 border border-sky-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:border-transparent text-base text-sky-900 bg-white transition-all"
@@ -308,7 +308,7 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      pixVisibleAtStatus: e.target.value as any,
+                      pixVisibleAtStatus: e.target.value as "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED",
                     })
                   }
                   className="w-full px-4 py-2.5 border border-sky-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:border-transparent text-base text-sky-900 bg-white transition-all"
@@ -360,3 +360,4 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
     </>
   );
 };
+

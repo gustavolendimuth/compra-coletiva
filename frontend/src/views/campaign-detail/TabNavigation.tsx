@@ -1,4 +1,5 @@
 import {
+  LucideIcon,
   LayoutDashboard,
   ShoppingBag,
   Package,
@@ -23,7 +24,7 @@ export function TabNavigation({
     id: TabType;
     label: string;
     shortLabel: string;
-    icon: any;
+    icon: LucideIcon;
   }> = [
     {
       id: "overview",
@@ -97,3 +98,4 @@ export function TabNavigation({
     </>
   );
 }
+

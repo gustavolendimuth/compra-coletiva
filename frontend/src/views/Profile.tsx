@@ -44,7 +44,7 @@ export function Profile() {
   };
 
   // Check if user has password (users created via Google OAuth don't have one)
-  const hasPassword = (localUser as any).hasPassword ?? true;
+  const hasPassword = localUser.hasPassword ?? true;
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 md:py-8 space-y-6">
@@ -68,3 +68,4 @@ export function Profile() {
 }
 
 export default Profile;
+

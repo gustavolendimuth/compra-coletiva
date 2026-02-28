@@ -6,7 +6,7 @@ import { createMockOrder } from '@/__tests__/mock-data';
 
 // Mock OrderCard component
 vi.mock('@/components/campaign/OrderCard', () => ({
-  default: ({ order, onView, onEdit, onDelete, onTogglePayment }: any) => (
+  default: ({ order, onView, onEdit, onDelete, onTogglePayment }: unknown) => (
     <div data-testid={`order-card-${order.id}`}>
       <span>Order: {order.customer.name}</span>
       <button onClick={onView}>View</button>
@@ -19,7 +19,7 @@ vi.mock('@/components/campaign/OrderCard', () => ({
 
 // Mock IconButton component
 vi.mock('@/components/IconButton', () => ({
-  default: ({ onClick, children, icon, ...props }: any) => (
+  default: ({ onClick, children, icon, ...props }: unknown) => (
     <button onClick={onClick} {...props}>
       {children}
     </button>
@@ -439,3 +439,4 @@ describe('OrdersTab', () => {
     });
   });
 });
+

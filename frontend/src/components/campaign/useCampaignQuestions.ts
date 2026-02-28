@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { campaignMessageApi } from '@/api';
+import { campaignMessageApi, CampaignMessage } from '@/api';
 import { getSocket } from '@/lib/socket';
+import { getApiErrorMessage } from '@/lib/apiError';
 import toast from 'react-hot-toast';
 
 /**
@@ -39,8 +40,8 @@ export const useCampaignQuestions = (campaignId: string) => {
       setAnswerText({});
       toast.success('Resposta publicada com sucesso!');
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Erro ao publicar resposta');
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao publicar resposta'));
     }
   });
 
@@ -51,14 +52,14 @@ export const useCampaignQuestions = (campaignId: string) => {
       queryClient.invalidateQueries({ queryKey: ['unanswered-campaign-messages', campaignId] });
       toast.success('Pergunta deletada');
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Erro ao deletar pergunta');
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao deletar pergunta'));
     }
   });
 
   // Socket.IO: Listen for new questions
   useEffect(() => {
-    const handleQuestionReceived = (data: any) => {
+    const handleQuestionReceived = (data: CampaignMessage) => {
       queryClient.invalidateQueries({ queryKey: ['unanswered-campaign-messages', campaignId] });
 
       if ('Notification' in window && Notification.permission === 'granted') {
@@ -95,3 +96,4 @@ export const useCampaignQuestions = (campaignId: string) => {
     deleteMutation
   };
 };
+

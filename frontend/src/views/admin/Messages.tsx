@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '@/api';
+import type { AdminMessage } from '@/api/types';
 import toast from 'react-hot-toast';
 
 export function Messages() {
@@ -84,7 +85,7 @@ export function Messages() {
             Nenhuma mensagem encontrada
           </div>
         ) : (
-          data.data.messages.map((message: any) => (
+          data.data.messages.map((message: AdminMessage) => (
             <div
               key={message.id}
               className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6"
@@ -183,3 +184,4 @@ export function Messages() {
     </div>
   );
 }
+

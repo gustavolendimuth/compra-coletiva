@@ -12,6 +12,7 @@ import toast from 'react-hot-toast';
 import { adminService, type AdminUser } from '@/api';
 import { Card, Button, Input } from '@/components/ui';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 export function Users() {
   const router = useRouter();
@@ -40,8 +41,8 @@ export function Users() {
       setBanModalOpen(false);
       setSelectedUser(null);
     },
-    onError: (error: any) => {
-      toast.error(error?.response?.data?.message || 'Erro ao banir usuário');
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao banir usuário'));
     },
   });
 
@@ -51,8 +52,8 @@ export function Users() {
       toast.success('Usuário desbanido com sucesso');
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
     },
-    onError: (error: any) => {
-      toast.error(error?.response?.data?.message || 'Erro ao desbanir usuário');
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao desbanir usuário'));
     },
   });
 
@@ -64,8 +65,8 @@ export function Users() {
       setDeleteModalOpen(false);
       setSelectedUser(null);
     },
-    onError: (error: any) => {
-      toast.error(error?.response?.data?.message || 'Erro ao deletar usuário');
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao deletar usuário'));
     },
   });
 
@@ -298,3 +299,4 @@ export function Users() {
 }
 
 export default Users;
+

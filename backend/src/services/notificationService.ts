@@ -1,4 +1,4 @@
-import { NotificationType } from '@prisma/client';
+import { NotificationType, Prisma } from '@prisma/client';
 import { prisma } from '../index';
 import { emitNotificationCreated } from './socketService';
 import { queueNotificationEmail } from './email/emailQueue';
@@ -7,7 +7,8 @@ export interface NotificationMetadata {
   campaignId?: string;
   campaignSlug?: string;
   campaignName?: string;
-  [key: string]: any;
+  senderName?: string;
+  [key: string]: Prisma.InputJsonValue | undefined;
 }
 
 export class NotificationService {
@@ -28,7 +29,7 @@ export class NotificationService {
           type,
           title,
           message,
-          metadata: metadata || {}
+          metadata: (metadata || {}) as Prisma.InputJsonValue
         }
       });
 

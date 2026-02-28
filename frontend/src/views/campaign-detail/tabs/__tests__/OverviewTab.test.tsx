@@ -11,7 +11,7 @@ import {
 
 // Mock CampaignChat component
 vi.mock("@/components/campaign", () => ({
-  CampaignChat: ({ campaignId, isCreator }: any) => (
+  CampaignChat: ({ campaignId, isCreator }: unknown) => (
     <div data-testid="campaign-chat">
       <span>Campaign Chat: {campaignId}</span>
       <span>Is Creator: {String(isCreator)}</span>
@@ -21,7 +21,7 @@ vi.mock("@/components/campaign", () => ({
 
 // Mock IconButton component
 vi.mock("@/components/IconButton", () => ({
-  default: ({ onClick, children, icon, title, ...props }: any) => (
+  default: ({ onClick, children, icon, title, ...props }: unknown) => (
     <button onClick={onClick} title={title} {...props}>
       {children}
     </button>
@@ -471,3 +471,4 @@ describe("OverviewTab", () => {
     });
   });
 });
+

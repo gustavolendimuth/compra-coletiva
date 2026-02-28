@@ -1,5 +1,6 @@
 import { useState, useRef, ChangeEvent, useEffect } from 'react';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
+/* eslint-disable @next/next/no-img-element */
 
 interface ImageUploadProps {
   currentImageUrl?: string;
@@ -130,6 +131,5 @@ export function ImageUpload({
     </div>
   );
 }
-
 
 

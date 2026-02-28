@@ -14,7 +14,7 @@ vi.mock("react-hot-toast", () => ({
 }));
 
 vi.mock("@/components/IconButton", () => ({
-  default: ({ onClick, children, disabled, ...props }: any) => (
+  default: ({ onClick, children, disabled, ...props }: unknown) => (
     <button onClick={onClick} disabled={disabled} {...props}>
       {children}
     </button>
@@ -118,3 +118,4 @@ describe("CampaignActionButtons", () => {
     });
   });
 });
+
