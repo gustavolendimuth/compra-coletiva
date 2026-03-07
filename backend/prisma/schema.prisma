@@ -98,6 +98,7 @@ enum NotificationType {
   CAMPAIGN_STATUS_CHANGED
   CAMPAIGN_ARCHIVED
   NEW_MESSAGE
+  PAYMENT_RELEASED
 }
 
 model Session {
@@ -159,7 +160,12 @@ model Campaign {
   pixKey              String?         // Chave PIX (CPF, CNPJ, email, telefone ou aleatória)
   pixType             PixKeyType?     // Tipo da chave PIX
   pixName             String?         // Nome do titular da conta PIX
-  pixVisibleAtStatus  CampaignStatus  @default(ACTIVE) // Status em que o PIX deve ser exibido
+  pixVisibleAtStatus  CampaignStatus  @default(ACTIVE) // @deprecated - usar paymentReleaseTrigger
+
+  // Controle de liberação de pagamento
+  paymentReleaseTrigger PaymentReleaseTrigger @default(ON_ACTIVE) // Quando liberar o pagamento
+  paymentReleased       Boolean               @default(false)     // Se o pagamento já foi liberado
+  paymentReleasedAt     DateTime?                                 // Quando foi liberado
 
   // Endereço de Retirada
   pickupZipCode       String?   // CEP (formato: XXXXX-XXX)
@@ -299,6 +305,13 @@ enum PixKeyType {
   RANDOM
 }
 
+enum PaymentReleaseTrigger {
+  ON_ACTIVE            // Liberar imediatamente ao criar (status ACTIVE)
+  ON_CLOSED            // Liberar quando status mudar para CLOSED
+  ON_SENT              // Liberar quando status mudar para SENT
+  ON_SHIPPING_UPDATED  // Liberar quando frete > 0 for definido
+}
+
 enum ImageStorageType {
   S3
   LOCAL
@@ -389,6 +402,7 @@ model EmailPreference {
   campaignStatusChanged Boolean @default(true)
   campaignArchived      Boolean @default(true)
   newMessage            Boolean @default(true)
+  paymentReleased       Boolean @default(true)
 
   // Digest (futuro)
   digestEnabled   Boolean @default(false)
