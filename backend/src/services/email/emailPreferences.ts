@@ -12,6 +12,7 @@ export interface EmailPreferenceData {
   campaignStatusChanged: boolean;
   campaignArchived: boolean;
   newMessage: boolean;
+  paymentReleased: boolean;
   digestEnabled: boolean;
   digestFrequency: string;
 }
@@ -36,6 +37,7 @@ export class EmailPreferenceService {
             campaignStatusChanged: true,
             campaignArchived: true,
             newMessage: true,
+            paymentReleased: true,
             digestEnabled: false,
             digestFrequency: 'DAILY',
           },
@@ -98,6 +100,8 @@ export class EmailPreferenceService {
           return prefs.campaignArchived;
         case 'NEW_MESSAGE':
           return prefs.newMessage;
+        case 'PAYMENT_RELEASED':
+          return prefs.paymentReleased;
         default:
           return true;
       }

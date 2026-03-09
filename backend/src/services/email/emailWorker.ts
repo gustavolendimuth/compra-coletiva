@@ -106,6 +106,7 @@ async function checkEmailPreferences(data: EmailJobData): Promise<boolean> {
           campaignStatusChanged: true,
           campaignArchived: true,
           newMessage: true,
+          paymentReleased: true,
         },
       });
       return true;
@@ -127,6 +128,8 @@ async function checkEmailPreferences(data: EmailJobData): Promise<boolean> {
           return prefs.campaignArchived;
         case 'NEW_MESSAGE':
           return prefs.newMessage;
+        case 'PAYMENT_RELEASED':
+          return prefs.paymentReleased;
         default:
           return true;
       }

@@ -17,6 +17,7 @@ import { ImageUploadService } from "../services/imageUploadService";
 import { geocodingService } from "../services/geocodingService";
 import { routingService } from "../services/routingService";
 import { haversineDistance, getBoundingBox } from "../utils/distance";
+import { PaymentReleaseService } from "../services/paymentReleaseService";
 
 const router = Router();
 
@@ -620,6 +621,9 @@ router.post(
       pixType: data.pixType,
       pixName: data.pixName,
       pixVisibleAtStatus: data.pixVisibleAtStatus,
+      paymentReleaseTrigger: PaymentReleaseService.mapPixVisibleAtStatusToTrigger(
+        data.pixVisibleAtStatus
+      ),
       pickupZipCode: data.pickupZipCode,
       pickupAddress: data.pickupAddress,
       pickupAddressNumber: data.pickupAddressNumber,
@@ -628,7 +632,7 @@ router.post(
       pickupCity: data.pickupCity,
       pickupState: data.pickupState,
       creatorId: req.user!.id,
-      slug: ''
+      slug: "",
     };
 
     // Geocodificar endereço de retirada para obter coordenadas
@@ -668,6 +672,15 @@ router.post(
         data: prismaData,
       });
     });
+
+    try {
+      await PaymentReleaseService.checkAndReleaseForCampaign(campaign.id);
+    } catch (error) {
+      console.error(
+        `[Campaigns] Failed to check payment release on create for campaign ${campaign.id}:`,
+        error
+      );
+    }
 
     res.status(201).json(campaign);
   })
@@ -801,6 +814,21 @@ router.patch(
       prismaData.slug = await generateUniqueSlug(data.name, campaignId);
     }
 
+    if (data.pixVisibleAtStatus) {
+      prismaData.paymentReleaseTrigger = PaymentReleaseService.mapPixVisibleAtStatusToTrigger(
+        data.pixVisibleAtStatus
+      );
+    }
+
+    const isPixBeingRemoved =
+      (data.pixKey === null || data.pixType === null) &&
+      (data.pixKey !== undefined || data.pixType !== undefined);
+
+    if (isPixBeingRemoved) {
+      prismaData.paymentReleased = false;
+      prismaData.paymentReleasedAt = null;
+    }
+
     // Geocodificar se o endereço de retirada foi atualizado
     if (data.pickupZipCode && data.pickupAddress) {
       try {
@@ -827,6 +855,15 @@ router.patch(
     // Se o shippingCost foi atualizado, redistribuir frete para todos os pedidos
     if (data.shippingCost !== undefined) {
       await ShippingCalculator.distributeShipping(campaignId);
+    }
+
+    try {
+      await PaymentReleaseService.checkAndReleaseForCampaign(campaignId);
+    } catch (error) {
+      console.error(
+        `[Campaigns] Failed to check payment release on update for campaign ${campaignId}:`,
+        error
+      );
     }
 
     res.json(updatedCampaign);
@@ -863,6 +900,15 @@ router.patch(
       where: { id: campaign.id },
       data: { status },
     });
+
+    try {
+      await PaymentReleaseService.checkAndReleaseForCampaign(campaign.id);
+    } catch (error) {
+      console.error(
+        `[Campaigns] Failed to check payment release on status change for campaign ${campaign.id}:`,
+        error
+      );
+    }
 
     res.json(updatedCampaign);
   })

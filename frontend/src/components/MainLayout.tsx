@@ -22,7 +22,8 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
-  const isCampaignsListPage = pathname === '/campanhas' || pathname === '/';
+  const isHomePage = pathname === '/';
+  const isCampaignsListPage = pathname === '/campanhas';
   const isCampaignDetailPage = pathname?.startsWith('/campanhas/') && pathname !== '/campanhas';
 
   useEffect(() => {
@@ -33,6 +34,14 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   const handleMenuToggle = () => setIsMobileMenuOpen(!isMobileMenuOpen);
   const handleCloseMenu = useCallback(() => setIsMobileMenuOpen(false), []);
+
+  if (isHomePage) {
+    return (
+      <div className="min-h-screen flex flex-col" style={{ background: '#fefdf8' }}>
+        <main className="flex-1">{children}</main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: '#fefdf8' }}>
