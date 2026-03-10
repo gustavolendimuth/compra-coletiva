@@ -59,3 +59,8 @@ tmpclaude-*
 
 #Uploads
 **/uploads/campaigns/*
+**/uploads/payment-proofs/*
+
+# Playwright test results
+playwright-report/
+output/
