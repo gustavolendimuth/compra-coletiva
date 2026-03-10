@@ -378,7 +378,8 @@ export interface Notification {
     | "CAMPAIGN_READY_TO_SEND"
     | "CAMPAIGN_STATUS_CHANGED"
     | "CAMPAIGN_ARCHIVED"
-    | "NEW_MESSAGE";
+    | "NEW_MESSAGE"
+    | "PAYMENT_RELEASED";
   title: string;
   message: string;
   isRead: boolean;

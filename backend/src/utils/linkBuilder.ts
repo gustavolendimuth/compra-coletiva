@@ -46,6 +46,7 @@ export class LinkBuilder {
       case 'CAMPAIGN_READY_TO_SEND':
       case 'CAMPAIGN_STATUS_CHANGED':
       case 'CAMPAIGN_ARCHIVED':
+      case 'PAYMENT_RELEASED':
         // Link direto para a campanha
         return `${baseUrl}/campanhas/${campaignSlug}`;
 

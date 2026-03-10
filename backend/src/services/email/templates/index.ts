@@ -14,6 +14,7 @@ import {
 } from './notifications/CampaignReadyToSend';
 import { NewMessage, NewMessageProps } from './notifications/NewMessage';
 import { CampaignArchived, CampaignArchivedProps } from './notifications/CampaignArchived';
+import { PaymentReleased, PaymentReleasedProps } from './notifications/PaymentReleased';
 import { Welcome, WelcomeProps } from './system/Welcome';
 import { PasswordReset, PasswordResetProps } from './system/PasswordReset';
 import { OrderCreated, OrderCreatedProps } from './system/OrderCreated';
@@ -107,6 +108,23 @@ export async function renderNotificationEmail(
       html = await render(CampaignArchived(props));
       subject = `📢 Status alterado: ${data.metadata.campaignName}`;
       templateName = 'campaign-status-changed';
+      break;
+    }
+
+    case 'PAYMENT_RELEASED': {
+      const props: PaymentReleasedProps = {
+        userName: data.userName,
+        campaignName: data.metadata.campaignName || 'Campanha',
+        pixKey: data.metadata.pixKey?.toString() || 'Consulte na campanha',
+        pixType: data.metadata.pixType?.toString() || 'PIX',
+        pixName: data.metadata.pixName?.toString(),
+        actionUrl,
+        unsubscribeUrl,
+        preferencesUrl,
+      };
+      html = await render(PaymentReleased(props));
+      subject = `💰 Pagamento liberado: ${data.metadata.campaignName || 'Campanha'}`;
+      templateName = 'payment-released';
       break;
     }
 
