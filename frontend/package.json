@@ -7,10 +7,11 @@
     "build": "next build",
     "start": "next start -p 5173",
     "lint": "next lint",
-    "test": "node ../node_modules/vitest/vitest.mjs --run --configLoader runner",
-    "test:ui": "node ../node_modules/vitest/vitest.mjs --ui --configLoader runner",
-    "test:coverage": "node ../node_modules/vitest/vitest.mjs --coverage --configLoader runner",
-    "clean": "rm -rf .next node_modules"
+    "test": "vitest --run --configLoader runner",
+    "test:ui": "vitest --ui --configLoader runner",
+    "test:coverage": "vitest --coverage --configLoader runner",
+    "clean": "rm -rf .next node_modules",
+    "test:unit:lgpd": "vitest --run --configLoader runner src/components/auth/__tests__/RegisterForm.test.tsx src/views/profile/__tests__/ProfileForm.test.tsx"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.51.11",

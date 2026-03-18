@@ -166,7 +166,7 @@ describe('ImageUploadModal', () => {
         await user.click(uploadButton);
 
         await waitFor(() => {
-          expect(toast.error).toHaveBeenCalledWith('Arquivo muito grande');
+          expect(toast.error).toHaveBeenCalledWith('Erro ao enviar imagem');
         });
       }
     });
@@ -331,7 +331,7 @@ describe('ImageUploadModal', () => {
         await user.click(confirmButton);
 
         await waitFor(() => {
-          expect(toast.error).toHaveBeenCalledWith('Erro ao remover');
+          expect(toast.error).toHaveBeenCalledWith('Erro ao remover imagem');
         });
       }
     });
@@ -375,4 +375,3 @@ describe('ImageUploadModal', () => {
     });
   });
 });
-

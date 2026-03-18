@@ -32,7 +32,7 @@ describe('CampaignCard', () => {
 
       const article = screen.getByRole('article');
       expect(article).toBeInTheDocument();
-      expect(article).toHaveClass('bg-white', 'rounded-xl', 'border');
+      expect(article).toHaveClass('bg-white', 'rounded-3xl', 'border', 'border-sky-100/50');
     });
   });
 
@@ -167,7 +167,7 @@ describe('CampaignCard', () => {
       renderWithProviders(<CampaignCard campaign={mockCampaign} />);
 
       const article = screen.getByRole('article');
-      expect(article).toHaveClass('hover:shadow-md', 'hover:border-primary-300');
+      expect(article).toHaveClass('campaign-card-hover');
     });
   });
 

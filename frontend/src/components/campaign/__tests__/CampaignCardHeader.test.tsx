@@ -29,7 +29,7 @@ describe('CampaignCardHeader', () => {
 
       const badge = screen.getByText('Ativa');
       expect(badge).toBeInTheDocument();
-      expect(badge).toHaveClass('bg-green-100', 'text-green-700');
+      expect(badge).toHaveClass('bg-emerald-100', 'text-emerald-700');
     });
 
     it('should display CLOSED status with correct styling', () => {
@@ -38,7 +38,7 @@ describe('CampaignCardHeader', () => {
 
       const badge = screen.getByText('Fechada');
       expect(badge).toBeInTheDocument();
-      expect(badge).toHaveClass('bg-yellow-100', 'text-yellow-700');
+      expect(badge).toHaveClass('bg-amber-100', 'text-amber-700');
     });
 
     it('should display SENT status with correct styling', () => {
@@ -47,7 +47,7 @@ describe('CampaignCardHeader', () => {
 
       const badge = screen.getByText('Enviada');
       expect(badge).toBeInTheDocument();
-      expect(badge).toHaveClass('bg-blue-100', 'text-blue-700');
+      expect(badge).toHaveClass('bg-sky-100', 'text-sky-700');
     });
 
     it('should display ARCHIVED status with correct styling', () => {
@@ -56,7 +56,7 @@ describe('CampaignCardHeader', () => {
 
       const badge = screen.getByText('Arquivada');
       expect(badge).toBeInTheDocument();
-      expect(badge).toHaveClass('bg-gray-100', 'text-gray-700');
+      expect(badge).toHaveClass('bg-sky-50', 'text-sky-500');
     });
 
     it('should have proper badge styling', () => {
@@ -64,7 +64,7 @@ describe('CampaignCardHeader', () => {
       render(<CampaignCardHeader campaign={campaign} />);
 
       const badge = screen.getByText('Ativa');
-      expect(badge).toHaveClass('px-2.5', 'py-0.5', 'md:py-1', 'text-xs', 'font-medium', 'rounded-full');
+      expect(badge).toHaveClass('px-2.5', 'py-0.5', 'text-xs', 'font-semibold', 'rounded-full');
     });
   });
 
@@ -86,7 +86,7 @@ describe('CampaignCardHeader', () => {
       render(<CampaignCardHeader campaign={campaign} />);
 
       const creatorName = screen.getByText('Jane Smith');
-      expect(creatorName).toHaveClass('font-medium', 'text-gray-700');
+      expect(creatorName).toHaveClass('font-medium', 'text-sky-800');
     });
 
     it('should not display creator section when creator is undefined', () => {
@@ -104,7 +104,7 @@ describe('CampaignCardHeader', () => {
       });
       const { container } = render(<CampaignCardHeader campaign={campaign} />);
 
-      const wrapper = container.querySelector('.space-y-1');
+      const wrapper = container.querySelector('.flex.flex-col.gap-1\\.5');
       expect(wrapper).toBeInTheDocument();
     });
 
@@ -115,11 +115,11 @@ describe('CampaignCardHeader', () => {
       render(<CampaignCardHeader campaign={campaign} />);
 
       const campaignName = screen.getByText(campaign.name);
-      expect(campaignName).toHaveClass('text-sm', 'md:text-lg', 'font-semibold');
+      expect(campaignName).toHaveClass('text-sm', 'md:text-base', 'font-bold');
 
       // Get the p element containing "por"
       const creatorParagraph = screen.getByText(/por/).closest('p');
-      expect(creatorParagraph).toHaveClass('hidden', 'md:block', 'text-sm', 'text-gray-500');
+      expect(creatorParagraph).toHaveClass('text-xs', 'text-sky-600');
     });
   });
 
@@ -129,7 +129,7 @@ describe('CampaignCardHeader', () => {
       render(<CampaignCardHeader campaign={campaign} />);
 
       const name = screen.getByText('Test Campaign');
-      expect(name).toHaveClass('font-semibold');
+      expect(name).toHaveClass('font-bold');
     });
 
     it('should use medium font for status badge', () => {
@@ -137,7 +137,7 @@ describe('CampaignCardHeader', () => {
       render(<CampaignCardHeader campaign={campaign} />);
 
       const badge = screen.getByText('Ativa');
-      expect(badge).toHaveClass('font-medium');
+      expect(badge).toHaveClass('font-semibold');
     });
   });
 });

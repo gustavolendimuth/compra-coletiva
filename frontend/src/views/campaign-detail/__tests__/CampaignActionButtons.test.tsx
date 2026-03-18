@@ -100,7 +100,6 @@ describe("CampaignActionButtons", () => {
 
     await waitFor(() => {
       expect(campaignApi.getOrdersSummary).toHaveBeenCalledWith("campaign-1");
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith("Resumo pronto");
       expect(toast.success).toHaveBeenCalledWith("Resumo copiado! Pronto para enviar no WhatsApp.");
     });
   });

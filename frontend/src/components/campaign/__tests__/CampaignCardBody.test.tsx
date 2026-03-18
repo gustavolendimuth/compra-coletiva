@@ -30,7 +30,7 @@ describe('CampaignCardBody', () => {
       // Find the paragraph element directly
       const descElement = container.querySelector('.line-clamp-2');
       expect(descElement).toBeInTheDocument();
-      expect(descElement).toHaveClass('text-sm', 'text-gray-600');
+      expect(descElement).toHaveClass('text-sm', 'text-sky-700');
     });
 
     it('should style description correctly', () => {
@@ -40,7 +40,7 @@ describe('CampaignCardBody', () => {
       render(<CampaignCardBody campaign={campaign} />);
 
       const desc = screen.getByText('Test description');
-      expect(desc).toHaveClass('text-sm', 'text-gray-600');
+      expect(desc).toHaveClass('text-sm', 'text-sky-700');
     });
   });
 
@@ -132,7 +132,9 @@ describe('CampaignCardBody', () => {
       const { container } = render(<CampaignCardBody campaign={campaign} />);
 
       const wrapper = container.querySelector('.space-y-3');
-      expect(wrapper).toBeInTheDocument();
+      expect(wrapper).not.toBeInTheDocument();
+      const updatedWrapper = container.querySelector('.space-y-2');
+      expect(updatedWrapper).toBeInTheDocument();
     });
 
     it('should style statistics text correctly', () => {
@@ -141,7 +143,7 @@ describe('CampaignCardBody', () => {
       });
       const { container } = render(<CampaignCardBody campaign={campaign} />);
 
-      const statsContainer = container.querySelector('.text-sm.text-gray-500');
+      const statsContainer = container.querySelector('.text-sm.text-sky-600');
       expect(statsContainer).toBeInTheDocument();
     });
   });
@@ -169,7 +171,7 @@ describe('CampaignCardBody', () => {
       render(<CampaignCardBody campaign={campaign} />);
 
       const description = screen.getByText('Test description');
-      expect(description).toHaveClass('text-gray-600');
+      expect(description).toHaveClass('text-sky-700');
     });
 
     it('should have semantic structure', () => {

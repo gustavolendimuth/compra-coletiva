@@ -184,7 +184,7 @@ describe('CampaignFilters', () => {
       );
 
       const mineButton = screen.getByRole('button', { name: /Minhas/i });
-      expect(mineButton).toHaveClass('bg-primary-600');
+      expect(mineButton).toHaveClass('from-sky-500', 'to-sky-600');
     });
   });
 
@@ -267,7 +267,7 @@ describe('CampaignFilters', () => {
       await user.click(statusButton);
 
       const activeOption = screen.getAllByRole('button', { name: /Ativas/i })[1]; // Get the option, not the main button
-      expect(activeOption).toHaveClass('text-primary-600');
+      expect(activeOption).toHaveClass('text-sky-700', 'bg-sky-50');
     });
   });
 

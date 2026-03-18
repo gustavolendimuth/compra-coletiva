@@ -59,8 +59,8 @@ describe('TabNavigation', () => {
 
       const productsTabs = screen.getAllByRole('button', { name: /produtos/i });
       const desktopTab = productsTabs[0]; // Desktop tab is first
-      expect(desktopTab).toHaveClass('text-primary-600');
-      expect(desktopTab).toHaveClass('border-primary-600');
+      expect(desktopTab).toHaveClass('text-sky-600');
+      expect(desktopTab).toHaveClass('border-sky-500');
     });
 
     it('should not highlight inactive tabs', () => {
@@ -68,8 +68,8 @@ describe('TabNavigation', () => {
 
       const overviewTabs = screen.getAllByRole('button', { name: /visão geral/i });
       const desktopTab = overviewTabs[0];
-      expect(desktopTab).toHaveClass('text-gray-600');
-      expect(desktopTab).not.toHaveClass('text-primary-600');
+      expect(desktopTab).toHaveClass('text-sky-700/50');
+      expect(desktopTab).not.toHaveClass('text-sky-600');
     });
   });
 
@@ -207,7 +207,7 @@ describe('TabNavigation', () => {
 
       const productsTabs = screen.getAllByRole('button', { name: /produtos/i });
       const desktopTab = productsTabs[0];
-      expect(desktopTab).toHaveClass('hover:text-gray-900');
+      expect(desktopTab).toHaveClass('hover:text-sky-900');
     });
 
     it('should have different background for active tab', () => {
@@ -215,18 +215,17 @@ describe('TabNavigation', () => {
 
       const productsTabs = screen.getAllByRole('button', { name: /produtos/i });
       const desktopTab = productsTabs[0];
-      expect(desktopTab).toHaveClass('bg-primary-50');
+      expect(desktopTab).toHaveClass('bg-sky-50/70');
     });
   });
 
   describe('Mobile Tab Styling', () => {
-    it('should apply yellow accent for active mobile tabs', () => {
+    it('should keep dark background for mobile tabs', () => {
       render(<TabNavigation {...defaultProps} activeTab="products" />);
 
-      // Mobile tabs have different styling with yellow accent
       const mobileContainer = document.querySelector('.md\\:hidden.fixed.bottom-0');
       expect(mobileContainer).toBeInTheDocument();
-      expect(mobileContainer).toHaveClass('bg-primary-600');
+      expect(mobileContainer).toHaveClass('bg-sky-800');
     });
 
     it('should have fixed positioning for mobile tabs', () => {

@@ -243,11 +243,13 @@ export const createMockAnalytics = (
   byCustomer: [
     {
       customerName: 'Customer 1',
+      customerAlias: 'Customer 1',
       total: 250.0,
       isPaid: true,
     },
     {
       customerName: 'Customer 2',
+      customerAlias: 'Customer 2',
       total: 300.0,
       isPaid: false,
     },

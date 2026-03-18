@@ -43,7 +43,7 @@ describe('CampaignCardFooter', () => {
       render(<CampaignCardFooter campaign={campaign} />);
 
       const dateElement = screen.getByText('01/11/2025').parentElement;
-      expect(dateElement).toHaveClass('text-gray-400');
+      expect(dateElement).toHaveClass('text-sky-500');
     });
   });
 
@@ -179,7 +179,7 @@ describe('CampaignCardFooter', () => {
       });
       const { container } = render(<CampaignCardFooter campaign={campaign} />);
 
-      const badge = container.querySelector('.text-gray-600.bg-gray-50');
+      const badge = container.querySelector('.text-sky-600.bg-sky-50');
       expect(badge).toBeInTheDocument();
     });
   });
@@ -189,7 +189,7 @@ describe('CampaignCardFooter', () => {
       const campaign = createMockCampaign();
       const { container } = render(<CampaignCardFooter campaign={campaign} />);
 
-      const footer = container.querySelector('.pt-3.border-t.border-gray-100');
+      const footer = container.querySelector('.pt-3.border-t.border-sky-100\\/60');
       expect(footer).toBeInTheDocument();
     });
 

@@ -64,7 +64,12 @@ describe('useOrderModal', () => {
     }),
   ];
 
-  const mockUser = { id: 'user-1', name: 'Test User' };
+  const mockUser = {
+    id: 'user-1',
+    name: 'Test User',
+    role: 'CUSTOMER' as const,
+    salesDisclaimerAcceptedVersion: '2026-03-12',
+  };
   const mockRequireAuth = vi.fn((cb: () => void) => cb());
 
   const defaultOptions = {

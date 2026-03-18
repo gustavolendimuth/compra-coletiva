@@ -42,9 +42,15 @@ Serviços e portas:
 # Subir ambiente
 npm run dev
 
+# Pipeline completo (lint + testes + build)
+npm run ci
+
 # Rodar testes
 npm test --workspace=backend
 npm test --workspace=frontend
+
+# Corrigir permissoes de pastas de build (Linux)
+npm run fix:build-output-perms
 ```
 
 ## Documentação

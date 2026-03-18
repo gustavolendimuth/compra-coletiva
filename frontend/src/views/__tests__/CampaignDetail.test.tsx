@@ -306,10 +306,11 @@ describe("CampaignDetail", () => {
       });
 
       // Overview tab is default, should show analytics
-      // Check that we're showing products and orders
+      // Check that we're showing products and analytics sections
       await waitFor(() => {
         expect(screen.getAllByText("Product 1")[0]).toBeInTheDocument();
-        expect(screen.getAllByText("Customer 1")[0]).toBeInTheDocument();
+        expect(screen.getByText(/resumo financeiro/i)).toBeInTheDocument();
+        expect(screen.getByText(/por pessoa/i)).toBeInTheDocument();
       });
     });
   });

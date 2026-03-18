@@ -21,7 +21,8 @@
     "backfill:pickup-coordinates": "tsx scripts/backfill-campaign-pickup-coordinates.ts",
     "capitalize:names": "node scripts/capitalize-user-names.js",
     "queue:clear": "node scripts/clear-email-queue.js",
-    "clean": "rm -rf dist node_modules"
+    "clean": "rm -rf dist node_modules",
+    "test:unit:lgpd": "jest src/utils/publicAlias.test.ts src/utils/campaignParticipantName.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.946.0",

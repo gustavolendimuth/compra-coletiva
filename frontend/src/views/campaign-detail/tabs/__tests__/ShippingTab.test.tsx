@@ -204,7 +204,7 @@ describe('ShippingTab', () => {
     it('should have highlighted shipping cost display', () => {
       const { container } = render(<ShippingTab {...defaultProps} />);
 
-      const highlightedSection = container.querySelector('.bg-gray-50');
+      const highlightedSection = container.querySelector('.bg-sky-50\\/60');
       expect(highlightedSection).toBeInTheDocument();
     });
   });

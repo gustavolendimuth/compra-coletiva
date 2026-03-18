@@ -12,9 +12,15 @@
     "build": "npm run build --workspaces",
     "clean": "npm run clean --workspaces",
     "fix:prisma-engine-perms": "node scripts/fix-prisma-engine-permissions.js",
+    "fix:build-output-perms": "node scripts/fix-build-output-permissions.js",
     "postinstall": "npm run fix:prisma-engine-perms",
     "migrate:deploy:container": "docker compose exec backend npx prisma migrate deploy --schema prisma/schema.prisma",
-    "migrate:deploy:host": "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/compra_coletiva npm exec --workspace=backend prisma migrate deploy"
+    "migrate:deploy:host": "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/compra_coletiva npm exec --workspace=backend prisma migrate deploy",
+    "test:ci:lgpd": "npm run test:unit:lgpd --workspace=backend && npm run test:unit:lgpd --workspace=frontend",
+    "lint:ci": "npm run lint --workspace=backend && npm exec --workspace=frontend -- next lint --no-cache",
+    "test:ci": "npm test --workspace=backend && npm test --workspace=frontend",
+    "build:ci": "npm run fix:build-output-perms && npm run build --workspace=backend && npm run build --workspace=frontend",
+    "ci": "npm run lint:ci && npm run test:ci && npm run build:ci"
   },
   "keywords": [
     "compra-coletiva",
@@ -22,5 +28,8 @@
     "pedidos"
   ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "jsdom": "^26.0.0"
+  }
 }
