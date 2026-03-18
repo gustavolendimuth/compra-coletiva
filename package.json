@@ -10,7 +10,11 @@
   "scripts": {
     "dev": "docker-compose up",
     "build": "npm run build --workspaces",
-    "clean": "npm run clean --workspaces"
+    "clean": "npm run clean --workspaces",
+    "fix:prisma-engine-perms": "node scripts/fix-prisma-engine-permissions.js",
+    "postinstall": "npm run fix:prisma-engine-perms",
+    "migrate:deploy:container": "docker compose exec backend npx prisma migrate deploy --schema prisma/schema.prisma",
+    "migrate:deploy:host": "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/compra_coletiva npm exec --workspace=backend prisma migrate deploy"
   },
   "keywords": [
     "compra-coletiva",
@@ -18,10 +22,5 @@
     "pedidos"
   ],
   "author": "",
-  "license": "MIT",
-  "devDependencies": {
-    "@rollup/rollup-win32-x64-msvc": "^4.59.0",
-    "baseline-browser-mapping": "^2.9.19",
-    "jsdom": "^28.1.0"
-  }
+  "license": "MIT"
 }
