@@ -39,6 +39,7 @@ declare global {
       privacyAcceptedVersion: string | null;
       salesDisclaimerAcceptedAt: Date | null;
       salesDisclaimerAcceptedVersion: string | null;
+      hideNameInCampaigns: boolean;
 
       // Endereço padrão do usuário (para cálculo de distância)
       addressCompleted: boolean;

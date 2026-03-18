@@ -42,6 +42,9 @@ export const createMockCampaign = (
     shippingCost: 50.0,
     creatorId: 'user-1',
     pixVisibleAtStatus: 'CLOSED',
+    paymentReleaseTrigger: 'ON_CLOSED',
+    paymentReleased: false,
+    paymentReleasedAt: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     _count: {
@@ -269,6 +272,9 @@ export const createMockCampaignFull = (
     shippingCost: 50.0,
     creatorId: 'user-1',
     pixVisibleAtStatus: 'CLOSED',
+    paymentReleaseTrigger: 'ON_CLOSED',
+    paymentReleased: false,
+    paymentReleasedAt: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     _count: {

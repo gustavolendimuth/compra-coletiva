@@ -32,6 +32,7 @@ type OAuthUser = Prisma.UserGetPayload<{
     phoneCompleted: true;
     addressCompleted: true;
     legalAcceptanceRequired: true;
+    hideNameInCampaigns: true;
   };
 }>;
 
@@ -123,6 +124,7 @@ const registerSchema = z.object({
       (value) => value === true,
       "Você precisa aceitar a Política de Privacidade para criar uma conta"
     ),
+  hideNameInCampaigns: z.boolean().optional().default(false),
 });
 
 const loginSchema = z.object({
@@ -161,6 +163,7 @@ const updateProfileSchema = z.object({
     .string()
     .min(6, "Nova senha deve ter pelo menos 6 caracteres")
     .optional(),
+  hideNameInCampaigns: z.boolean().optional(),
 });
 
 const completePhoneSchema = z.object({
@@ -227,7 +230,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const { name, email, password, phone } = validationResult.data;
+    const { name, email, password, phone, hideNameInCampaigns } = validationResult.data;
 
     // Valida email
     if (!AuthService.validateEmail(email)) {
@@ -278,6 +281,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
           phoneCompleted: true, // Email/password users provide phone during registration
           addressCompleted: false, // Users need to complete address after first login
           role: "CUSTOMER", // Default role
+          hideNameInCampaigns,
           legalAcceptanceRequired: false,
           termsAcceptedAt: acceptedAt,
           termsAcceptedVersion: LEGAL_TERMS_VERSION,
@@ -350,6 +354,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
         privacyAcceptedVersion: user.privacyAcceptedVersion,
         salesDisclaimerAcceptedAt: user.salesDisclaimerAcceptedAt,
         salesDisclaimerAcceptedVersion: user.salesDisclaimerAcceptedVersion,
+        hideNameInCampaigns: user.hideNameInCampaigns,
         role: user.role,
       },
       accessToken: tokens.accessToken,
@@ -453,6 +458,7 @@ router.post("/login", async (req: Request, res: Response): Promise<void> => {
         privacyAcceptedVersion: user.privacyAcceptedVersion,
         salesDisclaimerAcceptedAt: user.salesDisclaimerAcceptedAt,
         salesDisclaimerAcceptedVersion: user.salesDisclaimerAcceptedVersion,
+        hideNameInCampaigns: user.hideNameInCampaigns,
         role: user.role,
       },
       accessToken: tokens.accessToken,
@@ -543,6 +549,7 @@ router.post("/refresh", async (req: Request, res: Response): Promise<void> => {
         privacyAcceptedVersion: user.privacyAcceptedVersion,
         salesDisclaimerAcceptedAt: user.salesDisclaimerAcceptedAt,
         salesDisclaimerAcceptedVersion: user.salesDisclaimerAcceptedVersion,
+        hideNameInCampaigns: user.hideNameInCampaigns,
         role: user.role,
       },
     });
@@ -619,6 +626,7 @@ router.get(
           privacyAcceptedVersion: req.user.privacyAcceptedVersion,
           salesDisclaimerAcceptedAt: req.user.salesDisclaimerAcceptedAt,
           salesDisclaimerAcceptedVersion: req.user.salesDisclaimerAcceptedVersion,
+          hideNameInCampaigns: req.user.hideNameInCampaigns,
           role: req.user.role,
           createdAt: req.user.createdAt,
           defaultZipCode: req.user.defaultZipCode,
@@ -707,7 +715,8 @@ router.get(
           `userRole=${user.role}&` +
           `phoneCompleted=${user.phoneCompleted || false}&` +
           `addressCompleted=${user.addressCompleted || false}&` +
-          `legalAcceptanceRequired=${user.legalAcceptanceRequired || false}`
+          `legalAcceptanceRequired=${user.legalAcceptanceRequired || false}&` +
+          `hideNameInCampaigns=${user.hideNameInCampaigns || false}`
       );
     } catch (error) {
       console.error("Erro no callback do Google:", error);
@@ -888,7 +897,7 @@ router.patch(
   requireAuth,
   async (req: Request, res: Response): Promise<void> => {
     try {
-      const { name, phone, currentPassword, newPassword } =
+      const { name, phone, currentPassword, newPassword, hideNameInCampaigns } =
         updateProfileSchema.parse(req.body);
 
       const updates: Prisma.UserUpdateInput = {};
@@ -901,6 +910,10 @@ router.patch(
       // Atualiza nome se fornecido
       if (name) {
         updates.name = capitalizeName(name);
+      }
+
+      if (typeof hideNameInCampaigns === "boolean") {
+        updates.hideNameInCampaigns = hideNameInCampaigns;
       }
 
       // Atualiza senha se fornecida
@@ -967,6 +980,7 @@ router.patch(
           name: updatedUser.name,
           email: updatedUser.email,
           phone: updatedUser.phone,
+          hideNameInCampaigns: updatedUser.hideNameInCampaigns,
           role: updatedUser.role,
         },
       });
@@ -1023,6 +1037,7 @@ router.patch(
           privacyAcceptedVersion: true,
           salesDisclaimerAcceptedAt: true,
           salesDisclaimerAcceptedVersion: true,
+          hideNameInCampaigns: true,
         },
       });
 
@@ -1125,6 +1140,7 @@ router.patch(
           privacyAcceptedVersion: true,
           salesDisclaimerAcceptedAt: true,
           salesDisclaimerAcceptedVersion: true,
+          hideNameInCampaigns: true,
           defaultZipCode: true,
           defaultAddress: true,
           defaultAddressNumber: true,

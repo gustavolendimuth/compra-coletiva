@@ -12,6 +12,7 @@ import {
   Product,
   CreateProductDto,
   UpdateProductDto,
+  type PaymentReleaseTrigger,
 } from "@/api";
 import { Order } from "@/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,6 +20,10 @@ import { removeMask, applyPixMask } from "@/lib/pixMasks";
 import { getApiErrorMessage } from "@/lib/apiError";
 import { useOrderModal } from "@/hooks/useOrderModal";
 import type { AddressData } from "@/components/ui/AddressForm";
+import {
+  getPaymentReleaseTrigger,
+  getPixVisibleAtStatusForTrigger,
+} from "@/lib/paymentRelease";
 
 interface ProductForm {
   name: string;
@@ -105,7 +110,8 @@ export function useCampaignDetail() {
   const [pixKey, setPixKey] = useState("");
   const [pixType, setPixType] = useState<"CPF" | "CNPJ" | "EMAIL" | "PHONE" | "RANDOM" | "">("");
   const [pixName, setPixName] = useState("");
-  const [pixVisibleAtStatus, setPixVisibleAtStatus] = useState<"ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED">("ACTIVE");
+  const [paymentReleaseTrigger, setPaymentReleaseTrigger] =
+    useState<PaymentReleaseTrigger>("ON_ACTIVE");
 
   // Campaign inline edit states
   const [isEditingName, setIsEditingName] = useState(false);
@@ -431,7 +437,8 @@ export function useCampaignDetail() {
       pixKey?: string | null;
       pixType?: "CPF" | "CNPJ" | "EMAIL" | "PHONE" | "RANDOM" | null;
       pixName?: string | null;
-      pixVisibleAtStatus?: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED";
+      paymentReleaseTrigger?: PaymentReleaseTrigger;
+      pixVisibleAtStatus?: "ACTIVE" | "CLOSED" | "SENT";
     }) => campaignApi.update(slug!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["campaign", slug] });
@@ -639,10 +646,12 @@ export function useCampaignDetail() {
   const handleUpdatePix = (e: React.FormEvent) => {
     e.preventDefault();
     const cleanPixKey = pixKey ? removeMask(pixKey, pixType) : null;
+    const pixVisibleAtStatus = getPixVisibleAtStatusForTrigger(paymentReleaseTrigger);
     updatePixMutation.mutate({
       pixKey: cleanPixKey,
       pixType: pixType || null,
       pixName: pixName || null,
+      paymentReleaseTrigger,
       pixVisibleAtStatus,
     });
   };
@@ -652,6 +661,7 @@ export function useCampaignDetail() {
       pixKey: null,
       pixType: null,
       pixName: null,
+      paymentReleaseTrigger: "ON_ACTIVE",
       pixVisibleAtStatus: "ACTIVE",
     });
   };
@@ -829,12 +839,17 @@ export function useCampaignDetail() {
       setPixKey(maskedPixKey);
       setPixType(campaign.pixType || "");
       setPixName(campaign.pixName || "");
-      setPixVisibleAtStatus(campaign.pixVisibleAtStatus || "ACTIVE");
+      setPaymentReleaseTrigger(
+        getPaymentReleaseTrigger(
+          campaign.paymentReleaseTrigger,
+          campaign.pixVisibleAtStatus
+        )
+      );
     } else {
       setPixKey("");
       setPixType("");
       setPixName("");
-      setPixVisibleAtStatus("ACTIVE");
+      setPaymentReleaseTrigger("ON_ACTIVE");
     }
   };
 
@@ -966,8 +981,8 @@ export function useCampaignDetail() {
     setPixType,
     pixName,
     setPixName,
-    pixVisibleAtStatus,
-    setPixVisibleAtStatus,
+    paymentReleaseTrigger,
+    setPaymentReleaseTrigger,
 
     // Confirm Dialog State
     isCloseConfirmOpen,

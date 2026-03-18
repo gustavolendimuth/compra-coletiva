@@ -22,6 +22,7 @@ export interface StoredUser {
   privacyAcceptedVersion?: string | null;
   salesDisclaimerAcceptedAt?: string | null;
   salesDisclaimerAcceptedVersion?: string | null;
+  hideNameInCampaigns?: boolean;
   role: "ADMIN" | "CAMPAIGN_CREATOR" | "CUSTOMER";
   googleId?: string;
   defaultZipCode?: string | null;
@@ -41,6 +42,7 @@ export interface RegisterRequest {
   phone: string;
   acceptTerms: boolean;
   acceptPrivacy: boolean;
+  hideNameInCampaigns?: boolean;
   role?: "CUSTOMER" | "CAMPAIGN_CREATOR";
 }
 
@@ -68,6 +70,11 @@ export interface CompletePhoneRequest {
 // ============================================================================
 
 export type PixKeyType = "CPF" | "CNPJ" | "EMAIL" | "PHONE" | "RANDOM";
+export type PaymentReleaseTrigger =
+  | "ON_ACTIVE"
+  | "ON_CLOSED"
+  | "ON_SENT"
+  | "ON_SHIPPING_UPDATED";
 
 export interface Campaign {
   id: string;
@@ -85,6 +92,9 @@ export interface Campaign {
   pixType?: PixKeyType;
   pixName?: string;
   pixVisibleAtStatus: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED";
+  paymentReleaseTrigger: PaymentReleaseTrigger;
+  paymentReleased: boolean;
+  paymentReleasedAt?: string | null;
   pickupZipCode?: string;
   pickupAddress?: string;
   pickupAddressNumber?: string;
@@ -145,6 +155,7 @@ export interface CreateCampaignDto {
   pixType?: PixKeyType;
   pixName?: string;
   pixVisibleAtStatus?: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED";
+  paymentReleaseTrigger?: PaymentReleaseTrigger;
   pickupZipCode?: string;
   pickupAddress?: string;
   pickupAddressNumber?: string;
@@ -164,6 +175,7 @@ export interface UpdateCampaignDto {
   pixType?: PixKeyType | null;
   pixName?: string | null;
   pixVisibleAtStatus?: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED";
+  paymentReleaseTrigger?: PaymentReleaseTrigger;
   pickupZipCode?: string;
   pickupAddress?: string;
   pickupAddressNumber?: string;
@@ -590,6 +602,7 @@ export interface UpdateProfileDto {
   phone?: string;
   currentPassword?: string;
   newPassword?: string;
+  hideNameInCampaigns?: boolean;
 }
 
 export interface UpdateProfileResponse {

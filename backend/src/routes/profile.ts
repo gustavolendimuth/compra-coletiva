@@ -40,6 +40,7 @@ const updateProfileSchema = z.object({
     .string()
     .min(6, "Nova senha deve ter pelo menos 6 caracteres")
     .optional(),
+  hideNameInCampaigns: z.boolean().optional(),
 });
 
 const changeEmailSchema = z.object({
@@ -82,7 +83,7 @@ router.patch(
   requireAuth,
   async (req: Request, res: Response): Promise<void> => {
     try {
-      const { name, phone, currentPassword, newPassword } =
+      const { name, phone, currentPassword, newPassword, hideNameInCampaigns } =
         updateProfileSchema.parse(req.body);
 
       const updates: Prisma.UserUpdateInput = {};
@@ -95,6 +96,10 @@ router.patch(
       // Atualiza nome se fornecido
       if (name) {
         updates.name = capitalizeName(name);
+      }
+
+      if (typeof hideNameInCampaigns === "boolean") {
+        updates.hideNameInCampaigns = hideNameInCampaigns;
       }
 
       // Atualiza senha se fornecida
@@ -163,6 +168,7 @@ router.patch(
           phone: updatedUser.phone,
           phoneCompleted: updatedUser.phoneCompleted,
           avatarUrl: updatedUser.avatarUrl,
+          hideNameInCampaigns: updatedUser.hideNameInCampaigns,
           role: updatedUser.role,
         },
       });

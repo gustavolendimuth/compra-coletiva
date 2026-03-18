@@ -27,7 +27,7 @@ export class PaymentReleaseService {
     return PIX_VISIBLE_STATUS_TO_TRIGGER[status];
   }
 
-  private static shouldReleaseByTrigger(
+  static isTriggerReached(
     status: CampaignStatus,
     trigger: PaymentReleaseTrigger,
     shippingCost: number
@@ -73,6 +73,31 @@ export class PaymentReleaseService {
       return { released: false, notificationsSent: 0, reason: "CAMPAIGN_NOT_FOUND" };
     }
 
+    const shouldRelease = Boolean(campaign.pixKey && campaign.pixType) && this.isTriggerReached(
+      campaign.status,
+      campaign.paymentReleaseTrigger,
+      campaign.shippingCost
+    );
+
+    if (campaign.paymentReleased && !shouldRelease) {
+      await prisma.campaign.updateMany({
+        where: {
+          id: campaign.id,
+          paymentReleased: true,
+        },
+        data: {
+          paymentReleased: false,
+          paymentReleasedAt: null,
+        },
+      });
+
+      return {
+        released: false,
+        notificationsSent: 0,
+        reason: campaign.pixKey && campaign.pixType ? "TRIGGER_NOT_REACHED" : "PIX_NOT_CONFIGURED",
+      };
+    }
+
     if (!campaign.pixKey || !campaign.pixType) {
       return { released: false, notificationsSent: 0, reason: "PIX_NOT_CONFIGURED" };
     }
@@ -80,12 +105,6 @@ export class PaymentReleaseService {
     if (campaign.paymentReleased) {
       return { released: false, notificationsSent: 0, reason: "ALREADY_RELEASED" };
     }
-
-    const shouldRelease = this.shouldReleaseByTrigger(
-      campaign.status,
-      campaign.paymentReleaseTrigger,
-      campaign.shippingCost
-    );
 
     if (!shouldRelease) {
       return { released: false, notificationsSent: 0, reason: "TRIGGER_NOT_REACHED" };

@@ -4,12 +4,20 @@ import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import toast from "react-hot-toast";
-import { campaignApi, campaignService } from "@/api";
+import { campaignApi, campaignService, type PaymentReleaseTrigger } from "@/api";
 import { useAuth } from "@/contexts/AuthContext";
-import { Button, Modal, Input, Textarea, ImageUpload } from "@/components/ui";
+import {
+  Button,
+  Modal,
+  Input,
+  Textarea,
+  ImageUpload,
+  PaymentReleaseTriggerField,
+} from "@/components/ui";
 import { AddressForm, type AddressData } from "@/components/ui/AddressForm";
 import DateTimeInput from "@/components/DateTimeInput";
 import { applyPixMask, removeMask, getPixPlaceholder } from "@/lib/pixMasks";
+import { getPixVisibleAtStatusForTrigger } from "@/lib/paymentRelease";
 
 interface NewCampaignButtonProps {
   onModalOpen?: () => void; // Callback when modal is opened
@@ -39,7 +47,7 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
     pixKey: string;
     pixType: "CPF" | "CNPJ" | "EMAIL" | "PHONE" | "RANDOM" | "";
     pixName: string;
-    pixVisibleAtStatus: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED";
+    paymentReleaseTrigger: PaymentReleaseTrigger;
   }>({
     name: "",
     description: "",
@@ -48,7 +56,7 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
     pixKey: "",
     pixType: "",
     pixName: "",
-    pixVisibleAtStatus: "ACTIVE",
+    paymentReleaseTrigger: "ON_ACTIVE",
   });
 
   const queryClient = useQueryClient();
@@ -84,7 +92,7 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
         pixKey: "",
         pixType: "",
         pixName: "",
-        pixVisibleAtStatus: "ACTIVE",
+        paymentReleaseTrigger: "ON_ACTIVE",
       });
       setSelectedImage(null);
       setPickupAddress({
@@ -146,7 +154,10 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
       pixKey: cleanPixKey,
       pixType: formData.pixType || undefined,
       pixName: formData.pixName || undefined,
-      pixVisibleAtStatus: formData.pixVisibleAtStatus,
+      paymentReleaseTrigger: formData.paymentReleaseTrigger,
+      pixVisibleAtStatus: getPixVisibleAtStatusForTrigger(
+        formData.paymentReleaseTrigger
+      ),
       ...(hasAddress && {
         pickupZipCode: pickupAddress.zipCode.replace(/\D/g, ''),
         pickupAddress: pickupAddress.address,
@@ -299,28 +310,16 @@ export const NewCampaignButton: React.FC<NewCampaignButtonProps> = ({
                 placeholder="Nome do titular da conta PIX"
               />
 
-              <div>
-                <label className="block text-sm font-medium text-sky-800 mb-2">
-                  Mostrar PIX quando a campanha estiver
-                </label>
-                <select
-                  value={formData.pixVisibleAtStatus}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      pixVisibleAtStatus: e.target.value as "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED",
-                    })
-                  }
-                  className="w-full px-4 py-2.5 border border-sky-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:border-transparent text-base text-sky-900 bg-white transition-all"
-                >
-                  <option value="ACTIVE">Ativa</option>
-                  <option value="CLOSED">Fechada</option>
-                  <option value="SENT">Enviada</option>
-                </select>
-                <p className="text-sm text-sky-600/60 mt-2">
-                  O PIX será exibido em destaque apenas quando a campanha atingir o status selecionado.
-                </p>
-              </div>
+              <PaymentReleaseTriggerField
+                value={formData.paymentReleaseTrigger}
+                onChange={(paymentReleaseTrigger) =>
+                  setFormData({
+                    ...formData,
+                    paymentReleaseTrigger,
+                  })
+                }
+                disabled={createMutation.isPending}
+              />
             </div>
           </div>
 

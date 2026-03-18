@@ -1,8 +1,15 @@
-import { Modal, Button, Input, Textarea, CurrencyInput } from "@/components/ui";
+import {
+  Modal,
+  Button,
+  Input,
+  Textarea,
+  CurrencyInput,
+  PaymentReleaseTriggerField,
+} from "@/components/ui";
 import { AddressForm, type AddressData } from "@/components/ui/AddressForm";
 import DateTimeInput from "@/components/DateTimeInput";
 import ConfirmDialog from "@/components/ConfirmDialog";
-import { Campaign, PixKeyType } from "@/api";
+import { Campaign, PixKeyType, type PaymentReleaseTrigger } from "@/api";
 import { applyPixMask, getPixPlaceholder } from "@/lib/pixMasks";
 
 interface CloneModalProps {
@@ -327,13 +334,13 @@ interface PixModalProps {
   pixKey: string | undefined;
   pixType: PixKeyType | "" | undefined;
   pixName: string | undefined;
-  pixVisibleAtStatus: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED" | undefined;
+  paymentReleaseTrigger: PaymentReleaseTrigger | undefined;
   isPending: boolean;
   onClose: () => void;
   onChangePixKey: (value: string) => void;
   onChangePixType: (value: PixKeyType | "") => void;
   onChangePixName: (value: string) => void;
-  onChangePixVisibleAtStatus: (value: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED") => void;
+  onChangePaymentReleaseTrigger: (value: PaymentReleaseTrigger) => void;
   onSubmit: (e: React.FormEvent) => void;
   onRemove?: () => void;
 }
@@ -343,13 +350,13 @@ export function PixModal({
   pixKey,
   pixType,
   pixName,
-  pixVisibleAtStatus,
+  paymentReleaseTrigger,
   isPending,
   onClose,
   onChangePixKey,
   onChangePixType,
   onChangePixName,
-  onChangePixVisibleAtStatus,
+  onChangePaymentReleaseTrigger,
   onSubmit,
   onRemove,
 }: PixModalProps) {
@@ -399,27 +406,11 @@ export function PixModal({
           placeholder="Nome do titular da conta PIX"
         />
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Mostrar PIX quando a campanha estiver
-          </label>
-          <select
-            value={pixVisibleAtStatus || 'ACTIVE'}
-            onChange={(e) =>
-              onChangePixVisibleAtStatus(
-                e.target.value as "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED"
-              )
-            }
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
-          >
-            <option value="ACTIVE">Ativa</option>
-            <option value="CLOSED">Fechada</option>
-            <option value="SENT">Enviada</option>
-          </select>
-          <p className="text-sm text-gray-500 mt-2">
-            O PIX será exibido em destaque quando a campanha atingir este status.
-          </p>
-        </div>
+        <PaymentReleaseTriggerField
+          value={paymentReleaseTrigger || "ON_ACTIVE"}
+          onChange={onChangePaymentReleaseTrigger}
+          disabled={isPending}
+        />
 
         <div className="flex gap-3 pt-4">
           <Button

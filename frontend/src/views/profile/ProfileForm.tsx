@@ -19,6 +19,9 @@ interface ProfileFormProps {
 export function ProfileForm({ user, onUpdate }: ProfileFormProps) {
   const [name, setName] = useState(user.name);
   const [phone, setPhone] = useState(user.phone || '');
+  const [hideNameInCampaigns, setHideNameInCampaigns] = useState(
+    user.hideNameInCampaigns ?? false
+  );
   const [isEditing, setIsEditing] = useState(false);
 
   const updateMutation = useMutation({
@@ -37,13 +40,16 @@ export function ProfileForm({ user, onUpdate }: ProfileFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const updates: { name?: string; phone?: string } = {};
+    const updates: { name?: string; phone?: string; hideNameInCampaigns?: boolean } = {};
 
     if (name !== user.name) {
       updates.name = name;
     }
     if (phone !== (user.phone || '')) {
       updates.phone = phone;
+    }
+    if (hideNameInCampaigns !== (user.hideNameInCampaigns ?? false)) {
+      updates.hideNameInCampaigns = hideNameInCampaigns;
     }
 
     if (Object.keys(updates).length === 0) {
@@ -57,6 +63,7 @@ export function ProfileForm({ user, onUpdate }: ProfileFormProps) {
   const handleCancel = () => {
     setName(user.name);
     setPhone(user.phone || '');
+    setHideNameInCampaigns(user.hideNameInCampaigns ?? false);
     setIsEditing(false);
   };
 
@@ -79,6 +86,19 @@ export function ProfileForm({ user, onUpdate }: ProfileFormProps) {
           onChange={setPhone}
           disabled={!isEditing}
         />
+
+        <label className="flex items-start gap-2 text-sm text-sky-700">
+          <input
+            type="checkbox"
+            checked={hideNameInCampaigns}
+            onChange={(e) => setHideNameInCampaigns(e.target.checked)}
+            disabled={!isEditing}
+            className="mt-0.5 rounded border-sky-300 text-sky-600 focus:ring-sky-500"
+          />
+          <span>
+            Mascarar meu nome nas campanhas com apelido divertido.
+          </span>
+        </label>
 
         <div className="flex justify-end gap-2 pt-2">
           {isEditing ? (

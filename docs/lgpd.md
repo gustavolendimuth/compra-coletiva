@@ -36,8 +36,9 @@ Este documento resume os controles de privacidade e responsabilidade implementad
 - Backend valida e bloqueia criação de pedido sem aceite da versão atual.
 
 ### 4. Minimização de dados
-- Endpoint público de pedidos retorna somente apelido público e agregados.
-- Analytics por cliente usa alias público em vez de nome/email.
+- Nome em campanhas exibe apenas primeiro + último nome por padrão (minimização).
+- Usuário pode optar por mascarar o nome nas campanhas, exibindo apelido público divertido.
+- Endpoint público de pedidos e analytics por cliente respeitam a preferência de máscara.
 - Acesso à lista completa de pedidos é restrito a criador da campanha ou admin.
 - Usuário comum acessa apenas o próprio pedido.
 

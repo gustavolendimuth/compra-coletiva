@@ -22,6 +22,7 @@ export { NotificationItem } from "./NotificationItem";
 export { ImageUpload } from "./ImageUpload";
 export { PixDisplay } from "./PixDisplay";
 export { PaymentPendingNotice } from "./PaymentPendingNotice";
+export { PaymentReleaseTriggerField } from "./PaymentReleaseTriggerField";
 export { Portal } from "./Portal";
 
 // Re-export default for backward compatibility

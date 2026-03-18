@@ -48,6 +48,7 @@ export interface StoredUser {
   privacyAcceptedVersion?: string | null;
   salesDisclaimerAcceptedAt?: string | null;
   salesDisclaimerAcceptedVersion?: string | null;
+  hideNameInCampaigns?: boolean;
   role: "ADMIN" | "CAMPAIGN_CREATOR" | "CUSTOMER";
   googleId?: string;
   defaultZipCode?: string | null;

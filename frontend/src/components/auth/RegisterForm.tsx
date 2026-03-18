@@ -12,7 +12,8 @@ interface RegisterFormProps {
     password: string,
     phone: string,
     acceptTerms: boolean,
-    acceptPrivacy: boolean
+    acceptPrivacy: boolean,
+    hideNameInCampaigns: boolean
   ) => Promise<void>;
   onGoogleLogin: () => void;
   isLoading: boolean;
@@ -36,6 +37,7 @@ export const RegisterForm = ({
   const [password, setPassword] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
+  const [hideNameInCampaigns, setHideNameInCampaigns] = useState(false);
   const [nameSuggestion, setNameSuggestion] = useState<string | null>(null);
   const [checkingName, setCheckingName] = useState(false);
 
@@ -64,7 +66,15 @@ export const RegisterForm = ({
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    await onSubmit(name, email, password, phone, acceptTerms, acceptPrivacy);
+    await onSubmit(
+      name,
+      email,
+      password,
+      phone,
+      acceptTerms,
+      acceptPrivacy,
+      hideNameInCampaigns
+    );
   };
 
   return (
@@ -166,6 +176,19 @@ export const RegisterForm = ({
               Política de Privacidade
             </Link>
             .
+          </span>
+        </label>
+
+        <label className="flex items-start gap-2 text-xs text-sky-700">
+          <input
+            type="checkbox"
+            checked={hideNameInCampaigns}
+            onChange={(e) => setHideNameInCampaigns(e.target.checked)}
+            disabled={isLoading}
+            className="mt-0.5 rounded border-sky-300 text-sky-600 focus:ring-sky-500"
+          />
+          <span>
+            Quero mascarar meu nome nas campanhas (usar apelido divertido).
           </span>
         </label>
 

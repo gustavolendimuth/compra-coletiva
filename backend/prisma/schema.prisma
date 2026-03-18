@@ -55,6 +55,7 @@ model User {
   privacyAcceptedVersion       String?
   salesDisclaimerAcceptedAt    DateTime?
   salesDisclaimerAcceptedVersion String?
+  hideNameInCampaigns          Boolean   @default(false) // Oculta nome nas campanhas e mostra apelido público
 
   // Campaign Chat - Reputation & Rate Limiting
   messageCount  Int      @default(0)      // Total de perguntas feitas

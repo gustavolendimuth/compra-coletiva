@@ -67,6 +67,10 @@ export default function PrivacyPolicyPage() {
             </p>
             <ul className="list-disc list-inside ml-4 space-y-2 text-base text-gray-700">
               <li>Operação da plataforma entre participantes e organizadores.</li>
+              <li>
+                Identificação em campanhas: por padrão exibimos apenas primeiro e ultimo nome; o
+                usuario pode optar por mascarar com apelido divertido no cadastro ou perfil.
+              </li>
               <li>Prestadores essenciais (hospedagem, banco de dados, e-mail).</li>
               <li>Atendimento de ordens judiciais ou dever legal.</li>
             </ul>

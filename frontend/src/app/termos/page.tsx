@@ -114,6 +114,10 @@ export default function TermsOfServicePage() {
               O tratamento de dados pessoais segue a Política de Privacidade e a
               legislação aplicável, incluindo a Lei nº 13.709/2018 (LGPD).
             </p>
+            <p className="text-base text-gray-700 leading-relaxed mt-2">
+              Em listagens de campanhas, exibimos apenas primeiro e ultimo nome por padrao, com
+              opcao de mascarar o nome com apelido publico no cadastro ou perfil.
+            </p>
           </section>
 
           <section>

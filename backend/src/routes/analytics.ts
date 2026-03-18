@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../index';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
-import { generatePublicAlias } from '../utils/publicAlias';
+import { getCampaignParticipantDisplayName } from '../utils/campaignParticipantName';
 
 const router = Router();
 
@@ -35,6 +35,13 @@ router.get('/campaign/:campaignId', asyncHandler(async (req, res) => {
     include: {
       orders: {
         include: {
+          customer: {
+            select: {
+              id: true,
+              name: true,
+              hideNameInCampaigns: true,
+            },
+          },
           items: {
             include: {
               product: true
@@ -65,7 +72,7 @@ router.get('/campaign/:campaignId', asyncHandler(async (req, res) => {
   };
 
   const productMap = new Map<string, { name: string; quantity: number }>();
-  const customerMap = new Map<string, { total: number; isPaid: boolean }>();
+  const customerMap = new Map<string, { customerAlias: string; total: number; isPaid: boolean }>();
   let itemsCount = 0;
   const computeStart = Date.now();
 
@@ -80,16 +87,24 @@ router.get('/campaign/:campaignId', asyncHandler(async (req, res) => {
     }
 
     // Agrega por cliente
-    const customerAlias = generatePublicAlias(order.userId, campaignId);
+    const customerAlias = getCampaignParticipantDisplayName({
+      fullName: order.customer?.name,
+      hideNameInCampaigns: order.customer?.hideNameInCampaigns ?? true,
+      userId: order.userId,
+      campaignId,
+    });
 
-    if (!customerMap.has(customerAlias)) {
-      customerMap.set(customerAlias, {
+    if (!customerMap.has(order.userId)) {
+      customerMap.set(order.userId, {
+        customerAlias,
         total: 0,
-        isPaid: order.isPaid
+        isPaid: true,
       });
     }
-    const customerData = customerMap.get(customerAlias)!;
+    const customerData = customerMap.get(order.userId)!;
+    customerData.customerAlias = customerAlias;
     customerData.total += order.total;
+    customerData.isPaid = customerData.isPaid && order.isPaid;
 
     // Agrega por produto
     for (const item of order.items) {
@@ -114,8 +129,8 @@ router.get('/campaign/:campaignId', asyncHandler(async (req, res) => {
     quantity: data.quantity
   }));
 
-  analytics.byCustomer = Array.from(customerMap.entries()).map(([customerAlias, data]) => ({
-    customerAlias,
+  analytics.byCustomer = Array.from(customerMap.values()).map((data) => ({
+    customerAlias: data.customerAlias,
     total: data.total,
     isPaid: data.isPaid
   }));

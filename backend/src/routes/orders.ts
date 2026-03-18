@@ -12,7 +12,7 @@ import { uploadPaymentProof, handleUploadError } from '../middleware/uploadMiddl
 import { ImageUploadService } from '../services/imageUploadService';
 import { capitalizeName } from '../utils/nameFormatter';
 import { queueOrderCreatedEmail } from '../services/email/emailQueue';
-import { generatePublicAlias } from '../utils/publicAlias';
+import { getCampaignParticipantDisplayName } from '../utils/campaignParticipantName';
 import { LEGAL_SALES_DISCLAIMER_VERSION } from '../config/legal';
 import { LegalAcceptanceService } from '../services/legalAcceptanceService';
 
@@ -49,7 +49,7 @@ const addItemSchema = z.object({
   quantity: z.number().int().min(1)
 });
 
-// GET /api/orders/public?campaignId=xxx - Transparência pública com apelido + agregados
+// GET /api/orders/public?campaignId=xxx - Transparência pública com nome reduzido ou apelido + agregados
 router.get('/public', asyncHandler(async (req, res) => {
   const { campaignId } = req.query;
 
@@ -71,6 +71,12 @@ router.get('/public', asyncHandler(async (req, res) => {
           quantity: true,
         },
       },
+      customer: {
+        select: {
+          name: true,
+          hideNameInCampaigns: true,
+        },
+      },
     },
     orderBy: { createdAt: 'asc' },
   });
@@ -78,7 +84,12 @@ router.get('/public', asyncHandler(async (req, res) => {
   const publicOrders = orders.map((order) => {
     const quantityTotal = order.items.reduce((sum, item) => sum + item.quantity, 0);
     return {
-      alias: generatePublicAlias(order.userId, campaignId),
+      alias: getCampaignParticipantDisplayName({
+        fullName: order.customer?.name,
+        hideNameInCampaigns: order.customer?.hideNameInCampaigns ?? true,
+        userId: order.userId,
+        campaignId,
+      }),
       isPaid: order.isPaid,
       subtotal: order.subtotal,
       shippingFee: order.shippingFee,

@@ -79,8 +79,8 @@ describe("OverviewTab", () => {
     totalPaid: 300,
     totalUnpaid: 250,
     byCustomer: [
-      { customerName: "Alice", total: 110, isPaid: true },
-      { customerName: "Bob", total: 220, isPaid: false },
+      { customerAlias: "Alice", total: 110, isPaid: true },
+      { customerAlias: "Bob", total: 220, isPaid: false },
     ],
     byProduct: [
       { productId: "product-1", productName: "Product A", quantity: 5 },
@@ -135,7 +135,7 @@ describe("OverviewTab", () => {
     });
 
     it("should not render location section when no pickupAddress", () => {
-      render(<OverviewTab {...defaultProps} />);
+      render(<OverviewTab {...defaultProps} canEditCampaign={false} />);
 
       expect(screen.queryByTestId("campaign-location-section")).not.toBeInTheDocument();
     });

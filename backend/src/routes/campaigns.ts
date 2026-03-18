@@ -56,6 +56,9 @@ const createCampaignSchema = z.object({
   pixType: z.enum(["CPF", "CNPJ", "EMAIL", "PHONE", "RANDOM"]).optional(),
   pixName: z.string().optional(),
   pixVisibleAtStatus: z.enum(["ACTIVE", "CLOSED", "SENT", "ARCHIVED"]).default("ACTIVE"),
+  paymentReleaseTrigger: z
+    .enum(["ON_ACTIVE", "ON_CLOSED", "ON_SENT", "ON_SHIPPING_UPDATED"])
+    .optional(),
   // Endereço de retirada (opcional na criação - pode ser adicionado depois)
   pickupZipCode: z.string().regex(/^\d{5}-?\d{3}$/, "CEP deve ter o formato XXXXX-XXX").optional(),
   pickupAddress: z.string().min(1, "Endereço é obrigatório").optional(),
@@ -83,6 +86,9 @@ const updateCampaignSchema = z.object({
   pixType: z.enum(["CPF", "CNPJ", "EMAIL", "PHONE", "RANDOM"]).nullable().optional(),
   pixName: z.string().nullable().optional(),
   pixVisibleAtStatus: z.enum(["ACTIVE", "CLOSED", "SENT", "ARCHIVED"]).optional(),
+  paymentReleaseTrigger: z
+    .enum(["ON_ACTIVE", "ON_CLOSED", "ON_SENT", "ON_SHIPPING_UPDATED"])
+    .optional(),
   // Endereço de retirada (opcional na atualização)
   pickupZipCode: z.string().regex(/^\d{5}-?\d{3}$/).optional(),
   pickupAddress: z.string().min(1).optional(),
@@ -702,9 +708,9 @@ router.post(
       pixType: data.pixType,
       pixName: data.pixName,
       pixVisibleAtStatus: data.pixVisibleAtStatus,
-      paymentReleaseTrigger: PaymentReleaseService.mapPixVisibleAtStatusToTrigger(
-        data.pixVisibleAtStatus
-      ),
+      paymentReleaseTrigger:
+        data.paymentReleaseTrigger ||
+        PaymentReleaseService.mapPixVisibleAtStatusToTrigger(data.pixVisibleAtStatus),
       pickupZipCode: data.pickupZipCode,
       pickupAddress: data.pickupAddress,
       pickupAddressNumber: data.pickupAddressNumber,
@@ -912,7 +918,9 @@ router.patch(
       prismaData.slug = await generateUniqueSlug(data.name, campaignId);
     }
 
-    if (data.pixVisibleAtStatus) {
+    if (data.paymentReleaseTrigger) {
+      prismaData.paymentReleaseTrigger = data.paymentReleaseTrigger;
+    } else if (data.pixVisibleAtStatus) {
       prismaData.paymentReleaseTrigger = PaymentReleaseService.mapPixVisibleAtStatusToTrigger(
         data.pixVisibleAtStatus
       );

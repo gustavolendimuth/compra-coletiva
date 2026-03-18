@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card, PixDisplay } from "@/components/ui";
+import { Card, PixDisplay, PaymentPendingNotice } from "@/components/ui";
 import { CampaignChat } from "@/components/campaign";
 import { Skeleton } from "@/components/Skeleton";
 import { formatCurrency } from "@/lib/utils";
@@ -7,6 +7,11 @@ import { getImageUrl } from "@/lib/imageUrl";
 import { Order, Product, CampaignAnalytics, Campaign } from "@/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { CampaignLocationSection } from "../CampaignLocationSection";
+import {
+  canShowPaymentPendingNotice,
+  canShowPixToBuyer,
+  getPaymentReleaseTrigger,
+} from "@/lib/paymentRelease";
 
 interface OverviewTabProps {
   campaign: Campaign;
@@ -76,12 +81,13 @@ export function OverviewTab({
 
   const userOrder = user ? orders.find(o => o.userId === user.id) : undefined;
 
-  const shouldShowPix =
-    campaign.pixKey &&
-    campaign.pixType &&
-    campaign.status !== "ARCHIVED" &&
-    campaign.status === campaign.pixVisibleAtStatus &&
-    userOrder !== undefined;
+  const paymentReleaseTrigger = getPaymentReleaseTrigger(
+    campaign.paymentReleaseTrigger,
+    campaign.pixVisibleAtStatus
+  );
+  const hasUserOrder = userOrder !== undefined;
+  const shouldShowPix = canShowPixToBuyer(campaign, hasUserOrder);
+  const shouldShowPaymentPending = canShowPaymentPendingNotice(campaign, hasUserOrder);
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
@@ -111,6 +117,13 @@ export function OverviewTab({
           pixName={campaign.pixName}
           userOrder={userOrder}
           onUploadProof={onTogglePayment}
+        />
+      )}
+
+      {shouldShowPaymentPending && (
+        <PaymentPendingNotice
+          paymentReleaseTrigger={paymentReleaseTrigger}
+          campaignStatus={campaign.status}
         />
       )}
 

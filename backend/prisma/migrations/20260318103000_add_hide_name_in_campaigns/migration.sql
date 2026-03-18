@@ -1,0 +1,2 @@
+ALTER TABLE "users"
+  ADD COLUMN IF NOT EXISTS "hideNameInCampaigns" BOOLEAN NOT NULL DEFAULT false;

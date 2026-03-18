@@ -40,6 +40,7 @@ export default function AuthCallback() {
       const phoneCompleted = searchParams?.get('phoneCompleted');
       const addressCompleted = searchParams?.get('addressCompleted');
       const legalAcceptanceRequired = searchParams?.get('legalAcceptanceRequired');
+      const hideNameInCampaigns = searchParams?.get('hideNameInCampaigns');
 
       if (!accessToken || !userId || !userName || !userEmail || !userRole) {
         toast.error('Dados de autenticação incompletos');
@@ -56,6 +57,7 @@ export default function AuthCallback() {
         phoneCompleted: phoneCompleted === 'true',
         addressCompleted: addressCompleted === 'true',
         legalAcceptanceRequired: legalAcceptanceRequired === 'true',
+        hideNameInCampaigns: hideNameInCampaigns === 'true',
       };
       authStorage.setAuth(accessToken, userData);
 

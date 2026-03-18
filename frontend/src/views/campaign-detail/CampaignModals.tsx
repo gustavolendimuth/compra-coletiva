@@ -152,13 +152,13 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
         pixKey={hook.pixKey}
         pixType={hook.pixType}
         pixName={hook.pixName}
-        pixVisibleAtStatus={hook.pixVisibleAtStatus}
+        paymentReleaseTrigger={hook.paymentReleaseTrigger}
         isPending={hook.updatePixMutation?.isPending || false}
         onClose={() => hook.setIsPixModalOpen(false)}
         onChangePixKey={hook.setPixKey}
         onChangePixType={hook.setPixType}
         onChangePixName={hook.setPixName}
-        onChangePixVisibleAtStatus={hook.setPixVisibleAtStatus}
+        onChangePaymentReleaseTrigger={hook.setPaymentReleaseTrigger}
         onSubmit={hook.handleUpdatePix}
         onRemove={hook.handleRemovePix}
       />
