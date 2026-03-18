@@ -4,7 +4,13 @@
  */
 
 import { apiClient } from '../client';
-import type { Order, CreateOrderDto, UpdateOrderDto, UpdateOrderWithItemsDto } from '../types';
+import type {
+  Order,
+  PublicOrdersResponse,
+  CreateOrderDto,
+  UpdateOrderDto,
+  UpdateOrderWithItemsDto,
+} from '../types';
 
 export const orderService = {
   /**
@@ -14,6 +20,20 @@ export const orderService = {
    */
   getByCampaign: (campaignId: string) =>
     apiClient.get<Order[]>('/orders', { params: { campaignId } }).then(res => res.data),
+
+  /**
+   * Get public campaign transparency data (masked aliases + aggregates)
+   */
+  getPublicByCampaign: (campaignId: string) =>
+    apiClient
+      .get<PublicOrdersResponse>('/orders/public', { params: { campaignId } })
+      .then((res) => res.data),
+
+  /**
+   * Get current authenticated user's order for a campaign
+   */
+  getMyByCampaign: (campaignId: string) =>
+    apiClient.get<Order | null>('/orders/my', { params: { campaignId } }).then((res) => res.data),
 
   /**
    * Create a new order

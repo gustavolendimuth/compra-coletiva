@@ -33,15 +33,15 @@ export default function AuthCallback() {
 
       // Extract tokens and user data from URL
       const accessToken = searchParams?.get('accessToken');
-      const refreshToken = searchParams?.get('refreshToken');
       const userId = searchParams?.get('userId');
       const userName = searchParams?.get('userName');
       const userEmail = searchParams?.get('userEmail');
       const userRole = searchParams?.get('userRole');
       const phoneCompleted = searchParams?.get('phoneCompleted');
       const addressCompleted = searchParams?.get('addressCompleted');
+      const legalAcceptanceRequired = searchParams?.get('legalAcceptanceRequired');
 
-      if (!accessToken || !refreshToken || !userId || !userName || !userEmail || !userRole) {
+      if (!accessToken || !userId || !userName || !userEmail || !userRole) {
         toast.error('Dados de autenticação incompletos');
         router.push('/campanhas');
         return;
@@ -55,8 +55,9 @@ export default function AuthCallback() {
         role: userRole as 'ADMIN' | 'CAMPAIGN_CREATOR' | 'CUSTOMER',
         phoneCompleted: phoneCompleted === 'true',
         addressCompleted: addressCompleted === 'true',
+        legalAcceptanceRequired: legalAcceptanceRequired === 'true',
       };
-      authStorage.setAuth(accessToken, refreshToken, userData);
+      authStorage.setAuth(accessToken, userData);
 
       // Update React auth state (AuthContext) so downstream pages have user data
       setUser(userData);
@@ -65,7 +66,11 @@ export default function AuthCallback() {
       reconnectSocket();
 
       // Check if user needs to complete phone or address registration
-      if (phoneCompleted === 'false' || addressCompleted === 'false') {
+      if (
+        legalAcceptanceRequired === 'true' ||
+        phoneCompleted === 'false' ||
+        addressCompleted === 'false'
+      ) {
         console.log('[AuthCallback] Usuário precisa completar perfil, redirecionando...');
         if (!hasShownToast.current) {
           toast.success(`Bem-vindo, ${decodeURIComponent(userName)}!`);

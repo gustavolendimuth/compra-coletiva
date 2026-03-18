@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../index';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
-import { requireAuth, requireOrderOwnership, requireOrderOrCampaignOwnership, optionalAuth } from '../middleware/authMiddleware';
+import { requireAuth, requireOrderOwnership, requireOrderOrCampaignOwnership } from '../middleware/authMiddleware';
 import { z } from 'zod';
 import { ShippingCalculator } from '../services/shippingCalculator';
 import { emitOrderCreated, emitOrderUpdated, emitOrderDeleted, emitOrderStatusChanged } from '../services/socketService';
@@ -12,6 +12,9 @@ import { uploadPaymentProof, handleUploadError } from '../middleware/uploadMiddl
 import { ImageUploadService } from '../services/imageUploadService';
 import { capitalizeName } from '../utils/nameFormatter';
 import { queueOrderCreatedEmail } from '../services/email/emailQueue';
+import { generatePublicAlias } from '../utils/publicAlias';
+import { LEGAL_SALES_DISCLAIMER_VERSION } from '../config/legal';
+import { LegalAcceptanceService } from '../services/legalAcceptanceService';
 
 const router = Router();
 
@@ -46,9 +49,114 @@ const addItemSchema = z.object({
   quantity: z.number().int().min(1)
 });
 
-// GET /api/orders?campaignId=xxx - Lista pedidos de um grupo
-// Opcional auth: compradores também veem todos os pedidos da campanha
-router.get('/', optionalAuth, asyncHandler(async (req, res) => {
+// GET /api/orders/public?campaignId=xxx - Transparência pública com apelido + agregados
+router.get('/public', asyncHandler(async (req, res) => {
+  const { campaignId } = req.query;
+
+  if (!campaignId || typeof campaignId !== 'string') {
+    throw new AppError(400, 'campaignId is required');
+  }
+
+  const orders = await prisma.order.findMany({
+    where: { campaignId },
+    select: {
+      userId: true,
+      isPaid: true,
+      subtotal: true,
+      shippingFee: true,
+      total: true,
+      createdAt: true,
+      items: {
+        select: {
+          quantity: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  const publicOrders = orders.map((order) => {
+    const quantityTotal = order.items.reduce((sum, item) => sum + item.quantity, 0);
+    return {
+      alias: generatePublicAlias(order.userId, campaignId),
+      isPaid: order.isPaid,
+      subtotal: order.subtotal,
+      shippingFee: order.shippingFee,
+      total: order.total,
+      itemsCount: order.items.length,
+      quantityTotal,
+      createdAt: order.createdAt,
+    };
+  });
+
+  const totals = publicOrders.reduce(
+    (acc, order) => {
+      acc.orders += 1;
+      acc.totalWithShipping += order.total;
+      acc.totalWithoutShipping += order.subtotal;
+      acc.totalShipping += order.shippingFee;
+      acc.totalItems += order.itemsCount;
+      acc.totalQuantity += order.quantityTotal;
+      if (order.isPaid) {
+        acc.paidTotal += order.total;
+      } else {
+        acc.unpaidTotal += order.total;
+      }
+      return acc;
+    },
+    {
+      orders: 0,
+      totalWithShipping: 0,
+      totalWithoutShipping: 0,
+      totalShipping: 0,
+      totalItems: 0,
+      totalQuantity: 0,
+      paidTotal: 0,
+      unpaidTotal: 0,
+    }
+  );
+
+  res.json({
+    campaignId,
+    totals,
+    orders: publicOrders,
+  });
+}));
+
+// GET /api/orders/my?campaignId=xxx - Pedido do usuário autenticado na campanha
+router.get('/my', requireAuth, asyncHandler(async (req, res) => {
+  const { campaignId } = req.query;
+
+  if (!campaignId || typeof campaignId !== 'string') {
+    throw new AppError(400, 'campaignId is required');
+  }
+
+  const order = await prisma.order.findFirst({
+    where: {
+      campaignId,
+      userId: req.user!.id,
+    },
+    include: {
+      items: {
+        include: {
+          product: true,
+        },
+      },
+      customer: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+  });
+
+  res.json(order);
+}));
+
+// GET /api/orders?campaignId=xxx - Lista completa para gestão (criador/admin)
+router.get('/', requireAuth, asyncHandler(async (req, res) => {
   const { campaignId } = req.query;
   const requestId = Math.random().toString(36).slice(2, 8);
   const totalStart = Date.now();
@@ -57,40 +165,54 @@ router.get('/', optionalAuth, asyncHandler(async (req, res) => {
     throw new AppError(400, 'campaignId is required');
   }
 
-  const whereClause: Prisma.OrderWhereInput = { campaignId };
+  const campaign = await prisma.campaign.findUnique({
+    where: { id: campaignId },
+    select: { creatorId: true },
+  });
+
+  if (!campaign) {
+    throw new AppError(404, 'Campaign not found');
+  }
+
+  const isAdmin = req.user!.role === 'ADMIN';
+  const isCreator = campaign.creatorId === req.user!.id;
+
+  if (!isAdmin && !isCreator) {
+    throw new AppError(403, 'Você não tem permissão para visualizar os pedidos desta campanha');
+  }
 
   const fetchStart = Date.now();
   const orders = await prisma.order.findMany({
-    where: whereClause,
+    where: { campaignId },
     include: {
       items: {
         include: {
-          product: true
-        }
+          product: true,
+        },
       },
       customer: {
         select: {
           id: true,
           name: true,
-          email: true
-        }
-      }
+          email: true,
+        },
+      },
     },
-    orderBy: { createdAt: 'asc' }
+    orderBy: { createdAt: 'asc' },
   });
   const fetchMs = Date.now() - fetchStart;
 
   const itemsCount = orders.reduce((sum, order) => sum + (order.items?.length || 0), 0);
   const totalMs = Date.now() - totalStart;
   console.log(
-    `[Perf] GET /api/orders campaignId=${campaignId} user=${req.user?.id || 'anon'} role=${req.user?.role || 'anon'} orders=${orders.length} items=${itemsCount} fetchMs=${fetchMs} totalMs=${totalMs} req=${requestId}`
+    `[Perf] GET /api/orders campaignId=${campaignId} user=${req.user!.id} role=${req.user!.role} orders=${orders.length} items=${itemsCount} fetchMs=${fetchMs} totalMs=${totalMs} req=${requestId}`
   );
 
   res.json(orders);
 }));
 
 // GET /api/orders/:id - Busca um pedido específico
-router.get('/:id', asyncHandler(async (req, res) => {
+router.get('/:id', requireAuth, requireOrderOrCampaignOwnership, asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   const order = await prisma.order.findUnique({
@@ -140,6 +262,22 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
 
   if (canCreateForAnotherUser && data.userId && data.customer) {
     throw new AppError(400, 'Provide either userId or customer, not both');
+  }
+
+  if (
+    req.user!.role !== 'ADMIN' &&
+    !LegalAcceptanceService.hasAcceptedCurrentSalesDisclaimer(
+      req.user!,
+      LEGAL_SALES_DISCLAIMER_VERSION
+    )
+  ) {
+    res.status(403).json({
+      error: 'SALES_DISCLAIMER_REQUIRED',
+      message:
+        'Você precisa confirmar ciência da isenção de responsabilidade sobre vendas antes de criar pedidos.',
+      requiredVersion: LEGAL_SALES_DISCLAIMER_VERSION,
+    });
+    return;
   }
 
   const normalizePhone = (value?: string): string | undefined => {

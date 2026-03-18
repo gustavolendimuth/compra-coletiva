@@ -133,6 +133,7 @@ export const configurePassport = () => {
                 role: 'CUSTOMER', // Default role
                 phoneCompleted: false, // OAuth users need to complete phone
                 addressCompleted: false, // OAuth users need to complete address
+                legalAcceptanceRequired: true, // Aceite legal obrigatório para novos usuários OAuth
               },
             });
 

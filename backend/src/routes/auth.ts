@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaClient, Prisma, LegalDocumentType } from "@prisma/client";
 import { z } from "zod";
 import crypto from "crypto";
 import passport from "passport";
@@ -14,10 +14,26 @@ import {
 import { capitalizeName } from "../utils/nameFormatter";
 import { queueWelcomeEmail, queuePasswordResetEmail } from "../services/email/emailQueue";
 import { geocodingService } from "../services/geocodingService";
+import {
+  LEGAL_ACCEPTANCE_CONTEXT,
+  LEGAL_PRIVACY_VERSION,
+  LEGAL_TERMS_VERSION,
+} from "../config/legal";
+import { LegalAcceptanceService } from "../services/legalAcceptanceService";
 
 const router = Router();
 const prisma = new PrismaClient();
-type OAuthUser = Prisma.UserGetPayload<{ select: { id: true; name: true; email: true; role: true; phoneCompleted: true; addressCompleted: true; } }>;
+type OAuthUser = Prisma.UserGetPayload<{
+  select: {
+    id: true;
+    name: true;
+    email: true;
+    role: true;
+    phoneCompleted: true;
+    addressCompleted: true;
+    legalAcceptanceRequired: true;
+  };
+}>;
 
 // ========== HELPER FUNCTIONS ==========
 
@@ -95,6 +111,18 @@ const registerSchema = z.object({
   email: z.preprocess(normalizeEmail, z.string().email("Email inválido")),
   password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
   phone: phoneSchema,
+  acceptTerms: z
+    .boolean()
+    .refine(
+      (value) => value === true,
+      "Você precisa aceitar os Termos de Serviço para criar uma conta"
+    ),
+  acceptPrivacy: z
+    .boolean()
+    .refine(
+      (value) => value === true,
+      "Você precisa aceitar a Política de Privacidade para criar uma conta"
+    ),
 });
 
 const loginSchema = z.object({
@@ -237,17 +265,47 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
     // Hash da senha
     const hashedPassword = await AuthService.hashPassword(password);
 
-    // Cria usuário
-    const user = await prisma.user.create({
-      data: {
-        name: capitalizeName(name),
-        email,
-        password: hashedPassword,
-        phone,
-        phoneCompleted: true, // Email/password users provide phone during registration
-        addressCompleted: false, // Users need to complete address after first login
-        role: "CUSTOMER", // Default role
-      },
+    const acceptedAt = new Date();
+
+    // Cria usuário já com aceite legal registrado
+    const user = await prisma.$transaction(async (tx) => {
+      const createdUser = await tx.user.create({
+        data: {
+          name: capitalizeName(name),
+          email,
+          password: hashedPassword,
+          phone,
+          phoneCompleted: true, // Email/password users provide phone during registration
+          addressCompleted: false, // Users need to complete address after first login
+          role: "CUSTOMER", // Default role
+          legalAcceptanceRequired: false,
+          termsAcceptedAt: acceptedAt,
+          termsAcceptedVersion: LEGAL_TERMS_VERSION,
+          privacyAcceptedAt: acceptedAt,
+          privacyAcceptedVersion: LEGAL_PRIVACY_VERSION,
+        },
+      });
+
+      await Promise.all([
+        LegalAcceptanceService.recordAcceptance({
+          userId: createdUser.id,
+          documentType: LegalDocumentType.TERMS,
+          documentVersion: LEGAL_TERMS_VERSION,
+          context: LEGAL_ACCEPTANCE_CONTEXT.REGISTER,
+          req,
+          tx,
+        }),
+        LegalAcceptanceService.recordAcceptance({
+          userId: createdUser.id,
+          documentType: LegalDocumentType.PRIVACY,
+          documentVersion: LEGAL_PRIVACY_VERSION,
+          context: LEGAL_ACCEPTANCE_CONTEXT.REGISTER,
+          req,
+          tx,
+        }),
+      ]);
+
+      return createdUser;
     });
 
     // Gera tokens
@@ -284,11 +342,17 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
         email: user.email,
         phone: user.phone,
         phoneCompleted: user.phoneCompleted,
+        addressCompleted: user.addressCompleted,
+        legalAcceptanceRequired: user.legalAcceptanceRequired,
+        termsAcceptedAt: user.termsAcceptedAt,
+        termsAcceptedVersion: user.termsAcceptedVersion,
+        privacyAcceptedAt: user.privacyAcceptedAt,
+        privacyAcceptedVersion: user.privacyAcceptedVersion,
+        salesDisclaimerAcceptedAt: user.salesDisclaimerAcceptedAt,
+        salesDisclaimerAcceptedVersion: user.salesDisclaimerAcceptedVersion,
         role: user.role,
       },
       accessToken: tokens.accessToken,
-      // refreshToken is now in HttpOnly cookie, but still send in body for backward compatibility
-      refreshToken: tokens.refreshToken,
     });
   } catch (error) {
     console.error("Erro ao registrar usuário:", error);
@@ -381,11 +445,17 @@ router.post("/login", async (req: Request, res: Response): Promise<void> => {
         email: user.email,
         phone: user.phone,
         phoneCompleted: user.phoneCompleted,
+        addressCompleted: user.addressCompleted,
+        legalAcceptanceRequired: user.legalAcceptanceRequired,
+        termsAcceptedAt: user.termsAcceptedAt,
+        termsAcceptedVersion: user.termsAcceptedVersion,
+        privacyAcceptedAt: user.privacyAcceptedAt,
+        privacyAcceptedVersion: user.privacyAcceptedVersion,
+        salesDisclaimerAcceptedAt: user.salesDisclaimerAcceptedAt,
+        salesDisclaimerAcceptedVersion: user.salesDisclaimerAcceptedVersion,
         role: user.role,
       },
       accessToken: tokens.accessToken,
-      // refreshToken is now in HttpOnly cookie, but still send in body for backward compatibility
-      refreshToken: tokens.refreshToken,
     });
   } catch (error) {
     console.error("Erro ao fazer login:", error);
@@ -399,13 +469,11 @@ router.post("/login", async (req: Request, res: Response): Promise<void> => {
 /**
  * POST /api/auth/refresh
  * Renova o access token usando refresh token
- * Reads refresh token from HttpOnly cookie (preferred) or request body (fallback)
+ * Lê refresh token apenas de cookie HttpOnly
  */
 router.post("/refresh", async (req: Request, res: Response): Promise<void> => {
   try {
-    // Try to get refresh token from cookie first, then fallback to body
-    const refreshToken =
-      req.cookies?.[REFRESH_TOKEN_COOKIE_NAME] || req.body?.refreshToken;
+    const refreshToken = req.cookies?.[REFRESH_TOKEN_COOKIE_NAME];
 
     if (!refreshToken) {
       res.status(400).json({
@@ -467,6 +535,14 @@ router.post("/refresh", async (req: Request, res: Response): Promise<void> => {
         email: user.email,
         phone: user.phone,
         phoneCompleted: user.phoneCompleted,
+        addressCompleted: user.addressCompleted,
+        legalAcceptanceRequired: user.legalAcceptanceRequired,
+        termsAcceptedAt: user.termsAcceptedAt,
+        termsAcceptedVersion: user.termsAcceptedVersion,
+        privacyAcceptedAt: user.privacyAcceptedAt,
+        privacyAcceptedVersion: user.privacyAcceptedVersion,
+        salesDisclaimerAcceptedAt: user.salesDisclaimerAcceptedAt,
+        salesDisclaimerAcceptedVersion: user.salesDisclaimerAcceptedVersion,
         role: user.role,
       },
     });
@@ -482,16 +558,14 @@ router.post("/refresh", async (req: Request, res: Response): Promise<void> => {
 /**
  * POST /api/auth/logout
  * Faz logout revogando o refresh token
- * Reads refresh token from HttpOnly cookie (preferred) or request body (fallback)
+ * Lê refresh token apenas de cookie HttpOnly
  */
 router.post(
   "/logout",
   requireAuth,
   async (req: Request, res: Response): Promise<void> => {
     try {
-      // Try to get refresh token from cookie first, then fallback to body
-      const refreshToken =
-        req.cookies?.[REFRESH_TOKEN_COOKIE_NAME] || req.body?.refreshToken;
+      const refreshToken = req.cookies?.[REFRESH_TOKEN_COOKIE_NAME];
 
       if (refreshToken) {
         await TokenService.revokeRefreshToken(refreshToken);
@@ -538,6 +612,13 @@ router.get(
           phone: req.user.phone,
           phoneCompleted: req.user.phoneCompleted,
           addressCompleted: req.user.addressCompleted,
+          legalAcceptanceRequired: req.user.legalAcceptanceRequired,
+          termsAcceptedAt: req.user.termsAcceptedAt,
+          termsAcceptedVersion: req.user.termsAcceptedVersion,
+          privacyAcceptedAt: req.user.privacyAcceptedAt,
+          privacyAcceptedVersion: req.user.privacyAcceptedVersion,
+          salesDisclaimerAcceptedAt: req.user.salesDisclaimerAcceptedAt,
+          salesDisclaimerAcceptedVersion: req.user.salesDisclaimerAcceptedVersion,
           role: req.user.role,
           createdAt: req.user.createdAt,
           defaultZipCode: req.user.defaultZipCode,
@@ -615,19 +696,18 @@ router.get(
         getRefreshTokenCookieOptions()
       );
 
-      // Redireciona para o frontend com access token only (refresh token is in cookie)
-      // Keep refreshToken in URL for backward compatibility during transition
+      // Redireciona para o frontend apenas com access token (refresh token fica no cookie HttpOnly)
       const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
       res.redirect(
         `${frontendUrl}/auth/callback?` +
           `accessToken=${tokens.accessToken}&` +
-          `refreshToken=${tokens.refreshToken}&` +
           `userId=${encodeURIComponent(user.id)}&` +
           `userName=${encodeURIComponent(user.name)}&` +
           `userEmail=${encodeURIComponent(user.email)}&` +
           `userRole=${user.role}&` +
           `phoneCompleted=${user.phoneCompleted || false}&` +
-          `addressCompleted=${user.addressCompleted || false}`
+          `addressCompleted=${user.addressCompleted || false}&` +
+          `legalAcceptanceRequired=${user.legalAcceptanceRequired || false}`
       );
     } catch (error) {
       console.error("Erro no callback do Google:", error);
@@ -706,8 +786,7 @@ router.post(
       res.json({
         message:
           "Se o email existir em nossa base, você receberá instruções para resetar sua senha",
-        // Em desenvolvimento, retornar o token (remover em produção)
-        ...(process.env.NODE_ENV === "development" && { token }),
+        ...(process.env.EXPOSE_RESET_TOKEN_IN_RESPONSE === "true" && { token }),
       });
     } catch (error) {
       console.error("Erro ao solicitar reset de senha:", error);
@@ -936,6 +1015,14 @@ router.patch(
           phone: true,
           role: true,
           phoneCompleted: true,
+          addressCompleted: true,
+          legalAcceptanceRequired: true,
+          termsAcceptedAt: true,
+          termsAcceptedVersion: true,
+          privacyAcceptedAt: true,
+          privacyAcceptedVersion: true,
+          salesDisclaimerAcceptedAt: true,
+          salesDisclaimerAcceptedVersion: true,
         },
       });
 
@@ -1031,6 +1118,13 @@ router.patch(
           role: true,
           phoneCompleted: true,
           addressCompleted: true,
+          legalAcceptanceRequired: true,
+          termsAcceptedAt: true,
+          termsAcceptedVersion: true,
+          privacyAcceptedAt: true,
+          privacyAcceptedVersion: true,
+          salesDisclaimerAcceptedAt: true,
+          salesDisclaimerAcceptedVersion: true,
           defaultZipCode: true,
           defaultAddress: true,
           defaultAddressNumber: true,

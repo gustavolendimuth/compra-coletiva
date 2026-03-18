@@ -13,6 +13,7 @@ import {
 import { ImageUploadModal } from './modals/ImageUploadModal';
 import { PaymentProofModal } from './modals/PaymentProofModal';
 import { useCampaignDetail } from './useCampaignDetail';
+import { Button, Modal } from '@/components/ui';
 
 interface CampaignModalsProps {
   hook: ReturnType<typeof useCampaignDetail>;
@@ -25,18 +26,24 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
         isOpen={hook.isProductModalOpen}
         form={hook.productForm}
         isPending={hook.createProductMutation?.isPending || false}
-        onClose={() => hook.setIsProductModalOpen(false)}
+        onClose={hook.closeAddProductModal}
         onChange={(form) => hook.setProductForm(form)}
         onSubmit={hook.handleCreateProduct}
+        onImageSelect={hook.handleNewProductImageSelect}
+        onImageRemove={hook.handleNewProductImageRemove}
       />
 
       <EditProductModal
         isOpen={hook.isEditProductModalOpen}
         form={hook.editProductForm}
         isPending={hook.updateProductMutation?.isPending || false}
-        onClose={() => hook.setIsEditProductModalOpen(false)}
+        onClose={hook.closeEditProductModal}
         onChange={(form) => hook.setEditProductForm(form)}
         onSubmit={hook.handleEditProduct}
+        currentImageUrl={hook.editProductForm.imageUrl}
+        shouldHideCurrentImage={hook.shouldRemoveEditProductImage}
+        onImageSelect={hook.handleEditProductImageSelect}
+        onImageRemove={hook.handleEditProductImageRemove}
       />
 
       <EditOrderModal
@@ -65,6 +72,37 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
         onChange={(form) => hook.setAdminCustomerForm(form)}
         onSubmit={hook.handleCreateAdminOrder}
       />
+
+      <Modal
+        isOpen={hook.isSalesDisclaimerModalOpen}
+        onClose={hook.handleCancelSalesDisclaimer}
+        title="Confirmação de Isenção de Vendas"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-sky-900 leading-relaxed">
+            Antes de criar pedido, confirme ciência: a plataforma não realiza a venda e não se responsabiliza por transações entre usuários.
+          </p>
+          <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
+            <Button
+              variant="secondary"
+              onClick={hook.handleCancelSalesDisclaimer}
+              disabled={hook.isSalesDisclaimerLoading}
+              className="w-full sm:w-auto"
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              onClick={hook.handleConfirmSalesDisclaimer}
+              disabled={hook.isSalesDisclaimerLoading}
+              className="w-full sm:w-auto"
+            >
+              {hook.isSalesDisclaimerLoading ? "Registrando..." : "Confirmo a ciência"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <ViewOrderModal
         isOpen={hook.isViewOrderModalOpen}

@@ -11,6 +11,7 @@ import {
   analyticsApi,
   Product,
   CreateProductDto,
+  UpdateProductDto,
 } from "@/api";
 import { Order } from "@/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,6 +25,13 @@ interface ProductForm {
   price: string;
   weight: string;
   imageUrl?: string;
+}
+
+interface UpdateProductPayload {
+  productId: string;
+  data: UpdateProductDto;
+  imageFile?: File | null;
+  removeImage?: boolean;
 }
 
 type SortField =
@@ -84,6 +92,9 @@ export function useCampaignDetail() {
     weight: "",
     imageUrl: "",
   });
+  const [newProductImageFile, setNewProductImageFile] = useState<File | null>(null);
+  const [editProductImageFile, setEditProductImageFile] = useState<File | null>(null);
+  const [shouldRemoveEditProductImage, setShouldRemoveEditProductImage] = useState(false);
 
   const [shippingCost, setShippingCost] = useState("");
   const [deadlineForm, setDeadlineForm] = useState("");
@@ -133,6 +144,10 @@ export function useCampaignDetail() {
   };
 
   const campaignId = campaign?.id;
+  const canViewAllOrders =
+    !!campaign &&
+    !!user &&
+    (user.role === "ADMIN" || campaign.creatorId === user.id);
 
   const { data: products, isLoading: isProductsLoading } = useQuery({
     queryKey: ["products", campaignId],
@@ -141,8 +156,23 @@ export function useCampaignDetail() {
   });
 
   const { data: orders, isLoading: isOrdersLoading } = useQuery({
-    queryKey: ["orders", campaignId],
-    queryFn: () => orderApi.getByCampaign(campaignId!),
+    queryKey: ["orders", campaignId, user?.id, canViewAllOrders ? "all" : "mine"],
+    queryFn: async () => {
+      if (!campaignId) {
+        return [];
+      }
+
+      if (canViewAllOrders) {
+        return orderApi.getByCampaign(campaignId);
+      }
+
+      if (!user) {
+        return [];
+      }
+
+      const myOrder = await orderApi.getMyByCampaign(campaignId);
+      return myOrder ? [myOrder] : [];
+    },
     enabled: !!campaignId,
   });
 
@@ -180,8 +210,15 @@ export function useCampaignDetail() {
   const orderModal = useOrderModal({
     orders,
     campaignId,
-    user: user ? { id: user.id, name: user.name, role: user.role } : null,
-    canCreateOrdersForOthers: !!canEditCampaign || user?.role === "ADMIN",
+    user: user
+      ? {
+          id: user.id,
+          name: user.name,
+          role: user.role,
+          salesDisclaimerAcceptedVersion: user.salesDisclaimerAcceptedVersion,
+        }
+      : null,
+    canCreateOrdersForOthers: canViewAllOrders,
     isActive,
     requireAuth,
     products: alphabeticalProducts,
@@ -293,7 +330,21 @@ export function useCampaignDetail() {
 
   // Product mutations
   const createProductMutation = useMutation({
-    mutationFn: productApi.create,
+    mutationFn: async ({
+      data,
+      imageFile,
+    }: {
+      data: CreateProductDto;
+      imageFile?: File | null;
+    }) => {
+      const createdProduct = await productApi.create(data);
+
+      if (imageFile) {
+        await productApi.uploadImage(createdProduct.id, imageFile);
+      }
+
+      return createdProduct;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products", campaignId] });
       toast.success("Produto adicionado!");
@@ -304,18 +355,30 @@ export function useCampaignDetail() {
         weight: "",
         imageUrl: "",
       });
+      setNewProductImageFile(null);
     },
     onError: () => toast.error("Erro ao adicionar produto"),
   });
 
   const updateProductMutation = useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       productId,
       data,
-    }: {
-      productId: string;
-      data: Partial<Product>;
-    }) => productApi.update(productId, data),
+      imageFile,
+      removeImage,
+    }: UpdateProductPayload) => {
+      const updatedProduct = await productApi.update(productId, data);
+
+      if (removeImage && !imageFile) {
+        await productApi.deleteImage(productId);
+      }
+
+      if (imageFile) {
+        await productApi.uploadImage(productId, imageFile);
+      }
+
+      return updatedProduct;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products", campaignId] });
       queryClient.invalidateQueries({ queryKey: ["orders", campaignId] });
@@ -323,6 +386,8 @@ export function useCampaignDetail() {
       toast.success("Produto atualizado!");
       setIsEditProductModalOpen(false);
       setEditingProduct(null);
+      setEditProductImageFile(null);
+      setShouldRemoveEditProductImage(false);
     },
     onError: () => toast.error("Erro ao atualizar produto"),
   });
@@ -485,19 +550,27 @@ export function useCampaignDetail() {
       weight: parseFloat(productForm.weight) || 0,
     };
 
-    createProductMutation.mutate(payload);
+    createProductMutation.mutate({
+      data: payload,
+      imageFile: newProductImageFile,
+    });
   };
 
   const handleEditProduct = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProduct) return;
+
+    const payload: UpdateProductDto = {
+      name: editProductForm.name,
+      price: parseFloat(editProductForm.price) || 0,
+      weight: parseFloat(editProductForm.weight) || 0,
+    };
+
     updateProductMutation.mutate({
       productId: editingProduct.id,
-      data: {
-        ...editProductForm,
-        price: parseFloat(editProductForm.price) || 0,
-        weight: parseFloat(editProductForm.weight) || 0,
-      },
+      data: payload,
+      imageFile: editProductImageFile,
+      removeImage: shouldRemoveEditProductImage,
     });
   };
 
@@ -507,13 +580,45 @@ export function useCampaignDetail() {
       name: product.name,
       price: String(product.price),
       weight: String(product.weight),
-      imageUrl: "",
+      imageUrl: product.imageUrl || "",
     });
+    setEditProductImageFile(null);
+    setShouldRemoveEditProductImage(false);
     setIsEditProductModalOpen(true);
   };
 
   const handleDeleteProduct = (productId: string) => {
     deleteProductMutation.mutate(productId);
+  };
+
+  const handleNewProductImageSelect = (file: File) => {
+    setNewProductImageFile(file);
+  };
+
+  const handleNewProductImageRemove = () => {
+    setNewProductImageFile(null);
+  };
+
+  const handleEditProductImageSelect = (file: File) => {
+    setEditProductImageFile(file);
+    setShouldRemoveEditProductImage(false);
+  };
+
+  const handleEditProductImageRemove = () => {
+    setEditProductImageFile(null);
+    setShouldRemoveEditProductImage(Boolean(editingProduct?.imageUrl));
+  };
+
+  const closeAddProductModal = () => {
+    setIsProductModalOpen(false);
+    setNewProductImageFile(null);
+  };
+
+  const closeEditProductModal = () => {
+    setIsEditProductModalOpen(false);
+    setEditingProduct(null);
+    setEditProductImageFile(null);
+    setShouldRemoveEditProductImage(false);
   };
 
   // Campaign handlers
@@ -819,13 +924,18 @@ export function useCampaignDetail() {
     // Product Modal State
     isProductModalOpen,
     setIsProductModalOpen,
+    closeAddProductModal,
     productForm,
     setProductForm,
+    newProductImageFile,
     isEditProductModalOpen,
     setIsEditProductModalOpen,
+    closeEditProductModal,
     editingProduct,
     editProductForm,
     setEditProductForm,
+    editProductImageFile,
+    shouldRemoveEditProductImage,
 
     // Order Modal State (delegated to useOrderModal)
     ...orderModal,
@@ -902,6 +1012,10 @@ export function useCampaignDetail() {
     handleEditProduct,
     openEditProductModal,
     handleDeleteProduct,
+    handleNewProductImageSelect,
+    handleNewProductImageRemove,
+    handleEditProductImageSelect,
+    handleEditProductImageRemove,
     handleUpdateShipping,
     handleUpdateDeadline,
     handleRemoveDeadline,

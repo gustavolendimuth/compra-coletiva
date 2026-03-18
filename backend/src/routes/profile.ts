@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaClient, Prisma, LegalDocumentType } from "@prisma/client";
 import { z } from "zod";
 import crypto from "crypto";
 import { requireAuth } from "../middleware/authMiddleware";
@@ -8,6 +8,13 @@ import { ImageUploadService } from "../services/imageUploadService";
 import { uploadAvatar, handleUploadError } from "../middleware/uploadMiddleware";
 import { capitalizeName } from "../utils/nameFormatter";
 import { queueEmailVerificationEmail } from "../services/email/emailQueue";
+import {
+  LEGAL_ACCEPTANCE_CONTEXT,
+  LEGAL_PRIVACY_VERSION,
+  LEGAL_SALES_DISCLAIMER_VERSION,
+  LEGAL_TERMS_VERSION,
+} from "../config/legal";
+import { LegalAcceptanceService } from "../services/legalAcceptanceService";
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -47,6 +54,21 @@ const verifyEmailSchema = z.object({
 const deleteAccountSchema = z.object({
   password: z.string().optional(),
   reason: z.string().max(500).optional(),
+});
+
+const legalAcceptanceSchema = z.object({
+  acceptTerms: z
+    .boolean()
+    .refine((value) => value === true, "Aceite dos Termos é obrigatório"),
+  acceptPrivacy: z
+    .boolean()
+    .refine((value) => value === true, "Aceite da Política de Privacidade é obrigatório"),
+});
+
+const salesDisclaimerSchema = z.object({
+  accepted: z
+    .boolean()
+    .refine((value) => value === true, "Você precisa confirmar ciência da isenção de vendas"),
 });
 
 // ========== PROFILE UPDATE ==========
@@ -452,6 +474,154 @@ router.post(
   }
 );
 
+// ========== LEGAL ACCEPTANCE ==========
+
+/**
+ * POST /api/profile/legal-acceptance
+ * Registra aceite de Termos e Política de Privacidade
+ */
+router.post(
+  "/legal-acceptance",
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      legalAcceptanceSchema.parse(req.body);
+
+      const acceptedAt = new Date();
+
+      await prisma.$transaction(async (tx) => {
+        await tx.user.update({
+          where: { id: req.user!.id },
+          data: {
+            legalAcceptanceRequired: false,
+            termsAcceptedAt: acceptedAt,
+            termsAcceptedVersion: LEGAL_TERMS_VERSION,
+            privacyAcceptedAt: acceptedAt,
+            privacyAcceptedVersion: LEGAL_PRIVACY_VERSION,
+          },
+        });
+
+        await Promise.all([
+          LegalAcceptanceService.recordAcceptance({
+            userId: req.user!.id,
+            documentType: LegalDocumentType.TERMS,
+            documentVersion: LEGAL_TERMS_VERSION,
+            context: LEGAL_ACCEPTANCE_CONTEXT.OAUTH_ONBOARDING,
+            req,
+            tx,
+          }),
+          LegalAcceptanceService.recordAcceptance({
+            userId: req.user!.id,
+            documentType: LegalDocumentType.PRIVACY,
+            documentVersion: LEGAL_PRIVACY_VERSION,
+            context: LEGAL_ACCEPTANCE_CONTEXT.OAUTH_ONBOARDING,
+            req,
+            tx,
+          }),
+        ]);
+      });
+
+      const updatedUser = await prisma.user.findUnique({
+        where: { id: req.user!.id },
+        select: {
+          id: true,
+          legalAcceptanceRequired: true,
+          termsAcceptedAt: true,
+          termsAcceptedVersion: true,
+          privacyAcceptedAt: true,
+          privacyAcceptedVersion: true,
+        },
+      });
+
+      res.json({
+        message: "Aceite legal registrado com sucesso",
+        user: updatedUser,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          error: "VALIDATION_ERROR",
+          message: "Dados inválidos",
+          details: error.errors,
+        });
+        return;
+      }
+      console.error("Erro ao registrar aceite legal:", error);
+      res.status(500).json({
+        error: "INTERNAL_ERROR",
+        message: "Erro ao registrar aceite legal",
+      });
+    }
+  }
+);
+
+/**
+ * POST /api/profile/accept-sales-disclaimer
+ * Registra ciência da isenção de responsabilidade de vendas
+ */
+router.post(
+  "/accept-sales-disclaimer",
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      salesDisclaimerSchema.parse(req.body);
+
+      if (
+        req.user?.salesDisclaimerAcceptedVersion === LEGAL_SALES_DISCLAIMER_VERSION &&
+        req.user.salesDisclaimerAcceptedAt
+      ) {
+        res.json({
+          message: "Isenção de vendas já aceita",
+          version: LEGAL_SALES_DISCLAIMER_VERSION,
+          acceptedAt: req.user.salesDisclaimerAcceptedAt,
+        });
+        return;
+      }
+
+      const acceptedAt = new Date();
+
+      await prisma.$transaction(async (tx) => {
+        await tx.user.update({
+          where: { id: req.user!.id },
+          data: {
+            salesDisclaimerAcceptedAt: acceptedAt,
+            salesDisclaimerAcceptedVersion: LEGAL_SALES_DISCLAIMER_VERSION,
+          },
+        });
+
+        await LegalAcceptanceService.recordAcceptance({
+          userId: req.user!.id,
+          documentType: LegalDocumentType.SALES_DISCLAIMER,
+          documentVersion: LEGAL_SALES_DISCLAIMER_VERSION,
+          context: LEGAL_ACCEPTANCE_CONTEXT.ORDER_FLOW,
+          req,
+          tx,
+        });
+      });
+
+      res.json({
+        message: "Ciência da isenção de vendas registrada",
+        version: LEGAL_SALES_DISCLAIMER_VERSION,
+        acceptedAt,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          error: "VALIDATION_ERROR",
+          message: "Dados inválidos",
+          details: error.errors,
+        });
+        return;
+      }
+      console.error("Erro ao registrar isenção de vendas:", error);
+      res.status(500).json({
+        error: "INTERNAL_ERROR",
+        message: "Erro ao registrar isenção de vendas",
+      });
+    }
+  }
+);
+
 // ========== ACCOUNT DELETION ==========
 
 /**
@@ -618,6 +788,16 @@ router.get(
               answer: true,
               createdAt: true,
             },
+          },
+          legalAcceptanceLogs: {
+            select: {
+              id: true,
+              documentType: true,
+              documentVersion: true,
+              acceptedAt: true,
+              context: true,
+            },
+            orderBy: { acceptedAt: "desc" },
           },
         },
       });

@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Allows overriding output directory in restricted environments
+  distDir: process.env.NEXT_DIST_DIR || '.next',
+
   // Enable React Strict Mode
   reactStrictMode: true,
 

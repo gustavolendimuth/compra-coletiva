@@ -49,3 +49,12 @@ const isServer = typeof window === 'undefined';
 export const API_URL = isServer
   ? processEnvUrl(process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL, 'http://localhost:3000')
   : processEnvUrl(process.env.NEXT_PUBLIC_API_URL, 'http://localhost:3000');
+
+/**
+ * Public API URL used in rendered markup (e.g. image src).
+ * Must be stable between SSR and client hydration.
+ */
+export const PUBLIC_API_URL = processEnvUrl(
+  process.env.NEXT_PUBLIC_API_URL,
+  "http://localhost:3000"
+);

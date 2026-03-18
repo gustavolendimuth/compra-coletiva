@@ -11,7 +11,7 @@ interface UserMenuProps {
 }
 
 export const UserMenu: React.FC<UserMenuProps> = ({ variant = 'default', onAction }) => {
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout, isAuthenticated, isLoading } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -40,6 +40,15 @@ export const UserMenu: React.FC<UserMenuProps> = ({ variant = 'default', onActio
   const openAuthModal = (tab: 'login' | 'register' = 'login') => {
     window.dispatchEvent(new CustomEvent('openAuthModal', { detail: { tab } }));
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2">
+        <div className="h-9 w-20 rounded-lg bg-sky-100/60 animate-pulse" />
+        <div className="h-9 w-24 rounded-lg bg-sky-100/60 animate-pulse" />
+      </div>
+    );
+  }
 
   if (!isAuthenticated || !user) {
     return (

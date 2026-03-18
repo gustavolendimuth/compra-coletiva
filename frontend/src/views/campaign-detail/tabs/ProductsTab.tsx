@@ -10,6 +10,7 @@ import {
 import { Card, ConfirmModal } from "@/components/ui";
 import IconButton from "@/components/IconButton";
 import { formatCurrency } from "@/lib/utils";
+import { getImageUrl } from "@/lib/imageUrl";
 import { Product } from "@/api";
 
 interface ProductsTabProps {
@@ -23,6 +24,31 @@ interface ProductsTabProps {
   onEditProduct: (product: Product) => void;
   onDeleteProduct: (productId: string) => void;
   onSort: (field: "name" | "price" | "weight") => void;
+}
+
+function ProductThumbnail({ product }: { product: Product }) {
+  const [hasError, setHasError] = useState(false);
+  const imageUrl = getImageUrl(product.imageUrl);
+
+  if (!imageUrl || hasError) {
+    return (
+      <div className="w-12 h-12 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center flex-shrink-0">
+        <Package className="w-5 h-5 text-amber-500" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-12 h-12 rounded-lg overflow-hidden bg-sky-50 border border-sky-100 flex-shrink-0">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={imageUrl}
+        alt={product.name}
+        className="w-full h-full object-cover"
+        onError={() => setHasError(true)}
+      />
+    </div>
+  );
 }
 
 export function ProductsTab({
@@ -137,9 +163,12 @@ export function ProductsTab({
               <Card key={product.id}>
                 <div className="space-y-2">
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-semibold text-sky-900">
-                      {product.name}
-                    </h3>
+                    <div className="flex items-start gap-3 min-w-0">
+                      <ProductThumbnail product={product} />
+                      <h3 className="font-semibold text-sky-900 truncate">
+                        {product.name}
+                      </h3>
+                    </div>
                     {isActive && canEditCampaign && (
                       <div className="flex gap-1 flex-shrink-0">
                         <IconButton
@@ -222,7 +251,10 @@ export function ProductsTab({
                   {sortedProducts?.map((product) => (
                     <tr key={product.id} className="hover:bg-sky-50/30">
                       <td className="px-4 py-3 text-sm text-sky-900">
-                        {product.name}
+                        <div className="flex items-center gap-3 min-w-0">
+                          <ProductThumbnail product={product} />
+                          <span className="truncate">{product.name}</span>
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-sm text-sky-900">
                         {formatCurrency(product.price)}

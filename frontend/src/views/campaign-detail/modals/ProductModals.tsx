@@ -1,4 +1,5 @@
-import { Modal, Button, Input, CurrencyInput } from "@/components/ui";
+import { Modal, Button, Input, CurrencyInput, ImageUpload } from "@/components/ui";
+import { getImageUrlOrUndefined } from "@/lib/imageUrl";
 
 interface ProductForm {
   name: string;
@@ -14,6 +15,8 @@ interface AddProductModalProps {
   onClose: () => void;
   onChange: (form: ProductForm) => void;
   onSubmit: (e: React.FormEvent) => void;
+  onImageSelect?: (file: File) => void;
+  onImageRemove?: () => void;
 }
 
 export function AddProductModal({
@@ -23,7 +26,17 @@ export function AddProductModal({
   onClose,
   onChange,
   onSubmit,
+  onImageSelect,
+  onImageRemove,
 }: AddProductModalProps) {
+  const handleImageSelect = (file: File) => {
+    onImageSelect?.(file);
+  };
+
+  const handleImageRemove = () => {
+    onImageRemove?.();
+  };
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Adicionar Produto">
       <form onSubmit={onSubmit} className="space-y-4">
@@ -56,6 +69,19 @@ export function AddProductModal({
           label="Peso (gramas) *"
         />
 
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-sky-900">Imagem do Produto</p>
+          <ImageUpload
+            onImageSelect={handleImageSelect}
+            onImageRemove={handleImageRemove}
+            disabled={isPending}
+            className="max-w-md"
+          />
+          <p className="text-xs text-sky-600">
+            Opcional. Se não enviar, o produto aparece com ícone padrão.
+          </p>
+        </div>
+
         <div className="flex gap-3 pt-4">
           <Button
             type="submit"
@@ -85,6 +111,10 @@ interface EditProductModalProps {
   onClose: () => void;
   onChange: (form: ProductForm) => void;
   onSubmit: (e: React.FormEvent) => void;
+  currentImageUrl?: string;
+  shouldHideCurrentImage?: boolean;
+  onImageSelect?: (file: File) => void;
+  onImageRemove?: () => void;
 }
 
 export function EditProductModal({
@@ -94,7 +124,23 @@ export function EditProductModal({
   onClose,
   onChange,
   onSubmit,
+  currentImageUrl,
+  shouldHideCurrentImage = false,
+  onImageSelect,
+  onImageRemove,
 }: EditProductModalProps) {
+  const currentImage = shouldHideCurrentImage
+    ? undefined
+    : getImageUrlOrUndefined(currentImageUrl);
+
+  const handleImageSelect = (file: File) => {
+    onImageSelect?.(file);
+  };
+
+  const handleImageRemove = () => {
+    onImageRemove?.();
+  };
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Editar Produto">
       <form onSubmit={onSubmit} className="space-y-4">
@@ -126,6 +172,20 @@ export function EditProductModal({
           onChange={(e) => onChange({ ...form, weight: e.target.value })}
           label="Peso (gramas) *"
         />
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-sky-900">Imagem do Produto</p>
+          <ImageUpload
+            currentImageUrl={currentImage}
+            onImageSelect={handleImageSelect}
+            onImageRemove={handleImageRemove}
+            disabled={isPending}
+            className="max-w-md"
+          />
+          <p className="text-xs text-sky-600">
+            Envie uma nova imagem para substituir ou remova para voltar ao ícone padrão.
+          </p>
+        </div>
 
         <div className="flex gap-3 pt-4">
           <Button

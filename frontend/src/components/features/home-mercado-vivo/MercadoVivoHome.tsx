@@ -20,7 +20,7 @@ import styles from "./MercadoVivoHome.module.css";
 
 export function MercadoVivoHome() {
   const [isScrolled, setIsScrolled] = useState(false);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const { data } = useMercadoVivoHomeData();
 
   useEffect(() => {
@@ -48,7 +48,9 @@ export function MercadoVivoHome() {
             <a href="#como-funciona" className="text-sm font-medium text-sky-800/70 hover:text-sky-900 transition-colors">Como funciona</a>
             <a href="#comunidade" className="text-sm font-medium text-sky-800/70 hover:text-sky-900 transition-colors">Comunidade</a>
             <div className="h-5 w-px bg-sky-200" />
-            {isAuthenticated ? (
+            {isLoading ? (
+              <div className="h-5 w-20 rounded bg-sky-100/70 animate-pulse" />
+            ) : isAuthenticated ? (
               <Link href="/perfil" className="text-sm font-medium text-sky-800/70 hover:text-sky-900 transition-colors">Meu perfil</Link>
             ) : (
               <button onClick={() => window.dispatchEvent(new CustomEvent("openAuthModal", { detail: { tab: "login" } }))} className="text-sm font-medium text-sky-800/70 hover:text-sky-900 transition-colors">

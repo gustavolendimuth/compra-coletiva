@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function MercadoVivoFooter() {
+  const { isAuthenticated, isLoading } = useAuth();
+
   return (
     <footer className="bg-sky-950 text-white py-16">
       <div className="max-w-7xl mx-auto px-5 sm:px-8">
@@ -22,7 +25,19 @@ export function MercadoVivoFooter() {
           <div>
             <h4 className="font-display font-bold text-sm mb-4 text-sky-200">Suporte</h4>
             <ul className="space-y-2.5 text-sm text-sky-300/60">
-              <li><button onClick={() => window.dispatchEvent(new CustomEvent("openAuthModal"))} className="hover:text-white transition-colors">Entrar</button></li>
+              <li>
+                {isLoading ? (
+                  <span className="inline-block h-4 w-14 rounded bg-sky-300/30 animate-pulse" />
+                ) : isAuthenticated ? (
+                  <Link href="/perfil" className="hover:text-white transition-colors">
+                    Meu perfil
+                  </Link>
+                ) : (
+                  <button onClick={() => window.dispatchEvent(new CustomEvent("openAuthModal"))} className="hover:text-white transition-colors">
+                    Entrar
+                  </button>
+                )}
+              </li>
               <li><a href="https://github.com/gustavolendimuth/compra-coletiva" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">GitHub</a></li>
             </ul>
           </div>

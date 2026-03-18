@@ -69,7 +69,6 @@ export function CampaignDetailPage() {
           orders={hook.orders || []}
           isActive={hook.isActive}
           canEditCampaign={hook.canEditCampaign}
-          onViewOrder={hook.handleViewOrder}
           onTogglePayment={hook.handleTogglePayment}
           onAddToOrder={hook.handleAddToOrder}
           onEditAddress={hook.handleOpenAddressModal}

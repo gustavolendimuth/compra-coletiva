@@ -15,6 +15,13 @@ export interface StoredUser {
   hasPassword?: boolean;
   phoneCompleted?: boolean;
   addressCompleted?: boolean;
+  legalAcceptanceRequired?: boolean;
+  termsAcceptedAt?: string | null;
+  termsAcceptedVersion?: string | null;
+  privacyAcceptedAt?: string | null;
+  privacyAcceptedVersion?: string | null;
+  salesDisclaimerAcceptedAt?: string | null;
+  salesDisclaimerAcceptedVersion?: string | null;
   role: "ADMIN" | "CAMPAIGN_CREATOR" | "CUSTOMER";
   googleId?: string;
   defaultZipCode?: string | null;
@@ -32,6 +39,8 @@ export interface RegisterRequest {
   email: string;
   password: string;
   phone: string;
+  acceptTerms: boolean;
+  acceptPrivacy: boolean;
   role?: "CUSTOMER" | "CAMPAIGN_CREATOR";
 }
 
@@ -43,11 +52,11 @@ export interface LoginRequest {
 export interface AuthResponse {
   user: StoredUser;
   accessToken: string;
-  refreshToken: string;
 }
 
 export interface RefreshResponse {
   accessToken: string;
+  user: StoredUser;
 }
 
 export interface CompletePhoneRequest {
@@ -97,6 +106,7 @@ export interface ProductPreview {
   id: string;
   name: string;
   price: number;
+  imageUrl?: string;
 }
 
 export interface CampaignWithProducts extends Campaign {
@@ -188,6 +198,9 @@ export interface Product {
   name: string;
   price: number;
   weight: number;
+  imageUrl?: string;
+  imageKey?: string;
+  imageStorageType?: "S3" | "LOCAL";
   createdAt: string;
   updatedAt: string;
 }
@@ -239,6 +252,32 @@ export interface Order {
   paymentProofUrl?: string;
   paymentProofKey?: string;
   paymentProofStorageType?: 'S3' | 'LOCAL';
+}
+
+export interface PublicOrderSummary {
+  alias: string;
+  isPaid: boolean;
+  subtotal: number;
+  shippingFee: number;
+  total: number;
+  itemsCount: number;
+  quantityTotal: number;
+  createdAt: string;
+}
+
+export interface PublicOrdersResponse {
+  campaignId: string;
+  totals: {
+    orders: number;
+    totalWithShipping: number;
+    totalWithoutShipping: number;
+    totalShipping: number;
+    totalItems: number;
+    totalQuantity: number;
+    paidTotal: number;
+    unpaidTotal: number;
+  };
+  orders: PublicOrderSummary[];
 }
 
 export interface CreateOrderDto {
@@ -463,7 +502,7 @@ export interface Analytics {
     quantity: number;
   }>;
   byCustomer: Array<{
-    customerName: string;
+    customerAlias: string;
     total: number;
     isPaid: boolean;
   }>;
@@ -593,7 +632,40 @@ export interface ExportDataResponse {
     notifications: Notification[];
     feedback: Feedback[];
     emailPreference?: EmailPreference;
+    legalAcceptanceLogs?: Array<{
+      id: string;
+      documentType: "TERMS" | "PRIVACY" | "SALES_DISCLAIMER";
+      documentVersion: string;
+      acceptedAt: string;
+      ipAddress?: string | null;
+      userAgent?: string | null;
+      context?: string | null;
+    }>;
   };
+}
+
+export interface LegalAcceptanceRequest {
+  acceptTerms: boolean;
+  acceptPrivacy: boolean;
+}
+
+export interface LegalAcceptanceResponse {
+  message: string;
+  user: Pick<
+    StoredUser,
+    | "id"
+    | "legalAcceptanceRequired"
+    | "termsAcceptedAt"
+    | "termsAcceptedVersion"
+    | "privacyAcceptedAt"
+    | "privacyAcceptedVersion"
+  >;
+}
+
+export interface SalesDisclaimerAcceptanceResponse {
+  message: string;
+  version: string;
+  acceptedAt: string;
 }
 
 // ============================================================================

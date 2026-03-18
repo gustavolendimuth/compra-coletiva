@@ -1,7 +1,7 @@
 'use client';
 /* eslint-disable @next/next/no-img-element */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -57,11 +57,17 @@ export function CampaignHeader({
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [editedDescription, setEditedDescription] = useState("");
+  const [isImageUnavailable, setIsImageUnavailable] = useState(false);
 
   const isActive = campaign.status === "ACTIVE";
   const isClosed = campaign.status === "CLOSED";
 
   const imageUrl = getImageUrl(campaign.imageUrl);
+  const shouldShowImage = Boolean(imageUrl) && !isImageUnavailable;
+
+  useEffect(() => {
+    setIsImageUnavailable(false);
+  }, [imageUrl]);
 
   const handleNameClick = () => {
     if (!canEditCampaign) {
@@ -108,12 +114,13 @@ export function CampaignHeader({
       {/* Layout: Imagem à esquerda + Título/Descrição à direita */}
       <div className="flex flex-row gap-4 md:gap-6 mb-4">
         {/* Imagem da Campanha - Quadrado à esquerda */}
-        {imageUrl ? (
+        {shouldShowImage ? (
           <div className="relative flex-shrink-0 w-24 h-24 md:w-48 md:h-48 rounded-2xl overflow-hidden bg-sky-50 shadow-sm">
             <img
-              src={imageUrl}
+              src={imageUrl || undefined}
               alt={campaign.name}
               className="w-full h-full object-cover"
+              onError={() => setIsImageUnavailable(true)}
             />
             {canEditCampaign && (
               <button
@@ -132,9 +139,18 @@ export function CampaignHeader({
             title="Adicionar imagem da campanha"
           >
             <ImageIcon className="w-6 h-6 md:w-8 md:h-8 text-sky-300" />
-            <span className="text-xs text-sky-400 hidden md:block">Adicionar</span>
+            <span className="text-xs text-sky-400 hidden md:block">
+              {imageUrl ? "Reenviar" : "Adicionar"}
+            </span>
           </button>
-        ) : null}
+        ) : (
+          <div className="flex-shrink-0 w-24 h-24 md:w-48 md:h-48 rounded-2xl bg-sky-50 border border-sky-100 flex flex-col items-center justify-center gap-1">
+            <ImageIcon className="w-6 h-6 md:w-8 md:h-8 text-sky-300" />
+            <span className="text-[10px] md:text-xs text-sky-400 text-center px-2">
+              Imagem indisponível
+            </span>
+          </div>
+        )}
 
         {/* Conteúdo: Apenas Nome no mobile, Nome + Descrição + Deadline no desktop */}
         <div className="flex-1 min-w-0 h-24 md:h-48 flex flex-col justify-center">

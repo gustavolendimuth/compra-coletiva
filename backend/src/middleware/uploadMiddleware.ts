@@ -28,6 +28,7 @@ export const uploadMiddleware = multer({
 
 // Multer configuration - use memory storage for S3
 export const uploadCampaignImage = uploadMiddleware.single("image");
+export const uploadProductImage = uploadMiddleware.single("image");
 
 // Avatar upload configuration
 export const uploadAvatar = uploadMiddleware.single("avatar");
@@ -67,7 +68,6 @@ export const handleUploadError = (
 
   next(err);
 };
-
 
 
 

@@ -21,6 +21,7 @@ import emailPreferenceRoutes from "./routes/emailPreferences";
 import geocodingRoutes from "./routes/geocoding";
 import { errorHandler } from "./middleware/errorHandler";
 import { startCampaignScheduler } from "./services/campaignScheduler";
+import { startLegalDataRetentionScheduler } from "./services/legalDataRetentionService";
 import { initializeSocket } from "./services/socketService";
 import { ImageUploadService } from "./services/imageUploadService";
 import { startEmailWorker, stopEmailWorker } from "./services/email/emailWorker";
@@ -154,6 +155,9 @@ httpServer.listen(PORT, () => {
 
   // Start campaign scheduler to auto-close expired campaigns
   startCampaignScheduler();
+
+  // Start legal/security retention scheduler for minimization and cleanup
+  startLegalDataRetentionScheduler();
 
   // Start email worker (modular - pode ser separado depois)
   const enableWorker = process.env.ENABLE_EMAIL_WORKER !== 'false';

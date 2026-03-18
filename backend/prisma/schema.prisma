@@ -47,6 +47,15 @@ model User {
   deletedAt     DateTime? // Timestamp de exclusão (soft delete)
   deletedReason String?   // Motivo opcional da exclusão
 
+  // Consentimento legal (LGPD)
+  legalAcceptanceRequired      Boolean   @default(false) // Somente novos usuários podem ficar pendentes
+  termsAcceptedAt              DateTime?
+  termsAcceptedVersion         String?
+  privacyAcceptedAt            DateTime?
+  privacyAcceptedVersion       String?
+  salesDisclaimerAcceptedAt    DateTime?
+  salesDisclaimerAcceptedVersion String?
+
   // Campaign Chat - Reputation & Rate Limiting
   messageCount  Int      @default(0)      // Total de perguntas feitas
   answeredCount Int      @default(0)      // Total de respostas fornecidas (criadores apenas)
@@ -67,6 +76,7 @@ model User {
   emailPreference          EmailPreference?
   emailLogs                EmailLog[]
   adminAuditLogs           AuditLog[]            @relation("AdminAuditLogs")
+  legalAcceptanceLogs      LegalAcceptanceLog[]
 
   @@map("users")
   @@index([email])
@@ -74,6 +84,7 @@ model User {
   @@index([name])
   @@index([phone])
   @@index([deletedAt])
+  @@index([legalAcceptanceRequired])
 }
 
 model Notification {
@@ -200,6 +211,9 @@ model Product {
   name        String
   price       Float
   weight      Float
+  imageUrl    String?           // URL da imagem do produto (S3 ou local)
+  imageKey    String?           // Chave do arquivo no storage
+  imageStorageType ImageStorageType? // Tipo de armazenamento (S3/LOCAL)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -483,6 +497,28 @@ model AuditLog {
   @@index([action])
   @@index([targetType, targetId])
   @@index([createdAt])
+}
+
+model LegalAcceptanceLog {
+  id              String            @id @default(cuid())
+  userId          String
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentType    LegalDocumentType
+  documentVersion String
+  acceptedAt      DateTime          @default(now())
+  ipAddress       String?
+  userAgent       String?
+  context         String?
+
+  @@map("legal_acceptance_logs")
+  @@index([userId, documentType, acceptedAt])
+  @@index([acceptedAt])
+}
+
+enum LegalDocumentType {
+  TERMS
+  PRIVACY
+  SALES_DISCLAIMER
 }
 
 enum AuditAction {

@@ -10,7 +10,9 @@ interface RegisterFormProps {
     name: string,
     email: string,
     password: string,
-    phone: string
+    phone: string,
+    acceptTerms: boolean,
+    acceptPrivacy: boolean
   ) => Promise<void>;
   onGoogleLogin: () => void;
   isLoading: boolean;
@@ -32,6 +34,8 @@ export const RegisterForm = ({
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
   const [nameSuggestion, setNameSuggestion] = useState<string | null>(null);
   const [checkingName, setCheckingName] = useState(false);
 
@@ -60,7 +64,7 @@ export const RegisterForm = ({
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    await onSubmit(name, email, password, phone);
+    await onSubmit(name, email, password, phone, acceptTerms, acceptPrivacy);
   };
 
   return (
@@ -119,32 +123,56 @@ export const RegisterForm = ({
       />
 
       <div className="space-y-3">
-        <p className="text-xs text-sky-600 text-center">
-          Ao criar uma conta, você concorda com nossos{' '}
-          <Link
-            href="/termos"
-            className="text-sky-600 hover:text-sky-800 font-medium underline underline-offset-2"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Termos de Serviço
-          </Link>
-          {' '}e{' '}
-          <Link
-            href="/privacidade"
-            className="text-sky-600 hover:text-sky-800 font-medium underline underline-offset-2"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Política de Privacidade
-          </Link>
-          .
-        </p>
+        <label className="flex items-start gap-2 text-xs text-sky-700">
+          <input
+            type="checkbox"
+            checked={acceptTerms}
+            onChange={(e) => setAcceptTerms(e.target.checked)}
+            disabled={isLoading}
+            required
+            className="mt-0.5 rounded border-sky-300 text-sky-600 focus:ring-sky-500"
+          />
+          <span>
+            Li e aceito os{" "}
+            <Link
+              href="/termos"
+              className="text-sky-600 hover:text-sky-800 font-medium underline underline-offset-2"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Termos de Serviço
+            </Link>
+            .
+          </span>
+        </label>
+
+        <label className="flex items-start gap-2 text-xs text-sky-700">
+          <input
+            type="checkbox"
+            checked={acceptPrivacy}
+            onChange={(e) => setAcceptPrivacy(e.target.checked)}
+            disabled={isLoading}
+            required
+            className="mt-0.5 rounded border-sky-300 text-sky-600 focus:ring-sky-500"
+          />
+          <span>
+            Li e aceito a{" "}
+            <Link
+              href="/privacidade"
+              className="text-sky-600 hover:text-sky-800 font-medium underline underline-offset-2"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Política de Privacidade
+            </Link>
+            .
+          </span>
+        </label>
 
         <Button
           type="submit"
           variant="primary"
-          disabled={isLoading}
+          disabled={isLoading || !acceptTerms || !acceptPrivacy}
           className="w-full"
         >
           {isLoading ? "Criando conta..." : "Criar Conta"}

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../index';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
+import { generatePublicAlias } from '../utils/publicAlias';
 
 const router = Router();
 
@@ -16,7 +17,7 @@ interface Analytics {
     quantity: number;
   }>;
   byCustomer: Array<{
-    customerName: string;
+    customerAlias: string;
     total: number;
     isPaid: boolean;
   }>;
@@ -37,12 +38,6 @@ router.get('/campaign/:campaignId', asyncHandler(async (req, res) => {
           items: {
             include: {
               product: true
-            }
-          },
-          customer: {
-            select: {
-              name: true,
-              email: true
             }
           }
         }
@@ -85,17 +80,15 @@ router.get('/campaign/:campaignId', asyncHandler(async (req, res) => {
     }
 
     // Agrega por cliente
-    // Com usuários virtuais, cada pedido legado tem seu próprio usuário virtual
-    // Então podemos sempre usar customer.name
-    const customerName = order.customer.name;
+    const customerAlias = generatePublicAlias(order.userId, campaignId);
 
-    if (!customerMap.has(customerName)) {
-      customerMap.set(customerName, {
+    if (!customerMap.has(customerAlias)) {
+      customerMap.set(customerAlias, {
         total: 0,
         isPaid: order.isPaid
       });
     }
-    const customerData = customerMap.get(customerName)!;
+    const customerData = customerMap.get(customerAlias)!;
     customerData.total += order.total;
 
     // Agrega por produto
@@ -121,8 +114,8 @@ router.get('/campaign/:campaignId', asyncHandler(async (req, res) => {
     quantity: data.quantity
   }));
 
-  analytics.byCustomer = Array.from(customerMap.entries()).map(([customerName, data]) => ({
-    customerName,
+  analytics.byCustomer = Array.from(customerMap.entries()).map(([customerAlias, data]) => ({
+    customerAlias,
     total: data.total,
     isPaid: data.isPaid
   }));

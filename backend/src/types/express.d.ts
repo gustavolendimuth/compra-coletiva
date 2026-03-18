@@ -31,6 +31,15 @@ declare global {
       deletedAt: Date | null;
       deletedReason: string | null;
 
+      // Consentimento legal (LGPD)
+      legalAcceptanceRequired: boolean;
+      termsAcceptedAt: Date | null;
+      termsAcceptedVersion: string | null;
+      privacyAcceptedAt: Date | null;
+      privacyAcceptedVersion: string | null;
+      salesDisclaimerAcceptedAt: Date | null;
+      salesDisclaimerAcceptedVersion: string | null;
+
       // Endereço padrão do usuário (para cálculo de distância)
       addressCompleted: boolean;
       defaultZipCode: string | null;

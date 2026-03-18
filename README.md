@@ -51,6 +51,7 @@ npm test --workspace=frontend
 - `docs/development.md`
 - `docs/deployment.md`
 - `docs/features.md`
+- `docs/lgpd.md`
 
 ## Licença
 MIT

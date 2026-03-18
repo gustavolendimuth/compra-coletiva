@@ -1,30 +1,35 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { authService } from '@/api';
+import { authService, profileService } from '@/api';
 import { authStorage } from '@/lib/authStorage';
 import { PhoneInput } from '@/components/ui/PhoneInput';
 import { AddressForm, type AddressData } from '@/components/ui/AddressForm';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { getApiErrorMessage } from '@/lib/apiError';
+import Link from 'next/link';
 import toast from 'react-hot-toast';
 
 /**
  * CompleteProfile Page
- * Multi-step page for users to complete phone and address registration.
- * Step 1: Phone (if phoneCompleted === false)
- * Step 2: Address (if addressCompleted === false)
+ * Multi-step page for users to complete legal acceptance, phone and address.
  */
 export function CompleteProfile() {
   const { user, setUser, isLoading } = useAuth();
   const isMountedRef = useRef(true);
 
-  // Determine current step
+  const needsLegal = user && user.legalAcceptanceRequired;
   const needsPhone = user && !user.phoneCompleted;
   const needsAddress = user && !user.addressCompleted;
-  const [currentStep, setCurrentStep] = useState<'phone' | 'address'>(
-    needsPhone ? 'phone' : 'address'
+
+  const [currentStep, setCurrentStep] = useState<'legal' | 'phone' | 'address'>(
+    needsLegal ? 'legal' : needsPhone ? 'phone' : 'address'
   );
+
+  // Legal acceptance state
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
+  const [isLegalLoading, setIsLegalLoading] = useState(false);
 
   // Phone state
   const [phone, setPhone] = useState('');
@@ -52,10 +57,62 @@ export function CompleteProfile() {
 
   // Update step when user data changes
   useEffect(() => {
-    if (user?.phoneCompleted && !user?.addressCompleted) {
+    if (!user) return;
+
+    if (user.legalAcceptanceRequired) {
+      setCurrentStep('legal');
+      return;
+    }
+
+    if (!user.phoneCompleted) {
+      setCurrentStep('phone');
+      return;
+    }
+
+    if (!user.addressCompleted) {
       setCurrentStep('address');
     }
-  }, [user?.phoneCompleted, user?.addressCompleted]);
+  }, [user]);
+
+  const handleLegalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!acceptTerms || !acceptPrivacy) {
+      toast.error('Você precisa aceitar os Termos e a Política de Privacidade');
+      return;
+    }
+
+    setIsLegalLoading(true);
+    try {
+      const response = await profileService.acceptLegalTerms({
+        acceptTerms: true,
+        acceptPrivacy: true,
+      });
+      if (!isMountedRef.current || !user) return;
+
+      const mergedUser = {
+        ...user,
+        ...response.user,
+      };
+
+      setUser(mergedUser);
+      authStorage.setUser(mergedUser);
+      toast.success('Aceite legal registrado com sucesso!');
+      setIsLegalLoading(false);
+
+      if (!mergedUser.phoneCompleted) {
+        setCurrentStep('phone');
+      } else if (!mergedUser.addressCompleted) {
+        setCurrentStep('address');
+      } else {
+        redirectToApp();
+      }
+    } catch (error: unknown) {
+      if (!isMountedRef.current) return;
+      toast.error(getApiErrorMessage(error, 'Erro ao registrar aceite legal'));
+      setIsLegalLoading(false);
+    }
+  };
 
   const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,9 +188,9 @@ export function CompleteProfile() {
   };
 
   const redirectToApp = () => {
-    const returnTo = sessionStorage.getItem('returnTo') || '/';
-    sessionStorage.removeItem('returnTo');
-    window.location.href = returnTo;
+    const returnUrl = authStorage.getReturnUrl() || '/campanhas';
+    authStorage.clearReturnUrl();
+    window.location.href = returnUrl;
   };
 
   if (isLoading || !user) {
@@ -147,25 +204,103 @@ export function CompleteProfile() {
     );
   }
 
-  // If neither phone nor address is needed, redirect
-  if (!needsPhone && !needsAddress) {
+  // If nothing else is needed, redirect
+  if (!needsLegal && !needsPhone && !needsAddress) {
     redirectToApp();
     return null;
   }
+
+  const requiredSteps = [
+    needsLegal ? 'legal' : null,
+    needsPhone ? 'phone' : null,
+    needsAddress ? 'address' : null,
+  ].filter((step): step is 'legal' | 'phone' | 'address' => !!step);
+  const currentStepIndex = requiredSteps.indexOf(currentStep);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
       <Card className="w-full max-w-md">
         <div className="p-6 md:p-8">
           {/* Step indicator */}
-          {needsPhone && needsAddress && (
+          {requiredSteps.length > 1 && (
             <div className="flex items-center gap-2 mb-6">
-              <div className={`flex-1 h-1 rounded-full ${currentStep === 'phone' ? 'bg-blue-600' : 'bg-blue-600'}`} />
-              <div className={`flex-1 h-1 rounded-full ${currentStep === 'address' ? 'bg-blue-600' : 'bg-gray-200'}`} />
+              {requiredSteps.map((step, index) => (
+                <div
+                  key={step}
+                  className={`flex-1 h-1 rounded-full ${index <= currentStepIndex ? 'bg-blue-600' : 'bg-gray-200'}`}
+                />
+              ))}
             </div>
           )}
 
-          {currentStep === 'phone' ? (
+          {currentStep === 'legal' ? (
+            <>
+              <div className="mb-6">
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+                  Aceite legal
+                </h1>
+                <p className="text-sm md:text-base text-gray-600">
+                  Para continuar, você precisa aceitar os Termos de Serviço e a Política de Privacidade.
+                </p>
+              </div>
+
+              <form onSubmit={handleLegalSubmit} className="space-y-4">
+                <label className="flex items-start gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={acceptTerms}
+                    onChange={(e) => setAcceptTerms(e.target.checked)}
+                    disabled={isLegalLoading}
+                    required
+                    className="mt-1 rounded border-sky-300 text-sky-600 focus:ring-sky-500"
+                  />
+                  <span>
+                    Li e aceito os{" "}
+                    <Link
+                      href="/termos"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sky-600 underline underline-offset-2"
+                    >
+                      Termos de Serviço
+                    </Link>
+                    .
+                  </span>
+                </label>
+
+                <label className="flex items-start gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={acceptPrivacy}
+                    onChange={(e) => setAcceptPrivacy(e.target.checked)}
+                    disabled={isLegalLoading}
+                    required
+                    className="mt-1 rounded border-sky-300 text-sky-600 focus:ring-sky-500"
+                  />
+                  <span>
+                    Li e aceito a{" "}
+                    <Link
+                      href="/privacidade"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sky-600 underline underline-offset-2"
+                    >
+                      Política de Privacidade
+                    </Link>
+                    .
+                  </span>
+                </label>
+
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={isLegalLoading || !acceptTerms || !acceptPrivacy}
+                >
+                  {isLegalLoading ? 'Salvando...' : 'Continuar'}
+                </Button>
+              </form>
+            </>
+          ) : currentStep === 'phone' ? (
             <>
               <div className="mb-6">
                 <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">

@@ -4,6 +4,14 @@ import { TokenService } from '../services/tokenService';
 
 const prisma = new PrismaClient();
 
+const LEGAL_ACCEPTANCE_BYPASS_PATHS = new Set([
+  "/api/auth/me",
+  "/api/auth/logout",
+  "/api/auth/complete-phone",
+  "/api/auth/complete-address",
+  "/api/profile/legal-acceptance",
+]);
+
 /**
  * Middleware que verifica se o usuário está autenticado
  * Anexa o usuário à requisição se o token for válido
@@ -54,6 +62,15 @@ export const requireAuth = async (
       res.status(401).json({
         error: 'USER_NOT_FOUND',
         message: 'Usuário não encontrado',
+      });
+      return;
+    }
+
+    const requestPath = req.originalUrl.split("?")[0];
+    if (user.legalAcceptanceRequired && !LEGAL_ACCEPTANCE_BYPASS_PATHS.has(requestPath)) {
+      res.status(403).json({
+        error: 'LEGAL_ACCEPTANCE_REQUIRED',
+        message: 'Você precisa aceitar os Termos e a Política de Privacidade para continuar.',
       });
       return;
     }

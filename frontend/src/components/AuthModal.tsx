@@ -45,11 +45,13 @@ export const AuthModal = ({
     name: string,
     email: string,
     password: string,
-    phone: string
+    phone: string,
+    acceptTerms: boolean,
+    acceptPrivacy: boolean
   ) => {
     setIsLoading(true);
     try {
-      await register({ name, email, password, phone });
+      await register({ name, email, password, phone, acceptTerms, acceptPrivacy });
       onClose();
     } catch (error) {
       // Error is handled by AuthContext with toast

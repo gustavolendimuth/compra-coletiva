@@ -1,13 +1,12 @@
+import { useState } from "react";
 import { Card, PixDisplay } from "@/components/ui";
-import IconButton from "@/components/IconButton";
 import { CampaignChat } from "@/components/campaign";
 import { Skeleton } from "@/components/Skeleton";
 import { formatCurrency } from "@/lib/utils";
+import { getImageUrl } from "@/lib/imageUrl";
 import { Order, Product, CampaignAnalytics, Campaign } from "@/api";
-import { getCustomerDisplayName } from "../utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { CampaignLocationSection } from "../CampaignLocationSection";
-import { Eye, Upload } from "lucide-react";
 
 interface OverviewTabProps {
   campaign: Campaign;
@@ -18,10 +17,46 @@ interface OverviewTabProps {
   orders: Order[];
   isActive: boolean;
   canEditCampaign: boolean;
-  onViewOrder: (order: Order) => void;
   onTogglePayment: (order: Order) => void;
   onAddToOrder: (product: Product) => void;
   onEditAddress?: () => void;
+}
+
+function ProductImage({ product }: { product: Product }) {
+  const [hasError, setHasError] = useState(false);
+  const imageUrl = getImageUrl(product.imageUrl);
+
+  if (!imageUrl || hasError) {
+    return (
+      <div className="w-full aspect-square rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center mb-2">
+        <svg
+          className="w-6 h-6 text-amber-500"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.5}
+            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+          />
+        </svg>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full aspect-square rounded-xl overflow-hidden bg-sky-50 border border-sky-100 mb-2">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={imageUrl}
+        alt={product.name}
+        className="w-full h-full object-cover"
+        onError={() => setHasError(true)}
+      />
+    </div>
+  );
 }
 
 export function OverviewTab({
@@ -33,7 +68,6 @@ export function OverviewTab({
   orders,
   isActive,
   canEditCampaign,
-  onViewOrder,
   onTogglePayment,
   onAddToOrder,
   onEditAddress,
@@ -103,11 +137,7 @@ export function OverviewTab({
                   key={product.id}
                   className="bg-white border border-sky-100/60 rounded-2xl p-3 hover:border-sky-300 hover:shadow-md hover:shadow-sky-100/50 transition-all duration-200 flex flex-col"
                 >
-                  <div className="bg-amber-50 p-2 rounded-xl mb-2 w-fit">
-                    <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
-                  </div>
+                  <ProductImage product={product} />
 
                   <h4 className="font-semibold text-sky-900 mb-1 line-clamp-2 text-sm md:text-base leading-tight min-h-[2.25rem] md:min-h-[3rem]">
                     {product.name}
@@ -271,13 +301,9 @@ export function OverviewTab({
               <div className="space-y-3">
                 {[...analytics.byCustomer]
                   .sort((a, b) =>
-                    (a.customerName || "").localeCompare(b.customerName || "")
+                    (a.customerAlias || "").localeCompare(b.customerAlias || "")
                   )
                   .map((item, index) => {
-                    const order = orders?.find(
-                      (o) => getCustomerDisplayName(o) === item.customerName
-                    );
-
                     return (
                       <div
                         key={index}
@@ -285,33 +311,8 @@ export function OverviewTab({
                       >
                         <div className="flex justify-between items-center gap-3">
                           <span className="text-sky-900 font-medium flex-1 min-w-0">
-                            {item.customerName}
+                            {item.customerAlias}
                           </span>
-
-                          <div className="flex items-center gap-2">
-                            {order && (
-                              <>
-                                <IconButton
-                                  size="sm"
-                                  variant="secondary"
-                                  icon={<Eye className="w-5 h-5" />}
-                                  onClick={() => onViewOrder(order)}
-                                  title="Visualizar pedido"
-                                />
-                                <IconButton
-                                  size="sm"
-                                  variant={item.isPaid ? "success" : "secondary"}
-                                  icon={<Upload className="w-5 h-5" />}
-                                  onClick={() => onTogglePayment(order)}
-                                  title={
-                                    item.isPaid
-                                      ? "Marcar como não pago"
-                                      : "Enviar comprovante de pagamento"
-                                  }
-                                />
-                              </>
-                            )}
-                          </div>
                         </div>
 
                         <div className="flex items-center justify-between gap-3">

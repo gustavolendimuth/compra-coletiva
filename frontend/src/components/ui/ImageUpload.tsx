@@ -115,7 +115,7 @@ export function ImageUpload({
           </div>
           <div className="text-center px-4">
             <p className="text-sm md:text-base font-medium text-gray-700 mb-1">
-              Clique para adicionar imagem
+              Clique para enviar imagem
             </p>
             <p className="text-xs md:text-sm text-gray-500">
               JPEG, PNG ou WebP • Máximo {maxSizeMB}MB
@@ -131,5 +131,4 @@ export function ImageUpload({
     </div>
   );
 }
-
 

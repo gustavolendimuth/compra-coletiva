@@ -55,13 +55,12 @@ services:
       - ./backend:/app
       - /app/node_modules
       - /app/dist
-      - /app/prisma/migrations
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: sh -c "npx prisma migrate deploy && npm run dev"
+    command: sh -c "npx prisma generate && npx prisma migrate deploy && npm run dev"
 
   frontend:
     build:

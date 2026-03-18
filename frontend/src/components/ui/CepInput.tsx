@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface CepInputProps {
   value: string;
@@ -25,6 +25,7 @@ export function CepInput({
 }: CepInputProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const lastSearchedCepRef = useRef<string | null>(null);
 
   // Mask: XXXXX-XXX
   const formatCep = (val: string) => {
@@ -44,7 +45,13 @@ export function CepInput({
   // Auto-search when CEP is complete (8 digits)
   useEffect(() => {
     const digits = value.replace(/\D/g, '');
-    if (digits.length === 8 && onCepFound) {
+    if (digits.length !== 8) {
+      lastSearchedCepRef.current = null;
+      return;
+    }
+
+    if (onCepFound && lastSearchedCepRef.current !== digits) {
+      lastSearchedCepRef.current = digits;
       setIsSearching(true);
       onSearching?.(true);
       setSearchError(null);
@@ -54,6 +61,7 @@ export function CepInput({
         .then((data) => {
           if (data.erro) {
             setSearchError('CEP não encontrado');
+            lastSearchedCepRef.current = null;
             return;
           }
           onCepFound({
@@ -66,6 +74,7 @@ export function CepInput({
         })
         .catch(() => {
           setSearchError('Erro ao buscar CEP');
+          lastSearchedCepRef.current = null;
         })
         .finally(() => {
           setIsSearching(false);

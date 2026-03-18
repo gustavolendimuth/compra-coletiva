@@ -1,16 +1,16 @@
-import type { Metadata } from 'next';
-import Link from 'next/link';
+import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: 'Termos de Serviço',
-  description: 'Termos de serviço da plataforma Compra Coletiva. Leia atentamente antes de utilizar nossos serviços.',
+  title: "Termos de Serviço",
+  description:
+    "Termos de Serviço da plataforma Compra Coletiva, incluindo regras de uso e isenção de responsabilidade por vendas entre usuários.",
 };
 
 export default function TermsOfServicePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 py-8 md:py-12">
-        {/* Header */}
         <div className="mb-8">
           <Link
             href="/campanhas"
@@ -22,136 +22,125 @@ export default function TermsOfServicePage() {
             Termos de Serviço
           </h1>
           <p className="text-sm text-gray-500">
-            Última atualização: 7 de dezembro de 2025
+            Versão: 2026-03-12
           </p>
         </div>
 
-        {/* Content */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 md:p-8 space-y-6">
-          {/* Introduction */}
           <section>
             <p className="text-base text-gray-700 leading-relaxed">
-              Bem-vindo à nossa plataforma de compras coletivas. Ao utilizar nossos serviços,
-              você concorda com estes Termos de Serviço. Leia atentamente.
+              Estes Termos de Serviço regulam o uso da plataforma Compra Coletiva.
+              Ao criar conta ou utilizar o sistema, você declara que leu e concorda
+              com este documento e com a Política de Privacidade.
             </p>
           </section>
 
-          {/* Section 1 */}
           <section>
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
-              1. Aceitação dos Termos
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-3">
+              1. Objeto da Plataforma
             </h2>
             <p className="text-base text-gray-700 leading-relaxed">
-              Ao acessar ou usar a plataforma, você concorda em ficar vinculado a estes Termos
-              de Serviço e à nossa Política de Privacidade. Se você não concordar com algum
-              destes termos, não utilize nossos serviços.
+              A plataforma oferece infraestrutura digital para organização de
+              campanhas, registro de pedidos, comunicação e acompanhamento de
+              status entre usuários.
             </p>
           </section>
 
-          {/* Section 2 */}
           <section>
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
-              2. Descrição do Serviço
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-3">
+              2. Cadastro e Conta
             </h2>
-            <p className="text-base text-gray-700 leading-relaxed">
-              Nossa plataforma permite que usuários organizem e participem de compras coletivas,
-              facilitando a gestão de pedidos, produtos e distribuição de custos de frete.
-            </p>
-          </section>
-
-          {/* Section 3 */}
-          <section>
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
-              3. Responsabilidades do Usuário
-            </h2>
-            <p className="text-base text-gray-700 leading-relaxed mb-4">
-              Ao utilizar a plataforma, você se compromete a:
-            </p>
             <ul className="list-disc list-inside ml-4 space-y-2 text-base text-gray-700">
-              <li>Fornecer informações verdadeiras e atualizadas</li>
-              <li>Manter a segurança de suas credenciais de acesso</li>
-              <li>Não utilizar a plataforma para fins ilegais ou fraudulentos</li>
-              <li>Respeitar outros usuários e organizadores</li>
-              <li>Cumprir com os compromissos assumidos em campanhas</li>
+              <li>Você deve fornecer dados verdadeiros e atualizados.</li>
+              <li>Você é responsável pela segurança da sua conta e credenciais.</li>
+              <li>Contas podem ser suspensas em caso de fraude, abuso ou uso indevido.</li>
             </ul>
           </section>
 
-          {/* Section 4 */}
           <section>
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
-              4. Campanhas e Pedidos
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-3">
+              3. Regras de Uso
             </h2>
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-lg md:text-xl font-semibold text-gray-800 mb-2">
-                  4.1 Organizadores
-                </h3>
-                <p className="text-base text-gray-700 leading-relaxed">
-                  Os organizadores são responsáveis por gerenciar suas campanhas, incluindo
-                  definição de produtos, preços, prazos e distribuição de frete. A plataforma
-                  atua apenas como facilitadora.
-                </p>
-              </div>
-              <div>
-                <h3 className="text-lg md:text-xl font-semibold text-gray-800 mb-2">
-                  4.2 Participantes
-                </h3>
-                <p className="text-base text-gray-700 leading-relaxed">
-                  Os participantes devem verificar as informações das campanhas antes de realizar
-                  pedidos e cumprir com os pagamentos conforme acordado com o organizador.
-                </p>
-              </div>
-            </div>
+            <ul className="list-disc list-inside ml-4 space-y-2 text-base text-gray-700">
+              <li>É proibido usar a plataforma para fins ilegais.</li>
+              <li>É proibido publicar conteúdo enganoso, ofensivo ou fraudulento.</li>
+              <li>Usuários devem respeitar prazos e condições informadas nas campanhas.</li>
+            </ul>
           </section>
 
-          {/* Section 5 */}
           <section>
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
-              5. Limitação de Responsabilidade
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-3">
+              4. Campanhas, Pedidos e Pagamentos
             </h2>
             <p className="text-base text-gray-700 leading-relaxed">
-              A plataforma não se responsabiliza por transações entre usuários, qualidade dos
-              produtos, entregas ou quaisquer disputas entre organizadores e participantes.
-              Recomendamos que transações sejam realizadas apenas com pessoas de confiança.
+              Organizadores definem produtos, preços, frete, condições e prazos.
+              Participantes são responsáveis por validar essas informações antes
+              de concluir seus pedidos e pagamentos.
             </p>
           </section>
 
-          {/* Section 6 */}
-          <section>
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
-              6. Propriedade Intelectual
+          <section className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-3">
+              5. Isenção de Responsabilidade por Vendas
             </h2>
+            <p className="text-base text-gray-700 leading-relaxed mb-3">
+              A plataforma <strong>não é vendedora, revendedora, fornecedora ou intermediadora financeira</strong>.
+              A relação de compra e venda ocorre exclusivamente entre os usuários.
+            </p>
             <p className="text-base text-gray-700 leading-relaxed">
-              Este é um projeto open source. O código-fonte está disponível sob licença que
-              permite uso, modificação e distribuição, desde que respeitados os termos da licença.
+              Não nos responsabilizamos por preço, qualidade, quantidade, entrega,
+              trocas, devoluções, inadimplência, chargeback, golpes, vícios de produto
+              ou qualquer disputa entre organizadores e participantes.
             </p>
           </section>
 
-          {/* Section 7 */}
           <section>
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
-              7. Modificações
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-3">
+              6. Limitação de Responsabilidade Técnica
             </h2>
             <p className="text-base text-gray-700 leading-relaxed">
-              Reservamos o direito de modificar estes termos a qualquer momento. Alterações
-              significativas serão comunicadas aos usuários. O uso continuado da plataforma
-              após modificações constitui aceitação dos novos termos.
+              Empregamos medidas razoáveis de segurança e disponibilidade, mas não
+              garantimos operação ininterrupta ou sem falhas. Em caso de
+              indisponibilidade, responsabilidade máxima limita-se ao restabelecimento
+              técnico do serviço.
             </p>
           </section>
 
-          {/* Section 8 */}
           <section>
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
-              8. Contato
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-3">
+              7. Privacidade e LGPD
             </h2>
             <p className="text-base text-gray-700 leading-relaxed">
-              Para dúvidas sobre estes termos, entre em contato através do e-mail:{' '}
+              O tratamento de dados pessoais segue a Política de Privacidade e a
+              legislação aplicável, incluindo a Lei nº 13.709/2018 (LGPD).
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-3">
+              8. Alterações destes Termos
+            </h2>
+            <p className="text-base text-gray-700 leading-relaxed">
+              Podemos atualizar estes Termos periodicamente. A versão vigente estará
+              sempre publicada nesta página. O uso contínuo após atualização indica
+              concordância com o novo texto.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-3">
+              9. Contato
+            </h2>
+            <p className="text-base text-gray-700 leading-relaxed">
+              Para dúvidas jurídicas, privacidade ou exercício de direitos, utilize:
+              {" "}
               <a
                 href="mailto:gustavolendimuth@gmail.com"
                 className="text-blue-600 hover:text-blue-700 underline"
               >
                 gustavolendimuth@gmail.com
               </a>
+              .
             </p>
           </section>
         </div>
