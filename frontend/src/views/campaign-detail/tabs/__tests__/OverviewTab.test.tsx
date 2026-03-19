@@ -37,9 +37,9 @@ vi.mock("../../CampaignLocationSection", () => ({
 
 // Mock useAuth to return an admin user so all action buttons are visible
 vi.mock("@/contexts/AuthContext", () => ({
-  useAuth: () => ({
+  useAuth: vi.fn(() => ({
     user: { id: "admin-user", role: "ADMIN", name: "Admin", email: "admin@test.com" },
-  }),
+  })),
 }));
 
 describe("OverviewTab", () => {
@@ -475,6 +475,133 @@ describe("OverviewTab", () => {
 
       // Should still render the structure but with no customer entries
       expect(screen.getByText("Por Pessoa")).toBeInTheDocument();
+    });
+  });
+
+  describe("Role-based Permissions", () => {
+    const permissionOrders = [
+      createMockOrder({
+        id: "order-1",
+        userId: "u1",
+        customer: { id: "u1", name: "Alice", email: "alice@test.com" },
+        isPaid: true,
+        total: 110,
+      }),
+      createMockOrder({
+        id: "order-2",
+        userId: "u2",
+        customer: { id: "u2", name: "Bob", email: "bob@test.com" },
+        isPaid: false,
+        total: 220,
+      }),
+    ];
+
+    const permissionProps = {
+      ...defaultProps,
+      orders: permissionOrders,
+    };
+
+    it("should show all action buttons on all orders for admin user", async () => {
+      const { useAuth } = await import("@/contexts/AuthContext");
+      vi.mocked(useAuth).mockReturnValue({
+        user: { id: "admin-user", role: "ADMIN", name: "Admin", email: "admin@test.com" },
+      } as ReturnType<typeof useAuth>);
+
+      render(<OverviewTab {...permissionProps} />);
+
+      const viewButtons = screen.getAllByTitle(/visualizar pedido/i);
+      const paymentButtons = screen.getAllByTitle(
+        /marcar como não pago|enviar comprovante de pagamento/i
+      );
+      const editButtons = screen.getAllByTitle(/editar pedido/i);
+
+      expect(viewButtons).toHaveLength(2);
+      expect(paymentButtons).toHaveLength(2);
+      expect(editButtons).toHaveLength(2);
+    });
+
+    it("should show view button on all orders for campaign creator", async () => {
+      const { useAuth } = await import("@/contexts/AuthContext");
+      vi.mocked(useAuth).mockReturnValue({
+        user: { id: "user-1", role: "CUSTOMER", name: "Creator", email: "creator@test.com" },
+      } as ReturnType<typeof useAuth>);
+
+      render(<OverviewTab {...permissionProps} />);
+
+      const viewButtons = screen.getAllByTitle(/visualizar pedido/i);
+      expect(viewButtons).toHaveLength(2);
+    });
+
+    it("should not show payment/edit buttons on others' orders for creator", async () => {
+      const { useAuth } = await import("@/contexts/AuthContext");
+      vi.mocked(useAuth).mockReturnValue({
+        user: { id: "user-1", role: "CUSTOMER", name: "Creator", email: "creator@test.com" },
+      } as ReturnType<typeof useAuth>);
+
+      render(<OverviewTab {...permissionProps} />);
+
+      // Creator (user-1) is not u1 or u2, so no payment/edit buttons
+      expect(
+        screen.queryByTitle(/marcar como não pago|enviar comprovante de pagamento/i)
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTitle(/editar pedido/i)
+      ).not.toBeInTheDocument();
+    });
+
+    it("should show all buttons only on own order for regular user", async () => {
+      const { useAuth } = await import("@/contexts/AuthContext");
+      vi.mocked(useAuth).mockReturnValue({
+        user: { id: "u1", role: "CUSTOMER", name: "Alice", email: "alice@test.com" },
+      } as ReturnType<typeof useAuth>);
+
+      render(<OverviewTab {...permissionProps} />);
+
+      // u1 (Alice) should see view, payment, and edit on their own order
+      const viewButtons = screen.getAllByTitle(/visualizar pedido/i);
+      const paymentButtons = screen.getAllByTitle(
+        /marcar como não pago|enviar comprovante de pagamento/i
+      );
+      const editButtons = screen.getAllByTitle(/editar pedido/i);
+
+      expect(viewButtons).toHaveLength(1);
+      expect(paymentButtons).toHaveLength(1);
+      expect(editButtons).toHaveLength(1);
+    });
+
+    it("should show no buttons on other users' orders for regular user", async () => {
+      const { useAuth } = await import("@/contexts/AuthContext");
+      vi.mocked(useAuth).mockReturnValue({
+        user: { id: "u1", role: "CUSTOMER", name: "Alice", email: "alice@test.com" },
+      } as ReturnType<typeof useAuth>);
+
+      render(<OverviewTab {...permissionProps} />);
+
+      // Only 1 view button total (own order), so Bob's entry has no buttons
+      const viewButtons = screen.getAllByTitle(/visualizar pedido/i);
+      expect(viewButtons).toHaveLength(1);
+
+      // Verify Bob's name is rendered but has no associated buttons
+      expect(screen.getByText("Bob")).toBeInTheDocument();
+    });
+
+    it("should show no action buttons when user is unauthenticated", async () => {
+      const { useAuth } = await import("@/contexts/AuthContext");
+      vi.mocked(useAuth).mockReturnValue({
+        user: null,
+      } as ReturnType<typeof useAuth>);
+
+      render(<OverviewTab {...permissionProps} />);
+
+      expect(
+        screen.queryByTitle(/visualizar pedido/i)
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTitle(/marcar como não pago|enviar comprovante de pagamento/i)
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTitle(/editar pedido/i)
+      ).not.toBeInTheDocument();
     });
   });
 });

@@ -109,6 +109,7 @@ describe('useOrderModal', () => {
       expect(result.current.isEditOrderModalOpen).toBe(false);
       expect(result.current.isViewOrderModalOpen).toBe(false);
       expect(result.current.isPaymentProofModalOpen).toBe(false);
+      expect(result.current.isRemovePaymentProofConfirmOpen).toBe(false);
       expect(result.current.isAdminCustomerModalOpen).toBe(false);
     });
 
@@ -119,6 +120,7 @@ describe('useOrderModal', () => {
       expect(result.current.editingOrder).toBeNull();
       expect(result.current.viewingOrder).toBeNull();
       expect(result.current.orderForPayment).toBeNull();
+      expect(result.current.orderForPaymentRemoval).toBeNull();
     });
 
     it('should return autosave state', () => {
@@ -140,6 +142,8 @@ describe('useOrderModal', () => {
       expect(typeof result.current.handleOpenEditOrder).toBe('function');
       expect(typeof result.current.handleViewOrder).toBe('function');
       expect(typeof result.current.handleEditOrderFromView).toBe('function');
+      expect(typeof result.current.closeRemovePaymentProofConfirm).toBe('function');
+      expect(typeof result.current.handleConfirmRemovePaymentProof).toBe('function');
       expect(typeof result.current.handleTogglePayment).toBe('function');
       expect(typeof result.current.handlePaymentProofSubmit).toBe('function');
       expect(typeof result.current.openEditOrderModal).toBe('function');
@@ -666,7 +670,7 @@ describe('useOrderModal', () => {
       expect(result.current.orderForPayment).toBeNull();
     });
 
-    it('should trigger updatePayment mutation for paid order (toggle off)', async () => {
+    it('should trigger updatePayment mutation for paid order without payment proof', async () => {
       const wrapper = createWrapper();
       const { result } = renderHook(() => useOrderModal(defaultOptions), { wrapper });
       const paidOrder = createMockOrder({ id: 'order-paid', isPaid: true });
@@ -678,6 +682,70 @@ describe('useOrderModal', () => {
       await waitFor(() => {
         expect(orderApi.updatePayment).toHaveBeenCalled();
       });
+
+      expect(result.current.isRemovePaymentProofConfirmOpen).toBe(false);
+    });
+
+    it('should open remove proof confirm modal for paid order with payment proof', () => {
+      const wrapper = createWrapper();
+      const { result } = renderHook(() => useOrderModal(defaultOptions), { wrapper });
+      const paidOrderWithProof = createMockOrder({
+        id: 'order-paid-proof',
+        isPaid: true,
+        paymentProofUrl: 'uploads/proof.jpg',
+      });
+
+      act(() => {
+        result.current.handleTogglePayment(paidOrderWithProof);
+      });
+
+      expect(result.current.isRemovePaymentProofConfirmOpen).toBe(true);
+      expect(result.current.orderForPaymentRemoval).toEqual(paidOrderWithProof);
+      expect(orderApi.updatePayment).not.toHaveBeenCalled();
+    });
+
+    it('should remove payment proof when confirmation modal is confirmed', async () => {
+      const wrapper = createWrapper();
+      const { result } = renderHook(() => useOrderModal(defaultOptions), { wrapper });
+      const paidOrderWithProof = createMockOrder({
+        id: 'order-paid-proof',
+        isPaid: true,
+        paymentProofUrl: 'uploads/proof.jpg',
+      });
+
+      act(() => {
+        result.current.handleTogglePayment(paidOrderWithProof);
+      });
+      act(() => {
+        result.current.handleConfirmRemovePaymentProof();
+      });
+
+      await waitFor(() => {
+        expect(orderApi.updatePayment).toHaveBeenCalledWith('order-paid-proof', false, undefined);
+      });
+    });
+
+    it('should cancel payment toggle when confirmation modal is closed', async () => {
+      const wrapper = createWrapper();
+      const { result } = renderHook(() => useOrderModal(defaultOptions), { wrapper });
+      const paidOrderWithProof = createMockOrder({
+        id: 'order-paid-proof',
+        isPaid: true,
+        paymentProofUrl: 'uploads/proof.jpg',
+      });
+
+      act(() => {
+        result.current.handleTogglePayment(paidOrderWithProof);
+      });
+      act(() => {
+        result.current.closeRemovePaymentProofConfirm();
+      });
+
+      await waitFor(() => {
+        expect(orderApi.updatePayment).not.toHaveBeenCalled();
+      });
+      expect(result.current.isRemovePaymentProofConfirmOpen).toBe(false);
+      expect(result.current.orderForPaymentRemoval).toBeNull();
     });
   });
 

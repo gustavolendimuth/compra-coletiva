@@ -13,7 +13,7 @@ import {
 import { ImageUploadModal } from './modals/ImageUploadModal';
 import { PaymentProofModal } from './modals/PaymentProofModal';
 import { useCampaignDetail } from './useCampaignDetail';
-import { Button, Modal } from '@/components/ui';
+import { Button, ConfirmModal, Modal } from '@/components/ui';
 
 interface CampaignModalsProps {
   hook: ReturnType<typeof useCampaignDetail>;
@@ -125,6 +125,32 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
           hook.setOrderForPayment(null);
         }}
         onSubmit={hook.handlePaymentProofSubmit}
+      />
+
+      <ConfirmModal
+        isOpen={hook.isRemovePaymentProofConfirmOpen}
+        onClose={hook.closeRemovePaymentProofConfirm}
+        onConfirm={hook.handleConfirmRemovePaymentProof}
+        title="Remover Comprovante de Pagamento"
+        message={
+          hook.orderForPaymentRemoval ? (
+            <>
+              <p>
+                O pedido de <strong>{hook.orderForPaymentRemoval.customer.name}</strong> já tem
+                comprovante enviado.
+              </p>
+              <p className="mt-2 text-sm text-sky-600">
+                Confirma remover o comprovante e marcar o pedido como não pago?
+              </p>
+            </>
+          ) : (
+            'Confirma remover o comprovante e marcar o pedido como não pago?'
+          )
+        }
+        confirmText="Remover Comprovante"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={hook.updatePaymentMutation?.isPending || false}
       />
 
       <ShippingModal

@@ -35,10 +35,15 @@ export function useOrderModal({
   const [isEditOrderModalOpen, setIsEditOrderModalOpen] = useState(false);
   const [isViewOrderModalOpen, setIsViewOrderModalOpen] = useState(false);
   const [isPaymentProofModalOpen, setIsPaymentProofModalOpen] = useState(false);
+  const [isRemovePaymentProofConfirmOpen, setIsRemovePaymentProofConfirmOpen] =
+    useState(false);
   const [isAdminCustomerModalOpen, setIsAdminCustomerModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
   const [orderForPayment, setOrderForPayment] = useState<Order | null>(null);
+  const [orderForPaymentRemoval, setOrderForPaymentRemoval] = useState<Order | null>(
+    null
+  );
   const [hasAcceptedSalesDisclaimer, setHasAcceptedSalesDisclaimer] = useState<boolean>(
     !!user?.salesDisclaimerAcceptedVersion
   );
@@ -479,12 +484,31 @@ export function useOrderModal({
     });
   }, [requireAuth]);
 
+  const closeRemovePaymentProofConfirm = useCallback(() => {
+    setIsRemovePaymentProofConfirmOpen(false);
+    setOrderForPaymentRemoval(null);
+  }, []);
+
+  const handleConfirmRemovePaymentProof = useCallback(() => {
+    if (!orderForPaymentRemoval) return;
+    updatePaymentMutation.mutate({
+      orderId: orderForPaymentRemoval.id,
+      isPaid: false,
+    });
+  }, [orderForPaymentRemoval, updatePaymentMutation]);
+
   const handleTogglePayment = useCallback((order: Order) => {
     requireAuth(() => {
       if (!order.isPaid) {
         setOrderForPayment(order);
         setIsPaymentProofModalOpen(true);
       } else {
+        const hasPaymentProof = Boolean(order.paymentProofUrl || order.paymentProofKey);
+        if (hasPaymentProof) {
+          setOrderForPaymentRemoval(order);
+          setIsRemovePaymentProofConfirmOpen(true);
+          return;
+        }
         updatePaymentMutation.mutate({
           orderId: order.id,
           isPaid: false,
@@ -537,12 +561,16 @@ export function useOrderModal({
     setViewingOrder,
     isPaymentProofModalOpen,
     setIsPaymentProofModalOpen,
+    isRemovePaymentProofConfirmOpen,
+    setIsRemovePaymentProofConfirmOpen,
     isSalesDisclaimerModalOpen,
     isSalesDisclaimerLoading,
     isAdminCustomerModalOpen,
     setIsAdminCustomerModalOpen,
     orderForPayment,
     setOrderForPayment,
+    orderForPaymentRemoval,
+    setOrderForPaymentRemoval,
     adminCustomerForm,
     setAdminCustomerForm,
 
@@ -559,6 +587,8 @@ export function useOrderModal({
     handleViewOrder,
     handleEditOrderFromView,
     handleCreateAdminOrder,
+    closeRemovePaymentProofConfirm,
+    handleConfirmRemovePaymentProof,
     handleTogglePayment,
     handlePaymentProofSubmit,
     handleConfirmSalesDisclaimer,
