@@ -393,8 +393,8 @@ describe('OrdersTab', () => {
       expect(screen.queryAllByTitle(/editar pedido/i).length).toBeGreaterThan(0);
     });
 
-    it('should show edit button even when user cannot edit campaign if campaign is active', () => {
-      render(<OrdersTab {...defaultProps} isActive={true} canEditCampaign={false} />);
+    it('should show edit button for order owner even when not admin', () => {
+      render(<OrdersTab {...defaultProps} isActive={true} isAdmin={false} currentUserId="user-1" />);
 
       expect(screen.queryAllByTitle(/editar pedido/i).length).toBeGreaterThan(0);
     });
@@ -405,14 +405,14 @@ describe('OrdersTab', () => {
       expect(screen.queryAllByTitle(/editar pedido/i).length).toBeGreaterThan(0);
     });
 
-    it('should show delete button only for campaign editors and when active', () => {
-      render(<OrdersTab {...defaultProps} isActive={true} canEditCampaign={true} />);
+    it('should show delete button for admin when campaign is active', () => {
+      render(<OrdersTab {...defaultProps} isActive={true} isAdmin={true} />);
 
       expect(screen.queryAllByTitle(/remover pedido/i).length).toBeGreaterThan(0);
     });
 
-    it('should not show delete button when user cannot edit campaign', () => {
-      render(<OrdersTab {...defaultProps} isActive={true} canEditCampaign={false} />);
+    it('should not show delete button when user is not admin or order owner', () => {
+      render(<OrdersTab {...defaultProps} isActive={true} isAdmin={false} isCreator={false} currentUserId="different-user" />);
 
       expect(screen.queryAllByTitle(/remover pedido/i).length).toBe(0);
     });
