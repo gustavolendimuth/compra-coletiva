@@ -69,7 +69,9 @@ export function CampaignDetailPage() {
           orders={hook.orders || []}
           isActive={hook.isActive}
           canEditCampaign={hook.canEditCampaign}
+          onViewOrder={hook.handleViewOrder}
           onTogglePayment={hook.handleTogglePayment}
+          onEditOrder={hook.handleOpenEditOrder}
           onAddToOrder={hook.handleAddToOrder}
           onEditAddress={hook.handleOpenAddressModal}
         />
@@ -95,7 +97,9 @@ export function CampaignDetailPage() {
           orders={hook.orders || []}
           filteredOrders={hook.filteredOrders || []}
           isActive={hook.isActive}
-          canEditCampaign={hook.canEditCampaign}
+          currentUserId={hook.currentUserId}
+          isAdmin={hook.isAdmin}
+          isCreator={hook.isCreator}
           orderSearch={hook.orderSearch}
           sortField={hook.orderSortField}
           sortDirection={hook.orderSortDirection}
