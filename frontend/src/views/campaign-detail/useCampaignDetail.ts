@@ -192,13 +192,6 @@ export function useCampaignDetail() {
   const pathname = usePathname();
   const router = useRouter();
 
-  // Clear PIX key when type changes to avoid inconsistencies
-  useEffect(() => {
-    if (pixType) {
-      setPixKey("");
-    }
-  }, [pixType]);
-
   // Computed states
   const isActive = campaign?.status === "ACTIVE";
   const isClosed = campaign?.status === "CLOSED";
@@ -656,6 +649,13 @@ export function useCampaignDetail() {
     });
   };
 
+  const handlePixTypeChange = (value: "CPF" | "CNPJ" | "EMAIL" | "PHONE" | "RANDOM" | "") => {
+    if (pixType && pixType !== value) {
+      setPixKey("");
+    }
+    setPixType(value);
+  };
+
   const handleRemovePix = () => {
     updatePixMutation.mutate({
       pixKey: null,
@@ -979,6 +979,7 @@ export function useCampaignDetail() {
     setPixKey,
     pixType,
     setPixType,
+    handlePixTypeChange,
     pixName,
     setPixName,
     paymentReleaseTrigger,

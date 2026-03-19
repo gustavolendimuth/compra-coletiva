@@ -46,6 +46,7 @@ export function useNotifications() {
 
       // Show toast notification
       toast.success(notification.title, {
+        id: `notification-${notification.id}`,
         duration: 4000,
         icon: '🔔',
       });

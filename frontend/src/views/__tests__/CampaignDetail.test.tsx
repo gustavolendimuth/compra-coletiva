@@ -691,6 +691,78 @@ describe("CampaignDetail", () => {
     });
   });
 
+  describe("PIX Configuration", () => {
+    it("should keep existing pixKey when opening modal and saving without changes", async () => {
+      const user = userEvent.setup();
+      const campaignWithPix = createMockCampaignFull({
+        ...mockCampaign,
+        pixType: "EMAIL",
+        pixKey: "qa-modal@example.com",
+        pixName: "Conta QA",
+        paymentReleaseTrigger: "ON_SHIPPING_UPDATED",
+      });
+      vi.mocked(campaignApi.getBySlug).mockResolvedValue(campaignWithPix);
+      vi.mocked(campaignApi.update).mockResolvedValue(campaignWithPix);
+
+      renderWithProviders(<CampaignDetail />, {
+        authContext: mockAuthContext,
+      });
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /configurar pix/i })).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole("button", { name: /configurar pix/i }));
+
+      await waitFor(() => {
+        const pixInput = screen.getByLabelText(/chave pix/i) as HTMLInputElement;
+        expect(pixInput.value).toBe("qa-modal@example.com");
+      });
+
+      await user.click(screen.getByRole("button", { name: /^salvar$/i }));
+
+      await waitFor(() => {
+        expect(campaignApi.update).toHaveBeenCalledWith(
+          "campaign-1",
+          expect.objectContaining({
+            pixKey: "qa-modal@example.com",
+            pixType: "EMAIL",
+          })
+        );
+      });
+    });
+
+    it("should clear pixKey when user changes pixType in modal", async () => {
+      const user = userEvent.setup();
+      const campaignWithPix = createMockCampaignFull({
+        ...mockCampaign,
+        pixType: "EMAIL",
+        pixKey: "qa-modal@example.com",
+        pixName: "Conta QA",
+        paymentReleaseTrigger: "ON_SHIPPING_UPDATED",
+      });
+      vi.mocked(campaignApi.getBySlug).mockResolvedValue(campaignWithPix);
+
+      renderWithProviders(<CampaignDetail />, {
+        authContext: mockAuthContext,
+      });
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /configurar pix/i })).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole("button", { name: /configurar pix/i }));
+
+      const typeSelect = screen.getByRole("combobox");
+      await user.selectOptions(typeSelect, "CPF");
+
+      await waitFor(() => {
+        const pixInput = screen.getByLabelText(/chave pix/i) as HTMLInputElement;
+        expect(pixInput.value).toBe("");
+      });
+    });
+  });
+
   describe("Error Handling", () => {
     it("should handle campaign fetch error gracefully", async () => {
       vi.mocked(campaignApi.getBySlug).mockRejectedValue(

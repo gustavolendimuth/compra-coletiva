@@ -23,6 +23,72 @@ const PIX_VISIBLE_STATUS_TO_TRIGGER: Record<CampaignStatus, PaymentReleaseTrigge
 };
 
 export class PaymentReleaseService {
+  private static async notifyUnpaidBuyersOnce(
+    campaign: {
+      id: string;
+      slug: string;
+      name: string;
+      pixKey: string;
+      pixType: string;
+      pixName: string | null;
+    },
+    buyerIds: string[]
+  ): Promise<number> {
+    if (buyerIds.length === 0) {
+      return 0;
+    }
+
+    const existingNotifications = await prisma.notification.findMany({
+      where: {
+        userId: {
+          in: buyerIds,
+        },
+        type: "PAYMENT_RELEASED",
+        metadata: {
+          path: ["campaignId"],
+          equals: campaign.id,
+        },
+      },
+      select: {
+        userId: true,
+      },
+    });
+
+    const alreadyNotifiedBuyerIds = new Set(existingNotifications.map((notification) => notification.userId));
+    let notificationsSent = 0;
+
+    for (const buyerId of buyerIds) {
+      if (alreadyNotifiedBuyerIds.has(buyerId)) {
+        continue;
+      }
+
+      try {
+        await NotificationService.createNotification(
+          buyerId,
+          "PAYMENT_RELEASED",
+          "Pagamento liberado",
+          `O pagamento do grupo "${campaign.name}" foi liberado. Acesse a campanha para ver a chave PIX e enviar o comprovante.`,
+          {
+            campaignId: campaign.id,
+            campaignSlug: campaign.slug,
+            campaignName: campaign.name,
+            pixKey: campaign.pixKey,
+            pixType: campaign.pixType,
+            pixName: campaign.pixName || undefined,
+          }
+        );
+        notificationsSent += 1;
+      } catch (error) {
+        console.error(
+          `[PaymentReleaseService] Failed to notify buyer ${buyerId} for campaign ${campaign.id}:`,
+          error
+        );
+      }
+    }
+
+    return notificationsSent;
+  }
+
   static mapPixVisibleAtStatusToTrigger(status: CampaignStatus): PaymentReleaseTrigger {
     return PIX_VISIBLE_STATUS_TO_TRIGGER[status];
   }
@@ -102,8 +168,28 @@ export class PaymentReleaseService {
       return { released: false, notificationsSent: 0, reason: "PIX_NOT_CONFIGURED" };
     }
 
+    const buyerIds = Array.from(
+      new Set(
+        campaign.orders
+          .filter((order) => !order.isPaid)
+          .map((order) => order.userId)
+      )
+    );
+
     if (campaign.paymentReleased) {
-      return { released: false, notificationsSent: 0, reason: "ALREADY_RELEASED" };
+      const notificationsSent = await this.notifyUnpaidBuyersOnce(
+        {
+          id: campaign.id,
+          slug: campaign.slug,
+          name: campaign.name,
+          pixKey: campaign.pixKey,
+          pixType: campaign.pixType,
+          pixName: campaign.pixName,
+        },
+        buyerIds
+      );
+
+      return { released: false, notificationsSent, reason: "ALREADY_RELEASED" };
     }
 
     if (!shouldRelease) {
@@ -126,40 +212,17 @@ export class PaymentReleaseService {
       return { released: false, notificationsSent: 0, reason: "ALREADY_RELEASED_CONCURRENT" };
     }
 
-    const buyerIds = Array.from(
-      new Set(
-        campaign.orders
-          .filter((order) => !order.isPaid)
-          .map((order) => order.userId)
-      )
+    const notificationsSent = await this.notifyUnpaidBuyersOnce(
+      {
+        id: campaign.id,
+        slug: campaign.slug,
+        name: campaign.name,
+        pixKey: campaign.pixKey,
+        pixType: campaign.pixType,
+        pixName: campaign.pixName,
+      },
+      buyerIds
     );
-
-    let notificationsSent = 0;
-
-    for (const buyerId of buyerIds) {
-      try {
-        await NotificationService.createNotification(
-          buyerId,
-          "PAYMENT_RELEASED",
-          "Pagamento liberado",
-          `O pagamento do grupo "${campaign.name}" foi liberado. Acesse a campanha para ver a chave PIX e enviar o comprovante.`,
-          {
-            campaignId: campaign.id,
-            campaignSlug: campaign.slug,
-            campaignName: campaign.name,
-            pixKey: campaign.pixKey,
-            pixType: campaign.pixType,
-            pixName: campaign.pixName || undefined,
-          }
-        );
-        notificationsSent += 1;
-      } catch (error) {
-        console.error(
-          `[PaymentReleaseService] Failed to notify buyer ${buyerId} for campaign ${campaign.id}:`,
-          error
-        );
-      }
-    }
 
     console.log(
       `[PaymentReleaseService] Payment released for campaign ${campaign.id} ` +

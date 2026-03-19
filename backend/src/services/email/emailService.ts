@@ -86,20 +86,92 @@ export class EmailService {
       ...emailParams
     } = options;
 
+    const resolvedTemplateName = templateName || 'unknown';
+    let emailLog: { id: string } | null = null;
+
     try {
-      // Criar registro inicial no EmailLog
-      const emailLog = await prisma.emailLog.create({
-        data: {
-          userId: userId || null,
-          notificationId: notificationId || null,
-          to: emailParams.to,
-          subject: emailParams.subject,
-          templateName: templateName || 'unknown',
-          provider: 'pending',
-          status: 'PENDING',
-          attempts: 1,
-        },
-      });
+      if (notificationId) {
+        const existingSentLog = await prisma.emailLog.findFirst({
+          where: {
+            notificationId,
+            to: emailParams.to,
+            templateName: resolvedTemplateName,
+            status: 'SENT',
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+          select: {
+            id: true,
+            provider: true,
+            providerId: true,
+          },
+        });
+
+        if (existingSentLog) {
+          console.log(
+            `[EmailService] Skipping duplicate send for notification ${notificationId} (already sent)`
+          );
+          return {
+            success: true,
+            provider: existingSentLog.provider,
+            messageId: existingSentLog.providerId || undefined,
+          };
+        }
+
+        const existingOpenLog = await prisma.emailLog.findFirst({
+          where: {
+            notificationId,
+            to: emailParams.to,
+            templateName: resolvedTemplateName,
+            status: {
+              in: ['PENDING', 'RETRYING', 'FAILED'],
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+          select: {
+            id: true,
+          },
+        });
+
+        if (existingOpenLog) {
+          emailLog = await prisma.emailLog.update({
+            where: { id: existingOpenLog.id },
+            data: {
+              attempts: {
+                increment: 1,
+              },
+              status: 'PENDING',
+              error: null,
+              failedAt: null,
+            },
+            select: {
+              id: true,
+            },
+          });
+        }
+      }
+
+      if (!emailLog) {
+        // Criar registro inicial no EmailLog
+        emailLog = await prisma.emailLog.create({
+          data: {
+            userId: userId || null,
+            notificationId: notificationId || null,
+            to: emailParams.to,
+            subject: emailParams.subject,
+            templateName: resolvedTemplateName,
+            provider: 'pending',
+            status: 'PENDING',
+            attempts: 1,
+          },
+          select: {
+            id: true,
+          },
+        });
+      }
 
       console.log(`[EmailService] Sending email to ${emailParams.to} (${emailParams.subject})`);
 
@@ -137,6 +209,13 @@ export class EmailService {
       return response;
     } catch (error) {
       console.error('[EmailService] Error sending email:', error);
+
+      if (emailLog) {
+        await this.markAsFailed(
+          emailLog.id,
+          error instanceof Error ? error.message : 'Unknown error'
+        );
+      }
 
       return {
         success: false,

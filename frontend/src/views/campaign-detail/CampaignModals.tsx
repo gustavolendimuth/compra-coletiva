@@ -156,7 +156,7 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
         isPending={hook.updatePixMutation?.isPending || false}
         onClose={() => hook.setIsPixModalOpen(false)}
         onChangePixKey={hook.setPixKey}
-        onChangePixType={hook.setPixType}
+        onChangePixType={hook.handlePixTypeChange}
         onChangePixName={hook.setPixName}
         onChangePaymentReleaseTrigger={hook.setPaymentReleaseTrigger}
         onSubmit={hook.handleUpdatePix}
