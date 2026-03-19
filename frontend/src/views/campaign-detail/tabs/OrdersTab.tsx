@@ -22,7 +22,9 @@ interface OrdersTabProps {
   orders: Order[];
   filteredOrders: Order[];
   isActive: boolean;
-  canEditCampaign: boolean;
+  currentUserId?: string;
+  isAdmin: boolean;
+  isCreator: boolean;
   orderSearch: string;
   sortField: "customerName" | "subtotal" | "shippingFee" | "total" | "isPaid";
   sortDirection: "asc" | "desc";
@@ -41,7 +43,9 @@ export function OrdersTab({
   orders: _orders,
   filteredOrders,
   isActive,
-  canEditCampaign,
+  currentUserId,
+  isAdmin,
+  isCreator,
   orderSearch,
   sortField,
   sortDirection,
@@ -76,6 +80,15 @@ export function OrdersTab({
       <ArrowDown className="w-4 h-4 text-sky-600" />
     );
   };
+
+  const canViewOrder = (order: Order) =>
+    isAdmin || isCreator || order.userId === currentUserId;
+
+  const canManageOrder = (order: Order) =>
+    isAdmin || order.userId === currentUserId;
+
+  const canDeleteOrder = (order: Order) =>
+    isActive && (isAdmin || order.userId === currentUserId);
 
   return (
     <div className="pb-20 md:pb-0">
@@ -180,8 +193,9 @@ export function OrdersTab({
               <OrderCard
                 key={order.id}
                 order={order}
-                canEditCampaign={!!canEditCampaign}
-                isActive={isActive}
+                showView={canViewOrder(order)}
+                showManage={canManageOrder(order)}
+                showDelete={canDeleteOrder(order)}
                 onView={() => onViewOrder(order)}
                 onTogglePayment={() => onTogglePayment(order)}
                 onEdit={() => onEditOrder(order)}
@@ -294,32 +308,38 @@ export function OrdersTab({
                       </td>
                       <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
                         <div className="flex gap-1 justify-end">
-                          <IconButton
-                            size="sm"
-                            variant="secondary"
-                            icon={<Eye className="w-5 h-5" />}
-                            onClick={() => onViewOrder(order)}
-                            title="Visualizar pedido"
-                          />
-                          <IconButton
-                            size="sm"
-                            variant={order.isPaid ? "success" : "secondary"}
-                            icon={<Upload className="w-5 h-5" />}
-                            onClick={() => onTogglePayment(order)}
-                            title={
-                              order.isPaid
-                                ? "Marcar como não pago"
-                                : "Enviar comprovante de pagamento"
-                            }
-                          />
-                          <IconButton
-                            size="sm"
-                            variant="secondary"
-                            icon={<Edit className="w-4 h-4" />}
-                            onClick={() => onEditOrder(order)}
-                            title="Editar pedido"
-                          />
-                          {isActive && canEditCampaign && (
+                          {canViewOrder(order) && (
+                            <IconButton
+                              size="sm"
+                              variant="secondary"
+                              icon={<Eye className="w-5 h-5" />}
+                              onClick={() => onViewOrder(order)}
+                              title="Visualizar pedido"
+                            />
+                          )}
+                          {canManageOrder(order) && (
+                            <>
+                              <IconButton
+                                size="sm"
+                                variant={order.isPaid ? "success" : "secondary"}
+                                icon={<Upload className="w-5 h-5" />}
+                                onClick={() => onTogglePayment(order)}
+                                title={
+                                  order.isPaid
+                                    ? "Marcar como não pago"
+                                    : "Enviar comprovante de pagamento"
+                                }
+                              />
+                              <IconButton
+                                size="sm"
+                                variant="secondary"
+                                icon={<Edit className="w-4 h-4" />}
+                                onClick={() => onEditOrder(order)}
+                                title="Editar pedido"
+                              />
+                            </>
+                          )}
+                          {canDeleteOrder(order) && (
                             <IconButton
                               size="sm"
                               variant="danger"
