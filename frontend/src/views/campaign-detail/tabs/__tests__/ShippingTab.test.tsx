@@ -23,7 +23,6 @@ describe('ShippingTab', () => {
 
   const defaultProps = {
     campaign: mockCampaign,
-    isActive: true,
     canEditCampaign: true,
     onEditShipping: mockOnEditShipping,
   };
@@ -105,32 +104,56 @@ describe('ShippingTab', () => {
 
   describe('Edit Button', () => {
     it('should render edit button when campaign is active and user can edit', () => {
-      render(<ShippingTab {...defaultProps} isActive={true} canEditCampaign={true} />);
+      render(<ShippingTab {...defaultProps} canEditCampaign={true} />);
 
       expect(screen.getByRole('button', { name: /editar frete/i })).toBeInTheDocument();
     });
 
-    it('should not render edit button when campaign is not active', () => {
-      render(<ShippingTab {...defaultProps} isActive={false} canEditCampaign={true} />);
+    it('should render edit button when campaign is closed and user can edit', () => {
+      render(
+        <ShippingTab
+          {...defaultProps}
+          campaign={createMockCampaign({ status: 'CLOSED' })}
+          canEditCampaign={true}
+        />
+      );
+
+      expect(screen.getByRole('button', { name: /editar frete/i })).toBeInTheDocument();
+    });
+
+    it('should render edit button when campaign is sent and user can edit', () => {
+      render(
+        <ShippingTab
+          {...defaultProps}
+          campaign={createMockCampaign({ status: 'SENT' })}
+          canEditCampaign={true}
+        />
+      );
+
+      expect(screen.getByRole('button', { name: /editar frete/i })).toBeInTheDocument();
+    });
+
+    it('should not render edit button when campaign is archived', () => {
+      render(
+        <ShippingTab
+          {...defaultProps}
+          campaign={createMockCampaign({ status: 'ARCHIVED' })}
+          canEditCampaign={true}
+        />
+      );
 
       expect(screen.queryByRole('button', { name: /editar frete/i })).not.toBeInTheDocument();
     });
 
     it('should not render edit button when user cannot edit campaign', () => {
-      render(<ShippingTab {...defaultProps} isActive={true} canEditCampaign={false} />);
-
-      expect(screen.queryByRole('button', { name: /editar frete/i })).not.toBeInTheDocument();
-    });
-
-    it('should not render edit button when campaign is inactive and user cannot edit', () => {
-      render(<ShippingTab {...defaultProps} isActive={false} canEditCampaign={false} />);
+      render(<ShippingTab {...defaultProps} canEditCampaign={false} />);
 
       expect(screen.queryByRole('button', { name: /editar frete/i })).not.toBeInTheDocument();
     });
 
     it('should call onEditShipping when edit button is clicked', async () => {
       const user = userEvent.setup();
-      render(<ShippingTab {...defaultProps} isActive={true} canEditCampaign={true} />);
+      render(<ShippingTab {...defaultProps} canEditCampaign={true} />);
 
       const editButton = screen.getByRole('button', { name: /editar frete/i });
       await user.click(editButton);
@@ -221,7 +244,7 @@ describe('ShippingTab', () => {
     });
 
     it('should have accessible edit button', () => {
-      render(<ShippingTab {...defaultProps} isActive={true} canEditCampaign={true} />);
+      render(<ShippingTab {...defaultProps} canEditCampaign={true} />);
 
       const editButton = screen.getByRole('button', { name: /editar frete/i });
       expect(editButton).toBeInTheDocument();

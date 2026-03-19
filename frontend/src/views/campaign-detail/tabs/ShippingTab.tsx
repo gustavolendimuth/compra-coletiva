@@ -6,20 +6,20 @@ import { Campaign } from "@/api";
 
 interface ShippingTabProps {
   campaign: Campaign | null;
-  isActive: boolean;
   canEditCampaign: boolean;
   onEditShipping: () => void;
 }
 
 export function ShippingTab({
   campaign,
-  isActive,
   canEditCampaign,
   onEditShipping,
 }: ShippingTabProps) {
   if (!campaign) {
     return null;
   }
+
+  const canEditShipping = canEditCampaign && campaign.status !== "ARCHIVED";
 
   return (
     <div className="pb-20 md:pb-0">
@@ -56,7 +56,7 @@ export function ShippingTab({
             <div className="text-4xl font-bold text-sky-900 mb-4">
               {formatCurrency(campaign.shippingCost)}
             </div>
-            {isActive && canEditCampaign && (
+            {canEditShipping && (
               <IconButton
                 icon={<Edit className="w-4 h-4" />}
                 onClick={onEditShipping}

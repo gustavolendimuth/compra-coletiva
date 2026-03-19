@@ -112,7 +112,6 @@ export function CampaignDetailPage() {
       {activeTab === 'shipping' && hook.campaign && (
         <ShippingTab
           campaign={hook.campaign}
-          isActive={hook.isActive}
           canEditCampaign={hook.canEditCampaign}
           onEditShipping={() => {
             hook.setShippingCost(String(hook.campaign!.shippingCost));

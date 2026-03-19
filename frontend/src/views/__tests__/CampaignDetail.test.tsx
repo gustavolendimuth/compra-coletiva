@@ -588,6 +588,80 @@ describe("CampaignDetail", () => {
         expect(screen.getByText(/R\$\s*50,00/)).toBeInTheDocument();
       });
     });
+
+    it("should allow editing shipping when campaign is closed", async () => {
+      const user = userEvent.setup();
+      const closedCampaign = createMockCampaignFull({
+        ...mockCampaign,
+        status: "CLOSED",
+      });
+      vi.mocked(campaignApi.getBySlug).mockResolvedValue(closedCampaign);
+
+      renderWithProviders(<CampaignDetail />, {
+        authContext: mockAuthContext,
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/campanha fechada/i)).toBeInTheDocument();
+      });
+
+      const shippingTabs = screen.getAllByRole("button", { name: /^frete$/i });
+      await user.click(shippingTabs[0]);
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /editar frete/i })).toBeInTheDocument();
+      });
+    });
+
+    it("should allow editing shipping when campaign is sent", async () => {
+      const user = userEvent.setup();
+      const sentCampaign = createMockCampaignFull({
+        ...mockCampaign,
+        status: "SENT",
+      });
+      vi.mocked(campaignApi.getBySlug).mockResolvedValue(sentCampaign);
+
+      renderWithProviders(<CampaignDetail />, {
+        authContext: mockAuthContext,
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/campanha enviada/i)).toBeInTheDocument();
+      });
+
+      const shippingTabs = screen.getAllByRole("button", { name: /^frete$/i });
+      await user.click(shippingTabs[0]);
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /editar frete/i })).toBeInTheDocument();
+      });
+    });
+
+    it("should not allow editing shipping when campaign is archived", async () => {
+      const user = userEvent.setup();
+      const archivedCampaign = createMockCampaignFull({
+        ...mockCampaign,
+        status: "ARCHIVED",
+      });
+      vi.mocked(campaignApi.getBySlug).mockResolvedValue(archivedCampaign);
+
+      renderWithProviders(<CampaignDetail />, {
+        authContext: mockAuthContext,
+      });
+
+      await waitFor(() => {
+        expect(screen.getAllByText("Test Campaign")[0]).toBeInTheDocument();
+      });
+
+      const shippingTabs = screen.getAllByRole("button", { name: /^frete$/i });
+      await user.click(shippingTabs[0]);
+
+      await waitFor(() => {
+        expect(
+          screen.queryByRole("button", { name: /editar frete/i })
+        ).not.toBeInTheDocument();
+      });
+    });
   });
 
   describe("Campaign Status", () => {
