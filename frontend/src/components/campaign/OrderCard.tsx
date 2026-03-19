@@ -14,8 +14,9 @@ import IconButton from "@/components/IconButton";
 
 interface OrderCardProps {
   order: Order;
-  canEditCampaign: boolean;
-  isActive: boolean;
+  showView: boolean;
+  showManage: boolean;
+  showDelete: boolean;
   onView: () => void;
   onTogglePayment: () => void;
   onEdit: () => void;
@@ -24,15 +25,14 @@ interface OrderCardProps {
 
 export default function OrderCard({
   order,
-  canEditCampaign,
-  isActive,
+  showView,
+  showManage,
+  showDelete,
   onView,
   onTogglePayment,
   onEdit,
   onDelete,
 }: OrderCardProps) {
-  const canEdit = true;
-  const canDelete = isActive && canEditCampaign;
 
   return (
     <Card className="py-3">
@@ -96,45 +96,50 @@ export default function OrderCard({
           </div>
         </div>
 
-        {/* Ações - Linha separada com espaçamento adequado para touch */}
-        <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
-          <IconButton
-            size="sm"
-            variant="secondary"
-            icon={<Eye className="w-4 h-4" />}
-            onClick={onView}
-            title="Visualizar pedido"
-            className="flex-1"
-          />
-          <IconButton
-            size="sm"
-            variant={order.isPaid ? "success" : "secondary"}
-            icon={<Upload className="w-4 h-4" />}
-            onClick={onTogglePayment}
-            title={order.isPaid ? "Marcar como não pago" : "Enviar comprovante de pagamento"}
-            className="flex-1"
-          />
-          {canEdit && (
-            <IconButton
-              size="sm"
-              variant="secondary"
-              icon={<Edit className="w-4 h-4" />}
-              onClick={onEdit}
-              title="Editar pedido"
-              className="flex-1"
-            />
-          )}
-          {canDelete && (
-            <IconButton
-              size="sm"
-              variant="danger"
-              icon={<Trash2 className="w-4 h-4" />}
-              onClick={onDelete}
-              title="Remover pedido"
-              className="flex-1"
-            />
-          )}
-        </div>
+        {(showView || showManage || showDelete) && (
+          <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
+            {showView && (
+              <IconButton
+                size="sm"
+                variant="secondary"
+                icon={<Eye className="w-4 h-4" />}
+                onClick={onView}
+                title="Visualizar pedido"
+                className="flex-1"
+              />
+            )}
+            {showManage && (
+              <>
+                <IconButton
+                  size="sm"
+                  variant={order.isPaid ? "success" : "secondary"}
+                  icon={<Upload className="w-4 h-4" />}
+                  onClick={onTogglePayment}
+                  title={order.isPaid ? "Marcar como não pago" : "Enviar comprovante de pagamento"}
+                  className="flex-1"
+                />
+                <IconButton
+                  size="sm"
+                  variant="secondary"
+                  icon={<Edit className="w-4 h-4" />}
+                  onClick={onEdit}
+                  title="Editar pedido"
+                  className="flex-1"
+                />
+              </>
+            )}
+            {showDelete && (
+              <IconButton
+                size="sm"
+                variant="danger"
+                icon={<Trash2 className="w-4 h-4" />}
+                onClick={onDelete}
+                title="Remover pedido"
+                className="flex-1"
+              />
+            )}
+          </div>
+        )}
       </div>
     </Card>
   );
