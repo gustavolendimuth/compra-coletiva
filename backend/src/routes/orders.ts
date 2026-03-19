@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../index';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
-import { requireAuth, requireOrderOwnership, requireOrderOrCampaignOwnership } from '../middleware/authMiddleware';
+import { requireAuth, optionalAuth, requireOrderOwnership, requireOrderOrCampaignOwnership } from '../middleware/authMiddleware';
 import { z } from 'zod';
 import { ShippingCalculator } from '../services/shippingCalculator';
 import { emitOrderCreated, emitOrderUpdated, emitOrderDeleted, emitOrderStatusChanged } from '../services/socketService';
@@ -50,16 +50,19 @@ const addItemSchema = z.object({
 });
 
 // GET /api/orders/public?campaignId=xxx - Transparência pública com nome reduzido ou apelido + agregados
-router.get('/public', asyncHandler(async (req, res) => {
+router.get('/public', optionalAuth, asyncHandler(async (req, res) => {
   const { campaignId } = req.query;
 
   if (!campaignId || typeof campaignId !== 'string') {
     throw new AppError(400, 'campaignId is required');
   }
 
+  const isAuthenticated = !!req.user;
+
   const orders = await prisma.order.findMany({
     where: { campaignId },
     select: {
+      id: true,
       userId: true,
       isPaid: true,
       subtotal: true,
@@ -69,6 +72,11 @@ router.get('/public', asyncHandler(async (req, res) => {
       items: {
         select: {
           quantity: true,
+          unitPrice: true,
+          subtotal: true,
+          product: {
+            select: { name: true },
+          },
         },
       },
       customer: {
@@ -83,7 +91,7 @@ router.get('/public', asyncHandler(async (req, res) => {
 
   const publicOrders = orders.map((order) => {
     const quantityTotal = order.items.reduce((sum, item) => sum + item.quantity, 0);
-    return {
+    const base = {
       alias: getCampaignParticipantDisplayName({
         fullName: order.customer?.name,
         hideNameInCampaigns: order.customer?.hideNameInCampaigns ?? true,
@@ -98,6 +106,22 @@ router.get('/public', asyncHandler(async (req, res) => {
       quantityTotal,
       createdAt: order.createdAt,
     };
+
+    if (isAuthenticated) {
+      return {
+        ...base,
+        id: order.id,
+        userId: order.userId,
+        items: order.items.map((item) => ({
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          subtotal: item.subtotal,
+          product: item.product,
+        })),
+      };
+    }
+
+    return base;
   });
 
   const totals = publicOrders.reduce(
