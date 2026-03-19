@@ -35,6 +35,13 @@ vi.mock("../../CampaignLocationSection", () => ({
   ),
 }));
 
+// Mock useAuth to return an admin user so all action buttons are visible
+vi.mock("@/contexts/AuthContext", () => ({
+  useAuth: () => ({
+    user: { id: "admin-user", role: "ADMIN", name: "Admin", email: "admin@test.com" },
+  }),
+}));
+
 describe("OverviewTab", () => {
   const mockProducts = [
     createMockFullProduct({
@@ -98,6 +105,7 @@ describe("OverviewTab", () => {
   const mockCallbacks = {
     onViewOrder: vi.fn(),
     onTogglePayment: vi.fn(),
+    onEditOrder: vi.fn(),
     onAddToOrder: vi.fn(),
   };
 
@@ -280,57 +288,56 @@ describe("OverviewTab", () => {
     it("should render view order button for each customer", () => {
       render(<OverviewTab {...defaultProps} />);
 
-      const viewButtons = screen.queryAllByTitle(/visualizar pedido/i);
-      // If buttons don't have title attribute, check for buttons by role
-      if (viewButtons.length === 0) {
-        const allButtons = screen.getAllByRole("button");
-        expect(allButtons.length).toBeGreaterThan(0);
-      } else {
-        expect(viewButtons.length).toBeGreaterThan(0);
-      }
+      const viewButtons = screen.getAllByTitle(/visualizar pedido/i);
+      expect(viewButtons).toHaveLength(mockAnalytics.byCustomer.length);
     });
 
     it("should call onViewOrder when view button is clicked", async () => {
       const user = userEvent.setup();
       render(<OverviewTab {...defaultProps} />);
 
-      const viewButtons = screen.queryAllByTitle(/visualizar pedido/i);
-      // If title attribute exists, use it; otherwise skip this test
-      if (viewButtons.length > 0) {
-        await user.click(viewButtons[0]);
-        expect(mockCallbacks.onViewOrder).toHaveBeenCalled();
-      } else {
-        // Component might not have title attributes - test passes
-        expect(true).toBe(true);
-      }
+      const viewButtons = screen.getAllByTitle(/visualizar pedido/i);
+      await user.click(viewButtons[0]);
+
+      expect(mockCallbacks.onViewOrder).toHaveBeenCalledWith(mockOrders[0]);
     });
 
     it("should render payment toggle button for each customer", () => {
       render(<OverviewTab {...defaultProps} />);
 
-      const paymentButtons = screen.queryAllByTitle(/marcar como/i);
-      // If buttons don't have title attribute, check for buttons by role
-      if (paymentButtons.length === 0) {
-        const allButtons = screen.getAllByRole("button");
-        expect(allButtons.length).toBeGreaterThan(0);
-      } else {
-        expect(paymentButtons.length).toBeGreaterThan(0);
-      }
+      const paymentButtons = screen.getAllByTitle(
+        /marcar como não pago|enviar comprovante de pagamento/i
+      );
+      expect(paymentButtons).toHaveLength(mockAnalytics.byCustomer.length);
     });
 
     it("should call onTogglePayment when payment button is clicked", async () => {
       const user = userEvent.setup();
       render(<OverviewTab {...defaultProps} />);
 
-      const paymentButtons = screen.queryAllByTitle(/marcar como/i);
-      // If title attribute exists, use it; otherwise skip this test
-      if (paymentButtons.length > 0) {
-        await user.click(paymentButtons[0]);
-        expect(mockCallbacks.onTogglePayment).toHaveBeenCalled();
-      } else {
-        // Component might not have title attributes - test passes
-        expect(true).toBe(true);
-      }
+      const paymentButtons = screen.getAllByTitle(
+        /marcar como não pago|enviar comprovante de pagamento/i
+      );
+      await user.click(paymentButtons[0]);
+
+      expect(mockCallbacks.onTogglePayment).toHaveBeenCalledWith(mockOrders[0]);
+    });
+
+    it("should render edit button for each customer", () => {
+      render(<OverviewTab {...defaultProps} />);
+
+      const editButtons = screen.getAllByTitle(/editar pedido/i);
+      expect(editButtons).toHaveLength(mockAnalytics.byCustomer.length);
+    });
+
+    it("should call onEditOrder when edit button is clicked", async () => {
+      const user = userEvent.setup();
+      render(<OverviewTab {...defaultProps} />);
+
+      const editButtons = screen.getAllByTitle(/editar pedido/i);
+      await user.click(editButtons[0]);
+
+      expect(mockCallbacks.onEditOrder).toHaveBeenCalledWith(mockOrders[0]);
     });
   });
 
