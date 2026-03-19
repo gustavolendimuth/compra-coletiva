@@ -6,13 +6,17 @@ import { createMockOrder } from '@/__tests__/mock-data';
 
 // Mock OrderCard component
 vi.mock('@/components/campaign/OrderCard', () => ({
-  default: ({ order, onView, onEdit, onDelete, onTogglePayment }: unknown) => (
-    <div data-testid={`order-card-${order.id}`}>
-      <span>Order: {order.customer.name}</span>
-      <button onClick={onView}>View</button>
-      <button onClick={onEdit}>Edit</button>
-      <button onClick={onDelete}>Delete</button>
-      <button onClick={onTogglePayment}>Toggle Payment</button>
+  default: ({ order, showView, showManage, showDelete, onView, onEdit, onDelete, onTogglePayment }: Record<string, unknown>) => (
+    <div data-testid={`order-card-${(order as { id: string }).id}`}>
+      <span>Order: {(order as { customer: { name: string } }).customer.name}</span>
+      {showView && <button onClick={onView as () => void}>View</button>}
+      {showManage && (
+        <>
+          <button onClick={onEdit as () => void}>Edit</button>
+          <button onClick={onTogglePayment as () => void}>Toggle Payment</button>
+        </>
+      )}
+      {showDelete && <button onClick={onDelete as () => void}>Delete</button>}
     </div>
   ),
 }));
@@ -30,6 +34,7 @@ describe('OrdersTab', () => {
   const mockOrders = [
     createMockOrder({
       id: 'order-1',
+      userId: 'u1',
       customer: { id: 'u1', name: 'Alice', email: 'alice@test.com' },
       subtotal: 100,
       shippingFee: 10,
@@ -38,6 +43,7 @@ describe('OrdersTab', () => {
     }),
     createMockOrder({
       id: 'order-2',
+      userId: 'u2',
       customer: { id: 'u2', name: 'Bob', email: 'bob@test.com' },
       subtotal: 200,
       shippingFee: 20,
@@ -46,6 +52,7 @@ describe('OrdersTab', () => {
     }),
     createMockOrder({
       id: 'order-3',
+      userId: 'u3',
       customer: { id: 'u3', name: 'Charlie', email: 'charlie@test.com' },
       subtotal: 150,
       shippingFee: 15,
@@ -375,45 +382,54 @@ describe('OrdersTab', () => {
   });
 
   describe('Permissions', () => {
-    it('should show payment toggle button when user can edit campaign', () => {
-      render(<OrdersTab {...defaultProps} canEditCampaign={true} />);
+    it('should show all action buttons for admin on all orders', () => {
+      render(<OrdersTab {...defaultProps} currentUserId="admin-1" isAdmin={true} />);
 
+      expect(screen.queryAllByTitle(/visualizar pedido/i).length).toBeGreaterThan(0);
       expect(screen.queryAllByTitle(/marcar como|enviar comprovante/i).length).toBeGreaterThan(0);
-    });
-
-    it('should show payment toggle button when user cannot edit campaign', () => {
-      render(<OrdersTab {...defaultProps} canEditCampaign={false} />);
-
-      expect(screen.queryAllByTitle(/marcar como|enviar comprovante/i).length).toBeGreaterThan(0);
-    });
-
-    it('should show edit button only when campaign is active', () => {
-      render(<OrdersTab {...defaultProps} isActive={true} />);
-
       expect(screen.queryAllByTitle(/editar pedido/i).length).toBeGreaterThan(0);
-    });
-
-    it('should show edit button for order owner even when not admin', () => {
-      render(<OrdersTab {...defaultProps} isActive={true} isAdmin={false} currentUserId="user-1" />);
-
-      expect(screen.queryAllByTitle(/editar pedido/i).length).toBeGreaterThan(0);
-    });
-
-    it('should show edit button when campaign is not active', () => {
-      render(<OrdersTab {...defaultProps} isActive={false} />);
-
-      expect(screen.queryAllByTitle(/editar pedido/i).length).toBeGreaterThan(0);
-    });
-
-    it('should show delete button for admin when campaign is active', () => {
-      render(<OrdersTab {...defaultProps} isActive={true} isAdmin={true} />);
-
       expect(screen.queryAllByTitle(/remover pedido/i).length).toBeGreaterThan(0);
     });
 
-    it('should not show delete button when user is not admin or order owner', () => {
-      render(<OrdersTab {...defaultProps} isActive={true} isAdmin={false} isCreator={false} currentUserId="different-user" />);
+    it('should show action buttons only on own order for regular user', () => {
+      render(<OrdersTab {...defaultProps} currentUserId="u1" isAdmin={false} isCreator={false} />);
 
+      // u1 owns order-1 only — desktop table shows 1 of each
+      const viewButtons = screen.queryAllByTitle(/visualizar pedido/i);
+      const paymentButtons = screen.queryAllByTitle(/marcar como|enviar comprovante/i);
+      const editButtons = screen.queryAllByTitle(/editar pedido/i);
+      const deleteButtons = screen.queryAllByTitle(/remover pedido/i);
+
+      expect(viewButtons.length).toBe(1);
+      expect(paymentButtons.length).toBe(1);
+      expect(editButtons.length).toBe(1);
+      expect(deleteButtons.length).toBe(1);
+    });
+
+    it('should show view button on all orders for creator', () => {
+      render(<OrdersTab {...defaultProps} currentUserId="creator-1" isAdmin={false} isCreator={true} />);
+
+      // Creator sees view on all 3 orders in desktop table
+      const viewButtons = screen.queryAllByTitle(/visualizar pedido/i);
+      expect(viewButtons.length).toBe(3);
+
+      // No manage buttons since creator-1 doesn't own any of these orders
+      expect(screen.queryAllByTitle(/marcar como|enviar comprovante/i).length).toBe(0);
+      expect(screen.queryAllByTitle(/editar pedido/i).length).toBe(0);
+    });
+
+    it('should not show delete button when campaign is not active', () => {
+      render(<OrdersTab {...defaultProps} isActive={false} currentUserId="u1" />);
+
+      expect(screen.queryAllByTitle(/remover pedido/i).length).toBe(0);
+    });
+
+    it('should not show any action buttons when user has no matching order and is not admin or creator', () => {
+      render(<OrdersTab {...defaultProps} currentUserId="unknown-user" isAdmin={false} isCreator={false} />);
+
+      expect(screen.queryAllByTitle(/visualizar pedido/i).length).toBe(0);
+      expect(screen.queryAllByTitle(/marcar como|enviar comprovante/i).length).toBe(0);
+      expect(screen.queryAllByTitle(/editar pedido/i).length).toBe(0);
       expect(screen.queryAllByTitle(/remover pedido/i).length).toBe(0);
     });
   });
