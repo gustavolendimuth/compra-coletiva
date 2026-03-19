@@ -67,7 +67,9 @@ export default function CampaignDetail() {
           orders={hook.orders || []}
           isActive={hook.isActive}
           canEditCampaign={hook.canEditCampaign}
+          onViewOrder={hook.orderModal.handleViewOrder}
           onTogglePayment={hook.orderModal.handleTogglePayment}
+          onEditOrder={hook.handleOpenEditOrder}
           onAddToOrder={hook.orderModal.handleAddToOrder}
           onEditAddress={hook.handleOpenAddressModal}
         />
@@ -93,7 +95,9 @@ export default function CampaignDetail() {
           orders={hook.orders || []}
           filteredOrders={hook.filteredOrders || []}
           isActive={hook.isActive}
-          canEditCampaign={hook.canEditCampaign}
+          currentUserId={hook.currentUserId}
+          isAdmin={hook.isAdmin}
+          isCreator={hook.isCreator}
           orderSearch={hook.orderSearch}
           sortField={hook.orderSortField}
           sortDirection={hook.orderSortDirection}
