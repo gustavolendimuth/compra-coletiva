@@ -275,6 +275,15 @@ export interface PublicOrderSummary {
   itemsCount: number;
   quantityTotal: number;
   createdAt: string;
+  // Present only for authenticated users
+  id?: string;
+  userId?: string;
+  items?: Array<{
+    quantity: number;
+    unitPrice: number;
+    subtotal: number;
+    product: { name: string };
+  }>;
 }
 
 export interface PublicOrdersResponse {
