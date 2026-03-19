@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Card, PixDisplay, PaymentPendingNotice } from "@/components/ui";
+import IconButton from "@/components/IconButton";
 import { CampaignChat } from "@/components/campaign";
 import { Skeleton } from "@/components/Skeleton";
 import { formatCurrency } from "@/lib/utils";
@@ -7,6 +8,8 @@ import { getImageUrl } from "@/lib/imageUrl";
 import { Order, Product, CampaignAnalytics, Campaign } from "@/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { CampaignLocationSection } from "../CampaignLocationSection";
+import { getCustomerDisplayName } from "../utils";
+import { Edit, Eye, Upload } from "lucide-react";
 import {
   canShowPaymentPendingNotice,
   canShowPixToBuyer,
@@ -22,7 +25,9 @@ interface OverviewTabProps {
   orders: Order[];
   isActive: boolean;
   canEditCampaign: boolean;
+  onViewOrder: (order: Order) => void;
   onTogglePayment: (order: Order) => void;
+  onEditOrder: (order: Order) => void;
   onAddToOrder: (product: Product) => void;
   onEditAddress?: () => void;
 }
@@ -73,13 +78,18 @@ export function OverviewTab({
   orders,
   isActive,
   canEditCampaign,
+  onViewOrder,
   onTogglePayment,
+  onEditOrder,
   onAddToOrder,
   onEditAddress,
 }: OverviewTabProps) {
   const { user } = useAuth();
 
   const userOrder = user ? orders.find(o => o.userId === user.id) : undefined;
+
+  const isAdmin = user?.role === "ADMIN";
+  const isCreator = campaign.creatorId === user?.id;
 
   const paymentReleaseTrigger = getPaymentReleaseTrigger(
     campaign.paymentReleaseTrigger,
@@ -317,6 +327,16 @@ export function OverviewTab({
                     (a.customerAlias || "").localeCompare(b.customerAlias || "")
                   )
                   .map((item, index) => {
+                    const order =
+                      orders?.find(
+                        (o) => getCustomerDisplayName(o) === item.customerAlias
+                      ) ??
+                      orders?.find(
+                        (o) =>
+                          o.isPaid === item.isPaid &&
+                          Math.abs(o.total - item.total) < 0.01
+                      );
+
                     return (
                       <div
                         key={index}
@@ -326,6 +346,40 @@ export function OverviewTab({
                           <span className="text-sky-900 font-medium flex-1 min-w-0">
                             {item.customerAlias}
                           </span>
+
+                          <div className="flex items-center gap-2">
+                            {order && (isAdmin || isCreator || order.userId === user?.id) && (
+                              <IconButton
+                                size="sm"
+                                variant="secondary"
+                                icon={<Eye className="w-5 h-5" />}
+                                onClick={() => onViewOrder(order)}
+                                title="Visualizar pedido"
+                              />
+                            )}
+                            {order && (isAdmin || order.userId === user?.id) && (
+                              <>
+                                <IconButton
+                                  size="sm"
+                                  variant={item.isPaid ? "success" : "secondary"}
+                                  icon={<Upload className="w-5 h-5" />}
+                                  onClick={() => onTogglePayment(order)}
+                                  title={
+                                    item.isPaid
+                                      ? "Marcar como não pago"
+                                      : "Enviar comprovante de pagamento"
+                                  }
+                                />
+                                <IconButton
+                                  size="sm"
+                                  variant="secondary"
+                                  icon={<Edit className="w-4 h-4" />}
+                                  onClick={() => onEditOrder(order)}
+                                  title="Editar pedido"
+                                />
+                              </>
+                            )}
+                          </div>
                         </div>
 
                         <div className="flex items-center justify-between gap-3">
