@@ -150,10 +150,12 @@ export function useCampaignDetail() {
   };
 
   const campaignId = campaign?.id;
+  const isAdmin = user?.role === "ADMIN";
+  const isCreator = campaign?.creatorId === user?.id;
   const canViewAllOrders =
     !!campaign &&
     !!user &&
-    (user.role === "ADMIN" || campaign.creatorId === user.id);
+    (isAdmin || isCreator);
 
   const { data: products, isLoading: isProductsLoading } = useQuery({
     queryKey: ["products", campaignId],
@@ -162,7 +164,7 @@ export function useCampaignDetail() {
   });
 
   const { data: orders, isLoading: isOrdersLoading } = useQuery({
-    queryKey: ["orders", campaignId, user?.id, canViewAllOrders ? "all" : "mine"],
+    queryKey: ["orders", campaignId, user?.id, canViewAllOrders ? "all" : "public"],
     queryFn: async () => {
       if (!campaignId) {
         return [];
@@ -172,12 +174,36 @@ export function useCampaignDetail() {
         return orderApi.getByCampaign(campaignId);
       }
 
-      if (!user) {
-        return [];
-      }
-
-      const myOrder = await orderApi.getMyByCampaign(campaignId);
-      return myOrder ? [myOrder] : [];
+      const publicData = await orderApi.getPublicByCampaign(campaignId);
+      return publicData.orders.map((po) => ({
+        id: po.id ?? "",
+        campaignId,
+        userId: po.userId ?? "",
+        customer: { id: "", name: po.alias, email: "" },
+        isPaid: po.isPaid,
+        isSeparated: false,
+        subtotal: po.subtotal,
+        shippingFee: po.shippingFee,
+        total: po.total,
+        createdAt: po.createdAt,
+        updatedAt: po.createdAt,
+        items: (po.items ?? []).map((item) => ({
+          id: "",
+          orderId: po.id ?? "",
+          productId: "",
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          subtotal: item.subtotal,
+          product: {
+            id: "",
+            name: item.product.name,
+            price: item.unitPrice,
+            campaignId: campaignId,
+            createdAt: "",
+            updatedAt: "",
+          },
+        })),
+      })) as Order[];
     },
     enabled: !!campaignId,
   });
@@ -931,6 +957,9 @@ export function useCampaignDetail() {
     isSent,
     canEditCampaign,
     canGenerateOrdersSummary,
+    isAdmin: isAdmin ?? false,
+    isCreator: isCreator ?? false,
+    currentUserId: user?.id,
 
     // Navigation state
     shouldOpenQuestionsTab,
