@@ -9,7 +9,7 @@ import { Order, Product, CampaignAnalytics, Campaign } from "@/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { CampaignLocationSection } from "../CampaignLocationSection";
 import { getCustomerDisplayName } from "../utils";
-import { Edit, Eye, Upload } from "lucide-react";
+import { Edit, Eye, LogIn, Upload } from "lucide-react";
 import {
   canShowPaymentPendingNotice,
   canShowPixToBuyer,
@@ -84,7 +84,7 @@ export function OverviewTab({
   onAddToOrder,
   onEditAddress,
 }: OverviewTabProps) {
-  const { user } = useAuth();
+  const { user, requireAuth } = useAuth();
 
   const userOrder = user ? orders.find(o => o.userId === user.id) : undefined;
 
@@ -98,6 +98,8 @@ export function OverviewTab({
   const hasUserOrder = userOrder !== undefined;
   const shouldShowPix = canShowPixToBuyer(campaign, hasUserOrder);
   const shouldShowPaymentPending = canShowPaymentPendingNotice(campaign, hasUserOrder);
+  const hasPixConfigured = Boolean(campaign.pixKey && campaign.pixType && campaign.status !== "ARCHIVED");
+  const shouldShowPixLoginNotice = !user && hasPixConfigured;
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
@@ -135,6 +137,42 @@ export function OverviewTab({
           paymentReleaseTrigger={paymentReleaseTrigger}
           campaignStatus={campaign.status}
         />
+      )}
+
+      {shouldShowPixLoginNotice && (
+        <div className="relative overflow-hidden bg-gradient-to-br from-emerald-50 via-emerald-50 to-green-100 border border-emerald-200 rounded-lg p-4 md:p-5">
+          <div className="absolute top-0 right-0 w-24 h-24 opacity-[0.04]">
+            <svg viewBox="0 0 80 80" fill="currentColor" className="w-full h-full text-emerald-900">
+              <rect x="10" y="10" width="60" height="60" rx="8" stroke="currentColor" strokeWidth="2" fill="none" />
+              <path d="M30 40 L40 50 L55 30" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            </svg>
+          </div>
+          <div className="relative flex items-start gap-3">
+            <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-emerald-100 border border-emerald-200 flex items-center justify-center">
+              <LogIn className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="inline-flex items-center bg-emerald-600 text-white px-2 py-0.5 rounded-full text-[11px] font-bold tracking-wide uppercase">
+                  PIX
+                </span>
+              </div>
+              <p className="text-sm font-semibold text-emerald-900 mb-1">
+                Esta campanha possui pagamento via PIX
+              </p>
+              <p className="text-xs text-emerald-600/80 leading-relaxed mb-3">
+                Faca login ou crie uma conta para ver os dados de pagamento e participar da campanha.
+              </p>
+              <button
+                onClick={() => requireAuth(() => {})}
+                className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              >
+                <LogIn className="w-4 h-4" />
+                Fazer login
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Produtos em Destaque */}

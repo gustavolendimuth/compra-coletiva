@@ -48,6 +48,42 @@ type SortField =
 type SortDirection = "asc" | "desc";
 type ProductSortField = "name" | "price" | "weight";
 
+function safeSessionStorageSet(key: string, value: string): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(key, value);
+  } catch {
+    // Ignore restricted storage errors in private browsing contexts.
+  }
+}
+
+function safeSessionStorageGet(key: string): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    return window.sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeSessionStorageRemove(key: string): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.sessionStorage.removeItem(key);
+  } catch {
+    // Ignore restricted storage errors in private browsing contexts.
+  }
+}
+
 export function useCampaignDetail() {
   const params = useParams();
   const slug = params?.slug as string;
@@ -276,8 +312,8 @@ export function useCampaignDetail() {
       searchParams?.get("openChat") === "true" &&
       !!searchParams?.get("orderId");
 
-    if (shouldOpenOrderChat && typeof window !== "undefined") {
-      sessionStorage.setItem(
+    if (shouldOpenOrderChat) {
+      safeSessionStorageSet(
         "campaignNavigationState",
         JSON.stringify({
           openOrderChat: true,
@@ -288,9 +324,7 @@ export function useCampaignDetail() {
   }, [searchParams]);
 
   useEffect(() => {
-    const storedState = typeof window !== 'undefined'
-      ? sessionStorage.getItem('campaignNavigationState')
-      : null;
+    const storedState = safeSessionStorageGet("campaignNavigationState");
 
     if (!storedState) return;
 
@@ -306,13 +340,13 @@ export function useCampaignDetail() {
       if (order) {
         setViewingOrder(order);
         setIsViewOrderModalOpen(true);
-        sessionStorage.removeItem('campaignNavigationState');
+        safeSessionStorageRemove("campaignNavigationState");
       }
     }
 
     if (state?.openQuestionsTab) {
       setShouldOpenQuestionsTab(true);
-      sessionStorage.removeItem('campaignNavigationState');
+      safeSessionStorageRemove("campaignNavigationState");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orders]);
@@ -1108,4 +1142,3 @@ export function useCampaignDetail() {
     updateAddressMutation,
   };
 }
-

@@ -15,6 +15,57 @@ const PENDING_ACTION_DATA_KEY = "pendingActionData";
 const AUTH_TOKEN_COOKIE = "auth-token";
 const USER_ROLE_COOKIE = "user-role";
 
+function getLocalStorage(): Storage | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function safeStorageGet(key: string): string | null {
+  const storage = getLocalStorage();
+  if (!storage) {
+    return null;
+  }
+
+  try {
+    return storage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeStorageSet(key: string, value: string): void {
+  const storage = getLocalStorage();
+  if (!storage) {
+    return;
+  }
+
+  try {
+    storage.setItem(key, value);
+  } catch {
+    // Ignore storage write errors (Safari private mode / restricted contexts).
+  }
+}
+
+function safeStorageRemove(key: string): void {
+  const storage = getLocalStorage();
+  if (!storage) {
+    return;
+  }
+
+  try {
+    storage.removeItem(key);
+  } catch {
+    // Ignore storage remove errors (Safari private mode / restricted contexts).
+  }
+}
+
 // Helper to set a cookie
 function setCookie(name: string, value: string, days = 7): void {
   if (typeof document === 'undefined') return;
@@ -64,17 +115,17 @@ export interface StoredUser {
 export const authStorage = {
   // Token management
   getAccessToken(): string | null {
-    return localStorage.getItem(ACCESS_TOKEN_KEY);
+    return safeStorageGet(ACCESS_TOKEN_KEY);
   },
 
   setAccessToken(token: string): void {
-    localStorage.setItem(ACCESS_TOKEN_KEY, token);
+    safeStorageSet(ACCESS_TOKEN_KEY, token);
     setCookie(AUTH_TOKEN_COOKIE, token);
   },
 
   // User management
   getUser(): StoredUser | null {
-    const userJson = localStorage.getItem(USER_KEY);
+    const userJson = safeStorageGet(USER_KEY);
     if (!userJson) return null;
     try {
       return JSON.parse(userJson);
@@ -84,7 +135,7 @@ export const authStorage = {
   },
 
   setUser(user: StoredUser): void {
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    safeStorageSet(USER_KEY, JSON.stringify(user));
     setCookie(USER_ROLE_COOKIE, user.role);
   },
 
@@ -96,9 +147,9 @@ export const authStorage = {
 
   // Clear all auth data (for logout)
   clearAuth(): void {
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem(USER_KEY);
+    safeStorageRemove(ACCESS_TOKEN_KEY);
+    safeStorageRemove("refreshToken");
+    safeStorageRemove(USER_KEY);
     deleteCookie(AUTH_TOKEN_COOKIE);
     deleteCookie(USER_ROLE_COOKIE);
   },
@@ -111,40 +162,40 @@ export const authStorage = {
   // Pending action management (used for OAuth flow to persist actions across redirects)
   // Using localStorage instead of sessionStorage because OAuth redirects across domains
   setPendingActionFlag(): void {
-    localStorage.setItem(PENDING_ACTION_KEY, "true");
+    safeStorageSet(PENDING_ACTION_KEY, "true");
   },
 
   hasPendingAction(): boolean {
-    return localStorage.getItem(PENDING_ACTION_KEY) === "true";
+    return safeStorageGet(PENDING_ACTION_KEY) === "true";
   },
 
   clearPendingActionFlag(): void {
-    localStorage.removeItem(PENDING_ACTION_KEY);
+    safeStorageRemove(PENDING_ACTION_KEY);
   },
 
   // Return URL management (to redirect back to original page after OAuth)
   // Using localStorage instead of sessionStorage because OAuth redirects across domains
   // and sessionStorage doesn't persist across different domains
   setReturnUrl(url: string): void {
-    localStorage.setItem(RETURN_URL_KEY, url);
+    safeStorageSet(RETURN_URL_KEY, url);
   },
 
   getReturnUrl(): string | null {
-    return localStorage.getItem(RETURN_URL_KEY);
+    return safeStorageGet(RETURN_URL_KEY);
   },
 
   clearReturnUrl(): void {
-    localStorage.removeItem(RETURN_URL_KEY);
+    safeStorageRemove(RETURN_URL_KEY);
   },
 
   // Pending action data (serializable metadata about the action)
   // Using localStorage instead of sessionStorage because OAuth redirects across domains
   setPendingActionData(data: PendingActionData): void {
-    localStorage.setItem(PENDING_ACTION_DATA_KEY, JSON.stringify(data));
+    safeStorageSet(PENDING_ACTION_DATA_KEY, JSON.stringify(data));
   },
 
   getPendingActionData(): PendingActionData | null {
-    const data = localStorage.getItem(PENDING_ACTION_DATA_KEY);
+    const data = safeStorageGet(PENDING_ACTION_DATA_KEY);
     if (!data) return null;
     try {
       return JSON.parse(data);
@@ -154,7 +205,7 @@ export const authStorage = {
   },
 
   clearPendingActionData(): void {
-    localStorage.removeItem(PENDING_ACTION_DATA_KEY);
+    safeStorageRemove(PENDING_ACTION_DATA_KEY);
   },
 };
 

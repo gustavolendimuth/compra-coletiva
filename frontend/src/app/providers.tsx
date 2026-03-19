@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import { useState } from 'react';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { AuthModalManager } from '@/components/AuthModal';
+import { ClientErrorListener } from '@/components/shared/ClientErrorListener';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -22,6 +23,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <ClientErrorListener />
       <AuthProvider>
         <AuthModalManager />
         {children}

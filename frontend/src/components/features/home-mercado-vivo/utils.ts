@@ -3,21 +3,33 @@ import type { CampaignWithProducts } from "@/api";
 
 const EMOJIS = ["🥬", "🐟", "☕", "🍊", "🧀", "🍅", "🥖", "🥕"];
 
+function formatNumberWithOptions(
+  value: number,
+  options: Intl.NumberFormatOptions
+): string {
+  try {
+    return new Intl.NumberFormat("pt-BR", options).format(value);
+  } catch {
+    const { notation, compactDisplay, ...fallbackOptions } = options;
+    return new Intl.NumberFormat("pt-BR", fallbackOptions).format(value);
+  }
+}
+
 export function formatCompactNumber(value: number): string {
-  return new Intl.NumberFormat("pt-BR", {
+  return formatNumberWithOptions(value, {
     notation: "compact",
     compactDisplay: "short",
     maximumFractionDigits: 1,
-  }).format(value);
+  });
 }
 
 export function formatCurrencyCompact(value: number): string {
-  return new Intl.NumberFormat("pt-BR", {
+  return formatNumberWithOptions(value, {
     style: "currency",
     currency: "BRL",
     notation: "compact",
     maximumFractionDigits: 1,
-  }).format(value);
+  });
 }
 
 export function formatCampaignDistance(campaign: CampaignWithProducts): string {
