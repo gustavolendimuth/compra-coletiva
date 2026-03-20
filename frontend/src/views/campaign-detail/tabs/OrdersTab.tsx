@@ -16,6 +16,7 @@ import IconButton from "@/components/IconButton";
 import OrderCard from "@/components/campaign/OrderCard";
 import { formatCurrency } from "@/lib/utils";
 import { Order } from "@/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { getCustomerDisplayName } from "../utils";
 
 interface OrdersTabProps {
@@ -57,11 +58,17 @@ export function OrdersTab({
   onSearchChange,
   onSort,
 }: OrdersTabProps) {
+  const { requireAuth } = useAuth();
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+
+  const isLoggedIn = !!currentUserId;
 
   const handleDeleteClick = (order: Order) => {
     setOrderToDelete(order);
   };
+
+  const wrapAction = (fn: () => void) =>
+    !isLoggedIn ? () => requireAuth(() => {}) : fn;
 
   const handleConfirmDelete = () => {
     if (orderToDelete) {
@@ -193,13 +200,13 @@ export function OrdersTab({
               <OrderCard
                 key={order.id}
                 order={order}
-                showView={canViewOrder(order)}
-                showManage={canManageOrder(order)}
-                showDelete={canDeleteOrder(order)}
-                onView={() => onViewOrder(order)}
-                onTogglePayment={() => onTogglePayment(order)}
-                onEdit={() => onEditOrder(order)}
-                onDelete={() => handleDeleteClick(order)}
+                showView={!isLoggedIn || canViewOrder(order)}
+                showManage={!isLoggedIn || canManageOrder(order)}
+                showDelete={!isLoggedIn ? isActive : canDeleteOrder(order)}
+                onView={wrapAction(() => onViewOrder(order))}
+                onTogglePayment={wrapAction(() => onTogglePayment(order))}
+                onEdit={wrapAction(() => onEditOrder(order))}
+                onDelete={wrapAction(() => handleDeleteClick(order))}
               />
             ))}
           </div>
@@ -308,22 +315,22 @@ export function OrdersTab({
                       </td>
                       <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
                         <div className="flex gap-1 justify-end">
-                          {canViewOrder(order) && (
+                          {(!isLoggedIn || canViewOrder(order)) && (
                             <IconButton
                               size="sm"
                               variant="secondary"
                               icon={<Eye className="w-5 h-5" />}
-                              onClick={() => onViewOrder(order)}
+                              onClick={wrapAction(() => onViewOrder(order))}
                               title="Visualizar pedido"
                             />
                           )}
-                          {canManageOrder(order) && (
+                          {(!isLoggedIn || canManageOrder(order)) && (
                             <>
                               <IconButton
                                 size="sm"
                                 variant={order.isPaid ? "success" : "secondary"}
                                 icon={<Upload className="w-5 h-5" />}
-                                onClick={() => onTogglePayment(order)}
+                                onClick={wrapAction(() => onTogglePayment(order))}
                                 title={
                                   order.isPaid
                                     ? "Marcar como não pago"
@@ -334,17 +341,17 @@ export function OrdersTab({
                                 size="sm"
                                 variant="secondary"
                                 icon={<Edit className="w-4 h-4" />}
-                                onClick={() => onEditOrder(order)}
+                                onClick={wrapAction(() => onEditOrder(order))}
                                 title="Editar pedido"
                               />
                             </>
                           )}
-                          {canDeleteOrder(order) && (
+                          {(!isLoggedIn ? isActive : canDeleteOrder(order)) && (
                             <IconButton
                               size="sm"
                               variant="danger"
                               icon={<Trash2 className="w-4 h-4" />}
-                              onClick={() => handleDeleteClick(order)}
+                              onClick={wrapAction(() => handleDeleteClick(order))}
                               title="Remover pedido"
                             />
                           )}
