@@ -3,6 +3,13 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { OrdersTab } from '../OrdersTab';
 import { createMockOrder } from '@/__tests__/mock-data';
+import { useAuth } from '@/contexts/AuthContext';
+
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: vi.fn(() => ({
+    requireAuth: vi.fn(),
+  })),
+}));
 
 // Mock OrderCard component
 vi.mock('@/components/campaign/OrderCard', () => ({
@@ -436,6 +443,101 @@ describe('OrdersTab', () => {
       expect(screen.queryAllByTitle(/visualizar pedido/i).length).toBe(0);
       expect(screen.queryAllByTitle(/marcar como|enviar comprovante/i).length).toBe(0);
       expect(screen.queryAllByTitle(/editar pedido/i).length).toBe(0);
+      expect(screen.queryAllByTitle(/remover pedido/i).length).toBe(0);
+    });
+  });
+
+  describe('Usuário não autenticado', () => {
+    const unauthProps = {
+      ...defaultProps,
+      currentUserId: undefined,
+      isAdmin: false,
+      isCreator: false,
+    };
+
+    beforeEach(() => {
+      vi.mocked(useAuth).mockReturnValue({ requireAuth: vi.fn() } as ReturnType<typeof useAuth>);
+    });
+
+    it('deve exibir botoes de acao para todos os pedidos na tabela quando nao autenticado', () => {
+      render(<OrdersTab {...unauthProps} />);
+
+      // 3 orders × 1 desktop table = 3 view buttons, 3 payment, 3 edit, 3 delete
+      expect(screen.queryAllByTitle(/visualizar pedido/i).length).toBe(3);
+      expect(screen.queryAllByTitle(/marcar como|enviar comprovante/i).length).toBe(3);
+      expect(screen.queryAllByTitle(/editar pedido/i).length).toBe(3);
+      expect(screen.queryAllByTitle(/remover pedido/i).length).toBe(3);
+    });
+
+    it('deve exibir botoes de acao nos cards mobile quando nao autenticado', () => {
+      render(<OrdersTab {...unauthProps} />);
+
+      // Mobile OrderCard mock renders View/Edit/Toggle Payment/Delete when showView/showManage/showDelete are true
+      expect(screen.queryAllByRole('button', { name: /^view$/i }).length).toBe(3);
+      expect(screen.queryAllByRole('button', { name: /^edit$/i }).length).toBe(3);
+      expect(screen.queryAllByRole('button', { name: /toggle payment/i }).length).toBe(3);
+      expect(screen.queryAllByRole('button', { name: /^delete$/i }).length).toBe(3);
+    });
+
+    it('deve chamar requireAuth ao clicar em visualizar sem estar autenticado', async () => {
+      const user = userEvent.setup();
+      const requireAuthMock = vi.fn();
+      vi.mocked(useAuth).mockReturnValue({ requireAuth: requireAuthMock } as ReturnType<typeof useAuth>);
+
+      render(<OrdersTab {...unauthProps} />);
+
+      const viewButtons = screen.getAllByTitle(/visualizar pedido/i);
+      await user.click(viewButtons[0]);
+
+      expect(requireAuthMock).toHaveBeenCalledTimes(1);
+      expect(mockCallbacks.onViewOrder).not.toHaveBeenCalled();
+    });
+
+    it('deve chamar requireAuth ao clicar em pagamento sem estar autenticado', async () => {
+      const user = userEvent.setup();
+      const requireAuthMock = vi.fn();
+      vi.mocked(useAuth).mockReturnValue({ requireAuth: requireAuthMock } as ReturnType<typeof useAuth>);
+
+      render(<OrdersTab {...unauthProps} />);
+
+      const paymentButtons = screen.getAllByTitle(/marcar como|enviar comprovante/i);
+      await user.click(paymentButtons[0]);
+
+      expect(requireAuthMock).toHaveBeenCalledTimes(1);
+      expect(mockCallbacks.onTogglePayment).not.toHaveBeenCalled();
+    });
+
+    it('deve chamar requireAuth ao clicar em editar sem estar autenticado', async () => {
+      const user = userEvent.setup();
+      const requireAuthMock = vi.fn();
+      vi.mocked(useAuth).mockReturnValue({ requireAuth: requireAuthMock } as ReturnType<typeof useAuth>);
+
+      render(<OrdersTab {...unauthProps} />);
+
+      const editButtons = screen.getAllByTitle(/editar pedido/i);
+      await user.click(editButtons[0]);
+
+      expect(requireAuthMock).toHaveBeenCalledTimes(1);
+      expect(mockCallbacks.onEditOrder).not.toHaveBeenCalled();
+    });
+
+    it('deve chamar requireAuth ao clicar em remover sem estar autenticado', async () => {
+      const user = userEvent.setup();
+      const requireAuthMock = vi.fn();
+      vi.mocked(useAuth).mockReturnValue({ requireAuth: requireAuthMock } as ReturnType<typeof useAuth>);
+
+      render(<OrdersTab {...unauthProps} isActive={true} />);
+
+      const deleteButtons = screen.getAllByTitle(/remover pedido/i);
+      await user.click(deleteButtons[0]);
+
+      expect(requireAuthMock).toHaveBeenCalledTimes(1);
+      expect(mockCallbacks.onDeleteOrder).not.toHaveBeenCalled();
+    });
+
+    it('nao deve exibir botao de remover quando campanha esta inativa e usuario nao autenticado', () => {
+      render(<OrdersTab {...unauthProps} isActive={false} />);
+
       expect(screen.queryAllByTitle(/remover pedido/i).length).toBe(0);
     });
   });

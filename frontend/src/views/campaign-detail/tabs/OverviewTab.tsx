@@ -212,7 +212,7 @@ export function OverviewTab({
 
                   {isActive && (
                     <button
-                      onClick={() => onAddToOrder(product)}
+                      onClick={() => !user ? requireAuth(() => {}) : onAddToOrder(product)}
                       className="w-full bg-gradient-to-r from-sky-500 to-sky-600 hover:shadow-md hover:shadow-sky-300/30 text-white font-medium py-1.5 px-3 rounded-xl transition-all duration-200 text-sm"
                     >
                       Pedir
@@ -386,22 +386,22 @@ export function OverviewTab({
                           </span>
 
                           <div className="flex items-center gap-2">
-                            {order && (isAdmin || isCreator || order.userId === user?.id) && (
+                            {order && (!user || isAdmin || isCreator || order.userId === user?.id) && (
                               <IconButton
                                 size="sm"
                                 variant="secondary"
                                 icon={<Eye className="w-5 h-5" />}
-                                onClick={() => onViewOrder(order)}
+                                onClick={!user ? () => requireAuth(() => {}) : () => onViewOrder(order)}
                                 title="Visualizar pedido"
                               />
                             )}
-                            {order && (isAdmin || order.userId === user?.id) && (
+                            {order && (!user || isAdmin || order.userId === user?.id) && (
                               <>
                                 <IconButton
                                   size="sm"
                                   variant={item.isPaid ? "success" : "secondary"}
                                   icon={<Upload className="w-5 h-5" />}
-                                  onClick={() => onTogglePayment(order)}
+                                  onClick={!user ? () => requireAuth(() => {}) : () => onTogglePayment(order)}
                                   title={
                                     item.isPaid
                                       ? "Marcar como não pago"
@@ -412,7 +412,7 @@ export function OverviewTab({
                                   size="sm"
                                   variant="secondary"
                                   icon={<Edit className="w-4 h-4" />}
-                                  onClick={() => onEditOrder(order)}
+                                  onClick={!user ? () => requireAuth(() => {}) : () => onEditOrder(order)}
                                   title="Editar pedido"
                                 />
                               </>

@@ -39,6 +39,7 @@ vi.mock("../../CampaignLocationSection", () => ({
 vi.mock("@/contexts/AuthContext", () => ({
   useAuth: vi.fn(() => ({
     user: { id: "admin-user", role: "ADMIN", name: "Admin", email: "admin@test.com" },
+    requireAuth: vi.fn(),
   })),
 }));
 
@@ -585,23 +586,116 @@ describe("OverviewTab", () => {
       expect(screen.getByText("Bob")).toBeInTheDocument();
     });
 
-    it("should show no action buttons when user is unauthenticated", async () => {
+    it("deve exibir todos os botoes de acao para todos os pedidos quando usuario nao esta autenticado", async () => {
       const { useAuth } = await import("@/contexts/AuthContext");
       vi.mocked(useAuth).mockReturnValue({
         user: null,
+        requireAuth: vi.fn(),
       } as ReturnType<typeof useAuth>);
 
       render(<OverviewTab {...permissionProps} />);
 
-      expect(
-        screen.queryByTitle(/visualizar pedido/i)
-      ).not.toBeInTheDocument();
-      expect(
-        screen.queryByTitle(/marcar como não pago|enviar comprovante de pagamento/i)
-      ).not.toBeInTheDocument();
-      expect(
-        screen.queryByTitle(/editar pedido/i)
-      ).not.toBeInTheDocument();
+      const viewButtons = screen.getAllByTitle(/visualizar pedido/i);
+      const paymentButtons = screen.getAllByTitle(
+        /marcar como não pago|enviar comprovante de pagamento/i
+      );
+      const editButtons = screen.getAllByTitle(/editar pedido/i);
+
+      expect(viewButtons).toHaveLength(2);
+      expect(paymentButtons).toHaveLength(2);
+      expect(editButtons).toHaveLength(2);
+    });
+
+    it("deve chamar requireAuth ao clicar em visualizar sem estar autenticado", async () => {
+      const userEvent = (await import("@testing-library/user-event")).default;
+      const { useAuth } = await import("@/contexts/AuthContext");
+      const requireAuthMock = vi.fn();
+      vi.mocked(useAuth).mockReturnValue({
+        user: null,
+        requireAuth: requireAuthMock,
+      } as ReturnType<typeof useAuth>);
+
+      render(<OverviewTab {...permissionProps} />);
+
+      const viewButtons = screen.getAllByTitle(/visualizar pedido/i);
+      await userEvent.setup().click(viewButtons[0]);
+
+      expect(requireAuthMock).toHaveBeenCalledTimes(1);
+      expect(mockCallbacks.onViewOrder).not.toHaveBeenCalled();
+    });
+
+    it("deve chamar requireAuth ao clicar em pagamento sem estar autenticado", async () => {
+      const userEvent = (await import("@testing-library/user-event")).default;
+      const { useAuth } = await import("@/contexts/AuthContext");
+      const requireAuthMock = vi.fn();
+      vi.mocked(useAuth).mockReturnValue({
+        user: null,
+        requireAuth: requireAuthMock,
+      } as ReturnType<typeof useAuth>);
+
+      render(<OverviewTab {...permissionProps} />);
+
+      const paymentButtons = screen.getAllByTitle(
+        /marcar como não pago|enviar comprovante de pagamento/i
+      );
+      await userEvent.setup().click(paymentButtons[0]);
+
+      expect(requireAuthMock).toHaveBeenCalledTimes(1);
+      expect(mockCallbacks.onTogglePayment).not.toHaveBeenCalled();
+    });
+
+    it("deve chamar requireAuth ao clicar em editar sem estar autenticado", async () => {
+      const userEvent = (await import("@testing-library/user-event")).default;
+      const { useAuth } = await import("@/contexts/AuthContext");
+      const requireAuthMock = vi.fn();
+      vi.mocked(useAuth).mockReturnValue({
+        user: null,
+        requireAuth: requireAuthMock,
+      } as ReturnType<typeof useAuth>);
+
+      render(<OverviewTab {...permissionProps} />);
+
+      const editButtons = screen.getAllByTitle(/editar pedido/i);
+      await userEvent.setup().click(editButtons[0]);
+
+      expect(requireAuthMock).toHaveBeenCalledTimes(1);
+      expect(mockCallbacks.onEditOrder).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Botao Pedir sem autenticacao", () => {
+    it("deve chamar requireAuth ao clicar em Pedir quando usuario nao esta autenticado", async () => {
+      const { useAuth } = await import("@/contexts/AuthContext");
+      const requireAuthMock = vi.fn();
+      vi.mocked(useAuth).mockReturnValue({
+        user: null,
+        requireAuth: requireAuthMock,
+      } as ReturnType<typeof useAuth>);
+
+      const user = userEvent.setup();
+      render(<OverviewTab {...defaultProps} isActive={true} />);
+
+      const pedirButtons = screen.getAllByRole("button", { name: /pedir/i });
+      await user.click(pedirButtons[0]);
+
+      expect(requireAuthMock).toHaveBeenCalledTimes(1);
+      expect(mockCallbacks.onAddToOrder).not.toHaveBeenCalled();
+    });
+
+    it("deve chamar onAddToOrder ao clicar em Pedir quando usuario esta autenticado", async () => {
+      const { useAuth } = await import("@/contexts/AuthContext");
+      vi.mocked(useAuth).mockReturnValue({
+        user: { id: "u1", role: "CUSTOMER", name: "Alice", email: "alice@test.com" },
+        requireAuth: vi.fn(),
+      } as ReturnType<typeof useAuth>);
+
+      const user = userEvent.setup();
+      render(<OverviewTab {...defaultProps} isActive={true} />);
+
+      const pedirButtons = screen.getAllByRole("button", { name: /pedir/i });
+      await user.click(pedirButtons[0]);
+
+      expect(mockCallbacks.onAddToOrder).toHaveBeenCalledTimes(1);
     });
   });
 });
