@@ -418,10 +418,16 @@ describe('OrdersTab', () => {
       expect(screen.queryAllByTitle(/editar pedido/i).length).toBe(0);
     });
 
-    it('should not show delete button when campaign is not active', () => {
-      render(<OrdersTab {...defaultProps} isActive={false} currentUserId="u1" />);
+    it('should not show delete button for regular user when campaign is not active', () => {
+      render(<OrdersTab {...defaultProps} isActive={false} isAdmin={false} currentUserId="u1" />);
 
       expect(screen.queryAllByTitle(/remover pedido/i).length).toBe(0);
+    });
+
+    it('should show delete button for admin even when campaign is not active', () => {
+      render(<OrdersTab {...defaultProps} isActive={false} isAdmin={true} currentUserId="admin-1" />);
+
+      expect(screen.queryAllByTitle(/remover pedido/i).length).toBeGreaterThan(0);
     });
 
     it('should not show any action buttons when user has no matching order and is not admin or creator', () => {

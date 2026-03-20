@@ -899,7 +899,7 @@ router.delete('/:id', requireAuth, requireOrderOwnership, asyncHandler(async (re
     throw new AppError(404, 'Order not found');
   }
 
-  if (order.campaign.status !== 'ACTIVE') {
+  if (order.campaign.status !== 'ACTIVE' && req.user!.role !== 'ADMIN') {
     throw new AppError(400, 'Cannot delete orders from a closed or sent group');
   }
 
