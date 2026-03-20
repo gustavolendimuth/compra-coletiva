@@ -88,7 +88,7 @@ export function OrdersTab({
     isAdmin || order.userId === currentUserId;
 
   const canDeleteOrder = (order: Order) =>
-    isActive && (isAdmin || order.userId === currentUserId);
+    isAdmin || (isActive && order.userId === currentUserId);
 
   return (
     <div className="pb-20 md:pb-0">
