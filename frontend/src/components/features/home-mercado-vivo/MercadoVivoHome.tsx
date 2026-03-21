@@ -121,7 +121,20 @@ export function MercadoVivoHome() {
                   <article key={campaign.id} className={`${styles.floatCard} ${delayClass} absolute ${cardClass} bg-white rounded-3xl shadow-xl shadow-sky-100/50 border border-sky-100/40 overflow-hidden`}>
                     <div className={`${imageClass} bg-gradient-to-br from-amber-100 via-amber-50 to-sky-50 flex items-center justify-center`}>
                       {imageUrl ? (
-                        <img src={imageUrl} alt={campaign.name} className="w-full h-full object-cover" loading="lazy" decoding="async" />
+                        <img
+                          src={imageUrl}
+                          alt={campaign.name}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                          decoding="async"
+                          onError={(e) => {
+                            const parent = e.currentTarget.parentElement;
+                            e.currentTarget.style.display = 'none';
+                            if (parent) {
+                              parent.innerHTML += `<span class="text-6xl">${getCampaignEmoji(index)}</span>`;
+                            }
+                          }}
+                        />
                       ) : (
                         <span className="text-6xl">{getCampaignEmoji(index)}</span>
                       )}

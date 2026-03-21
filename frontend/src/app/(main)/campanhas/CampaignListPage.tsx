@@ -7,7 +7,7 @@ import { campaignApi, type CampaignListResponse } from '@/api';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useIntersectionObserver } from '@/hooks/useIntersectionObserver';
 import {
-  CampaignCard,
+  CampaignCardBanner,
   CampaignFilters,
   CampaignFiltersState,
   CampaignGridSkeleton,
@@ -149,8 +149,8 @@ export function CampaignListPage({ initialData }: CampaignListPageProps) {
           {campaigns.length > 0 && (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {campaigns.map((campaign) => (
-                  <CampaignCard key={campaign.id} campaign={campaign} />
+                {campaigns.map((campaign, index) => (
+                  <CampaignCardBanner key={campaign.id} campaign={campaign} index={index} />
                 ))}
               </div>
 
@@ -195,8 +195,8 @@ export function CampaignListPage({ initialData }: CampaignListPageProps) {
 
               {/* Grid de sugestões com visual diferenciado */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 opacity-90">
-                {suggestions.map((campaign) => (
-                  <CampaignCard key={campaign.id} campaign={campaign} />
+                {suggestions.map((campaign, index) => (
+                  <CampaignCardBanner key={campaign.id} campaign={campaign} index={index} />
                 ))}
               </div>
 
