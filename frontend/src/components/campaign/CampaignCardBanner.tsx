@@ -12,6 +12,7 @@ import {
   sanitizeDescription,
   sanitizeInlineText,
 } from '@/components/features/home-mercado-vivo/utils';
+import { getCampaignStatusBadge } from './campaignStatus';
 
 const campaignBackgrounds = [
   'from-amber-100 via-amber-50 to-sky-50',
@@ -29,6 +30,7 @@ export function CampaignCardBanner({ campaign, index = 0 }: CampaignCardBannerPr
   const cardBg = campaignBackgrounds[index % campaignBackgrounds.length] ?? campaignBackgrounds[0];
   const emoji = getCampaignEmoji(index);
   const location = [campaign.pickupNeighborhood, campaign.pickupCity, campaign.pickupState].filter(Boolean).join(', ');
+  const status = getCampaignStatusBadge(campaign.status);
 
   return (
     <Link href={`/campanhas/${campaign.slug}`} className="bg-white rounded-3xl overflow-hidden border border-sky-100/50 shadow-sm block hover:shadow-md transition-shadow">
@@ -51,7 +53,11 @@ export function CampaignCardBanner({ campaign, index = 0 }: CampaignCardBannerPr
         ) : (
           <span className="text-7xl">{emoji}</span>
         )}
-        <span className="absolute top-4 left-4 px-3 py-1 bg-emerald-500 text-white text-xs font-bold rounded-full shadow-sm">Ativa</span>
+        <span
+          className={`absolute top-4 left-4 px-3 py-1 text-xs font-bold rounded-full shadow-sm ${status.classes}`}
+        >
+          {status.label}
+        </span>
         {location && (
           <span className="absolute top-4 right-4 flex items-center gap-1 px-3 py-1 bg-white/90 text-sky-700 text-xs font-semibold rounded-full backdrop-blur-sm">
             <MapPin className="w-3 h-3 flex-shrink-0" />

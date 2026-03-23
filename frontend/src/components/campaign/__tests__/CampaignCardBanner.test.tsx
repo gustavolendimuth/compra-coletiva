@@ -18,9 +18,28 @@ describe('CampaignCardBanner', () => {
       expect(screen.getByText('Descrição da campanha')).toBeInTheDocument();
     });
 
-    it('should render "Ativa" status badge', () => {
-      renderWithProviders(<CampaignCardBanner campaign={createMockCampaign()} />);
+    it('should render "Ativa" status badge for active campaigns', () => {
+      renderWithProviders(
+        <CampaignCardBanner campaign={createMockCampaign({ status: 'ACTIVE' })} />
+      );
       expect(screen.getByText('Ativa')).toBeInTheDocument();
+    });
+
+    it('should render the correct badge label for each campaign status', () => {
+      const scenarios = [
+        { status: 'CLOSED' as const, label: 'Fechada' },
+        { status: 'SENT' as const, label: 'Enviada' },
+        { status: 'ARCHIVED' as const, label: 'Arquivada' },
+      ];
+
+      scenarios.forEach(({ status, label }) => {
+        const { unmount } = renderWithProviders(
+          <CampaignCardBanner campaign={createMockCampaign({ status })} />
+        );
+
+        expect(screen.getByText(label)).toBeInTheDocument();
+        unmount();
+      });
     });
 
     it('should not crash when description is missing', () => {

@@ -1,32 +1,14 @@
 import { MapPin } from 'lucide-react';
 import { CampaignWithProducts } from '@/api';
 import { DistanceBadge } from '@/components/ui/DistanceBadge';
+import { getCampaignStatusBadge } from './campaignStatus';
 
 interface CampaignCardHeaderProps {
   campaign: CampaignWithProducts;
 }
 
-const statusConfig = {
-  ACTIVE: {
-    label: 'Ativa',
-    classes: 'bg-emerald-100 text-emerald-700'
-  },
-  CLOSED: {
-    label: 'Fechada',
-    classes: 'bg-amber-100 text-amber-700'
-  },
-  SENT: {
-    label: 'Enviada',
-    classes: 'bg-sky-100 text-sky-700'
-  },
-  ARCHIVED: {
-    label: 'Arquivada',
-    classes: 'bg-sky-50 text-sky-500'
-  }
-} as const;
-
 export function CampaignCardHeader({ campaign }: CampaignCardHeaderProps) {
-  const status = statusConfig[campaign.status];
+  const status = getCampaignStatusBadge(campaign.status);
 
   return (
     <div className="flex flex-col justify-start w-full h-full gap-1.5">
