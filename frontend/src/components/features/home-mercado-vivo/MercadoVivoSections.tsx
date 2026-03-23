@@ -13,6 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import type { MercadoVivoHomeData } from "./useMercadoVivoHomeData";
+import { formatCompactNumber } from "./utils";
 import { CampaignCardBanner } from "@/components/campaign";
 import styles from "./MercadoVivoHome.module.css";
 import { MercadoVivoFooter } from "./MercadoVivoFooter";
