@@ -32,8 +32,8 @@ export function CampaignDetailPage() {
   }
 
   return (
-    <div>
-      <div className="mb-4 md:mb-6">
+    <div className="pb-28 md:pb-8">
+      <div className="mb-6 md:mb-8">
         <CampaignHeader
           campaign={hook.campaign}
           canEditCampaign={hook.canEditCampaign}

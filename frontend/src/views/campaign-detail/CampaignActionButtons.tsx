@@ -11,7 +11,6 @@ import {
   MapPin,
 } from "lucide-react";
 import { useState } from "react";
-import IconButton from "@/components/IconButton";
 import { Campaign, campaignApi } from "@/api";
 import toast from "react-hot-toast";
 
@@ -54,7 +53,6 @@ export function CampaignActionButtons({
       await navigator.clipboard.writeText(text);
       return;
     }
-
     const textarea = document.createElement("textarea");
     textarea.value = text;
     textarea.style.position = "fixed";
@@ -67,173 +65,163 @@ export function CampaignActionButtons({
   };
 
   return (
-    <div className="space-y-3">
-      {/* Primary Actions - Grid for mobile, flex for desktop */}
-      {isActive && (onAddProduct || onAddOrder) && (
-        <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap md:gap-2">
-          {canEditCampaign && onAddProduct && (
-            <IconButton
-              size="sm"
-              icon={<Package className="w-4 h-4" />}
-              onClick={onAddProduct}
-              className="w-full md:w-auto text-xs sm:text-sm font-medium"
+    <div className="space-y-4">
+      {/* Ação Principal do Participante */}
+      {isActive && onAddOrder && (
+        <button
+          onClick={onAddOrder}
+          className="w-full flex items-center justify-center gap-3 py-4 px-6 bg-sky-600 hover:bg-sky-700 active:bg-sky-800 text-white rounded-2xl font-bold text-lg shadow-md shadow-sky-200 transition-colors"
+          title="Adicionar Pedido (Alt+N)"
+        >
+          <ShoppingBag className="w-6 h-6" />
+          Fazer Pedido
+        </button>
+      )}
+
+      {/* Ações do Criador — Produtos e Configurações */}
+      {canEditCampaign && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="flex-1 h-px bg-sky-100" />
+            <span className="text-xs font-semibold text-sky-400 uppercase tracking-wider">
+              Ações do Criador
+            </span>
+            <div className="flex-1 h-px bg-sky-100" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            {isActive && onAddProduct && (
+              <button
+                onClick={onAddProduct}
+                className="flex items-center justify-center gap-2 py-3 px-4 border-2 border-sky-200 hover:border-sky-400 hover:bg-sky-50 text-sky-700 rounded-2xl font-semibold text-base transition-colors"
+              >
+                <Package className="w-5 h-5" />
+                Adicionar Produto
+              </button>
+            )}
+
+            <button
+              onClick={onEditPix}
+              className="flex items-center justify-center gap-2 py-3 px-4 border-2 border-sky-200 hover:border-sky-400 hover:bg-sky-50 text-sky-700 rounded-2xl font-semibold text-base transition-colors"
             >
-              <span className="md:inline">Adicionar Produto</span>
-              <span className="hidden sm:inline md:hidden">Produto</span>
-            </IconButton>
-          )}
-          {onAddOrder && (
-            <IconButton
-              size="sm"
-              icon={<ShoppingBag className="w-4 h-4" />}
-              onClick={onAddOrder}
-              className="w-full md:w-auto text-xs sm:text-sm font-medium"
-              title="Adicionar Pedido (Alt+N)"
+              <QrCode className="w-5 h-5" />
+              Configurar PIX
+            </button>
+
+            {onEditAddress && (
+              <button
+                onClick={onEditAddress}
+                className="flex items-center justify-center gap-2 py-3 px-4 border-2 border-sky-200 hover:border-sky-400 hover:bg-sky-50 text-sky-700 rounded-2xl font-semibold text-base transition-colors"
+              >
+                <MapPin className="w-5 h-5" />
+                Endereço de Retirada
+              </button>
+            )}
+
+            <button
+              onClick={onCloneCampaign}
+              className="flex items-center justify-center gap-2 py-3 px-4 border-2 border-sky-200 hover:border-sky-400 hover:bg-sky-50 text-sky-700 rounded-2xl font-semibold text-base transition-colors"
             >
-              <span className="md:inline">Adicionar Pedido</span>
-              <span className="hidden sm:inline md:hidden">Pedido</span>
-            </IconButton>
-          )}
+              <Copy className="w-5 h-5" />
+              Clonar Campanha
+            </button>
+
+            {ordersCount > 0 && (
+              <button
+                onClick={async () => {
+                  try {
+                    await campaignApi.downloadSupplierInvoice(campaign.id);
+                    toast.success("Fatura gerada com sucesso!");
+                  } catch {
+                    toast.error("Erro ao gerar fatura");
+                  }
+                }}
+                className="flex items-center justify-center gap-2 py-3 px-4 border-2 border-sky-200 hover:border-sky-400 hover:bg-sky-50 text-sky-700 rounded-2xl font-semibold text-base transition-colors"
+              >
+                <FileText className="w-5 h-5" />
+                Gerar Fatura
+              </button>
+            )}
+
+            {ordersCount > 0 && canGenerateOrdersSummary && (
+              <button
+                onClick={async () => {
+                  try {
+                    setIsGeneratingSummary(true);
+                    const summary = await campaignApi.getOrdersSummary(
+                      campaign.slug || campaign.id
+                    );
+                    await copyToClipboard(summary.summaryText);
+                    toast.success("Resumo copiado! Pronto para enviar no WhatsApp.");
+                  } catch {
+                    toast.error("Erro ao gerar resumo dos pedidos");
+                  } finally {
+                    setIsGeneratingSummary(false);
+                  }
+                }}
+                disabled={isGeneratingSummary}
+                className="flex items-center justify-center gap-2 py-3 px-4 border-2 border-sky-200 hover:border-sky-400 hover:bg-sky-50 text-sky-700 rounded-2xl font-semibold text-base transition-colors disabled:opacity-50"
+              >
+                <ClipboardList className="w-5 h-5" />
+                {isGeneratingSummary ? "Gerando..." : "Copiar Resumo"}
+              </button>
+            )}
+          </div>
+
+          {/* Ações de status — destaque próprio */}
+          <div className="space-y-3 pt-1">
+            {isActive && (
+              <button
+                onClick={onCloseCampaign}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-amber-50 border-2 border-amber-300 hover:bg-amber-100 text-amber-800 rounded-2xl font-semibold text-base transition-colors"
+              >
+                <Lock className="w-5 h-5" />
+                Fechar Campanha
+              </button>
+            )}
+
+            {isClosed && (
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={onReopenCampaign}
+                  className="flex items-center justify-center gap-2 py-3 px-4 bg-amber-50 border-2 border-amber-300 hover:bg-amber-100 text-amber-800 rounded-2xl font-semibold text-base transition-colors"
+                >
+                  <Unlock className="w-5 h-5" />
+                  Reabrir
+                </button>
+                <button
+                  onClick={onMarkAsSent}
+                  className="flex items-center justify-center gap-2 py-3 px-4 bg-sky-600 hover:bg-sky-700 text-white rounded-2xl font-semibold text-base transition-colors"
+                >
+                  <Send className="w-5 h-5" />
+                  Marcar como Enviado
+                </button>
+              </div>
+            )}
+
+            {isSent && (
+              <button
+                onClick={onReopenCampaign}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-amber-50 border-2 border-amber-300 hover:bg-amber-100 text-amber-800 rounded-2xl font-semibold text-base transition-colors"
+              >
+                <Unlock className="w-5 h-5" />
+                Reabrir Campanha
+              </button>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Secondary Actions */}
-      <div className="flex flex-wrap gap-2">
-        <IconButton
-          size="sm"
-          variant="secondary"
-          icon={<Copy className="w-4 h-4" />}
+      {/* Clonar — disponível para não-criadores também */}
+      {!canEditCampaign && (
+        <button
           onClick={onCloneCampaign}
-          className="text-xs sm:text-sm whitespace-nowrap"
+          className="flex items-center justify-center gap-2 py-3 px-4 border-2 border-sky-200 hover:border-sky-400 hover:bg-sky-50 text-sky-700 rounded-2xl font-semibold text-base transition-colors w-full"
         >
-          <span className="hidden sm:inline">Clonar Campanha</span>
-          <span className="sm:hidden">Clonar</span>
-        </IconButton>
-
-        {canEditCampaign && (
-          <IconButton
-            size="sm"
-            variant="secondary"
-            icon={<QrCode className="w-4 h-4" />}
-            onClick={onEditPix}
-            className="text-xs sm:text-sm whitespace-nowrap"
-          >
-            <span className="hidden sm:inline">Configurar PIX</span>
-            <span className="sm:hidden">PIX</span>
-          </IconButton>
-        )}
-
-        {canEditCampaign && onEditAddress && (
-          <IconButton
-            size="sm"
-            variant="secondary"
-            icon={<MapPin className="w-4 h-4" />}
-            onClick={onEditAddress}
-            className="text-xs sm:text-sm whitespace-nowrap"
-          >
-            <span className="hidden sm:inline">Endereço de Retirada</span>
-            <span className="sm:hidden">Endereço</span>
-          </IconButton>
-        )}
-
-        {ordersCount > 0 && canEditCampaign && (
-          <IconButton
-            size="sm"
-            variant="secondary"
-            icon={<FileText className="w-4 h-4" />}
-            onClick={async () => {
-              try {
-                await campaignApi.downloadSupplierInvoice(campaign.id);
-                toast.success("Fatura gerada com sucesso!");
-              } catch (error) {
-                toast.error("Erro ao gerar fatura");
-              }
-            }}
-            className="text-xs sm:text-sm whitespace-nowrap"
-          >
-            <span className="hidden sm:inline">Gerar Fatura</span>
-            <span className="sm:hidden">Fatura</span>
-          </IconButton>
-        )}
-
-        {ordersCount > 0 && canGenerateOrdersSummary && (
-          <IconButton
-            size="sm"
-            variant="secondary"
-            icon={<ClipboardList className="w-4 h-4" />}
-            onClick={async () => {
-              try {
-                setIsGeneratingSummary(true);
-                const summary = await campaignApi.getOrdersSummary(campaign.slug || campaign.id);
-                await copyToClipboard(summary.summaryText);
-                toast.success("Resumo copiado! Pronto para enviar no WhatsApp.");
-              } catch (error) {
-                toast.error("Erro ao gerar resumo dos pedidos");
-              } finally {
-                setIsGeneratingSummary(false);
-              }
-            }}
-            disabled={isGeneratingSummary}
-            className="text-xs sm:text-sm whitespace-nowrap"
-          >
-            <span className="hidden sm:inline">
-              {isGeneratingSummary ? "Gerando Resumo..." : "Copiar Resumo Pedidos"}
-            </span>
-            <span className="sm:hidden">
-              {isGeneratingSummary ? "Gerando..." : "Resumo"}
-            </span>
-          </IconButton>
-        )}
-
-        {isActive && canEditCampaign && (
-          <IconButton
-            size="sm"
-            icon={<Lock className="w-4 h-4" />}
-            onClick={onCloseCampaign}
-            variant="warning"
-            className="text-xs sm:text-sm whitespace-nowrap"
-          >
-            <span className="hidden sm:inline">Fechar Campanha</span>
-            <span className="sm:hidden">Fechar</span>
-          </IconButton>
-        )}
-
-        {isClosed && canEditCampaign && (
-          <>
-            <IconButton
-              size="sm"
-              icon={<Unlock className="w-4 h-4" />}
-              onClick={onReopenCampaign}
-              variant="warning"
-              className="text-xs sm:text-sm whitespace-nowrap"
-            >
-              Reabrir
-            </IconButton>
-            <IconButton
-              size="sm"
-              icon={<Send className="w-4 h-4" />}
-              onClick={onMarkAsSent}
-              className="text-xs sm:text-sm whitespace-nowrap"
-            >
-              <span className="hidden sm:inline">Marcar como Enviado</span>
-              <span className="sm:hidden">Enviado</span>
-            </IconButton>
-          </>
-        )}
-
-        {isSent && canEditCampaign && (
-          <IconButton
-            size="sm"
-            icon={<Unlock className="w-4 h-4" />}
-            onClick={onReopenCampaign}
-            variant="warning"
-            className="text-xs sm:text-sm whitespace-nowrap"
-          >
-            <span className="hidden sm:inline">Reabrir Campanha</span>
-            <span className="sm:hidden">Reabrir</span>
-          </IconButton>
-        )}
-      </div>
+          <Copy className="w-5 h-5" />
+          Clonar Campanha
+        </button>
+      )}
     </div>
   );
 }
