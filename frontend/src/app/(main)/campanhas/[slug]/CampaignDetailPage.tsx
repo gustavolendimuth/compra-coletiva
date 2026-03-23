@@ -32,8 +32,9 @@ export function CampaignDetailPage() {
   }
 
   return (
-    <div>
-      <div className="mb-4 md:mb-6">
+    <div className="max-w-5xl mx-auto">
+      {/* Header / Hero */}
+      <div className="mb-6 md:mb-8">
         <CampaignHeader
           campaign={hook.campaign}
           canEditCampaign={hook.canEditCampaign}
@@ -53,83 +54,87 @@ export function CampaignDetailPage() {
         />
       </div>
 
+      {/* Tab Navigation */}
       <TabNavigation
         activeTab={activeTab}
         onTabChange={setActiveTab}
         canEditCampaign={hook.canEditCampaign}
       />
 
-      {activeTab === 'overview' && (
-        <OverviewTab
-          campaign={hook.campaign}
-          campaignId={hook.campaign.id}
-          analytics={hook.analytics}
-          isAnalyticsLoading={hook.isAnalyticsLoading}
-          products={hook.products || []}
-          orders={hook.orders || []}
-          isActive={hook.isActive}
-          canEditCampaign={hook.canEditCampaign}
-          onViewOrder={hook.handleViewOrder}
-          onTogglePayment={hook.handleTogglePayment}
-          onEditOrder={hook.handleOpenEditOrder}
-          onAddToOrder={hook.handleAddToOrder}
-          onEditAddress={hook.handleOpenAddressModal}
-        />
-      )}
+      {/* Tab Content */}
+      <div className="min-h-[50vh]">
+        {activeTab === 'overview' && (
+          <OverviewTab
+            campaign={hook.campaign}
+            campaignId={hook.campaign.id}
+            analytics={hook.analytics}
+            isAnalyticsLoading={hook.isAnalyticsLoading}
+            products={hook.products || []}
+            orders={hook.orders || []}
+            isActive={hook.isActive}
+            canEditCampaign={hook.canEditCampaign}
+            onViewOrder={hook.handleViewOrder}
+            onTogglePayment={hook.handleTogglePayment}
+            onEditOrder={hook.handleOpenEditOrder}
+            onAddToOrder={hook.handleAddToOrder}
+            onEditAddress={hook.handleOpenAddressModal}
+          />
+        )}
 
-      {activeTab === 'products' && (
-        <ProductsTab
-          products={hook.products || []}
-          sortedProducts={hook.sortedProducts || []}
-          isActive={hook.isActive}
-          canEditCampaign={hook.canEditCampaign}
-          sortField={hook.productSortField}
-          sortDirection={hook.productSortDirection}
-          onAddProduct={() => hook.setIsProductModalOpen(true)}
-          onEditProduct={hook.openEditProductModal}
-          onDeleteProduct={hook.handleDeleteProduct}
-          onSort={hook.handleProductSort}
-        />
-      )}
+        {activeTab === 'products' && (
+          <ProductsTab
+            products={hook.products || []}
+            sortedProducts={hook.sortedProducts || []}
+            isActive={hook.isActive}
+            canEditCampaign={hook.canEditCampaign}
+            sortField={hook.productSortField}
+            sortDirection={hook.productSortDirection}
+            onAddProduct={() => hook.setIsProductModalOpen(true)}
+            onEditProduct={hook.openEditProductModal}
+            onDeleteProduct={hook.handleDeleteProduct}
+            onSort={hook.handleProductSort}
+          />
+        )}
 
-      {activeTab === 'orders' && (
-        <OrdersTab
-          orders={hook.orders || []}
-          filteredOrders={hook.filteredOrders || []}
-          isActive={hook.isActive}
-          currentUserId={hook.currentUserId}
-          isAdmin={hook.isAdmin}
-          isCreator={hook.isCreator}
-          orderSearch={hook.orderSearch}
-          sortField={hook.orderSortField}
-          sortDirection={hook.orderSortDirection}
-          onAddOrder={hook.handleAddOrder}
-          onViewOrder={hook.handleViewOrder}
-          onTogglePayment={hook.handleTogglePayment}
-          onEditOrder={hook.handleOpenEditOrder}
-          onDeleteOrder={hook.handleDeleteOrder}
-          onSearchChange={hook.setOrderSearch}
-          onSort={hook.handleSort}
-        />
-      )}
+        {activeTab === 'orders' && (
+          <OrdersTab
+            orders={hook.orders || []}
+            filteredOrders={hook.filteredOrders || []}
+            isActive={hook.isActive}
+            currentUserId={hook.currentUserId}
+            isAdmin={hook.isAdmin}
+            isCreator={hook.isCreator}
+            orderSearch={hook.orderSearch}
+            sortField={hook.orderSortField}
+            sortDirection={hook.orderSortDirection}
+            onAddOrder={hook.handleAddOrder}
+            onViewOrder={hook.handleViewOrder}
+            onTogglePayment={hook.handleTogglePayment}
+            onEditOrder={hook.handleOpenEditOrder}
+            onDeleteOrder={hook.handleDeleteOrder}
+            onSearchChange={hook.setOrderSearch}
+            onSort={hook.handleSort}
+          />
+        )}
 
-      {activeTab === 'shipping' && hook.campaign && (
-        <ShippingTab
-          campaign={hook.campaign}
-          canEditCampaign={hook.canEditCampaign}
-          onEditShipping={() => {
-            hook.setShippingCost(String(hook.campaign!.shippingCost));
-            hook.setIsShippingModalOpen(true);
-          }}
-        />
-      )}
+        {activeTab === 'shipping' && hook.campaign && (
+          <ShippingTab
+            campaign={hook.campaign}
+            canEditCampaign={hook.canEditCampaign}
+            onEditShipping={() => {
+              hook.setShippingCost(String(hook.campaign!.shippingCost));
+              hook.setIsShippingModalOpen(true);
+            }}
+          />
+        )}
 
-      {activeTab === 'questions' && hook.canEditCampaign && (
-        <QuestionsTab
-          campaignId={hook.campaign.id}
-          canEditCampaign={hook.canEditCampaign}
-        />
-      )}
+        {activeTab === 'questions' && hook.canEditCampaign && (
+          <QuestionsTab
+            campaignId={hook.campaign.id}
+            canEditCampaign={hook.canEditCampaign}
+          />
+        )}
+      </div>
 
       <CampaignModals hook={hook} />
     </div>

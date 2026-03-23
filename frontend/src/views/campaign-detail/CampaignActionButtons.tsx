@@ -68,46 +68,43 @@ export function CampaignActionButtons({
 
   return (
     <div className="space-y-3">
-      {/* Primary Actions - Grid for mobile, flex for desktop */}
+      {/* Primary Actions */}
       {isActive && (onAddProduct || onAddOrder) && (
-        <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap md:gap-2">
+        <div className="grid grid-cols-2 gap-3 md:flex md:flex-wrap md:gap-3">
           {canEditCampaign && onAddProduct && (
             <IconButton
-              size="sm"
-              icon={<Package className="w-4 h-4" />}
+              size="md"
+              icon={<Package className="w-5 h-5" />}
               onClick={onAddProduct}
-              className="w-full md:w-auto text-xs sm:text-sm font-medium"
+              className="w-full md:w-auto min-h-[48px] text-sm sm:text-base font-semibold"
             >
-              <span className="md:inline">Adicionar Produto</span>
-              <span className="hidden sm:inline md:hidden">Produto</span>
+              Adicionar Produto
             </IconButton>
           )}
           {onAddOrder && (
             <IconButton
-              size="sm"
-              icon={<ShoppingBag className="w-4 h-4" />}
+              size="md"
+              icon={<ShoppingBag className="w-5 h-5" />}
               onClick={onAddOrder}
-              className="w-full md:w-auto text-xs sm:text-sm font-medium"
+              className="w-full md:w-auto min-h-[48px] text-sm sm:text-base font-semibold"
               title="Adicionar Pedido (Alt+N)"
             >
-              <span className="md:inline">Adicionar Pedido</span>
-              <span className="hidden sm:inline md:hidden">Pedido</span>
+              Adicionar Pedido
             </IconButton>
           )}
         </div>
       )}
 
       {/* Secondary Actions */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2.5">
         <IconButton
           size="sm"
           variant="secondary"
           icon={<Copy className="w-4 h-4" />}
           onClick={onCloneCampaign}
-          className="text-xs sm:text-sm whitespace-nowrap"
+          className="min-h-[44px] text-sm whitespace-nowrap"
         >
-          <span className="hidden sm:inline">Clonar Campanha</span>
-          <span className="sm:hidden">Clonar</span>
+          Clonar
         </IconButton>
 
         {canEditCampaign && (
@@ -116,10 +113,9 @@ export function CampaignActionButtons({
             variant="secondary"
             icon={<QrCode className="w-4 h-4" />}
             onClick={onEditPix}
-            className="text-xs sm:text-sm whitespace-nowrap"
+            className="min-h-[44px] text-sm whitespace-nowrap"
           >
-            <span className="hidden sm:inline">Configurar PIX</span>
-            <span className="sm:hidden">PIX</span>
+            PIX
           </IconButton>
         )}
 
@@ -129,10 +125,9 @@ export function CampaignActionButtons({
             variant="secondary"
             icon={<MapPin className="w-4 h-4" />}
             onClick={onEditAddress}
-            className="text-xs sm:text-sm whitespace-nowrap"
+            className="min-h-[44px] text-sm whitespace-nowrap"
           >
-            <span className="hidden sm:inline">Endereço de Retirada</span>
-            <span className="sm:hidden">Endereço</span>
+            Endereco
           </IconButton>
         )}
 
@@ -149,10 +144,9 @@ export function CampaignActionButtons({
                 toast.error("Erro ao gerar fatura");
               }
             }}
-            className="text-xs sm:text-sm whitespace-nowrap"
+            className="min-h-[44px] text-sm whitespace-nowrap"
           >
-            <span className="hidden sm:inline">Gerar Fatura</span>
-            <span className="sm:hidden">Fatura</span>
+            Fatura
           </IconButton>
         )}
 
@@ -164,9 +158,13 @@ export function CampaignActionButtons({
             onClick={async () => {
               try {
                 setIsGeneratingSummary(true);
-                const summary = await campaignApi.getOrdersSummary(campaign.slug || campaign.id);
+                const summary = await campaignApi.getOrdersSummary(
+                  campaign.slug || campaign.id
+                );
                 await copyToClipboard(summary.summaryText);
-                toast.success("Resumo copiado! Pronto para enviar no WhatsApp.");
+                toast.success(
+                  "Resumo copiado! Pronto para enviar no WhatsApp."
+                );
               } catch (error) {
                 toast.error("Erro ao gerar resumo dos pedidos");
               } finally {
@@ -174,14 +172,9 @@ export function CampaignActionButtons({
               }
             }}
             disabled={isGeneratingSummary}
-            className="text-xs sm:text-sm whitespace-nowrap"
+            className="min-h-[44px] text-sm whitespace-nowrap"
           >
-            <span className="hidden sm:inline">
-              {isGeneratingSummary ? "Gerando Resumo..." : "Copiar Resumo Pedidos"}
-            </span>
-            <span className="sm:hidden">
-              {isGeneratingSummary ? "Gerando..." : "Resumo"}
-            </span>
+            {isGeneratingSummary ? "Gerando..." : "Resumo"}
           </IconButton>
         )}
 
@@ -191,10 +184,9 @@ export function CampaignActionButtons({
             icon={<Lock className="w-4 h-4" />}
             onClick={onCloseCampaign}
             variant="warning"
-            className="text-xs sm:text-sm whitespace-nowrap"
+            className="min-h-[44px] text-sm whitespace-nowrap"
           >
-            <span className="hidden sm:inline">Fechar Campanha</span>
-            <span className="sm:hidden">Fechar</span>
+            Fechar
           </IconButton>
         )}
 
@@ -205,7 +197,7 @@ export function CampaignActionButtons({
               icon={<Unlock className="w-4 h-4" />}
               onClick={onReopenCampaign}
               variant="warning"
-              className="text-xs sm:text-sm whitespace-nowrap"
+              className="min-h-[44px] text-sm whitespace-nowrap"
             >
               Reabrir
             </IconButton>
@@ -213,10 +205,9 @@ export function CampaignActionButtons({
               size="sm"
               icon={<Send className="w-4 h-4" />}
               onClick={onMarkAsSent}
-              className="text-xs sm:text-sm whitespace-nowrap"
+              className="min-h-[44px] text-sm whitespace-nowrap"
             >
-              <span className="hidden sm:inline">Marcar como Enviado</span>
-              <span className="sm:hidden">Enviado</span>
+              Marcar Enviado
             </IconButton>
           </>
         )}
@@ -227,10 +218,9 @@ export function CampaignActionButtons({
             icon={<Unlock className="w-4 h-4" />}
             onClick={onReopenCampaign}
             variant="warning"
-            className="text-xs sm:text-sm whitespace-nowrap"
+            className="min-h-[44px] text-sm whitespace-nowrap"
           >
-            <span className="hidden sm:inline">Reabrir Campanha</span>
-            <span className="sm:hidden">Reabrir</span>
+            Reabrir
           </IconButton>
         )}
       </div>

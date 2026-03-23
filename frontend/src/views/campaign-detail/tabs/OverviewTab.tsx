@@ -9,7 +9,7 @@ import { Order, Product, CampaignAnalytics, Campaign } from "@/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { CampaignLocationSection } from "../CampaignLocationSection";
 import { getCustomerDisplayName } from "../utils";
-import { Edit, Eye, LogIn, Upload } from "lucide-react";
+import { Edit, Eye, LogIn, Upload, ShoppingBag, Users, Hash, CreditCard, Truck as TruckIcon, TrendingUp, TrendingDown, MessageCircle } from "lucide-react";
 import {
   canShowPaymentPendingNotice,
   canShowPixToBuyer,
@@ -38,9 +38,9 @@ function ProductImage({ product }: { product: Product }) {
 
   if (!imageUrl || hasError) {
     return (
-      <div className="w-full aspect-square rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center mb-2">
+      <div className="w-full aspect-square rounded-2xl bg-cream-100 border border-sky-100 flex items-center justify-center">
         <svg
-          className="w-6 h-6 text-amber-500"
+          className="w-8 h-8 text-sky-300"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -57,7 +57,7 @@ function ProductImage({ product }: { product: Product }) {
   }
 
   return (
-    <div className="w-full aspect-square rounded-xl overflow-hidden bg-sky-50 border border-sky-100 mb-2">
+    <div className="w-full aspect-square rounded-2xl overflow-hidden bg-sky-50 border border-sky-100">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={imageUrl}
@@ -65,6 +65,72 @@ function ProductImage({ product }: { product: Product }) {
         className="w-full h-full object-cover"
         onError={() => setHasError(true)}
       />
+    </div>
+  );
+}
+
+/* ---------- Section wrapper for visual rhythm ---------- */
+function Section({
+  title,
+  icon,
+  iconBg = "bg-sky-100",
+  iconColor = "text-sky-600",
+  children,
+  className = "",
+}: {
+  title: string;
+  icon: React.ReactNode;
+  iconBg?: string;
+  iconColor?: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={`space-y-4 ${className}`}>
+      <h2 className="font-display text-xl md:text-2xl font-bold text-sky-900 flex items-center gap-3">
+        <span
+          className={`w-9 h-9 md:w-10 md:h-10 rounded-xl ${iconBg} flex items-center justify-center flex-shrink-0`}
+        >
+          <span className={iconColor}>{icon}</span>
+        </span>
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+/* ---------- Stat card for financial summary ---------- */
+function StatCard({
+  label,
+  value,
+  icon,
+  accent = false,
+  negative = false,
+}: {
+  label: string;
+  value: string | number;
+  icon: React.ReactNode;
+  accent?: boolean;
+  negative?: boolean;
+}) {
+  return (
+    <div className="bg-white rounded-2xl border border-sky-100/60 p-4 md:p-5">
+      <div className="flex items-center gap-2.5 mb-2">
+        <span className="flex-shrink-0">{icon}</span>
+        <span className="text-sm md:text-base text-sky-600 font-medium">{label}</span>
+      </div>
+      <div
+        className={`text-xl md:text-2xl font-bold ${
+          accent
+            ? "text-emerald-600"
+            : negative
+              ? "text-red-500"
+              : "text-sky-900"
+        }`}
+      >
+        {value}
+      </div>
     </div>
   );
 }
@@ -86,7 +152,7 @@ export function OverviewTab({
 }: OverviewTabProps) {
   const { user, requireAuth } = useAuth();
 
-  const userOrder = user ? orders.find(o => o.userId === user.id) : undefined;
+  const userOrder = user ? orders.find((o) => o.userId === user.id) : undefined;
 
   const isAdmin = user?.role === "ADMIN";
   const isCreator = campaign.creatorId === user?.id;
@@ -97,22 +163,18 @@ export function OverviewTab({
   );
   const hasUserOrder = userOrder !== undefined;
   const shouldShowPix = canShowPixToBuyer(campaign, hasUserOrder);
-  const shouldShowPaymentPending = canShowPaymentPendingNotice(campaign, hasUserOrder);
-  const hasPixConfigured = Boolean(campaign.pixKey && campaign.pixType && campaign.status !== "ARCHIVED");
+  const shouldShowPaymentPending = canShowPaymentPendingNotice(
+    campaign,
+    hasUserOrder
+  );
+  const hasPixConfigured = Boolean(
+    campaign.pixKey && campaign.pixType && campaign.status !== "ARCHIVED"
+  );
   const shouldShowPixLoginNotice = !user && hasPixConfigured;
 
   return (
-    <div className="space-y-6 pb-20 md:pb-0">
-      <h2 className="font-display text-2xl font-bold text-sky-900 flex items-center gap-2">
-        <span className="w-7 h-7 rounded-xl bg-sky-100 flex items-center justify-center flex-shrink-0">
-          <svg className="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-          </svg>
-        </span>
-        Visão Geral
-      </h2>
-
-      {/* Localização de Retirada */}
+    <div className="space-y-8 md:space-y-10 pb-24 md:pb-4">
+      {/* ========== Location ========== */}
       {(campaign.pickupAddress || canEditCampaign) && (
         <CampaignLocationSection
           campaign={campaign}
@@ -121,7 +183,7 @@ export function OverviewTab({
         />
       )}
 
-      {/* PIX em Destaque */}
+      {/* ========== PIX Payment ========== */}
       {shouldShowPix && (
         <PixDisplay
           pixKey={campaign.pixKey!}
@@ -140,34 +202,29 @@ export function OverviewTab({
       )}
 
       {shouldShowPixLoginNotice && (
-        <div className="relative overflow-hidden bg-gradient-to-br from-emerald-50 via-emerald-50 to-green-100 border border-emerald-200 rounded-lg p-4 md:p-5">
-          <div className="absolute top-0 right-0 w-24 h-24 opacity-[0.04]">
-            <svg viewBox="0 0 80 80" fill="currentColor" className="w-full h-full text-emerald-900">
-              <rect x="10" y="10" width="60" height="60" rx="8" stroke="currentColor" strokeWidth="2" fill="none" />
-              <path d="M30 40 L40 50 L55 30" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-            </svg>
-          </div>
-          <div className="relative flex items-start gap-3">
-            <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-emerald-100 border border-emerald-200 flex items-center justify-center">
-              <LogIn className="w-5 h-5 text-emerald-600" />
+        <div className="relative overflow-hidden bg-gradient-to-br from-emerald-50 via-emerald-50 to-green-100 border-2 border-emerald-200 rounded-2xl p-5 md:p-6">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-emerald-100 border border-emerald-200 flex items-center justify-center">
+              <LogIn className="w-6 h-6 text-emerald-600" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1.5">
-                <span className="inline-flex items-center bg-emerald-600 text-white px-2 py-0.5 rounded-full text-[11px] font-bold tracking-wide uppercase">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="inline-flex items-center bg-emerald-600 text-white px-2.5 py-0.5 rounded-full text-xs font-bold tracking-wide uppercase">
                   PIX
                 </span>
               </div>
-              <p className="text-sm font-semibold text-emerald-900 mb-1">
+              <p className="text-base font-semibold text-emerald-900 mb-1">
                 Esta campanha possui pagamento via PIX
               </p>
-              <p className="text-xs text-emerald-600/80 leading-relaxed mb-3">
-                Faca login ou crie uma conta para ver os dados de pagamento e participar da campanha.
+              <p className="text-sm text-emerald-700/80 leading-relaxed mb-4">
+                Faca login ou crie uma conta para ver os dados de pagamento e
+                participar da campanha.
               </p>
               <button
                 onClick={() => requireAuth(() => {})}
-                className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-base font-medium px-6 py-3 rounded-xl transition-colors min-h-[48px]"
               >
-                <LogIn className="w-4 h-4" />
+                <LogIn className="w-5 h-5" />
                 Fazer login
               </button>
             </div>
@@ -175,163 +232,136 @@ export function OverviewTab({
         </div>
       )}
 
-      {/* Produtos em Destaque */}
+      {/* ========== Products ========== */}
       {products && products.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-display text-xl font-semibold text-sky-900 flex items-center gap-2">
-              <span className="w-6 h-6 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
-                <svg className="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-              </span>
-              Produtos Disponíveis
-            </h3>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+        <Section
+          title="Produtos Disponiveis"
+          icon={<ShoppingBag className="w-5 h-5" />}
+          iconBg="bg-amber-50"
+          iconColor="text-amber-600"
+        >
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
             {products
               .slice()
               .sort((a, b) => a.name.localeCompare(b.name))
               .map((product) => (
                 <div
                   key={product.id}
-                  className="bg-white border border-sky-100/60 rounded-2xl p-3 hover:border-sky-300 hover:shadow-md hover:shadow-sky-100/50 transition-all duration-200 flex flex-col"
+                  className="bg-white border border-sky-100/60 rounded-2xl p-3 md:p-4 hover:border-sky-200 hover:shadow-md hover:shadow-sky-100/40 transition-all duration-200 flex flex-col"
                 >
-                  <ProductImage product={product} />
+                  <div className="mb-3">
+                    <ProductImage product={product} />
+                  </div>
 
-                  <h4 className="font-semibold text-sky-900 mb-1 line-clamp-2 text-sm md:text-base leading-tight min-h-[2.25rem] md:min-h-[3rem]">
+                  <h4 className="font-semibold text-sky-900 mb-2 line-clamp-2 text-sm md:text-base leading-snug min-h-[2.5rem] md:min-h-[3rem]">
                     {product.name}
                   </h4>
 
-                  <div className="mt-auto mb-2">
-                    <span className="text-lg font-bold text-sky-700">
+                  <div className="mt-auto space-y-2.5">
+                    <span className="block text-lg md:text-xl font-bold text-sky-800">
                       {formatCurrency(product.price)}
                     </span>
-                  </div>
 
-                  {isActive && (
-                    <button
-                      onClick={() => onAddToOrder(product)}
-                      className="w-full bg-gradient-to-r from-sky-500 to-sky-600 hover:shadow-md hover:shadow-sky-300/30 text-white font-medium py-1.5 px-3 rounded-xl transition-all duration-200 text-sm"
-                    >
-                      Pedir
-                    </button>
-                  )}
+                    {isActive && (
+                      <button
+                        onClick={() => onAddToOrder(product)}
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-200 text-base min-h-[48px] shadow-sm shadow-emerald-200/40 hover:shadow-md hover:shadow-emerald-200/50"
+                      >
+                        Pedir
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
           </div>
-        </div>
+        </Section>
       )}
 
-      {/* Resumo Financeiro */}
-      <div>
-        <h3 className="font-display text-lg font-semibold text-sky-900 mb-4 flex items-center gap-2">
-          <span className="w-6 h-6 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
-            <svg className="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </span>
-          Resumo Financeiro
-        </h3>
+      {/* ========== Financial Summary ========== */}
+      <Section
+        title="Resumo Financeiro"
+        icon={<CreditCard className="w-5 h-5" />}
+        iconBg="bg-emerald-50"
+        iconColor="text-emerald-600"
+      >
         {isAnalyticsLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {Array.from({ length: 6 }).map((_, index) => (
-              <Card key={index}>
-                <div className="flex items-center gap-2 mb-2">
-                  <Skeleton className="h-4 w-4" />
-                  <Skeleton className="h-4 w-28" />
+              <div
+                key={index}
+                className="bg-white rounded-2xl border border-sky-100/60 p-4 md:p-5"
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <Skeleton className="h-5 w-5 rounded" />
+                  <Skeleton className="h-4 w-24" />
                 </div>
                 <Skeleton className="h-7 w-20" />
-              </Card>
+              </div>
             ))}
           </div>
         ) : analytics ? (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <Card>
-              <div className="flex items-center gap-2 mb-2">
-                <svg className="w-4 h-4 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <div className="text-sm text-sky-600">Total de Pessoas</div>
-              </div>
-              <div className="text-2xl md:text-3xl font-bold text-sky-900">
-                {analytics.byCustomer.length}
-              </div>
-            </Card>
-            <Card>
-              <div className="flex items-center gap-2 mb-2">
-                <svg className="w-4 h-4 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
-                </svg>
-                <div className="text-sm text-sky-600">Total de Itens</div>
-              </div>
-              <div className="text-2xl md:text-3xl font-bold text-sky-900">
-                {analytics.totalQuantity}
-              </div>
-            </Card>
-            <Card>
-              <div className="flex items-center gap-2 mb-2">
-                <svg className="w-4 h-4 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
-                <div className="text-sm text-sky-600">Total sem Frete</div>
-              </div>
-              <div className="text-xl md:text-3xl font-bold text-sky-900">
-                {formatCurrency(analytics.totalWithoutShipping)}
-              </div>
-            </Card>
-            <Card>
-              <div className="flex items-center gap-2 mb-2">
-                <svg className="w-4 h-4 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
-                </svg>
-                <div className="text-sm text-sky-600">Total com Frete</div>
-              </div>
-              <div className="text-xl md:text-3xl font-bold text-sky-900">
-                {formatCurrency(analytics.totalWithShipping)}
-              </div>
-            </Card>
-            <Card>
-              <div className="flex items-center gap-2 mb-2">
-                <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
-                <div className="text-sm text-sky-600">Total Pago</div>
-              </div>
-              <div className="text-xl md:text-3xl font-bold text-emerald-600">
-                {formatCurrency(analytics.totalPaid)}
-              </div>
-            </Card>
-            <Card>
-              <div className="flex items-center gap-2 mb-2">
-                <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div className="text-sm text-sky-600">Total Não Pago</div>
-              </div>
-              <div className="text-xl md:text-3xl font-bold text-red-500">
-                {formatCurrency(analytics.totalUnpaid)}
-              </div>
-            </Card>
+            <StatCard
+              label="Pessoas"
+              value={analytics.byCustomer.length}
+              icon={<Users className="w-5 h-5 text-sky-500" />}
+            />
+            <StatCard
+              label="Itens"
+              value={analytics.totalQuantity}
+              icon={<Hash className="w-5 h-5 text-sky-500" />}
+            />
+            <StatCard
+              label="Sem Frete"
+              value={formatCurrency(analytics.totalWithoutShipping)}
+              icon={<ShoppingBag className="w-5 h-5 text-sky-500" />}
+            />
+            <StatCard
+              label="Com Frete"
+              value={formatCurrency(analytics.totalWithShipping)}
+              icon={<TruckIcon className="w-5 h-5 text-sky-500" />}
+            />
+            <StatCard
+              label="Pago"
+              value={formatCurrency(analytics.totalPaid)}
+              icon={<TrendingUp className="w-5 h-5 text-emerald-500" />}
+              accent
+            />
+            <StatCard
+              label="Pendente"
+              value={formatCurrency(analytics.totalUnpaid)}
+              icon={<TrendingDown className="w-5 h-5 text-red-400" />}
+              negative
+            />
           </div>
         ) : (
           <Card>
-            <p className="text-sm text-sky-600">Nenhum dado financeiro disponível.</p>
+            <p className="text-base text-sky-600">
+              Nenhum dado financeiro disponivel.
+            </p>
           </Card>
         )}
-      </div>
+      </Section>
 
-      {/* Detalhes por Produto e Cliente */}
-      <div>
-        <h3 className="font-display text-lg font-semibold text-sky-900 mb-4 flex items-center gap-2">
-          <span className="w-6 h-6 rounded-lg bg-sky-100 flex items-center justify-center flex-shrink-0">
-            <svg className="w-3.5 h-3.5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-          </span>
-          Detalhamento
-        </h3>
+      {/* ========== Breakdown by Customer & Product ========== */}
+      <Section
+        title="Detalhamento"
+        icon={
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+            />
+          </svg>
+        }
+      >
         {isAnalyticsLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
             <Card className="h-fit space-y-3">
@@ -352,22 +382,24 @@ export function OverviewTab({
           </div>
         ) : analytics ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
+            {/* By Customer */}
             <Card className="h-fit">
-              <h4 className="font-semibold mb-4 text-sky-900 flex items-center gap-2">
-                <svg className="w-4 h-4 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
+              <h4 className="font-semibold text-base md:text-lg mb-4 text-sky-900 flex items-center gap-2.5">
+                <Users className="w-5 h-5 text-sky-500" />
                 Por Pessoa
               </h4>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {[...analytics.byCustomer]
                   .sort((a, b) =>
-                    (a.customerAlias || "").localeCompare(b.customerAlias || "")
+                    (a.customerAlias || "").localeCompare(
+                      b.customerAlias || ""
+                    )
                   )
                   .map((item, index) => {
                     const order =
                       orders?.find(
-                        (o) => getCustomerDisplayName(o) === item.customerAlias
+                        (o) =>
+                          getCustomerDisplayName(o) === item.customerAlias
                       ) ??
                       orders?.find(
                         (o) =>
@@ -378,60 +410,69 @@ export function OverviewTab({
                     return (
                       <div
                         key={index}
-                        className="flex flex-col gap-2 pb-3 border-b border-sky-100 last:border-b-0 last:pb-0"
+                        className="pb-4 border-b border-sky-100 last:border-b-0 last:pb-0"
                       >
-                        <div className="flex justify-between items-center gap-3">
-                          <span className="text-sky-900 font-medium flex-1 min-w-0">
+                        {/* Name row */}
+                        <div className="flex justify-between items-center gap-3 mb-2">
+                          <span className="text-sky-900 font-semibold text-base flex-1 min-w-0">
                             {item.customerAlias}
                           </span>
-
-                          <div className="flex items-center gap-2">
-                            {order && (isAdmin || isCreator || order.userId === user?.id) && (
-                              <IconButton
-                                size="sm"
-                                variant="secondary"
-                                icon={<Eye className="w-5 h-5" />}
-                                onClick={() => onViewOrder(order)}
-                                title="Visualizar pedido"
-                              />
-                            )}
-                            {order && (isAdmin || order.userId === user?.id) && (
-                              <>
-                                <IconButton
-                                  size="sm"
-                                  variant={item.isPaid ? "success" : "secondary"}
-                                  icon={<Upload className="w-5 h-5" />}
-                                  onClick={() => onTogglePayment(order)}
-                                  title={
-                                    item.isPaid
-                                      ? "Marcar como não pago"
-                                      : "Enviar comprovante de pagamento"
-                                  }
-                                />
+                          <div className="flex items-center gap-1.5">
+                            {order &&
+                              (isAdmin ||
+                                isCreator ||
+                                order.userId === user?.id) && (
                                 <IconButton
                                   size="sm"
                                   variant="secondary"
-                                  icon={<Edit className="w-4 h-4" />}
-                                  onClick={() => onEditOrder(order)}
-                                  title="Editar pedido"
+                                  icon={<Eye className="w-5 h-5" />}
+                                  onClick={() => onViewOrder(order)}
+                                  title="Visualizar pedido"
+                                  className="min-w-[44px] min-h-[44px]"
                                 />
-                              </>
-                            )}
+                              )}
+                            {order &&
+                              (isAdmin || order.userId === user?.id) && (
+                                <>
+                                  <IconButton
+                                    size="sm"
+                                    variant={
+                                      item.isPaid ? "success" : "secondary"
+                                    }
+                                    icon={<Upload className="w-5 h-5" />}
+                                    onClick={() => onTogglePayment(order)}
+                                    title={
+                                      item.isPaid
+                                        ? "Marcar como nao pago"
+                                        : "Enviar comprovante"
+                                    }
+                                    className="min-w-[44px] min-h-[44px]"
+                                  />
+                                  <IconButton
+                                    size="sm"
+                                    variant="secondary"
+                                    icon={<Edit className="w-4 h-4" />}
+                                    onClick={() => onEditOrder(order)}
+                                    title="Editar pedido"
+                                    className="min-w-[44px] min-h-[44px]"
+                                  />
+                                </>
+                              )}
                           </div>
                         </div>
 
+                        {/* Status + Total row */}
                         <div className="flex items-center justify-between gap-3">
                           <span
-                            className={`px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap ${
+                            className={`px-3 py-1.5 text-sm font-semibold rounded-full whitespace-nowrap ${
                               item.isPaid
                                 ? "bg-emerald-100 text-emerald-700"
-                                : "bg-red-100 text-red-600"
+                                : "bg-red-50 text-red-600"
                             }`}
                           >
                             {item.isPaid ? "Pago" : "Pendente"}
                           </span>
-
-                          <span className="font-semibold text-sky-900 whitespace-nowrap">
+                          <span className="font-bold text-lg text-sky-900 whitespace-nowrap">
                             {formatCurrency(item.total)}
                           </span>
                         </div>
@@ -441,26 +482,24 @@ export function OverviewTab({
               </div>
             </Card>
 
+            {/* By Product */}
             <Card className="h-fit">
-              <h4 className="font-semibold mb-4 text-sky-900 flex items-center gap-2">
-                <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
+              <h4 className="font-semibold text-base md:text-lg mb-4 text-sky-900 flex items-center gap-2.5">
+                <ShoppingBag className="w-5 h-5 text-amber-500" />
                 Por Produto
               </h4>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {analytics.byProduct.map((item) => (
                   <div
                     key={item.productId}
-                    className="flex justify-between items-center gap-3"
+                    className="flex justify-between items-center gap-3 py-2 border-b border-sky-50 last:border-b-0"
                   >
-                    <span className="text-sky-700 truncate flex-1 min-w-0">
+                    <span className="text-sky-800 text-base flex-1 min-w-0 truncate">
                       {item.productName}
                     </span>
-                    <span className="font-medium text-sky-900 whitespace-nowrap flex-shrink-0">
+                    <span className="font-semibold text-sky-900 whitespace-nowrap text-base flex-shrink-0">
                       {item.quantity}{" "}
-                      <span className="hidden sm:inline">unidades</span>
-                      <span className="sm:hidden">un.</span>
+                      <span className="text-sky-500 font-normal">un.</span>
                     </span>
                   </div>
                 ))}
@@ -469,29 +508,23 @@ export function OverviewTab({
           </div>
         ) : (
           <Card>
-            <p className="text-sm text-sky-600">Nenhum dado de detalhamento disponível.</p>
+            <p className="text-base text-sky-600">
+              Nenhum dado de detalhamento disponivel.
+            </p>
           </Card>
         )}
-      </div>
+      </Section>
 
-      {/* Seção de Perguntas e Respostas */}
-      <div>
-        <div className="mb-4">
-          <h3 className="font-display text-xl font-bold text-sky-900 mb-2 flex items-center gap-2">
-            <span className="w-7 h-7 rounded-xl bg-sky-100 flex items-center justify-center flex-shrink-0">
-              <svg className="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-              </svg>
-            </span>
-            Perguntas e Respostas
-          </h3>
-          <p className="text-sky-600 text-sm">
-            Faça perguntas sobre os produtos e a campanha. O criador responderá
-            em breve.
-          </p>
-        </div>
+      {/* ========== Q&A Section ========== */}
+      <Section
+        title="Perguntas e Respostas"
+        icon={<MessageCircle className="w-5 h-5" />}
+      >
+        <p className="text-sky-600 text-base -mt-2 mb-2">
+          Tire suas duvidas sobre os produtos e a campanha.
+        </p>
         <CampaignChat campaignId={campaignId} isCreator={canEditCampaign} />
-      </div>
+      </Section>
     </div>
   );
 }
