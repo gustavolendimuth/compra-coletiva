@@ -90,14 +90,15 @@ export function PaymentProofModal({
             onImageRemove={handleImageRemove}
             maxSizeMB={5}
             disabled={isPending}
+            acceptPdf
           />
         </div>
 
         {/* Instructions */}
         <div className="text-xs text-gray-500 space-y-1">
-          <p>• Formatos aceitos: JPEG, PNG, WebP</p>
+          <p>• Formatos aceitos: JPEG, PNG, WebP ou PDF</p>
           <p>• Tamanho máximo: 5MB</p>
-          <p>• Faça upload da captura de tela do comprovante PIX</p>
+          <p>• Faça upload da captura de tela ou PDF do comprovante PIX</p>
         </div>
 
         {/* Actions */}
