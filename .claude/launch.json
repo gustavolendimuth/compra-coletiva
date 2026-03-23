@@ -1,0 +1,25 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Frontend (Next.js)",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["node_modules/next/dist/bin/next", "dev", "frontend"],
+      "port": 5173,
+      "autoPort": false
+    },
+    {
+      "name": "Backend (Express + Prisma)",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["node_modules/.bin/tsx", "watch", "backend/src/index.ts"],
+      "port": 3000,
+      "autoPort": true
+    },
+    {
+      "name": "Docker Compose (Full Stack)",
+      "runtimeExecutable": "docker-compose",
+      "runtimeArgs": ["up"],
+      "port": 5173
+    }
+  ]
+}
