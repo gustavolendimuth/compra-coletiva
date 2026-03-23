@@ -1,5 +1,4 @@
 "use client";
-/* eslint-disable @next/next/no-img-element */
 
 import Link from "next/link";
 import {
@@ -13,28 +12,15 @@ import {
   Truck,
   Users,
 } from "lucide-react";
-import { getImageUrl } from "@/lib/imageUrl";
 import type { MercadoVivoHomeData } from "./useMercadoVivoHomeData";
-import {
-  formatCampaignDistance,
-  formatCompactNumber,
-  getCampaignEmoji,
-  getDeadlineLabel,
-  sanitizeDescription,
-  sanitizeInlineText,
-} from "./utils";
+import { formatCompactNumber } from "./utils";
+import { CampaignCardBanner } from "@/components/campaign";
 import styles from "./MercadoVivoHome.module.css";
 import { MercadoVivoFooter } from "./MercadoVivoFooter";
 
 interface MercadoVivoSectionsProps {
   data: MercadoVivoHomeData | undefined;
 }
-
-const campaignBackgrounds = [
-  "from-amber-100 via-amber-50 to-sky-50",
-  "from-sky-100 via-sky-50 to-emerald-50",
-  "from-terracotta-400/20 via-amber-50 to-cream-100",
-];
 
 const featureCards = [
   {
@@ -133,43 +119,9 @@ export function MercadoVivoSections({ data }: MercadoVivoSectionsProps) {
               </div>
             )}
 
-            {featuredCampaigns.map((campaign, index) => {
-              const imageUrl = getImageUrl(campaign.imageUrl);
-              const cardBg = campaignBackgrounds[index % campaignBackgrounds.length] ?? campaignBackgrounds[0];
-
-              return (
-                <Link key={campaign.id} href={`/campanhas/${campaign.slug}`} className={`${styles.campaignCard} bg-white rounded-3xl overflow-hidden border border-sky-100/50 shadow-sm block`}>
-                  <div className={`h-48 bg-gradient-to-br ${cardBg} flex items-center justify-center relative overflow-hidden`}>
-                    {imageUrl ? (
-                      <img src={imageUrl} alt={campaign.name} className="w-full h-full object-cover" loading="lazy" decoding="async" />
-                    ) : (
-                      <span className="text-7xl">{getCampaignEmoji(index)}</span>
-                    )}
-                    <span className="absolute top-4 left-4 px-3 py-1 bg-emerald-500 text-white text-xs font-bold rounded-full shadow-sm">Ativa</span>
-                    <span className="absolute top-4 right-4 px-3 py-1 bg-white/90 text-sky-700 text-xs font-semibold rounded-full backdrop-blur-sm">{formatCampaignDistance(campaign)}</span>
-                  </div>
-                  <div className="p-6">
-                    <h3
-                      className="font-display font-bold text-sky-900 text-xl mb-1"
-                      dangerouslySetInnerHTML={{ __html: sanitizeInlineText(campaign.name, "Campanha local") }}
-                    />
-                    <p
-                      className="text-sm text-sky-700/50 mb-4"
-                      dangerouslySetInnerHTML={{
-                        __html: sanitizeDescription(
-                          campaign.description,
-                          "Campanha comunitaria com produtos selecionados para o bairro."
-                        ),
-                      }}
-                    />
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-sky-700/40 font-medium">+{formatCompactNumber(campaign._count?.orders ?? 0)} pedidos</span>
-                      <span className="text-xs text-amber-600 font-semibold bg-amber-50 px-2.5 py-1 rounded-full">{getDeadlineLabel(campaign.deadline)}</span>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
+            {featuredCampaigns.map((campaign, index) => (
+              <CampaignCardBanner key={campaign.id} campaign={campaign} index={index} />
+            ))}
           </div>
         </div>
       </section>
