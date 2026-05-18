@@ -10,6 +10,7 @@ interface PaymentProofModalProps {
   onClose: () => void;
   order: Order | null;
   onSubmit: (file: File) => void;
+  onMarkPaidWithoutProof?: () => void;
   isPending: boolean;
 }
 
@@ -33,6 +34,7 @@ export function PaymentProofModal({
   onClose,
   order,
   onSubmit,
+  onMarkPaidWithoutProof,
   isPending,
 }: PaymentProofModalProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -110,6 +112,17 @@ export function PaymentProofModal({
           >
             {isPending ? 'Enviando...' : 'Marcar como Pago'}
           </Button>
+          {onMarkPaidWithoutProof && (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onMarkPaidWithoutProof}
+              disabled={isPending}
+              className="flex-1 w-full sm:w-auto"
+            >
+              Marcar como Pago sem Comprovante
+            </Button>
+          )}
           <Button
             type="button"
             variant="secondary"

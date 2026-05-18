@@ -92,7 +92,7 @@ export function OrdersTab({
     isAdmin || isCreator || order.userId === currentUserId;
 
   const canManageOrder = (order: Order) =>
-    isAdmin || order.userId === currentUserId;
+    isAdmin || isCreator || order.userId === currentUserId;
 
   const canDeleteOrder = (order: Order) =>
     isAdmin || (isActive && order.userId === currentUserId);

@@ -125,6 +125,7 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
           hook.setOrderForPayment(null);
         }}
         onSubmit={hook.handlePaymentProofSubmit}
+        onMarkPaidWithoutProof={hook.canMarkPaidWithoutProof ? hook.handleMarkPaidWithoutProof : undefined}
       />
 
       <ConfirmModal

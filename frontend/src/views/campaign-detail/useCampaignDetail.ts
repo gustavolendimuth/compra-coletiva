@@ -258,7 +258,7 @@ export function useCampaignDetail() {
   const isActive = campaign?.status === "ACTIVE";
   const isClosed = campaign?.status === "CLOSED";
   const isSent = campaign?.status === "SENT";
-  const canEditCampaign = campaign?.creatorId === user?.id;
+  const canEditCampaign = campaign?.creatorId === user?.id || isAdmin;
   const canGenerateOrdersSummary = canEditCampaign || user?.role === "ADMIN";
 
   // Alphabetical products for modal dropdown
@@ -280,6 +280,7 @@ export function useCampaignDetail() {
         }
       : null,
     canCreateOrdersForOthers: canViewAllOrders,
+    canMarkPaidWithoutProof: canEditCampaign,
     isActive,
     requireAuth,
     products: alphabeticalProducts,

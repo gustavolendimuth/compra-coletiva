@@ -16,6 +16,7 @@ interface UseOrderModalOptions {
     salesDisclaimerAcceptedVersion?: string | null;
   } | null;
   canCreateOrdersForOthers?: boolean;
+  canMarkPaidWithoutProof?: boolean;
   isActive: boolean;
   requireAuth: (callback: () => void) => void;
   products: Product[];
@@ -26,6 +27,7 @@ export function useOrderModal({
   campaignId,
   user,
   canCreateOrdersForOthers = false,
+  canMarkPaidWithoutProof = false,
   isActive,
   requireAuth,
 }: UseOrderModalOptions) {
@@ -526,6 +528,14 @@ export function useOrderModal({
     });
   }, [orderForPayment, updatePaymentMutation]);
 
+  const handleMarkPaidWithoutProof = useCallback(() => {
+    if (!orderForPayment) return;
+    updatePaymentMutation.mutate({
+      orderId: orderForPayment.id,
+      isPaid: true,
+    });
+  }, [orderForPayment, updatePaymentMutation]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -591,6 +601,8 @@ export function useOrderModal({
     handleConfirmRemovePaymentProof,
     handleTogglePayment,
     handlePaymentProofSubmit,
+    handleMarkPaidWithoutProof,
+    canMarkPaidWithoutProof,
     handleConfirmSalesDisclaimer,
     handleCancelSalesDisclaimer,
     openEditOrderModal,

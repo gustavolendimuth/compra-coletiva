@@ -797,8 +797,10 @@ router.patch('/:id/payment',
       throw new AppError(404, 'Order not found');
     }
 
-    // Se está marcando como pago, exige comprovante
-    if (isPaid === 'true' && !req.file) {
+    // Admin e criador da campanha podem marcar como pago sem comprovante
+    const isCampaignCreator = order.campaign.creatorId === req.user!.id;
+    const isAdminUser = req.user!.role === 'ADMIN';
+    if (isPaid === 'true' && !req.file && !isAdminUser && !isCampaignCreator) {
       throw new AppError(400, 'Comprovante de pagamento é obrigatório');
     }
 
