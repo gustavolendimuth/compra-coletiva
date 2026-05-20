@@ -24,6 +24,7 @@ export { PixDisplay } from "./PixDisplay";
 export { PaymentPendingNotice } from "./PaymentPendingNotice";
 export { PaymentReleaseTriggerField } from "./PaymentReleaseTriggerField";
 export { Portal } from "./Portal";
+export { ImageLightbox } from "./ImageLightbox";
 
 // Re-export default for backward compatibility
 export { default as ButtonDefault } from "./Button";

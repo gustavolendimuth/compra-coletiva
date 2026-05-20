@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card, PixDisplay, PaymentPendingNotice } from "@/components/ui";
+import { Card, PixDisplay, PaymentPendingNotice, ImageLightbox } from "@/components/ui";
 import IconButton from "@/components/IconButton";
 import { CampaignChat } from "@/components/campaign";
 import { Skeleton } from "@/components/Skeleton";
@@ -34,6 +34,7 @@ interface OverviewTabProps {
 
 function ProductImage({ product }: { product: Product }) {
   const [hasError, setHasError] = useState(false);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const imageUrl = getImageUrl(product.imageUrl);
 
   if (!imageUrl || hasError) {
@@ -57,15 +58,26 @@ function ProductImage({ product }: { product: Product }) {
   }
 
   return (
-    <div className="w-full aspect-square rounded-xl overflow-hidden bg-sky-50 border border-sky-100 mb-2">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+    <>
+      <div
+        className="w-full aspect-square rounded-xl overflow-hidden bg-sky-50 border border-sky-100 mb-2 cursor-zoom-in"
+        onClick={() => setIsLightboxOpen(true)}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={imageUrl}
+          alt={product.name}
+          className="w-full h-full object-cover"
+          onError={() => setHasError(true)}
+        />
+      </div>
+      <ImageLightbox
         src={imageUrl}
         alt={product.name}
-        className="w-full h-full object-cover"
-        onError={() => setHasError(true)}
+        isOpen={isLightboxOpen}
+        onClose={() => setIsLightboxOpen(false)}
       />
-    </div>
+    </>
   );
 }
 

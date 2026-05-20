@@ -17,6 +17,7 @@ import { Campaign } from "@/api";
 import { getImageUrl } from "@/lib/imageUrl";
 import toast from "react-hot-toast";
 import { CampaignActionButtons } from "./CampaignActionButtons";
+import { ImageLightbox } from "@/components/ui";
 
 interface CampaignHeaderProps {
   campaign: Campaign;
@@ -58,6 +59,7 @@ export function CampaignHeader({
   const [editedName, setEditedName] = useState("");
   const [editedDescription, setEditedDescription] = useState("");
   const [isImageUnavailable, setIsImageUnavailable] = useState(false);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   const isActive = campaign.status === "ACTIVE";
   const isClosed = campaign.status === "CLOSED";
@@ -119,8 +121,9 @@ export function CampaignHeader({
             <img
               src={imageUrl || undefined}
               alt={campaign.name}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover cursor-zoom-in"
               onError={() => setIsImageUnavailable(true)}
+              onClick={() => setIsLightboxOpen(true)}
             />
             {canEditCampaign && (
               <button
@@ -388,6 +391,15 @@ export function CampaignHeader({
             {campaign.pickupState ? `, ${campaign.pickupState}` : ''}
           </span>
         </div>
+      )}
+
+      {imageUrl && (
+        <ImageLightbox
+          src={imageUrl}
+          alt={campaign.name}
+          isOpen={isLightboxOpen}
+          onClose={() => setIsLightboxOpen(false)}
+        />
       )}
 
       {/* Action Buttons */}
