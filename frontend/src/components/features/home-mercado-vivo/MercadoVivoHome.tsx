@@ -44,7 +44,7 @@ export function MercadoVivoHome() {
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
-            <a href="#campanhas" className="text-sm font-medium text-sky-800/70 hover:text-sky-900 transition-colors">Campanhas</a>
+            <Link href="/campanhas" className="text-sm font-medium text-sky-800/70 hover:text-sky-900 transition-colors">Campanhas</Link>
             <a href="#como-funciona" className="text-sm font-medium text-sky-800/70 hover:text-sky-900 transition-colors">Como funciona</a>
             <a href="#comunidade" className="text-sm font-medium text-sky-800/70 hover:text-sky-900 transition-colors">Comunidade</a>
             <div className="h-5 w-px bg-sky-200" />
