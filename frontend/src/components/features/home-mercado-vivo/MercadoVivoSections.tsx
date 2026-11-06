@@ -98,7 +98,7 @@ export function MercadoVivoSections({ data }: MercadoVivoSectionsProps) {
         </div>
       </section>
 
-      <section id="campanhas" className="py-20 sm:py-28 relative">
+      <section id="campanhas" className="py-20 sm:py-28 relative overflow-x-clip">
         <div className="blob-2 -bottom-40 -right-40 opacity-50" />
         <div className="max-w-7xl mx-auto px-5 sm:px-8 relative z-10">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between mb-12 gap-4">
