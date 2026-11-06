@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import type { MercadoVivoHomeData } from "./useMercadoVivoHomeData";
 import { formatCompactNumber } from "./utils";
+import { CREATE_CAMPAIGN_HREF } from "@/lib/campaignLinks";
 import { CampaignCardBanner } from "@/components/campaign";
 import styles from "./MercadoVivoHome.module.css";
 import { MercadoVivoFooter } from "./MercadoVivoFooter";
@@ -185,7 +186,7 @@ export function MercadoVivoSections({ data }: MercadoVivoSectionsProps) {
             <button onClick={() => window.dispatchEvent(new CustomEvent("openAuthModal", { detail: { tab: "register" } }))} className="inline-flex items-center justify-center gap-2 px-10 py-4 bg-gradient-to-r from-sky-500 to-sky-600 text-white font-semibold rounded-2xl shadow-xl shadow-sky-300/30 hover:shadow-sky-400/40 hover:from-sky-600 hover:to-sky-700 transition-all text-lg">
               Criar conta gratuita
             </button>
-            <Link href="/campanhas" className="inline-flex items-center justify-center gap-2 px-10 py-4 bg-amber-100 text-amber-800 font-semibold rounded-2xl hover:bg-amber-200 transition-all text-lg">
+            <Link href={CREATE_CAMPAIGN_HREF} className="inline-flex items-center justify-center gap-2 px-10 py-4 bg-amber-100 text-amber-800 font-semibold rounded-2xl hover:bg-amber-200 transition-all text-lg">
               Criar uma campanha
             </Link>
           </div>

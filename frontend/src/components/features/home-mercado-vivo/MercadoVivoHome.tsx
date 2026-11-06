@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, Menu, Search, ShoppingBag, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { CREATE_CAMPAIGN_HREF } from "@/lib/campaignLinks";
 import { getImageUrl } from "@/lib/imageUrl";
 import { MercadoVivoSections } from "./MercadoVivoSections";
 import { useMercadoVivoHomeData } from "./useMercadoVivoHomeData";
@@ -57,7 +58,7 @@ export function MercadoVivoHome() {
                 Entrar
               </button>
             )}
-            <Link href="/campanhas" className="px-5 py-2.5 bg-gradient-to-r from-sky-500 to-sky-600 text-white text-sm font-semibold rounded-full shadow-lg shadow-sky-300/40 hover:shadow-sky-400/50 hover:from-sky-600 hover:to-sky-700 transition-all">
+            <Link href={CREATE_CAMPAIGN_HREF} className="px-5 py-2.5 bg-gradient-to-r from-sky-500 to-sky-600 text-white text-sm font-semibold rounded-full shadow-lg shadow-sky-300/40 hover:shadow-sky-400/50 hover:from-sky-600 hover:to-sky-700 transition-all">
               Criar campanha
             </Link>
           </div>
