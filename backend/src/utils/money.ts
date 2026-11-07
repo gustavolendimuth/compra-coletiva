@@ -49,8 +49,9 @@ export class Money {
   /**
    * Distributes a total amount proportionally across weights
    *
-   * Ensures the sum of distributed amounts equals the total exactly.
-   * The last item receives the remainder to handle rounding differences.
+   * Largest remainder in cents: each share gets the floor of its quota and the
+   * leftover cents go to the largest fractions (ties go to the higher index).
+   * The sum always equals the total exactly and no share is ever negative.
    *
    * @param total - Total amount to distribute
    * @param weights - Array of weights for proportional distribution
@@ -71,25 +72,21 @@ export class Money {
       return weights.map(() => 0);
     }
 
-    const distributed: number[] = [];
-    let distributedSum = 0;
+    const totalCents = Math.round(total * 100);
+    const quotas = weights.map((w) => (w / totalWeight) * totalCents);
+    const cents = quotas.map((q) => Math.floor(q));
+    let leftover = totalCents - cents.reduce((sum, c) => sum + c, 0);
 
-    for (let i = 0; i < weights.length; i++) {
-      let amount: number;
+    const byFraction = quotas
+      .map((q, index) => ({ index, fraction: q - Math.floor(q) }))
+      .sort((a, b) => b.fraction - a.fraction || b.index - a.index);
 
-      if (i === weights.length - 1) {
-        // Last item gets the remainder to ensure exact total
-        amount = this.round(total - distributedSum);
-      } else {
-        // Calculate proportional amount and round immediately
-        amount = this.round((weights[i] / totalWeight) * total);
-        distributedSum = this.round(distributedSum + amount);
-      }
-
-      distributed.push(amount);
+    for (let i = 0; leftover > 0; i = (i + 1) % byFraction.length) {
+      cents[byFraction[i].index] += 1;
+      leftover -= 1;
     }
 
-    return distributed;
+    return cents.map((c) => c / 100);
   }
 
   /**
