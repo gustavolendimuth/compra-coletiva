@@ -18,6 +18,7 @@ import { geocodingService } from "../services/geocodingService";
 import { routingService } from "../services/routingService";
 import { haversineDistance, getBoundingBox } from "../utils/distance";
 import { PaymentReleaseService } from "../services/paymentReleaseService";
+import { geoRateLimiter } from "../middleware/rateLimiter";
 
 const router = Router();
 
@@ -531,6 +532,7 @@ router.get(
 // GET /api/campaigns/:idOrSlug/distance - Calcula distância do CEP informado até a campanha
 router.get(
   "/:idOrSlug/distance",
+  geoRateLimiter,
   asyncHandler(async (req, res) => {
     const { idOrSlug } = req.params;
     const { fromZipCode, fromLat, fromLng } = distanceQuerySchema.parse(req.query);

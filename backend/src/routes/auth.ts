@@ -7,6 +7,11 @@ import { AuthService } from "../services/authService";
 import { TokenService } from "../services/tokenService";
 import { requireAuth } from "../middleware/authMiddleware";
 import {
+  loginRateLimiter,
+  registerRateLimiter,
+  passwordResetRateLimiter,
+} from "../middleware/rateLimiter";
+import {
   REFRESH_TOKEN_COOKIE_NAME,
   getRefreshTokenCookieOptions,
   getClearCookieOptions,
@@ -216,7 +221,7 @@ router.get("/check-name", async (req: Request, res: Response): Promise<void> => 
  * POST /api/auth/register
  * Registra um novo usuário
  */
-router.post("/register", async (req: Request, res: Response): Promise<void> => {
+router.post("/register", registerRateLimiter, async (req: Request, res: Response): Promise<void> => {
   try {
     // Valida dados
     const validationResult = registerSchema.safeParse(req.body);
@@ -372,7 +377,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
  * POST /api/auth/login
  * Faz login de um usuário
  */
-router.post("/login", async (req: Request, res: Response): Promise<void> => {
+router.post("/login", loginRateLimiter, async (req: Request, res: Response): Promise<void> => {
   try {
     // Valida dados
     const validationResult = loginSchema.safeParse(req.body);
@@ -731,6 +736,7 @@ router.get(
  */
 router.post(
   "/request-password-reset",
+  passwordResetRateLimiter,
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { email } = requestPasswordResetSchema.parse(req.body);

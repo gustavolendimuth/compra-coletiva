@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import passport from "passport";
 import { PrismaClient } from "@prisma/client";
 import { configurePassport } from "./config/passport";
+import { configureTrustProxy } from "./config/trustProxy";
 import authRoutes from "./routes/auth";
 import profileRoutes from "./routes/profile";
 import adminRoutes from "./routes/admin";
@@ -34,6 +35,9 @@ const PORT = process.env.PORT || 3000;
 
 // Configure Passport
 configurePassport();
+
+// Confia só no proxy do Railway: req.ip = IP real do cliente
+configureTrustProxy(app);
 
 // Parse CORS origins - accepts comma-separated list or single origin
 // Automatically adds correct protocol based on environment and domain

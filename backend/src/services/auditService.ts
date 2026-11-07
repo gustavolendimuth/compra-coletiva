@@ -218,10 +218,7 @@ export class AuditService {
    * Extrai o IP do cliente da request
    */
   private static getClientIp(req: Request): string {
-    const forwarded = req.headers['x-forwarded-for'];
-    if (typeof forwarded === 'string') {
-      return forwarded.split(',')[0].trim();
-    }
-    return req.socket.remoteAddress || 'unknown';
+    // `req.ip` respeita `trust proxy` (não confia no X-Forwarded-For do cliente)
+    return req.ip || req.socket.remoteAddress || 'unknown';
   }
 }

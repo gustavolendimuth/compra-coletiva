@@ -1,8 +1,12 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import { geocodingService } from "../services/geocodingService";
+import { geoRateLimiter } from "../middleware/rateLimiter";
 
 const router = Router();
+
+// Todas as rotas chamam ViaCEP/Nominatim: limite compartilhado com /campaigns/:idOrSlug/distance
+router.use(geoRateLimiter);
 
 const asyncHandler =
   (fn: (req: Request, res: Response) => Promise<void>) =>
