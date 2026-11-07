@@ -11,6 +11,7 @@ import { z } from "zod";
 import { InvoiceGenerator } from "../services/invoiceGenerator";
 import { OrderSummaryGenerator } from "../services/orderSummaryGenerator";
 import { ShippingCalculator } from "../services/shippingCalculator";
+import { lockCampaignRow } from "../services/orderLocks";
 import { generateUniqueSlug } from "../utils/slugify";
 import { uploadCampaignImage } from "../middleware/uploadMiddleware";
 import { ImageUploadService } from "../services/imageUploadService";
@@ -1113,8 +1114,22 @@ router.delete(
       throw new AppError(404, "Campaign not found");
     }
 
-    await prisma.campaign.delete({
-      where: { id: campaign.id },
+    // Pedidos são registros financeiros: campanha com pedido não é apagada (o cascade levaria
+    // pedidos e comprovantes). O lock da campanha impede um pedido novo entre a contagem e o delete.
+    await prisma.$transaction(async (tx) => {
+      await lockCampaignRow(tx, campaign.id);
+
+      const orderCount = await tx.order.count({ where: { campaignId: campaign.id } });
+      if (orderCount > 0) {
+        throw new AppError(
+          400,
+          "Não é possível deletar uma campanha com pedidos. Arquive-a em vez disso."
+        );
+      }
+
+      await tx.campaign.delete({
+        where: { id: campaign.id },
+      });
     });
 
     res.status(204).send();
