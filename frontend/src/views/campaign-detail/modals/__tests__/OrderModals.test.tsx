@@ -1,8 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AddOrderModal, AdminCreateOrderModal, EditOrderModal, ViewOrderModal } from '../OrderModals';
 import { createMockOrder, createMockFullProduct } from '@/__tests__/mock-data';
+
+const { mockGetPaymentProof } = vi.hoisted(() => ({ mockGetPaymentProof: vi.fn() }));
+vi.mock('@/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/api')>()),
+  orderApi: { getPaymentProof: mockGetPaymentProof },
+}));
 
 // Mock OrderChat component
 vi.mock('@/components/campaign', () => ({
@@ -545,6 +551,59 @@ describe('OrderModals', () => {
 
         expect(screen.queryByText('John Doe')).not.toBeInTheDocument();
       });
+    });
+  });
+
+  describe('ViewOrderModal payment proof from endpoint', () => {
+    const proofOrder = createMockOrder({
+      id: 'order-proof',
+      isPaid: true,
+      paymentProofUrl: '/api/orders/order-proof/payment-proof',
+    });
+    const props = {
+      isOpen: true,
+      order: proofOrder,
+      isActive: true,
+      canEdit: false,
+      onClose: vi.fn(),
+      onEdit: vi.fn(),
+    };
+
+    beforeEach(() => {
+      mockGetPaymentProof.mockReset();
+      URL.createObjectURL = vi.fn(() => 'blob:proof-1');
+      URL.revokeObjectURL = vi.fn();
+    });
+
+    it('payment proof from endpoint: renders an image from the fetched blob', async () => {
+      mockGetPaymentProof.mockResolvedValue(new Blob(['x'], { type: 'image/png' }));
+
+      render(<ViewOrderModal {...props} />);
+
+      const img = await screen.findByAltText('Comprovante PIX');
+      expect(img).toHaveAttribute('src', 'blob:proof-1');
+      expect(mockGetPaymentProof).toHaveBeenCalledWith('order-proof');
+    });
+
+    it('payment proof from endpoint: renders a PDF viewer when blob type is application/pdf', async () => {
+      mockGetPaymentProof.mockResolvedValue(new Blob(['%PDF-'], { type: 'application/pdf' }));
+
+      render(<ViewOrderModal {...props} />);
+
+      const frame = await screen.findByTitle('Comprovante PIX');
+      expect(frame.tagName).toBe('IFRAME');
+      expect(frame).toHaveAttribute('src', 'blob:proof-1');
+    });
+
+    it('payment proof from endpoint: never renders a blob of another type', async () => {
+      mockGetPaymentProof.mockResolvedValue(new Blob(['<html>'], { type: 'text/html' }));
+
+      render(<ViewOrderModal {...props} />);
+
+      await waitFor(() => expect(mockGetPaymentProof).toHaveBeenCalled());
+      expect(await screen.findByText(/não foi possível exibir o comprovante/i)).toBeInTheDocument();
+      expect(screen.queryByAltText('Comprovante PIX')).not.toBeInTheDocument();
+      expect(screen.queryByTitle('Comprovante PIX')).not.toBeInTheDocument();
     });
   });
 });

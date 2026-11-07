@@ -1,10 +1,9 @@
-import { Plus, Trash2, Edit, Check, Loader, FileText, ExternalLink } from "lucide-react";
-/* eslint-disable @next/next/no-img-element */
+import { Plus, Trash2, Edit, Check, Loader } from "lucide-react";
 import { Modal, Button, Input, Select, Badge } from "@/components/ui";
 import IconButton from "@/components/IconButton";
 import { OrderChat } from "@/components/campaign";
 import { formatCurrency } from "@/lib/utils";
-import { getImageUrl } from "@/lib/imageUrl";
+import { PaymentProofPreview } from "./PaymentProofPreview";
 import { Order, Product } from "@/api";
 import type { OrderFormItem } from "@/api/types";
 
@@ -378,35 +377,7 @@ export function ViewOrderModal({
               <h4 className="font-semibold text-sky-900 mb-2">
                 Comprovante de Pagamento
               </h4>
-              {order.paymentProofUrl.toLowerCase().endsWith('.pdf') || order.paymentProofUrl.toLowerCase().includes('application/pdf') ? (
-                <div className="border rounded-lg overflow-hidden bg-gray-50">
-                  <iframe
-                    src={getImageUrl(order.paymentProofUrl) || undefined}
-                    title="Comprovante PIX"
-                    className="w-full h-96"
-                  />
-                  <div className="p-3 border-t flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-red-500 flex-shrink-0" />
-                    <a
-                      href={getImageUrl(order.paymentProofUrl) || undefined}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-sky-600 hover:underline flex items-center gap-1"
-                    >
-                      Abrir PDF em nova aba
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  </div>
-                </div>
-              ) : (
-                <div className="border rounded-lg overflow-hidden">
-                  <img
-                    src={getImageUrl(order.paymentProofUrl) || undefined}
-                    alt="Comprovante PIX"
-                    className="w-full h-auto"
-                  />
-                </div>
-              )}
+              <PaymentProofPreview orderId={order.id} />
             </div>
           )}
 
