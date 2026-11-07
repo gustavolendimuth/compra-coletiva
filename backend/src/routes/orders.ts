@@ -502,7 +502,7 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
 
   // Emite evento apropriado
   if (isNewOrder) {
-    emitOrderCreated(data.campaignId, updatedOrder);
+    emitOrderCreated(data.campaignId, order.id);
 
     if (updatedOrder?.customer?.email && campaign.slug) {
       try {
@@ -519,7 +519,7 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
       }
     }
   } else {
-    emitOrderUpdated(data.campaignId, updatedOrder);
+    emitOrderUpdated(data.campaignId, order.id);
   }
 
   // Retorna status 200 se atualizou, 201 se criou
@@ -556,11 +556,7 @@ router.patch('/:id', requireAuth, requireOrderOrCampaignOwnership, asyncHandler(
 
   // Se mudou status de pagamento ou separação, emite evento específico
   if (data.isPaid !== undefined || data.isSeparated !== undefined) {
-    emitOrderStatusChanged(order.campaignId, {
-      orderId: order.id,
-      isPaid: order.isPaid,
-      isSeparated: order.isSeparated
-    });
+    emitOrderStatusChanged(order.campaignId, order.id);
 
     // Se mudou status de pagamento, verifica se deve arquivar/desarquivar a campanha
     if (data.isPaid !== undefined) {
@@ -585,7 +581,7 @@ router.patch('/:id', requireAuth, requireOrderOrCampaignOwnership, asyncHandler(
     }
   } else {
     // Caso contrário, emite atualização geral
-    emitOrderUpdated(order.campaignId, order);
+    emitOrderUpdated(order.campaignId, order.id);
   }
 
   res.json(order);
@@ -676,7 +672,7 @@ router.put('/:id', requireAuth, requireOrderOwnership, asyncHandler(async (req, 
 
   // Emite evento de atualização
   if (updatedOrder) {
-    emitOrderUpdated(updatedOrder.campaignId, updatedOrder);
+    emitOrderUpdated(updatedOrder.campaignId, updatedOrder.id);
   }
 
   res.json(updatedOrder);
@@ -742,7 +738,7 @@ router.post('/:id/items', requireAuth, requireOrderOwnership, asyncHandler(async
 
   // Emite evento de atualização
   if (updatedOrder) {
-    emitOrderUpdated(updatedOrder.campaignId, updatedOrder);
+    emitOrderUpdated(updatedOrder.campaignId, updatedOrder.id);
   }
 
   res.json(updatedOrder);
@@ -773,7 +769,7 @@ router.delete('/:id/items/:itemId', requireAuth, requireOrderOwnership, asyncHan
   await ShippingCalculator.recalculateOrderSubtotal(id);
 
   // Emite evento de atualização
-  emitOrderUpdated(order.campaignId, { orderId: id });
+  emitOrderUpdated(order.campaignId, id);
 
   res.status(204).send();
 }));
@@ -862,11 +858,7 @@ router.patch('/:id/payment',
     });
 
     // Emite eventos e verifica auto-arquivamento
-    emitOrderStatusChanged(order.campaignId, {
-      orderId: updatedOrder.id,
-      isPaid: updatedOrder.isPaid,
-      isSeparated: updatedOrder.isSeparated
-    });
+    emitOrderStatusChanged(order.campaignId, updatedOrder.id);
 
     if (isPaid !== undefined) {
       try {
@@ -913,7 +905,7 @@ router.delete('/:id', requireAuth, requireOrderOwnership, asyncHandler(async (re
   await ShippingCalculator.distributeShipping(order.campaignId);
 
   // Emite evento de exclusão
-  emitOrderDeleted(order.campaignId, { orderId: id });
+  emitOrderDeleted(order.campaignId, id);
 
   res.status(204).send();
 }));

@@ -15,6 +15,69 @@ interface AuthenticatedSocket extends Socket {
   };
 }
 
+type SocketUser = NonNullable<AuthenticatedSocket['user']>;
+
+/**
+ * Dono do pedido, criador da campanha ou ADMIN
+ */
+const canAccessOrder = async (user: SocketUser | undefined, orderId: unknown): Promise<boolean> => {
+  if (!user || typeof orderId !== 'string' || !orderId) {
+    return false;
+  }
+  if (user.role === 'ADMIN') {
+    return true;
+  }
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { userId: true, campaign: { select: { creatorId: true } } },
+  });
+  if (!order) {
+    return false;
+  }
+  return order.userId === user.id || order.campaign?.creatorId === user.id;
+};
+
+/**
+ * Chaves que nunca podem sair na sala pública da campanha
+ */
+const SENSITIVE_CAMPAIGN_ROOM_KEYS = new Set([
+  'email',
+  'pixKey',
+  'pixName',
+  'pixType',
+  'paymentProofUrl',
+  'paymentProofKey',
+]);
+
+/**
+ * Remove recursivamente as chaves sensíveis de um payload
+ */
+export const stripSensitiveKeys = (value: unknown): unknown => {
+  if (Array.isArray(value)) {
+    return value.map(stripSensitiveKeys);
+  }
+  if (value instanceof Date) {
+    return value;
+  }
+  if (value && typeof value === 'object') {
+    const result: Record<string, unknown> = {};
+    for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
+      if (!SENSITIVE_CAMPAIGN_ROOM_KEYS.has(key)) {
+        result[key] = stripSensitiveKeys(nested);
+      }
+    }
+    return result;
+  }
+  return value;
+};
+
+const emitToCampaignRoom = (campaignId: string, event: string, data: unknown) => {
+  const io = getIO();
+  const payload = stripSensitiveKeys(data);
+  io.to(`campaign-${campaignId}`).emit(event, payload);
+  return payload;
+};
+
 export const initializeSocket = (httpServer: HttpServer): Server => {
   const corsOrigins = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',').flatMap(origin => {
@@ -89,10 +152,17 @@ export const initializeSocket = (httpServer: HttpServer): Server => {
       console.log(`📍 Socket ${socket.id} left campaign-${campaignId}`);
     });
 
-    // Join order room (for order-specific chat)
-    socket.on('join-order', (orderId: string) => {
-      socket.join(`order-${orderId}`);
-      console.log(`📌 Socket ${socket.id} joined order-${orderId}`);
+    // Join order room (for order-specific chat) - apenas dono, criador da campanha ou ADMIN
+    socket.on('join-order', async (orderId: string) => {
+      try {
+        if (!(await canAccessOrder(socket.user, orderId))) {
+          return;
+        }
+        socket.join(`order-${orderId}`);
+        console.log(`📌 Socket ${socket.id} joined order-${orderId}`);
+      } catch (error) {
+        console.error(`❌ join-order failed for socket ${socket.id}`, error);
+      }
     });
 
     // Leave order room
@@ -103,7 +173,7 @@ export const initializeSocket = (httpServer: HttpServer): Server => {
 
     // Typing indicator for campaign chat
     socket.on('typing', (data: { campaignId: string; isTyping: boolean }) => {
-      if (socket.user) {
+      if (socket.user && data && typeof data.campaignId === 'string') {
         socket.to(`campaign-${data.campaignId}`).emit('user-typing', {
           userId: socket.user.id,
           userName: socket.user.name,
@@ -113,13 +183,26 @@ export const initializeSocket = (httpServer: HttpServer): Server => {
     });
 
     // Creator typing indicator (sent to specific user)
-    socket.on('creator-typing', (data: { userId: string; isTyping: boolean }) => {
-      if (socket.user) {
+    // Só entrega para quem tem pedido em campanha criada pelo emissor
+    socket.on('creator-typing', async (data: { userId: string; isTyping: boolean }) => {
+      try {
+        if (!socket.user || !data || typeof data.userId !== 'string') {
+          return;
+        }
+        const order = await prisma.order.findFirst({
+          where: { userId: data.userId, campaign: { creatorId: socket.user.id } },
+          select: { id: true },
+        });
+        if (!order) {
+          return;
+        }
         socket.to(`user-${data.userId}`).emit('creator-typing', {
           creatorId: socket.user.id,
           creatorName: socket.user.name,
           isTyping: data.isTyping
         });
+      } catch (error) {
+        console.error(`❌ creator-typing failed for socket ${socket.id}`, error);
       }
     });
 
@@ -139,34 +222,33 @@ export const getIO = (): Server => {
 };
 
 // Event emitters for different entities
-export const emitOrderStatusChanged = (campaignId: string, data: unknown) => {
-  const io = getIO();
-  io.to(`campaign-${campaignId}`).emit('order-status-changed', data);
-  console.log(`📡 Emitted order-status-changed to campaign-${campaignId}`, data);
+export const emitOrderStatusChanged = (campaignId: string, orderId: string) => {
+  // Só identificadores: o cliente faz refetch pela API autorizada
+  emitToCampaignRoom(campaignId, 'order-status-changed', { orderId, campaignId });
+  console.log(`📡 Emitted order-status-changed to campaign-${campaignId}`, { orderId });
 };
 
-export const emitOrderCreated = (campaignId: string, data: unknown) => {
-  const io = getIO();
-  io.to(`campaign-${campaignId}`).emit('order-created', data);
-  console.log(`📡 Emitted order-created to campaign-${campaignId}`, data);
+export const emitOrderCreated = (campaignId: string, orderId: string) => {
+  // Só identificadores: o cliente faz refetch pela API autorizada
+  emitToCampaignRoom(campaignId, 'order-created', { orderId, campaignId });
+  console.log(`📡 Emitted order-created to campaign-${campaignId}`, { orderId });
 };
 
-export const emitOrderDeleted = (campaignId: string, data: unknown) => {
-  const io = getIO();
-  io.to(`campaign-${campaignId}`).emit('order-deleted', data);
-  console.log(`📡 Emitted order-deleted to campaign-${campaignId}`, data);
+export const emitOrderDeleted = (campaignId: string, orderId: string) => {
+  // Só identificadores: o cliente faz refetch pela API autorizada
+  emitToCampaignRoom(campaignId, 'order-deleted', { orderId, campaignId });
+  console.log(`📡 Emitted order-deleted to campaign-${campaignId}`, { orderId });
 };
 
-export const emitOrderUpdated = (campaignId: string, data: unknown) => {
-  const io = getIO();
-  io.to(`campaign-${campaignId}`).emit('order-updated', data);
-  console.log(`📡 Emitted order-updated to campaign-${campaignId}`, data);
+export const emitOrderUpdated = (campaignId: string, orderId: string) => {
+  // Só identificadores: o cliente faz refetch pela API autorizada
+  emitToCampaignRoom(campaignId, 'order-updated', { orderId, campaignId });
+  console.log(`📡 Emitted order-updated to campaign-${campaignId}`, { orderId });
 };
 
 export const emitCampaignUpdated = (campaignId: string, data: unknown) => {
-  const io = getIO();
-  io.to(`campaign-${campaignId}`).emit('campaign-updated', data);
-  console.log(`📡 Emitted campaign-updated to campaign-${campaignId}`, data);
+  emitToCampaignRoom(campaignId, 'campaign-updated', data);
+  console.log(`📡 Emitted campaign-updated to campaign-${campaignId}`);
 };
 
 export const emitMessageSent = (orderId: string, data: unknown) => {
@@ -184,10 +266,9 @@ export const emitCampaignQuestionReceived = (creatorId: string, campaignId: stri
 };
 
 export const emitCampaignMessagePublished = (campaignId: string, data: unknown) => {
-  const io = getIO();
   // Emite para todos na room da campanha
-  io.to(`campaign-${campaignId}`).emit('campaign-message-published', data);
-  console.log(`📡 Emitted campaign-message-published to campaign-${campaignId}`, data);
+  emitToCampaignRoom(campaignId, 'campaign-message-published', data);
+  console.log(`📡 Emitted campaign-message-published to campaign-${campaignId}`);
 };
 
 export const emitCampaignMessageEdited = (creatorId: string, campaignId: string, data: unknown) => {
@@ -198,14 +279,12 @@ export const emitCampaignMessageEdited = (creatorId: string, campaignId: string,
 };
 
 export const emitCampaignMessageDeleted = (campaignId: string, data: unknown) => {
-  const io = getIO();
-  io.to(`campaign-${campaignId}`).emit('campaign-message-deleted', data);
-  console.log(`📡 Emitted campaign-message-deleted to campaign-${campaignId}`, data);
+  emitToCampaignRoom(campaignId, 'campaign-message-deleted', data);
+  console.log(`📡 Emitted campaign-message-deleted to campaign-${campaignId}`);
 };
 
 export const emitUserTyping = (campaignId: string, data: unknown) => {
-  const io = getIO();
-  io.to(`campaign-${campaignId}`).emit('user-typing', data);
+  emitToCampaignRoom(campaignId, 'user-typing', data);
 };
 
 export const emitCreatorTyping = (userId: string, data: unknown) => {

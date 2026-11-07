@@ -177,7 +177,7 @@ describe("DELETE /api/orders/:id", () => {
     expect(res.status).toBe(204);
     expect(mockDelete).toHaveBeenCalledWith({ where: { id: "order-1" } });
     expect(mockDistributeShipping).toHaveBeenCalledWith("campaign-1");
-    expect(mockEmitOrderDeleted).toHaveBeenCalledWith("campaign-1", { orderId: "order-1" });
+    expect(mockEmitOrderDeleted).toHaveBeenCalledWith("campaign-1", "order-1");
   });
 
   it("allows admin to delete an order from a CLOSED campaign", async () => {
