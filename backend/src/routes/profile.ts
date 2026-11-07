@@ -4,6 +4,8 @@ import { z } from "zod";
 import crypto from "crypto";
 import { requireAuth } from "../middleware/authMiddleware";
 import { AuthService } from "../services/authService";
+import { TokenService } from "../services/tokenService";
+import { REFRESH_TOKEN_COOKIE_NAME } from "../utils/cookieConfig";
 import { ImageUploadService } from "../services/imageUploadService";
 import { uploadAvatar, handleUploadError } from "../middleware/uploadMiddleware";
 import { capitalizeName } from "../utils/nameFormatter";
@@ -158,6 +160,14 @@ router.patch(
         where: { id: req.user!.id },
         data: updates,
       });
+
+      // Troca de senha derruba as outras sessões; a atual continua válida
+      if (updates.password) {
+        await TokenService.revokeOtherUserTokens(
+          req.user!.id,
+          req.cookies?.[REFRESH_TOKEN_COOKIE_NAME]
+        );
+      }
 
       res.json({
         message: "Perfil atualizado com sucesso",

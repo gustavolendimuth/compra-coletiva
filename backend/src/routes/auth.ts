@@ -761,11 +761,11 @@ router.post(
       const token = crypto.randomBytes(32).toString("hex");
       const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hora
 
-      // Salva token no banco
+      // Salva só o hash do token no banco; o token cru vai apenas no e-mail
       await prisma.passwordResetToken.create({
         data: {
           userId: user.id,
-          token,
+          token: TokenService.hashToken(token),
           expiresAt,
         },
       });
@@ -792,7 +792,8 @@ router.post(
       res.json({
         message:
           "Se o email existir em nossa base, você receberá instruções para resetar sua senha",
-        ...(process.env.EXPOSE_RESET_TOKEN_IN_RESPONSE === "true" && { token }),
+        ...(process.env.EXPOSE_RESET_TOKEN_IN_RESPONSE === "true" &&
+          process.env.NODE_ENV !== "production" && { token }),
       });
     } catch (error) {
       console.error("Erro ao solicitar reset de senha:", error);
@@ -816,7 +817,7 @@ router.post(
 
       // Busca token
       const resetToken = await prisma.passwordResetToken.findUnique({
-        where: { token },
+        where: { token: TokenService.hashToken(token) },
         include: { user: true },
       });
 
@@ -860,17 +861,35 @@ router.post(
       // Hash da nova senha
       const hashedPassword = await AuthService.hashPassword(newPassword);
 
-      // Atualiza senha do usuário e marca token como usado
-      await prisma.$transaction([
-        prisma.user.update({
+      // Consome o token de forma atômica: só uma requisição concorrente vence
+      const consumed = await prisma.$transaction(async (tx) => {
+        const { count } = await tx.passwordResetToken.updateMany({
+          where: { id: resetToken.id, used: false, expiresAt: { gt: new Date() } },
+          data: { used: true },
+        });
+        if (count !== 1) {
+          return false;
+        }
+
+        await tx.user.update({
           where: { id: resetToken.userId },
           data: { password: hashedPassword },
-        }),
-        prisma.passwordResetToken.update({
-          where: { id: resetToken.id },
-          data: { used: true },
-        }),
-      ]);
+        });
+        // Derruba todas as sessões e invalida outros tokens de reset pendentes
+        await tx.session.deleteMany({ where: { userId: resetToken.userId } });
+        await tx.passwordResetToken.deleteMany({
+          where: { userId: resetToken.userId, id: { not: resetToken.id } },
+        });
+        return true;
+      });
+
+      if (!consumed) {
+        res.status(400).json({
+          error: "TOKEN_ALREADY_USED",
+          message: "Este token já foi utilizado",
+        });
+        return;
+      }
 
       res.json({ message: "Senha alterada com sucesso" });
     } catch (error) {
@@ -969,6 +988,14 @@ router.patch(
         where: { id: req.user!.id },
         data: updates,
       });
+
+      // Troca de senha derruba as outras sessões; a atual continua válida
+      if (updates.password) {
+        await TokenService.revokeOtherUserTokens(
+          req.user!.id,
+          req.cookies?.[REFRESH_TOKEN_COOKIE_NAME]
+        );
+      }
 
       res.json({
         message: "Perfil atualizado com sucesso",
