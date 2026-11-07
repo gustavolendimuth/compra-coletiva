@@ -46,6 +46,12 @@ const updateOrderWithItemsSchema = z.object({
   })).min(1).optional()
 });
 
+const updatePaymentSchema = z.object({
+  isPaid: z.enum(['true', 'false'], {
+    errorMap: () => ({ message: 'isPaid é obrigatório ("true" ou "false")' })
+  })
+});
+
 const addItemSchema = z.object({
   productId: z.string(),
   quantity: z.number().int().min(1)
@@ -538,6 +544,22 @@ router.patch('/:id', requireAuth, requireOrderOrCampaignOwnership, asyncHandler(
   const { id } = req.params;
   const data = updateOrderSchema.parse(req.body);
 
+  // Pagamento e separação: só criador da campanha ou ADMIN (participante usa /:id/payment com comprovante)
+  if ((data.isPaid !== undefined || data.isSeparated !== undefined) && req.user!.role !== 'ADMIN') {
+    const current = await prisma.order.findUnique({
+      where: { id },
+      select: { campaign: { select: { creatorId: true } } }
+    });
+
+    if (!current) {
+      throw new AppError(404, 'Order not found');
+    }
+
+    if (current.campaign.creatorId !== req.user!.id) {
+      throw new AppError(403, 'Apenas o criador da campanha ou um administrador pode alterar pagamento ou separação');
+    }
+  }
+
   const order = await prisma.order.update({
     where: { id },
     data,
@@ -830,7 +852,7 @@ router.patch('/:id/payment',
   handleUploadError,
   asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { isPaid } = req.body; // "true" or "false" as string
+    const { isPaid } = updatePaymentSchema.parse(req.body); // multipart: "true" | "false"
 
     const order = await prisma.order.findUnique({
       where: { id },
@@ -841,10 +863,15 @@ router.patch('/:id/payment',
       throw new AppError(404, 'Order not found');
     }
 
-    // Admin e criador da campanha podem marcar como pago sem comprovante
+    // Admin e criador da campanha marcam/desmarcam com ou sem comprovante;
+    // o participante só marca como pago enviando o comprovante
     const isCampaignCreator = order.campaign.creatorId === req.user!.id;
     const isAdminUser = req.user!.role === 'ADMIN';
-    if (isPaid === 'true' && !req.file && !isAdminUser && !isCampaignCreator) {
+    const isParticipant = !isAdminUser && !isCampaignCreator;
+    if (isParticipant && isPaid === 'false') {
+      throw new AppError(403, 'Apenas o criador da campanha ou um administrador pode desmarcar o pagamento');
+    }
+    if (isParticipant && isPaid === 'true' && !req.file) {
       throw new AppError(400, 'Comprovante de pagamento é obrigatório');
     }
 
@@ -905,7 +932,7 @@ router.patch('/:id/payment',
     // Emite eventos e verifica auto-arquivamento
     emitOrderStatusChanged(order.campaignId, updatedOrder.id);
 
-    if (isPaid !== undefined) {
+    {
       try {
         const archiveResult = await CampaignStatusService.checkAndArchiveCampaign(order.campaignId);
         const unarchiveResult = await CampaignStatusService.checkAndUnarchiveCampaign(order.campaignId);

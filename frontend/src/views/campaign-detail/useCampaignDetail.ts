@@ -18,6 +18,7 @@ import { Order } from "@/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { removeMask, applyPixMask } from "@/lib/pixMasks";
 import { getApiErrorMessage } from "@/lib/apiError";
+import { canMarkPaidWithoutProof } from "@/lib/orderPaymentPermissions";
 import { useOrderModal } from "@/hooks/useOrderModal";
 import type { AddressData } from "@/components/ui/AddressForm";
 import {
@@ -280,7 +281,7 @@ export function useCampaignDetail() {
         }
       : null,
     canCreateOrdersForOthers: canViewAllOrders,
-    canMarkPaidWithoutProof: canEditCampaign,
+    canMarkPaidWithoutProof: canMarkPaidWithoutProof(user, campaign),
     isActive,
     requireAuth,
     products: alphabeticalProducts,
