@@ -91,6 +91,8 @@ export interface Campaign {
   pixKey?: string;
   pixType?: PixKeyType;
   pixName?: string;
+  /** PIX configurado, mesmo quando a API esconde pixKey/pixName/pixType do requisitante */
+  hasPixConfigured?: boolean;
   pixVisibleAtStatus: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED";
   paymentReleaseTrigger: PaymentReleaseTrigger;
   paymentReleased: boolean;

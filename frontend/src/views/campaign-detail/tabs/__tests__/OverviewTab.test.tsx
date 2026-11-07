@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { OverviewTab } from "../OverviewTab";
@@ -696,6 +696,58 @@ describe("OverviewTab", () => {
       await user.click(pedirButtons[0]);
 
       expect(mockCallbacks.onAddToOrder).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("PIX login notice", () => {
+    afterEach(async () => {
+      const { useAuth } = await import("@/contexts/AuthContext");
+      vi.mocked(useAuth).mockReturnValue({
+        user: { id: "admin-user", role: "ADMIN", name: "Admin", email: "admin@test.com" },
+        requireAuth: vi.fn(),
+      } as unknown as ReturnType<typeof useAuth>);
+    });
+
+    it("login notice from hasPixConfigured: shows the notice to visitors when the API hides pixKey", async () => {
+      const { useAuth } = await import("@/contexts/AuthContext");
+      vi.mocked(useAuth).mockReturnValue({ user: null, requireAuth: vi.fn() } as unknown as ReturnType<typeof useAuth>);
+
+      render(
+        <OverviewTab
+          {...defaultProps}
+          canEditCampaign={false}
+          campaign={createMockCampaignFull({
+            ...mockCampaign,
+            pixKey: undefined,
+            pixType: undefined,
+            pixName: undefined,
+            hasPixConfigured: true,
+            status: "ACTIVE",
+          })}
+        />
+      );
+
+      expect(screen.getByText("Esta campanha possui pagamento via PIX")).toBeInTheDocument();
+    });
+
+    it("login notice from hasPixConfigured: hidden when the campaign has no PIX", async () => {
+      const { useAuth } = await import("@/contexts/AuthContext");
+      vi.mocked(useAuth).mockReturnValue({ user: null, requireAuth: vi.fn() } as unknown as ReturnType<typeof useAuth>);
+
+      render(
+        <OverviewTab
+          {...defaultProps}
+          canEditCampaign={false}
+          campaign={createMockCampaignFull({
+            ...mockCampaign,
+            pixKey: undefined,
+            pixType: undefined,
+            hasPixConfigured: false,
+          })}
+        />
+      );
+
+      expect(screen.queryByText("Esta campanha possui pagamento via PIX")).not.toBeInTheDocument();
     });
   });
 });

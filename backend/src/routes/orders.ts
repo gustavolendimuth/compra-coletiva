@@ -110,10 +110,12 @@ router.get('/public', optionalAuth, asyncHandler(async (req, res) => {
     };
 
     if (isAuthenticated) {
+      // id e userId só no pedido do próprio requisitante
+      const ownOrderIdentity =
+        order.userId === req.user!.id ? { id: order.id, userId: order.userId } : {};
       return {
         ...base,
-        id: order.id,
-        userId: order.userId,
+        ...ownOrderIdentity,
         items: order.items.map((item) => ({
           quantity: item.quantity,
           unitPrice: item.unitPrice,

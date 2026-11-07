@@ -18,6 +18,7 @@ import { geocodingService } from "../services/geocodingService";
 import { routingService } from "../services/routingService";
 import { haversineDistance, getBoundingBox } from "../utils/distance";
 import { PaymentReleaseService } from "../services/paymentReleaseService";
+import { applyPixVisibility, canViewerSeePix } from "../utils/campaignPixVisibility";
 
 const router = Router();
 
@@ -292,6 +293,35 @@ async function getSuggestions(
   return results.map((r) => r.id);
 }
 
+// IDs das campanhas (entre as informadas) em que o usuário tem pedido
+async function findViewerOrderCampaignIds(
+  userId: string | undefined,
+  campaignIds: string[]
+): Promise<Set<string>> {
+  if (!userId || campaignIds.length === 0) return new Set();
+  const orders = await prisma.order.findMany({
+    where: { userId, campaignId: { in: campaignIds } },
+    select: { campaignId: true },
+  });
+  return new Set(orders.map((order) => order.campaignId));
+}
+
+// Aplica a regra de visibilidade do PIX a uma lista de campanhas
+async function withPixVisibilityForViewer<
+  T extends { id: string; creatorId: string | null; status: string; paymentReleased: boolean; pixKey: string | null; pixType: string | null; pixName: string | null }
+>(campaigns: T[], viewer: Express.User | undefined) {
+  const viewerOrderCampaignIds = await findViewerOrderCampaignIds(
+    viewer?.id,
+    campaigns.map((campaign) => campaign.id)
+  );
+  return campaigns.map((campaign) =>
+    applyPixVisibility(
+      campaign,
+      canViewerSeePix(campaign, viewer, viewerOrderCampaignIds.has(campaign.id))
+    )
+  );
+}
+
 // GET /api/campaigns - Lista campanhas com pagination e filtros
 router.get(
   "/",
@@ -351,7 +381,7 @@ router.get(
 
           return res.json({
             data: [],
-            suggestions,
+            suggestions: await withPixVisibilityForViewer(suggestions, req.user),
             nextCursor: null,
             hasMore: false,
             total: 0,
@@ -524,7 +554,13 @@ router.get(
       }
     }
 
-    res.json({ data, suggestions, nextCursor, hasMore, total });
+    res.json({
+      data: await withPixVisibilityForViewer(data, req.user),
+      suggestions: await withPixVisibilityForViewer(suggestions, req.user),
+      nextCursor,
+      hasMore,
+      total,
+    });
   })
 );
 
@@ -661,6 +697,7 @@ async function findCampaignByIdOrSlug(idOrSlug: string) {
 // GET /api/campaigns/:idOrSlug - Busca um grupo específico por ID ou slug
 router.get(
   "/:idOrSlug",
+  optionalAuth,
   asyncHandler(async (req, res) => {
     const { idOrSlug } = req.params;
     const requestId = Math.random().toString(36).slice(2, 8);
@@ -687,7 +724,8 @@ router.get(
       `[Perf] GET /api/campaigns/${idOrSlug} auth=${hasAuthHeader} orders=${ordersCount} items=${itemsCount} products=${productsCount} fetchMs=${fetchMs} totalMs=${totalMs} req=${requestId}`
     );
 
-    res.json(campaign);
+    const [visibleCampaign] = await withPixVisibilityForViewer([campaign], req.user);
+    res.json(visibleCampaign);
   })
 );
 

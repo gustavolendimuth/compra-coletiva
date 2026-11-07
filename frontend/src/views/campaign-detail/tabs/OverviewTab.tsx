@@ -13,6 +13,7 @@ import { Edit, Eye, LogIn, Upload } from "lucide-react";
 import {
   canShowPaymentPendingNotice,
   canShowPixToBuyer,
+  hasPixConfigured,
   getPaymentReleaseTrigger,
 } from "@/lib/paymentRelease";
 
@@ -110,8 +111,7 @@ export function OverviewTab({
   const hasUserOrder = userOrder !== undefined;
   const shouldShowPix = canShowPixToBuyer(campaign, hasUserOrder);
   const shouldShowPaymentPending = canShowPaymentPendingNotice(campaign, hasUserOrder);
-  const hasPixConfigured = Boolean(campaign.pixKey && campaign.pixType && campaign.status !== "ARCHIVED");
-  const shouldShowPixLoginNotice = !user && hasPixConfigured;
+  const shouldShowPixLoginNotice = !user && hasPixConfigured(campaign) && campaign.status !== "ARCHIVED";
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
