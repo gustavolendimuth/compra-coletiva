@@ -1,4 +1,5 @@
 import Script from 'next/script';
+import { serializeJsonLd } from '@/lib/jsonLd';
 
 interface OrganizationSchema {
   '@context': 'https://schema.org';
@@ -103,7 +104,7 @@ export function StructuredData({ type, data }: StructuredDataProps) {
     <Script
       id={`structured-data-${type}-${Math.random().toString(36).slice(2, 9)}`}
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      dangerouslySetInnerHTML={{ __html: serializeJsonLd(schema) }}
     />
   );
 }
