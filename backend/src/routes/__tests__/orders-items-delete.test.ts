@@ -9,15 +9,21 @@ let items: StoredItem[] = [];
 const mockOrderFindUnique = jest.fn();
 const mockOrderItemDelete = jest.fn();
 const mockOrderItemDeleteMany = jest.fn();
-jest.mock("../../index", () => ({
-  prisma: {
+jest.mock("../../index", () => {
+  const prisma: Record<string, unknown> = {
     order: { findUnique: mockOrderFindUnique },
     orderItem: { delete: mockOrderItemDelete, deleteMany: mockOrderItemDeleteMany },
-  },
-}));
+    // Locks da escrita de itens: campanha ACTIVE e pedido não pago
+    $queryRaw: jest.fn((strings: TemplateStringsArray) =>
+      Promise.resolve(/FROM campaigns/i.test(strings.join("?")) ? [{ status: "ACTIVE" }] : [{ isPaid: false }])
+    ),
+  };
+  prisma.$transaction = (fn: (tx: unknown) => Promise<unknown>) => fn(prisma);
+  return { prisma };
+});
 
 jest.mock("../../services/shippingCalculator", () => ({
-  ShippingCalculator: { recalculateOrderSubtotal: jest.fn(), distributeShipping: jest.fn() },
+  ShippingCalculator: { recalculateOrderSubtotal: jest.fn(), distributeShipping: jest.fn(), recalculateCampaignTotals: jest.fn() },
 }));
 
 jest.mock("../../services/socketService", () => ({

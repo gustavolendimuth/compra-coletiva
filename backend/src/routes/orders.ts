@@ -5,6 +5,7 @@ import { asyncHandler, AppError } from '../middleware/errorHandler';
 import { requireAuth, optionalAuth, requireOrderOwnership, requireOrderOrCampaignOwnership } from '../middleware/authMiddleware';
 import { z } from 'zod';
 import { ShippingCalculator } from '../services/shippingCalculator';
+import { lockCampaignRow, lockOrderRow } from '../services/orderLocks';
 import { emitOrderCreated, emitOrderUpdated, emitOrderDeleted, emitOrderStatusChanged } from '../services/socketService';
 import { Money } from '../utils/money';
 import { CampaignStatusService } from '../services/campaignStatusService';
@@ -19,6 +20,74 @@ import { LEGAL_SALES_DISCLAIMER_VERSION } from '../config/legal';
 import { LegalAcceptanceService } from '../services/legalAcceptanceService';
 
 const router = Router();
+
+const PAID_ORDER_LOCKED_MESSAGE = 'Pedido já pago não pode ser alterado';
+const PAID_ORDER_DELETE_MESSAGE = 'Pedido já pago não pode ser removido';
+const DUPLICATE_ORDER_MESSAGE = 'Você já tem um pedido nesta campanha. Atualize a página e tente novamente.';
+
+// strict=false: o Zod infere campos como opcionais; o schema já garantiu os dois
+type OrderItemInput = { productId?: string; quantity?: number };
+
+/**
+ * Trava a campanha até o fim da transação e exige status ACTIVE no momento da escrita.
+ */
+async function assertCampaignOpenForOrders(
+  tx: Prisma.TransactionClient,
+  campaignId: string,
+  closedMessage: string
+): Promise<void> {
+  const status = await lockCampaignRow(tx, campaignId);
+  if (!status) {
+    throw new AppError(404, 'Campaign not found');
+  }
+  if (status !== 'ACTIVE') {
+    throw new AppError(400, closedMessage);
+  }
+}
+
+/**
+ * Trava o pedido até o fim da transação e recusa pedido já pago (vale para qualquer ator).
+ */
+async function assertOrderNotPaid(tx: Prisma.TransactionClient, orderId: string): Promise<void> {
+  const order = await lockOrderRow(tx, orderId);
+  if (!order) {
+    throw new AppError(404, 'Order not found');
+  }
+  if (order.isPaid) {
+    throw new AppError(400, PAID_ORDER_LOCKED_MESSAGE);
+  }
+}
+
+/**
+ * Monta as linhas de itens só com produtos da própria campanha; produto de outra campanha (ou inexistente) = 400.
+ */
+async function buildCampaignItemRows(
+  tx: Prisma.TransactionClient,
+  campaignId: string,
+  items: OrderItemInput[]
+): Promise<Array<{ productId: string; quantity: number; unitPrice: number; subtotal: number }>> {
+  const productIds = [...new Set(items.map((item) => item.productId))];
+  const products = await tx.product.findMany({
+    where: { id: { in: productIds }, campaignId },
+    select: { id: true, price: true }
+  });
+  const productMap = new Map(products.map((product) => [product.id, product]));
+
+  const missing = productIds.find((productId) => !productMap.has(productId));
+  if (missing) {
+    throw new AppError(400, `Produto ${missing} não pertence a esta campanha`);
+  }
+
+  return items.map((item) => {
+    const product = productMap.get(item.productId!)!;
+    return {
+      productId: item.productId!,
+      quantity: item.quantity!,
+      unitPrice: product.price,
+      subtotal: Money.multiply(product.price, item.quantity)
+    };
+  });
+}
 
 const createOrderSchema = z.object({
   campaignId: z.string(),
@@ -400,96 +469,66 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
     throw new AppError(400, 'Cannot create orders in a closed or sent group');
   }
 
-  // Busca produtos para calcular preços (apenas se houver items)
-  let productMap = new Map<string, { id: string; price: number }>();
-  if (data.items && data.items.length > 0) {
-    const productIds = data.items.map(item => item.productId);
-    const products = await prisma.product.findMany({
-      where: { id: { in: productIds } }
-    });
-
-    type ProductType = typeof products[number];
-    productMap = new Map<string, ProductType>(products.map(p => [p.id, p]));
-  }
-
-  // Verifica se já existe um pedido do usuário nesta campanha
-  const existingOrder = await prisma.order.findFirst({
-    where: {
-      campaignId: data.campaignId,
-      userId: targetUserId
-    },
-    include: {
-      items: true
-    }
-  });
-
-  let order;
+  const closedMessage = 'Cannot create orders in a closed or sent group';
+  let orderId: string;
   let isNewOrder = false;
 
-  if (existingOrder) {
-    // Pedido existe - substituir/atualizar itens
-    // Remove todos os itens antigos e cria novos com as quantidades enviadas
-    await prisma.$transaction(async (tx) => {
-      // Remove todos os itens antigos
-      await tx.orderItem.deleteMany({
-        where: { orderId: existingOrder.id }
+  try {
+    // Status da campanha, pagamento e itens conferidos e gravados sob lock, junto com os totais
+    orderId = await prisma.$transaction(async (tx) => {
+      await assertCampaignOpenForOrders(tx, data.campaignId, closedMessage);
+
+      const itemRows = data.items.length > 0
+        ? await buildCampaignItemRows(tx, data.campaignId, data.items)
+        : [];
+
+      // Pedido existente do par (campanha, usuário): substitui os itens
+      const existingOrder = await tx.order.findFirst({
+        where: {
+          campaignId: data.campaignId,
+          userId: targetUserId
+        },
+        select: { id: true }
       });
 
-      // Cria novos itens com as quantidades enviadas (se houver items)
-      if (data.items && data.items.length > 0) {
-        await tx.orderItem.createMany({
-          data: data.items.map(item => {
-            const product = productMap.get(item.productId);
-            if (!product) {
-              throw new AppError(400, `Product ${item.productId} not found`);
-            }
-            return {
-              orderId: existingOrder.id,
-              productId: item.productId,
-              quantity: item.quantity,
-              unitPrice: product.price,
-              subtotal: Money.multiply(product.price, item.quantity)
-            };
-          })
+      let id: string;
+      if (existingOrder) {
+        await assertOrderNotPaid(tx, existingOrder.id);
+        await tx.orderItem.deleteMany({
+          where: { orderId: existingOrder.id }
         });
-      }
-    });
-
-    order = existingOrder;
-  } else {
-    // Pedido não existe - criar novo (pode ser vazio)
-    isNewOrder = true;
-    order = await prisma.order.create({
-      data: {
-        campaignId: data.campaignId,
-        userId: targetUserId,
-        items: data.items && data.items.length > 0 ? {
-          create: data.items.map(item => {
-            const product = productMap.get(item.productId);
-            if (!product) {
-              throw new AppError(400, `Product ${item.productId} not found`);
-            }
-            return {
-              productId: item.productId,
-              quantity: item.quantity,
-              unitPrice: product.price,
-              subtotal: Money.multiply(product.price, item.quantity)
-            };
-          })
-        } : undefined
-      },
-      include: {
-        items: {
-          include: {
-            product: true
-          }
+        if (itemRows.length > 0) {
+          await tx.orderItem.createMany({
+            data: itemRows.map((row) => ({ ...row, orderId: existingOrder.id }))
+          });
         }
+        id = existingOrder.id;
+      } else {
+        // Pedido não existe - criar novo (pode ser vazio)
+        isNewOrder = true;
+        const created = await tx.order.create({
+          data: {
+            campaignId: data.campaignId,
+            userId: targetUserId,
+            items: itemRows.length > 0 ? { create: itemRows } : undefined
+          },
+          select: { id: true }
+        });
+        id = created.id;
       }
+
+      await ShippingCalculator.recalculateCampaignTotals(tx, data.campaignId);
+      return id;
     });
+  } catch (error: unknown) {
+    // Corrida com outra requisição do mesmo usuário: o índice único (campaignId, userId) barrou a duplicata
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      throw new AppError(409, DUPLICATE_ORDER_MESSAGE);
+    }
+    throw error;
   }
 
-  // Recalcula subtotal e frete
-  await ShippingCalculator.recalculateOrderSubtotal(order.id);
+  const order = { id: orderId };
 
   // Busca pedido atualizado
   const updatedOrder = await prisma.order.findUnique({
@@ -637,43 +676,22 @@ router.put('/:id', requireAuth, requireOrderOwnership, asyncHandler(async (req, 
 
   // Se há itens para atualizar
   if (data.items) {
-    // Busca produtos para calcular preços
-    const productIds = data.items.map(item => item.productId);
-    const products = await prisma.product.findMany({
-      where: { id: { in: productIds } }
-    });
-
-    type ProductType = typeof products[number];
-    const productMap = new Map<string, ProductType>(products.map(p => [p.id, p]));
-
-    // Remove itens antigos e cria novos em uma transação
+    const items = data.items;
     await prisma.$transaction(async (tx) => {
-      // Remove todos os itens antigos
+      await assertCampaignOpenForOrders(tx, currentOrder.campaignId, 'Cannot update orders in a closed or sent group');
+      await assertOrderNotPaid(tx, id);
+
+      const itemRows = await buildCampaignItemRows(tx, currentOrder.campaignId, items);
+
       await tx.orderItem.deleteMany({
         where: { orderId: id }
       });
-
-      // Cria novos itens
       await tx.orderItem.createMany({
-        data: data.items!.map(item => {
-          const product = productMap.get(item.productId);
-          if (!product) {
-            throw new AppError(400, `Product ${item.productId} not found`);
-          }
-          return {
-            orderId: id,
-            productId: item.productId,
-            quantity: item.quantity,
-            unitPrice: product.price,
-            subtotal: Money.multiply(product.price, item.quantity)
-          };
-        })
+        data: itemRows.map((row) => ({ ...row, orderId: id }))
       });
 
+      await ShippingCalculator.recalculateCampaignTotals(tx, currentOrder.campaignId);
     });
-
-    // Recalcula subtotal e frete
-    await ShippingCalculator.recalculateOrderSubtotal(id);
   }
 
   // Busca pedido atualizado
@@ -723,25 +741,17 @@ router.post('/:id/items', requireAuth, requireOrderOwnership, asyncHandler(async
     throw new AppError(400, 'Cannot add items to orders in a closed or sent group');
   }
 
-  const product = await prisma.product.findUnique({
-    where: { id: data.productId }
+  await prisma.$transaction(async (tx) => {
+    await assertCampaignOpenForOrders(tx, order.campaignId, 'Cannot add items to orders in a closed or sent group');
+    await assertOrderNotPaid(tx, id);
+
+    const [itemRow] = await buildCampaignItemRows(tx, order.campaignId, [data]);
+    await tx.orderItem.create({
+      data: { ...itemRow, orderId: id }
+    });
+
+    await ShippingCalculator.recalculateCampaignTotals(tx, order.campaignId);
   });
-
-  if (!product) {
-    throw new AppError(404, 'Product not found');
-  }
-
-  await prisma.orderItem.create({
-    data: {
-      orderId: id,
-      productId: data.productId,
-      quantity: data.quantity,
-      unitPrice: product.price,
-      subtotal: Money.multiply(product.price, data.quantity)
-    }
-  });
-
-  await ShippingCalculator.recalculateOrderSubtotal(id);
 
   const updatedOrder = await prisma.order.findUnique({
     where: { id },
@@ -788,16 +798,21 @@ router.delete('/:id/items/:itemId', requireAuth, requireOrderOwnership, asyncHan
     throw new AppError(400, 'Cannot remove items from orders in a closed or sent group');
   }
 
-  // Só remove se o item pertence a este pedido (evita IDOR por itemId de outro pedido)
-  const { count } = await prisma.orderItem.deleteMany({
-    where: { id: itemId, orderId: id }
+  await prisma.$transaction(async (tx) => {
+    await assertCampaignOpenForOrders(tx, order.campaignId, 'Cannot remove items from orders in a closed or sent group');
+    await assertOrderNotPaid(tx, id);
+
+    // Só remove se o item pertence a este pedido (evita IDOR por itemId de outro pedido)
+    const { count } = await tx.orderItem.deleteMany({
+      where: { id: itemId, orderId: id }
+    });
+
+    if (count === 0) {
+      throw new AppError(404, 'Order item not found');
+    }
+
+    await ShippingCalculator.recalculateCampaignTotals(tx, order.campaignId);
   });
-
-  if (count === 0) {
-    throw new AppError(404, 'Order item not found');
-  }
-
-  await ShippingCalculator.recalculateOrderSubtotal(id);
 
   // Emite evento de atualização
   emitOrderUpdated(order.campaignId, id);
@@ -953,8 +968,9 @@ router.patch('/:id/payment',
 );
 
 // DELETE /api/orders/:id - Remove um pedido
-router.delete('/:id', requireAuth, requireOrderOwnership, asyncHandler(async (req, res) => {
+router.delete('/:id', requireAuth, requireOrderOrCampaignOwnership, asyncHandler(async (req, res) => {
   const { id } = req.params;
+  const isAdmin = req.user!.role === 'ADMIN';
 
   const order = await prisma.order.findUnique({
     where: { id },
@@ -965,8 +981,18 @@ router.delete('/:id', requireAuth, requireOrderOwnership, asyncHandler(async (re
     throw new AppError(404, 'Order not found');
   }
 
-  if (order.campaign.status !== 'ACTIVE' && req.user!.role !== 'ADMIN') {
+  if (order.campaign.status !== 'ACTIVE' && !isAdmin) {
     throw new AppError(400, 'Cannot delete orders from a closed or sent group');
+  }
+
+  // Pedido pago não some (dono e criador); ADMIN mantém o delete
+  if (order.isPaid && !isAdmin) {
+    throw new AppError(400, PAID_ORDER_DELETE_MESSAGE);
+  }
+
+  // O criador passa pelo guard só para receber o 400 acima; apagar pedido alheio continua proibido
+  if (order.userId !== req.user!.id && !isAdmin) {
+    throw new AppError(403, 'Você não tem permissão para remover este pedido');
   }
 
   await prisma.order.delete({
