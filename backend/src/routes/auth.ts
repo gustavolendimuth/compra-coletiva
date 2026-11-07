@@ -653,80 +653,99 @@ router.get(
 
 // ========== GOOGLE OAUTH ==========
 
+const OAUTH_STATE_COOKIE_NAME = "oauthState";
+const OAUTH_STATE_MAX_AGE_MS = 10 * 60 * 1000;
+
+const getOAuthStateCookieOptions = () => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  path: "/api/auth/google",
+});
+
+const getFrontendUrl = () => process.env.FRONTEND_URL || "http://localhost:5173";
+
+const isSameState = (expected: unknown, received: unknown): boolean => {
+  if (typeof expected !== "string" || typeof received !== "string") return false;
+  if (!expected || expected.length !== received.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(received));
+};
+
 /**
  * GET /api/auth/google
- * Inicia o fluxo de autenticação do Google OAuth
+ * Inicia o fluxo de autenticação do Google OAuth com `state` anti-CSRF
  */
-router.get(
-  "/google",
+router.get("/google", (req: Request, res: Response, next) => {
+  const state = crypto.randomBytes(32).toString("hex");
+  res.cookie(OAUTH_STATE_COOKIE_NAME, state, {
+    ...getOAuthStateCookieOptions(),
+    maxAge: OAUTH_STATE_MAX_AGE_MS,
+  });
   passport.authenticate("google", {
     scope: ["profile", "email"],
     session: false,
-  })
-);
+    state,
+  })(req, res, next);
+});
 
 /**
  * GET /api/auth/google/callback
  * Callback do Google OAuth
- * Sets refresh token as HttpOnly cookie and passes only access token in URL
+ * Valida `state`, grava o refresh token em cookie HttpOnly e redireciona
+ * para /auth/callback sem nenhum dado na URL (a página chama /refresh)
  */
-router.get(
-  "/google/callback",
-  passport.authenticate("google", {
-    session: false,
-    failureRedirect: "/login",
-  }),
-  async (req: Request, res: Response): Promise<void> => {
-    try {
-      if (!req.user) {
-        res.redirect(
-          `${
-            process.env.FRONTEND_URL || "http://localhost:5173"
-          }/login?error=auth_failed`
-        );
-        return;
-      }
+router.get("/google/callback", (req: Request, res: Response, next) => {
+  const frontendUrl = getFrontendUrl();
+  const expectedState = req.cookies?.[OAUTH_STATE_COOKIE_NAME];
+  res.clearCookie(OAUTH_STATE_COOKIE_NAME, getOAuthStateCookieOptions());
 
-      const user = req.user as OAuthUser;
-
-      // Gera tokens
-      const tokens = TokenService.generateTokenPair({
-        userId: user.id,
-        email: user.email,
-        role: user.role,
-      });
-
-      // Salva refresh token
-      await TokenService.saveRefreshToken(user.id, tokens.refreshToken);
-
-      // Set refresh token as HttpOnly cookie
-      res.cookie(
-        REFRESH_TOKEN_COOKIE_NAME,
-        tokens.refreshToken,
-        getRefreshTokenCookieOptions()
-      );
-
-      // Redireciona para o frontend apenas com access token (refresh token fica no cookie HttpOnly)
-      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-      res.redirect(
-        `${frontendUrl}/auth/callback?` +
-          `accessToken=${tokens.accessToken}&` +
-          `userId=${encodeURIComponent(user.id)}&` +
-          `userName=${encodeURIComponent(user.name)}&` +
-          `userEmail=${encodeURIComponent(user.email)}&` +
-          `userRole=${user.role}&` +
-          `phoneCompleted=${user.phoneCompleted || false}&` +
-          `addressCompleted=${user.addressCompleted || false}&` +
-          `legalAcceptanceRequired=${user.legalAcceptanceRequired || false}&` +
-          `hideNameInCampaigns=${user.hideNameInCampaigns || false}`
-      );
-    } catch (error) {
-      console.error("Erro no callback do Google:", error);
-      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-      res.redirect(`${frontendUrl}/login?error=auth_failed`);
-    }
+  if (!isSameState(expectedState, req.query.state)) {
+    res.redirect(`${frontendUrl}/auth/callback?error=oauth_state`);
+    return;
   }
-);
+
+  passport.authenticate(
+    "google",
+    { session: false },
+    async (err: unknown, user: OAuthUser | false, info?: { message?: string }) => {
+      try {
+        if (!err && !user && info?.message === "email_not_verified") {
+          res.redirect(`${frontendUrl}/auth/callback?error=email_not_verified`);
+          return;
+        }
+
+        if (err || !user) {
+          if (err) console.error("Erro no callback do Google:", err);
+          res.redirect(`${frontendUrl}/login?error=auth_failed`);
+          return;
+        }
+
+        // Gera tokens
+        const tokens = TokenService.generateTokenPair({
+          userId: user.id,
+          email: user.email,
+          role: user.role,
+        });
+
+        // Salva refresh token
+        await TokenService.saveRefreshToken(user.id, tokens.refreshToken);
+
+        // Set refresh token as HttpOnly cookie
+        res.cookie(
+          REFRESH_TOKEN_COOKIE_NAME,
+          tokens.refreshToken,
+          getRefreshTokenCookieOptions()
+        );
+
+        // Sem token nem dados do usuário na URL
+        res.redirect(`${frontendUrl}/auth/callback`);
+      } catch (error) {
+        console.error("Erro no callback do Google:", error);
+        res.redirect(`${frontendUrl}/login?error=auth_failed`);
+      }
+    }
+  )(req, res, next);
+});
 
 // ========== PASSWORD RESET ==========
 
