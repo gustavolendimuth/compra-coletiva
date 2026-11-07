@@ -762,9 +762,14 @@ router.delete('/:id/items/:itemId', requireAuth, requireOrderOwnership, asyncHan
     throw new AppError(400, 'Cannot remove items from orders in a closed or sent group');
   }
 
-  await prisma.orderItem.delete({
-    where: { id: itemId }
+  // Só remove se o item pertence a este pedido (evita IDOR por itemId de outro pedido)
+  const { count } = await prisma.orderItem.deleteMany({
+    where: { id: itemId, orderId: id }
   });
+
+  if (count === 0) {
+    throw new AppError(404, 'Order item not found');
+  }
 
   await ShippingCalculator.recalculateOrderSubtotal(id);
 
