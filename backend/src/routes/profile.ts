@@ -3,6 +3,7 @@ import { PrismaClient, Prisma, LegalDocumentType } from "@prisma/client";
 import { z } from "zod";
 import crypto from "crypto";
 import { requireAuth } from "../middleware/authMiddleware";
+import { AppError } from "../middleware/errorHandler";
 import { AuthService } from "../services/authService";
 import { ImageUploadService } from "../services/imageUploadService";
 import { uploadAvatar, handleUploadError } from "../middleware/uploadMiddleware";
@@ -243,6 +244,13 @@ router.post(
         avatarUrl: updatedUser.avatarUrl,
       });
     } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({
+          error: "UPLOAD_ERROR",
+          message: error.message,
+        });
+        return;
+      }
       console.error("Erro ao atualizar avatar:", error);
       res.status(500).json({
         error: "INTERNAL_ERROR",

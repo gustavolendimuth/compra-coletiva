@@ -9,7 +9,9 @@ import { emitOrderCreated, emitOrderUpdated, emitOrderDeleted, emitOrderStatusCh
 import { Money } from '../utils/money';
 import { CampaignStatusService } from '../services/campaignStatusService';
 import { uploadPaymentProof, handleUploadError } from '../middleware/uploadMiddleware';
-import { ImageUploadService } from '../services/imageUploadService';
+import { buildPaymentProofUrl, PaymentProofStorage } from '../services/paymentProofStorage';
+import { detectFileType } from '../utils/fileSignature';
+import fs from 'fs';
 import { capitalizeName } from '../utils/nameFormatter';
 import { queueOrderCreatedEmail } from '../services/email/emailQueue';
 import { getCampaignParticipantDisplayName } from '../utils/campaignParticipantName';
@@ -779,6 +781,45 @@ router.delete('/:id/items/:itemId', requireAuth, requireOrderOwnership, asyncHan
   res.status(204).send();
 }));
 
+// GET /api/orders/:id/payment-proof - Comprovante (dono do pedido, criador da campanha ou admin)
+router.get('/:id/payment-proof', requireAuth, requireOrderOrCampaignOwnership, asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const order = await prisma.order.findUnique({
+    where: { id },
+    select: { paymentProofKey: true, paymentProofStorageType: true },
+  });
+
+  if (!order || !order.paymentProofKey || !order.paymentProofStorageType) {
+    throw new AppError(404, 'Payment proof not found');
+  }
+
+  res.setHeader('Cache-Control', 'private, no-store');
+
+  if (order.paymentProofStorageType === 'S3') {
+    const signedUrl = await PaymentProofStorage.getSignedUrl(order.paymentProofKey);
+    res.redirect(302, signedUrl);
+    return;
+  }
+
+  const localPath = PaymentProofStorage.resolveLocalPath(order.paymentProofKey);
+  if (!localPath) {
+    throw new AppError(404, 'Payment proof not found');
+  }
+
+  // Content-Type pelo conteúdo: arquivo legado com extensão enganosa nunca sai como HTML
+  const buffer = fs.readFileSync(localPath);
+  const detected = detectFileType(buffer);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  if (detected) {
+    res.type(detected.mime);
+  } else {
+    res.type('application/octet-stream');
+    res.setHeader('Content-Disposition', 'attachment');
+  }
+  res.status(200).send(buffer);
+}));
+
 // PATCH /api/orders/:id/payment - Atualiza status de pagamento com comprovante
 router.patch('/:id/payment',
   requireAuth,
@@ -809,30 +850,27 @@ router.patch('/:id/payment',
       isPaid: isPaid === 'true'
     };
 
-    // Se está marcando como pago, faz upload do comprovante
+    // Se está marcando como pago, faz upload do comprovante (privado)
     if (isPaid === 'true' && req.file) {
+      // Upload primeiro: arquivo inválido (400) não apaga o comprovante anterior
+      const uploadResult = await PaymentProofStorage.upload(req.file);
+
       // Deleta comprovante anterior se existir
       if (order.paymentProofKey && order.paymentProofStorageType) {
-        await ImageUploadService.deleteImage(
+        await PaymentProofStorage.delete(
           order.paymentProofKey,
           order.paymentProofStorageType
         );
       }
 
-      // Upload do novo comprovante
-      const uploadResult = await ImageUploadService.uploadImage(
-        req.file,
-        'payment-proofs'
-      );
-
-      updateData.paymentProofUrl = uploadResult.imageUrl;
-      updateData.paymentProofKey = uploadResult.imageKey;
+      updateData.paymentProofUrl = buildPaymentProofUrl(id);
+      updateData.paymentProofKey = uploadResult.key;
       updateData.paymentProofStorageType = uploadResult.storageType;
     }
 
     // Se está desmarcando como pago, remove comprovante
     if (isPaid === 'false' && order.paymentProofKey && order.paymentProofStorageType) {
-      await ImageUploadService.deleteImage(
+      await PaymentProofStorage.delete(
         order.paymentProofKey,
         order.paymentProofStorageType
       );

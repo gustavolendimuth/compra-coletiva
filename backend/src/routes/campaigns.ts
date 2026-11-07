@@ -1213,57 +1213,63 @@ router.post(
   requireAuth,
   requireCampaignOwnership,
   asyncHandler(async (req, res) => {
-    uploadCampaignImage(req, res, async (err) => {
-      if (err) {
-        throw new AppError(400, err.message || "Erro ao fazer upload da imagem");
-      }
+    // multer em Promise: erros lançados abaixo chegam ao errorHandler (antes ficavam sem resposta)
+    await new Promise<void>((resolve, reject) => {
+      uploadCampaignImage(req, res, (err: unknown) => {
+        if (err) {
+          const message = err instanceof Error ? err.message : "";
+          reject(new AppError(400, message || "Erro ao fazer upload da imagem"));
+          return;
+        }
+        resolve();
+      });
+    });
 
-      if (!req.file) {
-        throw new AppError(400, "Nenhuma imagem foi enviada");
-      }
+    if (!req.file) {
+      throw new AppError(400, "Nenhuma imagem foi enviada");
+    }
 
-      const { idOrSlug } = req.params;
+    const { idOrSlug } = req.params;
 
-      // Find campaign by slug or ID
-      let campaign = await prisma.campaign.findUnique({
-        where: { slug: idOrSlug },
+    // Find campaign by slug or ID
+    let campaign = await prisma.campaign.findUnique({
+      where: { slug: idOrSlug },
+      select: { id: true, imageKey: true, imageStorageType: true },
+    });
+
+    if (!campaign) {
+      campaign = await prisma.campaign.findUnique({
+        where: { id: idOrSlug },
         select: { id: true, imageKey: true, imageStorageType: true },
       });
+    }
 
-      if (!campaign) {
-        campaign = await prisma.campaign.findUnique({
-          where: { id: idOrSlug },
-          select: { id: true, imageKey: true, imageStorageType: true },
-        });
-      }
+    if (!campaign) {
+      throw new AppError(404, "Campaign not found");
+    }
 
-      if (!campaign) {
-        throw new AppError(404, "Campaign not found");
-      }
+    // Upload new image
+    const uploadResult = await ImageUploadService.uploadImage(req.file, "campaigns");
 
-      // Upload new image
-      const uploadResult = await ImageUploadService.uploadImage(req.file, "campaigns");
+    // Delete old image if exists
+    if (campaign.imageKey && campaign.imageStorageType) {
+      await ImageUploadService.deleteImage(campaign.imageKey, campaign.imageStorageType);
+    }
 
-      // Delete old image if exists
-      if (campaign.imageKey && campaign.imageStorageType) {
-        await ImageUploadService.deleteImage(campaign.imageKey, campaign.imageStorageType);
-      }
+    // Update campaign with new image
+    const updatedCampaign = await prisma.campaign.update({
+      where: { id: campaign.id },
+      data: {
+        imageUrl: uploadResult.imageUrl,
+        imageKey: uploadResult.imageKey,
+        imageStorageType: uploadResult.storageType,
+      },
+    });
 
-      // Update campaign with new image
-      const updatedCampaign = await prisma.campaign.update({
-        where: { id: campaign.id },
-        data: {
-          imageUrl: uploadResult.imageUrl,
-          imageKey: uploadResult.imageKey,
-          imageStorageType: uploadResult.storageType,
-        },
-      });
-
-      res.json({
-        message: "Imagem enviada com sucesso",
-        imageUrl: updatedCampaign.imageUrl,
-        storageType: uploadResult.storageType,
-      });
+    res.json({
+      message: "Imagem enviada com sucesso",
+      imageUrl: updatedCampaign.imageUrl,
+      storageType: uploadResult.storageType,
     });
   })
 );

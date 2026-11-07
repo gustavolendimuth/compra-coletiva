@@ -24,6 +24,7 @@ import { startCampaignScheduler } from "./services/campaignScheduler";
 import { startLegalDataRetentionScheduler } from "./services/legalDataRetentionService";
 import { initializeSocket } from "./services/socketService";
 import { ImageUploadService } from "./services/imageUploadService";
+import { mountUploadsStatic } from "./utils/uploadsStatic";
 import { startEmailWorker, stopEmailWorker } from "./services/email/emailWorker";
 import { closeEmailQueue } from "./services/email/emailQueue";
 
@@ -77,7 +78,7 @@ app.use(passport.initialize());
 // Serve static files (for local image storage fallback)
 // Uses UPLOAD_DIR env var if set (Railway volume), otherwise defaults to ./uploads
 const uploadBaseDir = ImageUploadService.getUploadBaseDir();
-app.use("/uploads", express.static(uploadBaseDir));
+mountUploadsStatic(app, uploadBaseDir);
 console.log(`📁 Serving uploads from: ${uploadBaseDir}`);
 
 // Health check
@@ -138,6 +139,11 @@ httpServer.listen(PORT, () => {
       process.env.AWS_S3_BUCKET
     );
     const hasVolume = !!process.env.UPLOAD_DIR;
+
+    if (!hasS3 && !process.env.PRIVATE_UPLOAD_DIR) {
+      console.warn('⚠️  WARNING: PRIVATE_UPLOAD_DIR not set: payment proofs are stored in ./private-uploads');
+      console.warn('⚠️  Point PRIVATE_UPLOAD_DIR to a persistent volume outside UPLOAD_DIR.');
+    }
 
     if (hasS3) {
       console.log('✅ S3 storage configured and ready');
