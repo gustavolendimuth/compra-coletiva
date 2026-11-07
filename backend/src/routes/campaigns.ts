@@ -19,6 +19,10 @@ import { routingService } from "../services/routingService";
 import { haversineDistance, getBoundingBox } from "../utils/distance";
 import { PaymentReleaseService } from "../services/paymentReleaseService";
 import { applyPixVisibility, canViewerSeePix } from "../utils/campaignPixVisibility";
+import {
+  isManualStatusTransitionAllowed,
+  manualStatusTransitionError,
+} from "../utils/campaignStatusTransitions";
 
 const router = Router();
 
@@ -915,6 +919,7 @@ router.patch(
       where: { slug: idOrSlug },
       select: {
         id: true,
+        status: true,
         pickupZipCode: true,
         pickupAddress: true,
         pickupAddressNumber: true,
@@ -929,6 +934,7 @@ router.patch(
         where: { id: idOrSlug },
         select: {
           id: true,
+          status: true,
           pickupZipCode: true,
           pickupAddress: true,
           pickupAddressNumber: true,
@@ -944,6 +950,10 @@ router.patch(
     }
 
     const campaignId = campaign.id;
+
+    if (data.status !== undefined && !isManualStatusTransitionAllowed(campaign.status, data.status)) {
+      throw new AppError(400, manualStatusTransitionError(campaign.status, data.status));
+    }
 
     // Convert deadline string to Date object for Prisma
     const prismaData: Prisma.CampaignUncheckedUpdateInput = { ...data };
@@ -1042,18 +1052,22 @@ router.patch(
     // Find campaign by slug or ID to get the actual ID
     let campaign = await prisma.campaign.findUnique({
       where: { slug: idOrSlug },
-      select: { id: true },
+      select: { id: true, status: true },
     });
 
     if (!campaign) {
       campaign = await prisma.campaign.findUnique({
         where: { id: idOrSlug },
-        select: { id: true },
+        select: { id: true, status: true },
       });
     }
 
     if (!campaign) {
       throw new AppError(404, "Campaign not found");
+    }
+
+    if (!isManualStatusTransitionAllowed(campaign.status, status)) {
+      throw new AppError(400, manualStatusTransitionError(campaign.status, status));
     }
 
     const updatedCampaign = await prisma.campaign.update({
