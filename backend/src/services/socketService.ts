@@ -15,6 +15,52 @@ interface AuthenticatedSocket extends Socket {
   };
 }
 
+/**
+ * Middleware de autenticação do socket.
+ * Token só via `handshake.auth.token`; conta excluída conecta como anônima.
+ */
+export const authenticateSocket = async (
+  socket: AuthenticatedSocket,
+  next: (err?: Error) => void
+): Promise<void> => {
+  try {
+    const token = socket.handshake.auth?.token;
+
+    if (!token || typeof token !== 'string') {
+      // Allow unauthenticated connections for viewing public data
+      console.log(`⚠️  Unauthenticated socket connected: ${socket.id}`);
+      return next();
+    }
+
+    // Verify token
+    const payload = TokenService.verifyAccessToken(token);
+
+    // Get user from database
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: { id: true, email: true, role: true, name: true, deletedAt: true }
+    });
+
+    if (!user) {
+      return next(new Error('User not found'));
+    }
+
+    if (user.deletedAt) {
+      console.log(`⚠️  Deleted user socket treated as anonymous: ${socket.id}`);
+      return next();
+    }
+
+    // Attach user to socket
+    socket.user = { id: user.id, email: user.email, role: user.role, name: user.name };
+    console.log(`✅ Authenticated socket connected: ${socket.id} (${user.email})`);
+    next();
+  } catch (error) {
+    console.log(`❌ Socket authentication failed: ${socket.id}`, error);
+    // Allow connection but without user info (for public viewing)
+    next();
+  }
+};
+
 export const initializeSocket = (httpServer: HttpServer): Server => {
   const corsOrigins = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',').flatMap(origin => {
@@ -34,39 +80,7 @@ export const initializeSocket = (httpServer: HttpServer): Server => {
   });
 
   // Authentication middleware
-  io.use(async (socket: AuthenticatedSocket, next) => {
-    try {
-      const token = socket.handshake.auth.token || socket.handshake.query.token;
-
-      if (!token) {
-        // Allow unauthenticated connections for viewing public data
-        console.log(`⚠️  Unauthenticated socket connected: ${socket.id}`);
-        return next();
-      }
-
-      // Verify token
-      const payload = TokenService.verifyAccessToken(token as string);
-
-      // Get user from database
-      const user = await prisma.user.findUnique({
-        where: { id: payload.userId },
-        select: { id: true, email: true, role: true, name: true }
-      });
-
-      if (!user) {
-        return next(new Error('User not found'));
-      }
-
-      // Attach user to socket
-      socket.user = user;
-      console.log(`✅ Authenticated socket connected: ${socket.id} (${user.email})`);
-      next();
-    } catch (error) {
-      console.log(`❌ Socket authentication failed: ${socket.id}`, error);
-      // Allow connection but without user info (for public viewing)
-      next();
-    }
-  });
+  io.use(authenticateSocket);
 
   io.on('connection', (socket: AuthenticatedSocket) => {
     console.log(`✅ Client connected: ${socket.id}`);

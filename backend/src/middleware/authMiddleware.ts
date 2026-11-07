@@ -58,7 +58,8 @@ export const requireAuth = async (
       where: { id: payload.userId },
     });
 
-    if (!user) {
+    // Conta excluída perde acesso na hora, mesmo com access token válido
+    if (!user || user.deletedAt) {
       res.status(401).json({
         error: 'USER_NOT_FOUND',
         message: 'Usuário não encontrado',
@@ -106,7 +107,7 @@ export const optionalAuth = async (
           where: { id: payload.userId },
         });
 
-        if (user) {
+        if (user && !user.deletedAt) {
           req.user = user;
         }
       } catch {

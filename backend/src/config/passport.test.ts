@@ -31,19 +31,15 @@ describe('Google OAuth Authentication Flow (passport.ts)', () => {
       expect(true).toBe(true);
     });
 
-    it('should document soft-deleted user reactivation flow', () => {
+    it('should document that soft-deleted users are never reactivated', () => {
       /**
-       * Expected behavior when soft-deleted user logs in with Google:
-       * 1. Find user by googleId (finds the soft-deleted user)
-       * 2. Detect that email has changed (was anonymized)
-       * 3. Update user with:
-       *    - Original email from Google
-       *    - Updated name from Google profile
-       *    - deletedAt set to null (reactivation)
-       *    - deletedReason set to null
+       * Expected behavior when a soft-deleted user logs in with Google:
+       * 1. Deletion (self or admin) already nulls googleId, so lookup by googleId
+       *    does not find the deleted account
+       * 2. Legacy deleted rows that still hold googleId get googleId released
+       * 3. Login follows the new-account flow; deletedAt stays set
        *
-       * This allows users who previously deleted their account to
-       * seamlessly restore it by logging in with Google again.
+       * Behavior is executed in config/__tests__/passportGoogle.test.ts.
        */
       expect(true).toBe(true);
     });

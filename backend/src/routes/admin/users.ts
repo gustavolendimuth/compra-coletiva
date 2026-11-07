@@ -317,16 +317,23 @@ router.delete(
     // Soft delete with anonymization
     const randomEmail = `deleted_${Date.now()}_${Math.random().toString(36).substring(7)}@deleted.local`;
 
-    await prisma.user.update({
-      where: { id },
-      data: {
-        name: 'Usuário Excluído',
-        email: randomEmail,
-        deletedAt: new Date(),
-        deletedReason: 'Deletado por administrador',
-        isBanned: true,
-      },
-    });
+    // Anonimiza, remove credenciais e derruba as sessões (como a auto-exclusão)
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id },
+        data: {
+          name: 'Usuário Excluído',
+          email: randomEmail,
+          password: null,
+          googleId: null,
+          deletedAt: new Date(),
+          deletedReason: 'Deletado por administrador',
+          isBanned: true,
+        },
+      }),
+      prisma.session.deleteMany({ where: { userId: id } }),
+      prisma.passwordResetToken.deleteMany({ where: { userId: id } }),
+    ]);
 
     res.json({
       message: 'Usuário deletado com sucesso',
