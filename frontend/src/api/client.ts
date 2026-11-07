@@ -6,8 +6,7 @@
 import axios, { AxiosInstance } from "axios";
 import { apiConfig } from "./config";
 import { authStorage } from "../lib/authStorage";
-import { RefreshResponse } from "./types";
-import { updateSocketToken } from "../lib/socket";
+import { refreshSession } from "./refreshSession";
 
 /**
  * Main API client instance
@@ -113,22 +112,9 @@ apiClient.interceptors.response.use(
     isRefreshing = true;
 
     try {
-      // Try to refresh the access token using authClient to avoid circular dependency.
+      // Refresh serializado por aba (refresh token rotaciona a cada uso).
       // Refresh token is sent via HttpOnly cookie automatically (withCredentials: true).
-      const response = await authClient.post<RefreshResponse>("/auth/refresh");
-
-      const { accessToken, user } = response.data;
-      authStorage.setAccessToken(accessToken);
-      if (user) {
-        authStorage.setUser(user);
-      }
-
-      // Update Socket.IO token when access token is refreshed
-      try {
-        updateSocketToken(accessToken);
-      } catch (err) {
-        console.warn('Failed to update socket token:', err);
-      }
+      const { accessToken } = await refreshSession();
 
       // Update the failed request with new token
       originalRequest.headers.Authorization = `Bearer ${accessToken}`;

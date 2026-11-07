@@ -3,7 +3,8 @@
 import { useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../contexts/AuthContext';
-import { authStorage } from '../lib/authStorage';
+import { authStorage, StoredUser } from '../lib/authStorage';
+import { refreshSession } from '../api/refreshSession';
 import { reconnectSocket } from '../lib/socket';
 import toast from 'react-hot-toast';
 
@@ -22,8 +23,8 @@ export default function AuthCallback() {
     }
     hasProcessedCallback.current = true;
 
-    const handleCallback = () => {
-      // Check for error
+    const handleCallback = async () => {
+      // Check for error (ex.: oauth_state, email_not_verified)
       const error = searchParams?.get('error');
       if (error) {
         toast.error('Erro ao fazer login com Google');
@@ -31,35 +32,17 @@ export default function AuthCallback() {
         return;
       }
 
-      // Extract tokens and user data from URL
-      const accessToken = searchParams?.get('accessToken');
-      const userId = searchParams?.get('userId');
-      const userName = searchParams?.get('userName');
-      const userEmail = searchParams?.get('userEmail');
-      const userRole = searchParams?.get('userRole');
-      const phoneCompleted = searchParams?.get('phoneCompleted');
-      const addressCompleted = searchParams?.get('addressCompleted');
-      const legalAcceptanceRequired = searchParams?.get('legalAcceptanceRequired');
-      const hideNameInCampaigns = searchParams?.get('hideNameInCampaigns');
-
-      if (!accessToken || !userId || !userName || !userEmail || !userRole) {
-        toast.error('Dados de autenticação incompletos');
+      // Nada vem na URL: o refresh token está no cookie HttpOnly,
+      // e o access token + usuário vêm de POST /auth/refresh
+      let userData: StoredUser;
+      try {
+        const response = await refreshSession();
+        userData = response.user;
+      } catch {
+        toast.error('Erro ao fazer login com Google');
         router.push('/campanhas');
         return;
       }
-
-      // Save auth data to localStorage
-      const userData = {
-        id: userId,
-        name: decodeURIComponent(userName),
-        email: decodeURIComponent(userEmail),
-        role: userRole as 'ADMIN' | 'CAMPAIGN_CREATOR' | 'CUSTOMER',
-        phoneCompleted: phoneCompleted === 'true',
-        addressCompleted: addressCompleted === 'true',
-        legalAcceptanceRequired: legalAcceptanceRequired === 'true',
-        hideNameInCampaigns: hideNameInCampaigns === 'true',
-      };
-      authStorage.setAuth(accessToken, userData);
 
       // Update React auth state (AuthContext) so downstream pages have user data
       setUser(userData);
@@ -67,34 +50,32 @@ export default function AuthCallback() {
       // Reconnect socket with new token
       reconnectSocket();
 
-      // Check if user needs to complete phone or address registration
-      if (
-        legalAcceptanceRequired === 'true' ||
-        phoneCompleted === 'false' ||
-        addressCompleted === 'false'
-      ) {
-        console.log('[AuthCallback] Usuário precisa completar perfil, redirecionando...');
+      const welcome = () => {
         if (!hasShownToast.current) {
-          toast.success(`Bem-vindo, ${decodeURIComponent(userName)}!`);
+          toast.success(`Bem-vindo, ${userData.name}!`);
           hasShownToast.current = true;
         }
+      };
+
+      // Check if user needs to complete phone or address registration
+      if (
+        userData.legalAcceptanceRequired ||
+        !userData.phoneCompleted ||
+        !userData.addressCompleted
+      ) {
+        console.log('[AuthCallback] Usuário precisa completar perfil, redirecionando...');
+        welcome();
         router.replace('/completar-perfil');
         return;
       }
 
       // Get return URL or default to campaigns
       const returnUrl = authStorage.getReturnUrl() || '/campanhas';
-      console.log('[AuthCallback] returnUrl recuperado do storage:', returnUrl);
       authStorage.clearReturnUrl();
 
-      // Show welcome message (prevent duplicate toasts)
-      if (!hasShownToast.current) {
-        toast.success(`Bem-vindo, ${decodeURIComponent(userName)}!`);
-        hasShownToast.current = true;
-      }
+      welcome();
 
       // Navigate to the original page
-      console.log('[AuthCallback] Navegando para:', returnUrl);
       router.replace(returnUrl);
     };
 
