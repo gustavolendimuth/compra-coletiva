@@ -489,10 +489,11 @@ router.post("/refresh", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Verifica se refresh token existe no banco
-    const isValid = await TokenService.validateRefreshToken(refreshToken);
+    // Rotação: consome o refresh atual (reuso revoga todas as sessões)
+    const consumption = await TokenService.consumeRefreshToken(refreshToken);
 
-    if (!isValid) {
+    if (consumption.outcome !== "consumed") {
+      res.clearCookie(REFRESH_TOKEN_COOKIE_NAME, getClearCookieOptions());
       res.status(401).json({
         error: "INVALID_REFRESH_TOKEN",
         message: "Refresh token inválido ou expirado",
@@ -500,24 +501,13 @@ router.post("/refresh", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Decodifica refresh token
-    let payload;
-    try {
-      payload = TokenService.verifyRefreshToken(refreshToken);
-    } catch {
-      res.status(401).json({
-        error: "INVALID_REFRESH_TOKEN",
-        message: "Refresh token inválido",
-      });
-      return;
-    }
-
     // Busca usuário atualizado
     const user = await prisma.user.findUnique({
-      where: { id: payload.userId },
+      where: { id: consumption.payload.userId },
     });
 
-    if (!user) {
+    if (!user || user.deletedAt) {
+      res.clearCookie(REFRESH_TOKEN_COOKIE_NAME, getClearCookieOptions());
       res.status(401).json({
         error: "USER_NOT_FOUND",
         message: "Usuário não encontrado",
@@ -525,12 +515,19 @@ router.post("/refresh", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Gera novo access token
-    const newAccessToken = TokenService.generateAccessToken({
+    // Gera novo par e grava o novo refresh (rotação)
+    const tokens = TokenService.generateTokenPair({
       userId: user.id,
       email: user.email,
       role: user.role,
     });
+    await TokenService.saveRefreshToken(user.id, tokens.refreshToken);
+    res.cookie(
+      REFRESH_TOKEN_COOKIE_NAME,
+      tokens.refreshToken,
+      getRefreshTokenCookieOptions()
+    );
+    const newAccessToken = tokens.accessToken;
 
     res.status(200).json({
       message: "Token renovado com sucesso",

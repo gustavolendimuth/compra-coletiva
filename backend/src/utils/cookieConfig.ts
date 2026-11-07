@@ -4,11 +4,12 @@
  */
 
 import { CookieOptions } from "express";
+import { REFRESH_TOKEN_TTL_MS } from "../config/session";
 
 const REFRESH_TOKEN_COOKIE_NAME = "refreshToken";
 
-// Cookie expiration: 7 days (same as refresh token)
-const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
+// Cookie expiration: same TTL as the refresh token (30 days)
+const COOKIE_MAX_AGE = REFRESH_TOKEN_TTL_MS;
 
 /**
  * Get cookie options based on environment
