@@ -11,7 +11,7 @@ import { usePathname } from 'next/navigation';
 interface NavItem {
   name: string;
   path: string;
-  icon: JSX.Element;
+  icon: React.JSX.Element;
 }
 
 const navItems: NavItem[] = [

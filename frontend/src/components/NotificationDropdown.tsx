@@ -13,7 +13,7 @@ import { Portal } from './ui/Portal';
 interface NotificationDropdownProps {
   isOpen: boolean;
   onClose: () => void;
-  buttonRef?: React.RefObject<HTMLButtonElement>;
+  buttonRef?: React.RefObject<HTMLButtonElement | null>;
 }
 
 interface Position {

@@ -15,7 +15,7 @@ interface FocusTrapOptions {
  * @param options - Configuration options for the focus trap
  */
 export const useFocusTrap = (
-  containerRef: React.RefObject<HTMLElement>,
+  containerRef: React.RefObject<HTMLElement | null>,
   isActive: boolean,
   options: FocusTrapOptions = {}
 ) => {
