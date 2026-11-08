@@ -46,4 +46,16 @@ describe("paymentRelease helpers", () => {
     expect(canShowPixToBuyer(campaign, true)).toBe(false);
     expect(canShowPaymentPendingNotice(campaign, true)).toBe(true);
   });
+
+  it("should show pending notice from hasPixConfigured when the API hides pixKey", () => {
+    const campaign = createMockCampaignFull({
+      pixKey: undefined,
+      pixType: undefined,
+      hasPixConfigured: true,
+      paymentReleased: false,
+    });
+
+    expect(canShowPaymentPendingNotice(campaign, true)).toBe(true);
+    expect(canShowPixToBuyer(campaign, true)).toBe(false);
+  });
 });

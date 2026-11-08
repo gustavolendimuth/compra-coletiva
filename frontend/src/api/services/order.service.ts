@@ -82,6 +82,16 @@ export const orderService = {
   },
 
   /**
+   * Fetch the payment proof file (owner, campaign creator or admin).
+   * The API answers 200 with the file or 302 to a short-lived signed URL;
+   * withCredentials is off so the redirected request to storage stays a plain CORS GET.
+   */
+  getPaymentProof: (id: string) =>
+    apiClient
+      .get<Blob>(`/orders/${id}/payment-proof`, { responseType: 'blob', withCredentials: false })
+      .then((res) => res.data),
+
+  /**
    * Delete an order
    * @param id - Order ID
    */

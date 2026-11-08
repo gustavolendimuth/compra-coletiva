@@ -22,33 +22,43 @@ export async function closeExpiredCampaigns() {
       return 0;
     }
 
-    await prisma.campaign.updateMany({
-      where: {
-        id: { in: expiredCampaigns.map(campaign => campaign.id) }
-      },
-      data: {
-        status: 'CLOSED'
+    // Escrita condicional por campanha: só fecha a que ainda está ACTIVE e vencida no momento
+    // da escrita (uma que virou SENT/CLOSED depois da leitura fica como está)
+    const closedIds: string[] = [];
+    for (const campaign of expiredCampaigns) {
+      const { count } = await prisma.campaign.updateMany({
+        where: {
+          id: campaign.id,
+          status: 'ACTIVE',
+          deadline: { lte: now }
+        },
+        data: {
+          status: 'CLOSED'
+        }
+      });
+      if (count > 0) {
+        closedIds.push(campaign.id);
       }
-    });
+    }
 
     await Promise.all(
-      expiredCampaigns.map(async (campaign) => {
+      closedIds.map(async (campaignId) => {
         try {
-          await PaymentReleaseService.checkAndReleaseForCampaign(campaign.id);
+          await PaymentReleaseService.checkAndReleaseForCampaign(campaignId);
         } catch (error) {
           console.error(
-            `[CampaignScheduler] Failed to check payment release for campaign ${campaign.id}:`,
+            `[CampaignScheduler] Failed to check payment release for campaign ${campaignId}:`,
             error
           );
         }
       })
     );
 
-    if (expiredCampaigns.length > 0) {
-      console.log(`[CampaignScheduler] Closed ${expiredCampaigns.length} expired campaign(s)`);
+    if (closedIds.length > 0) {
+      console.log(`[CampaignScheduler] Closed ${closedIds.length} expired campaign(s)`);
     }
 
-    return expiredCampaigns.length;
+    return closedIds.length;
   } catch (error) {
     console.error('[CampaignScheduler] Error closing expired campaigns:', error);
     return 0;

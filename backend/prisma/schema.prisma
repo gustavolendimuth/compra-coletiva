@@ -254,7 +254,7 @@ model Order {
   @@index([campaignId])
   @@index([customerName])
   @@index([userId])
-  @@index([campaignId, userId])
+  @@unique([campaignId, userId])
 }
 
 model OrderItem {

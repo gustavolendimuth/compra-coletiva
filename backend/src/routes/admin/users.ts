@@ -148,7 +148,9 @@ router.get(
       throw new AppError(404, 'Usuário não encontrado');
     }
 
-    res.json(user);
+    // Nunca devolve hash de senha, token de troca de e-mail nem vínculo do Google
+    const { password: _password, pendingEmailToken: _pendingEmailToken, googleId: _googleId, ...safeUser } = user;
+    res.json(safeUser);
   })
 );
 

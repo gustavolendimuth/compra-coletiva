@@ -30,8 +30,12 @@ vi.mock("../modals/ImageUploadModal", () => ({
   ImageUploadModal: () => null,
 }));
 
+const paymentProofModalProps: Array<Record<string, unknown>> = [];
 vi.mock("../modals/PaymentProofModal", () => ({
-  PaymentProofModal: () => null,
+  PaymentProofModal: (props: Record<string, unknown>) => {
+    paymentProofModalProps.push(props);
+    return null;
+  },
 }));
 
 describe("CampaignModals - Remove Payment Proof Confirmation", () => {
@@ -114,5 +118,38 @@ describe("CampaignModals - Remove Payment Proof Confirmation", () => {
 
     expect(hook.closeRemovePaymentProofConfirm).toHaveBeenCalledTimes(1);
     expect(hook.handleConfirmRemovePaymentProof).not.toHaveBeenCalled();
+  });
+});
+
+describe("CampaignModals - PaymentProofModal", () => {
+  const buildHook = (canMarkPaidWithoutProof: boolean) =>
+    ({
+      isSalesDisclaimerModalOpen: false,
+      isSalesDisclaimerLoading: false,
+      editProductForm: { imageUrl: "" },
+      isRemovePaymentProofConfirmOpen: false,
+      orderForPaymentRemoval: null,
+      updatePaymentMutation: { isPending: false },
+      isPaymentProofModalOpen: true,
+      orderForPayment: createMockOrder({ id: "order-1" }),
+      handlePaymentProofSubmit: vi.fn(),
+      handleMarkPaidWithoutProof: vi.fn(),
+      canMarkPaidWithoutProof,
+    }) as any;
+
+  beforeEach(() => {
+    paymentProofModalProps.length = 0;
+  });
+
+  it.each([
+    [false, "undefined"],
+    [true, "the handler"],
+  ])("mark paid without proof wiring: canMarkPaidWithoutProof=%s passes %s", (flag) => {
+    const hook = buildHook(flag);
+
+    render(<CampaignModals hook={hook} />);
+
+    const props = paymentProofModalProps[paymentProofModalProps.length - 1];
+    expect(props.onMarkPaidWithoutProof).toBe(flag ? hook.handleMarkPaidWithoutProof : undefined);
   });
 });

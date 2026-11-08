@@ -3,7 +3,7 @@ import { Modal } from '@/components/ui/Modal';
 import { ImageUpload } from '@/components/ui/ImageUpload';
 import Button from '@/components/ui/Button';
 import { Order } from '@/api/types';
-import { getImageUrlOrUndefined } from '@/lib/imageUrl';
+import { usePaymentProofFile } from '@/hooks/usePaymentProofFile';
 
 interface PaymentProofModalProps {
   isOpen: boolean;
@@ -59,9 +59,10 @@ export function PaymentProofModal({
     onClose();
   };
 
-  const currentProofUrl = order?.paymentProofUrl
-    ? getImageUrlOrUndefined(order.paymentProofUrl)
-    : undefined;
+  // Comprovante atual vem do endpoint autenticado (a URL salva é opaca)
+  const currentProof = usePaymentProofFile(order?.id, isOpen && Boolean(order?.paymentProofUrl));
+  const currentProofUrl =
+    currentProof.kind === 'image' && currentProof.url ? currentProof.url : undefined;
 
   return (
     <Modal

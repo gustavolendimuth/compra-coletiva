@@ -5,6 +5,8 @@ import { requireAuth } from "../middleware/authMiddleware";
 import { z } from "zod";
 import { uploadProductImage } from "../middleware/uploadMiddleware";
 import { ImageUploadService } from "../services/imageUploadService";
+import { ShippingCalculator } from "../services/shippingCalculator";
+import { lockCampaignRow } from "../services/orderLocks";
 
 const router = Router();
 
@@ -365,13 +367,36 @@ router.delete(
       throw new AppError(400, "Cannot delete products from a closed or sent group");
     }
 
+    // Item de pedido pago é registro financeiro: o produto não sai.
+    // Sem pedido pago, os itens saem em cascata e os totais da campanha são recalculados na mesma transação.
+    await prisma.$transaction(async (tx) => {
+      const status = await lockCampaignRow(tx, product.campaignId);
+      if (status !== "ACTIVE") {
+        throw new AppError(400, "Cannot delete products from a closed or sent group");
+      }
+
+      const ordersWithProduct = await tx.$queryRaw<Array<{ id: string; isPaid: boolean }>>`
+        SELECT o.id, o."isPaid"
+        FROM orders o
+        JOIN order_items i ON i."orderId" = o.id
+        WHERE i."productId" = ${id}
+        FOR UPDATE OF o
+      `;
+
+      if (ordersWithProduct.some((order) => order.isPaid)) {
+        throw new AppError(400, "Não é possível remover um produto que está em pedido já pago");
+      }
+
+      await tx.product.delete({
+        where: { id },
+      });
+
+      await ShippingCalculator.recalculateCampaignTotals(tx, product.campaignId);
+    });
+
     if (product.imageKey && product.imageStorageType) {
       await ImageUploadService.deleteImage(product.imageKey, product.imageStorageType);
     }
-
-    await prisma.product.delete({
-      where: { id },
-    });
 
     res.status(204).send();
   })

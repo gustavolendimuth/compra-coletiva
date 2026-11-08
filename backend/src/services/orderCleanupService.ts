@@ -17,8 +17,10 @@ export class OrderCleanupService {
       // 1. Have no items
       // 2. Are older than the cutoff date
       // 3. Are from ACTIVE campaigns only (don't touch historical data)
+      // 4. Are not paid (paid orders are financial records and never disappear)
       const result = await prisma.order.deleteMany({
         where: {
+          isPaid: false,
           createdAt: { lt: cutoffDate },
           items: { none: {} },
           campaign: {
