@@ -1,11 +1,11 @@
 import express from "express";
 import { createServer } from "http";
-import cors from "cors";
 import cookieParser from "cookie-parser";
 import passport from "passport";
 import { PrismaClient } from "@prisma/client";
 import { configurePassport } from "./config/passport";
 import { configureTrustProxy } from "./config/trustProxy";
+import { configureHttpSecurity, parseCorsOrigins } from "./config/httpSecurity";
 import authRoutes from "./routes/auth";
 import profileRoutes from "./routes/profile";
 import adminRoutes from "./routes/admin";
@@ -45,41 +45,11 @@ configurePassport();
 // Confia só no proxy do Railway: req.ip = IP real do cliente
 configureTrustProxy(app);
 
-// Parse CORS origins - accepts comma-separated list or single origin
-// Automatically adds correct protocol based on environment and domain
-const corsOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(",").map((origin) => {
-      const trimmed = origin.trim();
+// CORS_ORIGIN aceita lista separada por vírgula; protocolo adicionado conforme ambiente
+const corsOrigins = parseCorsOrigins();
 
-      // If protocol is already specified, use as-is
-      if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-        return trimmed;
-      }
-
-      // Determine if domain is local
-      const isLocal =
-        trimmed.includes("localhost") ||
-        trimmed.includes("127.0.0.1") ||
-        trimmed.includes("0.0.0.0");
-
-      // Local domains always use http, remote domains use https in production
-      if (isLocal) {
-        return `http://${trimmed}`;
-      }
-
-      // Remote domains: use https in production, http in development
-      const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
-      return `${protocol}://${trimmed}`;
-    })
-  : ["http://localhost:5173"];
-
-// Middleware
-app.use(
-  cors({
-    origin: corsOrigins,
-    credentials: true,
-  })
-);
+// Middleware: headers de segurança (helmet) + CORS com credentials
+configureHttpSecurity(app, corsOrigins);
 app.use(express.json());
 app.use(cookieParser());
 app.use(passport.initialize());
