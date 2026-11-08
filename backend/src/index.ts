@@ -27,6 +27,7 @@ import { initializeSocket } from "./services/socketService";
 import { ImageUploadService } from "./services/imageUploadService";
 import { startEmailWorker, stopEmailWorker } from "./services/email/emailWorker";
 import { closeEmailQueue } from "./services/email/emailQueue";
+import { closeRateLimitRedisClient } from "./middleware/rateLimitStore";
 
 const app = express();
 const httpServer = createServer(app);
@@ -113,6 +114,7 @@ process.on("beforeExit", async () => {
   console.log('Shutting down gracefully...');
   await stopEmailWorker();
   await closeEmailQueue();
+  await closeRateLimitRedisClient();
   await prisma.$disconnect();
 });
 
@@ -120,6 +122,7 @@ process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down...');
   await stopEmailWorker();
   await closeEmailQueue();
+  await closeRateLimitRedisClient();
   await prisma.$disconnect();
   process.exit(0);
 });

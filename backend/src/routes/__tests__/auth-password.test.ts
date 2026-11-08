@@ -3,6 +3,13 @@ import cookieParser from "cookie-parser";
 import request from "supertest";
 import crypto from "crypto";
 
+// Rate limit em memória: este arquivo não testa limites (ver auth-rate-limit.test.ts)
+// e não deve abrir conexão com Redis
+jest.mock("../../middleware/rateLimitStore", () => {
+  const { MemoryStore } = jest.requireActual("express-rate-limit");
+  return { createRateLimitStore: () => new MemoryStore() };
+});
+
 // ── Stateful fake of password_reset_tokens ──────────────────────────────────
 
 type FakeResetToken = { id: string; userId: string; token: string; expiresAt: Date; used: boolean };
