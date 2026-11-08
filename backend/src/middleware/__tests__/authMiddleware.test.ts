@@ -8,7 +8,9 @@ jest.mock("@prisma/client", () => ({
 }));
 
 import { requireAuth, optionalAuth } from "../authMiddleware";
+import jwt from "jsonwebtoken";
 import { TokenService } from "../../services/tokenService";
+import { getSecret } from "../../config/secrets";
 
 function createApp() {
   const app = express();
@@ -54,5 +56,18 @@ describe("authMiddleware and deleted accounts", () => {
       .set("Authorization", `Bearer ${accessToken}`);
     expect(res.status).toBe(200);
     expect(res.body.userId).toBeNull();
+  });
+
+  it("rejects HS512 token signed with the correct secret: requireAuth 401", async () => {
+    mockUserFindUnique.mockResolvedValue(user);
+    const hs512 = jwt.sign(
+      { userId: "user-1", email: "u@test.com", role: "CUSTOMER" },
+      getSecret("JWT_ACCESS_SECRET"),
+      { algorithm: "HS512", expiresIn: "15m" }
+    );
+    const res = await request(createApp())
+      .get("/private")
+      .set("Authorization", `Bearer ${hs512}`);
+    expect(res.status).toBe(401);
   });
 });

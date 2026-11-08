@@ -15,8 +15,15 @@ NODE_ENV=production
 PORT=3000
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 CORS_ORIGIN=https://<frontend-domain>
-JWT_SECRET=<gerar>
+JWT_ACCESS_SECRET=<gerar>
+JWT_REFRESH_SECRET=<gerar>
+PUBLIC_ALIAS_SECRET=<gerar>
 ```
+
+Segredos: em `NODE_ENV=production` o backend não sobe (exit 1) se `JWT_ACCESS_SECRET`,
+`JWT_REFRESH_SECRET` ou `PUBLIC_ALIAS_SECRET` estiver ausente, tiver menos de 32 caracteres ou for
+o valor padrão de desenvolvimento. Gere cada um com `openssl rand -hex 32`. Trocar
+`JWT_ACCESS_SECRET` invalida as sessões e os links de unsubscribe já enviados.
 
 Backend (opcionais comuns):
 ```env

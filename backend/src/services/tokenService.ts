@@ -2,12 +2,12 @@ import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import { REFRESH_TOKEN_TTL_DAYS, REFRESH_TOKEN_TTL_MS } from '../config/session';
+import { getSecret } from '../config/secrets';
 
 const prisma = new PrismaClient();
 
-// Environment variables (com defaults para desenvolvimento)
-const JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'dev-access-secret-change-in-production';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret-change-in-production';
+// Segredos validados no boot (config/secrets); só HS256 é aceito na verificação
+const JWT_ALGORITHM: jwt.Algorithm = 'HS256';
 const JWT_ACCESS_EXPIRES_IN = process.env.JWT_ACCESS_EXPIRES_IN || '15m';
 
 export interface TokenPayload {
@@ -38,7 +38,8 @@ export class TokenService {
    * Gera um access token (curta duração)
    */
   static generateAccessToken(payload: TokenPayload): string {
-    return jwt.sign(payload, JWT_ACCESS_SECRET, {
+    return jwt.sign(payload, getSecret('JWT_ACCESS_SECRET'), {
+      algorithm: JWT_ALGORITHM,
       expiresIn: JWT_ACCESS_EXPIRES_IN,
     } as jwt.SignOptions);
   }
@@ -47,7 +48,8 @@ export class TokenService {
    * Gera um refresh token (longa duração)
    */
   static generateRefreshToken(payload: TokenPayload): string {
-    return jwt.sign(payload, JWT_REFRESH_SECRET, {
+    return jwt.sign(payload, getSecret('JWT_REFRESH_SECRET'), {
+      algorithm: JWT_ALGORITHM,
       expiresIn: `${REFRESH_TOKEN_TTL_DAYS}d`,
       jwtid: crypto.randomBytes(16).toString('hex'),
     } as jwt.SignOptions);
@@ -68,7 +70,9 @@ export class TokenService {
    */
   static verifyAccessToken(token: string): TokenPayload {
     try {
-      return jwt.verify(token, JWT_ACCESS_SECRET) as TokenPayload;
+      return jwt.verify(token, getSecret('JWT_ACCESS_SECRET'), {
+        algorithms: [JWT_ALGORITHM],
+      }) as TokenPayload;
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
         throw new Error('TOKEN_EXPIRED');
@@ -82,7 +86,9 @@ export class TokenService {
    */
   static verifyRefreshToken(token: string): TokenPayload {
     try {
-      return jwt.verify(token, JWT_REFRESH_SECRET) as TokenPayload;
+      return jwt.verify(token, getSecret('JWT_REFRESH_SECRET'), {
+        algorithms: [JWT_ALGORITHM],
+      }) as TokenPayload;
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
         throw new Error('REFRESH_TOKEN_EXPIRED');

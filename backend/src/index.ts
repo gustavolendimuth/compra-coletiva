@@ -29,6 +29,10 @@ import { mountUploadsStatic } from "./utils/uploadsStatic";
 import { startEmailWorker, stopEmailWorker } from "./services/email/emailWorker";
 import { closeEmailQueue } from "./services/email/emailQueue";
 import { closeRateLimitRedisClient } from "./middleware/rateLimitStore";
+import { assertProductionSecrets } from "./config/secrets";
+
+// Antes de tudo: em produção, segredo ausente/fraco/padrão encerra com exit 1
+assertProductionSecrets();
 
 const app = express();
 const httpServer = createServer(app);
