@@ -1,3 +1,5 @@
+import { BoundedTtlCache } from "../utils/boundedTtlCache";
+
 /**
  * Serviço de geocodificação para converter CEP em endereço e coordenadas.
  * Usa APIs gratuitas: ViaCEP (endereço) + Nominatim/OpenStreetMap (coordenadas).
@@ -42,9 +44,13 @@ interface NominatimResult {
   display_name?: string;
 }
 
-// Cache em memória (TTL de 24h para CEPs, dados raramente mudam)
-const cepCache = new Map<string, AddressFromCEP>();
-const coordsCache = new Map<string, Coordinates>();
+// Cache em memória limitado: 5.000 entradas por cache, cada uma vale 24h
+export const GEOCODING_CACHE_MAX_ENTRIES = 5000;
+export const GEOCODING_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+const cacheOptions = { maxEntries: GEOCODING_CACHE_MAX_ENTRIES, ttlMs: GEOCODING_CACHE_TTL_MS };
+const cepCache = new BoundedTtlCache<string, AddressFromCEP>(cacheOptions);
+const coordsCache = new BoundedTtlCache<string, Coordinates>(cacheOptions);
 
 function normalizeCEP(cep: string): string {
   return cep.replace(/\D/g, "");
