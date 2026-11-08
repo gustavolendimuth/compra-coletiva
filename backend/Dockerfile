@@ -55,6 +55,14 @@ COPY scripts ./scripts
 COPY start.sh ./start.sh
 RUN chmod +x start.sh
 
+# Diretórios graváveis pelo usuário não-root: uploads públicos (UPLOAD_DIR padrão e
+# /app/data, caminho sugerido para volume), comprovantes privados (PRIVATE_UPLOAD_DIR padrão)
+RUN mkdir -p /app/uploads /app/data /app/private-uploads \
+  && chown node:node /app/uploads /app/data /app/private-uploads
+
+# Roda como o usuário não-root `node` (uid 1000) da imagem base
+USER node
+
 EXPOSE 3000
 
 # Executa migrations e inicia o servidor
