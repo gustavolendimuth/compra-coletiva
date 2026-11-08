@@ -2,6 +2,7 @@ import { Server as HttpServer } from 'http';
 import { Server, Socket } from 'socket.io';
 import { TokenService } from './tokenService';
 import { prisma } from '../index';
+import { safeError } from '../utils/safeLog';
 
 let io: Server | null = null;
 
@@ -52,10 +53,10 @@ export const authenticateSocket = async (
 
     // Attach user to socket
     socket.user = { id: user.id, email: user.email, role: user.role, name: user.name };
-    console.log(`✅ Authenticated socket connected: ${socket.id} (${user.email})`);
+    console.log(`✅ Authenticated socket connected: ${socket.id} (user ${user.id})`);
     next();
   } catch (error) {
-    console.log(`❌ Socket authentication failed: ${socket.id}`, error);
+    console.log(`❌ Socket authentication failed: ${socket.id}`, safeError(error));
     // Allow connection but without user info (for public viewing)
     next();
   }

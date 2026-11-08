@@ -5,6 +5,7 @@ import crypto from "crypto";
 import passport from "passport";
 import { AuthService } from "../services/authService";
 import { TokenService } from "../services/tokenService";
+import { safeError } from "../utils/safeLog";
 import { requireAuth } from "../middleware/authMiddleware";
 import {
   loginRateLimiter,
@@ -469,7 +470,7 @@ router.post("/login", loginRateLimiter, async (req: Request, res: Response): Pro
       accessToken: tokens.accessToken,
     });
   } catch (error) {
-    console.error("Erro ao fazer login:", error);
+    console.error("Erro ao fazer login:", safeError(error));
     res.status(500).json({
       error: "INTERNAL_ERROR",
       message: "Erro ao processar login",
@@ -556,7 +557,7 @@ router.post("/refresh", async (req: Request, res: Response): Promise<void> => {
       },
     });
   } catch (error) {
-    console.error("Erro ao renovar token:", error);
+    console.error("Erro ao renovar token:", safeError(error));
     res.status(500).json({
       error: "INTERNAL_ERROR",
       message: "Erro ao renovar token",
@@ -1052,16 +1053,10 @@ router.patch(
   requireAuth,
   async (req: Request, res: Response): Promise<void> => {
     try {
-      console.log("[CompletePhone] Requisição recebida:", {
-        userId: req.user!.id,
-        body: req.body,
-      });
-
       const { phone } = completePhoneSchema.parse(req.body);
 
       console.log("[CompletePhone] Validação OK, atualizando usuário:", {
         userId: req.user!.id,
-        phone,
       });
 
       // Atualiza usuário com telefone e marca como completo
@@ -1100,10 +1095,10 @@ router.patch(
         user: updatedUser,
       });
     } catch (error) {
-      console.error("[CompletePhone] Erro ao completar telefone:", error);
+      console.error("[CompletePhone] Erro ao completar telefone:", safeError(error));
 
       if (error instanceof z.ZodError) {
-        console.error("[CompletePhone] Erro de validação:", error.errors);
+        console.error("[CompletePhone] Erro de validação:", error.errors.map((issue) => issue.message));
         res.status(400).json({
           error: "VALIDATION_ERROR",
           message: "Formato de telefone inválido",

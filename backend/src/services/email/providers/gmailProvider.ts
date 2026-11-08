@@ -6,6 +6,7 @@
 import nodemailer from 'nodemailer';
 import { EmailProvider, SendEmailParams, EmailResponse } from './emailProvider.interface';
 import { getEmailConfig } from '../../../config/email';
+import { safeError } from '../../../utils/safeLog';
 
 export class GmailProvider implements EmailProvider {
   name = 'gmail';
@@ -37,7 +38,7 @@ export class GmailProvider implements EmailProvider {
 
       console.log('[GmailProvider] Initialized successfully');
     } catch (error) {
-      console.error('[GmailProvider] Failed to initialize:', error);
+      console.error('[GmailProvider] Failed to initialize:', safeError(error));
       this.transporter = null;
     }
   }
@@ -93,7 +94,7 @@ export class GmailProvider implements EmailProvider {
         provider: this.name,
       };
     } catch (error) {
-      console.error('[GmailProvider] Failed to send email:', error);
+      console.error('[GmailProvider] Failed to send email:', safeError(error));
 
       return {
         success: false,

@@ -4,6 +4,7 @@ jest.mock("../../index", () => ({
 }));
 
 import { authenticateSocket } from "../socketService";
+import { inspect } from "util";
 import { TokenService } from "../tokenService";
 
 type FakeSocket = Parameters<typeof authenticateSocket>[0];
@@ -55,5 +56,47 @@ describe("authenticateSocket", () => {
     expect(next).toHaveBeenCalledWith();
     expect((socket as { user?: unknown }).user).toBeUndefined();
     expect(mockUserFindUnique).not.toHaveBeenCalled();
+  });
+
+  describe("logs no email nor token", () => {
+    const methods = ["log", "info", "warn", "error", "debug"] as const;
+    let spies: jest.SpyInstance[];
+    const logText = () =>
+      spies
+        .flatMap((spy) => spy.mock.calls)
+        .map((args) => args.map((arg: unknown) => (typeof arg === "string" ? arg : inspect(arg, { depth: 10 }))).join(" "))
+        .join("\n");
+
+    beforeEach(() => {
+      spies = methods.map((method) => jest.spyOn(console, method).mockImplementation(() => undefined));
+    });
+
+    afterEach(() => {
+      spies.forEach((spy) => spy.mockRestore());
+    });
+
+    it("logs no email on authenticated connection", async () => {
+      mockUserFindUnique.mockResolvedValue(activeUser);
+      await authenticateSocket(makeSocket({ auth: { token: accessToken } }), jest.fn());
+
+      expect(logText()).not.toContain("u@test.com");
+      expect(logText()).not.toContain(accessToken);
+    });
+
+    it("logs no email nor token on invalid token", async () => {
+      const bogus = `${accessToken}tampered`;
+      await authenticateSocket(makeSocket({ auth: { token: bogus } }), jest.fn());
+
+      expect(logText()).not.toContain(bogus);
+      expect(logText()).not.toContain("u@test.com");
+    });
+
+    it("logs no email nor token when the database error quotes them", async () => {
+      mockUserFindUnique.mockRejectedValue(new Error(`db down for u@test.com token ${accessToken}`));
+      await authenticateSocket(makeSocket({ auth: { token: accessToken } }), jest.fn());
+
+      expect(logText()).not.toContain("u@test.com");
+      expect(logText()).not.toContain(accessToken);
+    });
   });
 });

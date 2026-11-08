@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { PrismaClient, UserRole } from '@prisma/client';
 import { TokenService } from '../services/tokenService';
+import { safeError } from '../utils/safeLog';
 
 const prisma = new PrismaClient();
 
@@ -80,7 +81,7 @@ export const requireAuth = async (
     req.user = user;
     next();
   } catch (error) {
-    console.error('Erro no middleware de autenticação:', error);
+    console.error('Erro no middleware de autenticação:', safeError(error));
     res.status(500).json({
       error: 'INTERNAL_ERROR',
       message: 'Erro ao processar autenticação',
