@@ -12,8 +12,13 @@ RUN apk add --no-cache libc6-compat
 # Railway passa essas variáveis automaticamente via Service Variables
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_SITE_URL
+# Bucket S3 aceito pelo otimizador /_next/image (remotePatterns é fixado no build)
+ARG AWS_S3_BUCKET
+ARG AWS_S3_REGION
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+ENV AWS_S3_BUCKET=$AWS_S3_BUCKET
+ENV AWS_S3_REGION=$AWS_S3_REGION
 
 # Copia package files
 COPY package.json package-lock.json* ./
