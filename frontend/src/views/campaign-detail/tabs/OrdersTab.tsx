@@ -91,8 +91,12 @@ export function OrdersTab({
   const canViewOrder = (order: Order) =>
     isAdmin || isCreator || order.userId === currentUserId;
 
-  const canManageOrder = (order: Order) =>
+  // Criador marca pagamento de qualquer pedido; editar itens é só do dono ou ADMIN
+  const canManagePayment = (order: Order) =>
     isAdmin || isCreator || order.userId === currentUserId;
+
+  const canEditOrder = (order: Order) =>
+    isAdmin || order.userId === currentUserId;
 
   const canDeleteOrder = (order: Order) =>
     isAdmin || (isActive && order.userId === currentUserId);
@@ -201,7 +205,8 @@ export function OrdersTab({
                 key={order.id}
                 order={order}
                 showView={!isLoggedIn || canViewOrder(order)}
-                showManage={!isLoggedIn || canManageOrder(order)}
+                showPayment={!isLoggedIn || canManagePayment(order)}
+                showEdit={!isLoggedIn || canEditOrder(order)}
                 showDelete={!isLoggedIn ? isActive : canDeleteOrder(order)}
                 onView={wrapAction(() => onViewOrder(order))}
                 onTogglePayment={wrapAction(() => onTogglePayment(order))}
@@ -324,27 +329,27 @@ export function OrdersTab({
                               title="Visualizar pedido"
                             />
                           )}
-                          {(!isLoggedIn || canManageOrder(order)) && (
-                            <>
-                              <IconButton
-                                size="sm"
-                                variant={order.isPaid ? "success" : "secondary"}
-                                icon={<Upload className="w-5 h-5" />}
-                                onClick={wrapAction(() => onTogglePayment(order))}
-                                title={
-                                  order.isPaid
-                                    ? "Marcar como não pago"
-                                    : "Enviar comprovante de pagamento"
-                                }
-                              />
-                              <IconButton
-                                size="sm"
-                                variant="secondary"
-                                icon={<Edit className="w-4 h-4" />}
-                                onClick={wrapAction(() => onEditOrder(order))}
-                                title="Editar pedido"
-                              />
-                            </>
+                          {(!isLoggedIn || canManagePayment(order)) && (
+                            <IconButton
+                              size="sm"
+                              variant={order.isPaid ? "success" : "secondary"}
+                              icon={<Upload className="w-5 h-5" />}
+                              onClick={wrapAction(() => onTogglePayment(order))}
+                              title={
+                                order.isPaid
+                                  ? "Marcar como não pago"
+                                  : "Enviar comprovante de pagamento"
+                              }
+                            />
+                          )}
+                          {(!isLoggedIn || canEditOrder(order)) && (
+                            <IconButton
+                              size="sm"
+                              variant="secondary"
+                              icon={<Edit className="w-4 h-4" />}
+                              onClick={wrapAction(() => onEditOrder(order))}
+                              title="Editar pedido"
+                            />
                           )}
                           {(!isLoggedIn ? isActive : canDeleteOrder(order)) && (
                             <IconButton
