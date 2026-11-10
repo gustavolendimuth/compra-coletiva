@@ -413,16 +413,16 @@ describe('OrdersTab', () => {
       expect(deleteButtons.length).toBe(1);
     });
 
-    it('should show view button on all orders for creator', () => {
+    it('should show view and manage buttons on all orders for creator', () => {
       render(<OrdersTab {...defaultProps} currentUserId="creator-1" isAdmin={false} isCreator={true} />);
 
       // Creator sees view on all 3 orders in desktop table
       const viewButtons = screen.queryAllByTitle(/visualizar pedido/i);
       expect(viewButtons.length).toBe(3);
 
-      // No manage buttons since creator-1 doesn't own any of these orders
-      expect(screen.queryAllByTitle(/marcar como|enviar comprovante/i).length).toBe(0);
-      expect(screen.queryAllByTitle(/editar pedido/i).length).toBe(0);
+      // Creator manages all orders even without owning any of them
+      expect(screen.queryAllByTitle(/marcar como|enviar comprovante/i).length).toBe(3);
+      expect(screen.queryAllByTitle(/editar pedido/i).length).toBe(3);
     });
 
     it('should not show delete button for regular user when campaign is not active', () => {

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import type { MercadoVivoHomeData } from "./useMercadoVivoHomeData";
 import { formatCompactNumber } from "./utils";
+import { CREATE_CAMPAIGN_HREF } from "@/lib/campaignLinks";
 import { CampaignCardBanner } from "@/components/campaign";
 import styles from "./MercadoVivoHome.module.css";
 import { MercadoVivoFooter } from "./MercadoVivoFooter";
@@ -98,7 +99,7 @@ export function MercadoVivoSections({ data }: MercadoVivoSectionsProps) {
         </div>
       </section>
 
-      <section id="campanhas" className="py-20 sm:py-28 relative">
+      <section id="campanhas" className="py-20 sm:py-28 relative overflow-x-clip">
         <div className="blob-2 -bottom-40 -right-40 opacity-50" />
         <div className="max-w-7xl mx-auto px-5 sm:px-8 relative z-10">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between mb-12 gap-4">
@@ -185,7 +186,7 @@ export function MercadoVivoSections({ data }: MercadoVivoSectionsProps) {
             <button onClick={() => window.dispatchEvent(new CustomEvent("openAuthModal", { detail: { tab: "register" } }))} className="inline-flex items-center justify-center gap-2 px-10 py-4 bg-gradient-to-r from-sky-500 to-sky-600 text-white font-semibold rounded-2xl shadow-xl shadow-sky-300/30 hover:shadow-sky-400/40 hover:from-sky-600 hover:to-sky-700 transition-all text-lg">
               Criar conta gratuita
             </button>
-            <Link href="/campanhas" className="inline-flex items-center justify-center gap-2 px-10 py-4 bg-amber-100 text-amber-800 font-semibold rounded-2xl hover:bg-amber-200 transition-all text-lg">
+            <Link href={CREATE_CAMPAIGN_HREF} className="inline-flex items-center justify-center gap-2 px-10 py-4 bg-amber-100 text-amber-800 font-semibold rounded-2xl hover:bg-amber-200 transition-all text-lg">
               Criar uma campanha
             </Link>
           </div>
