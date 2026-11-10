@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../index';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
-import { requireAuth, optionalAuth, requireOrderOwnership, requireOrderOrCampaignOwnership } from '../middleware/authMiddleware';
+import { requireAuth, optionalAuth, requireOrderOrCampaignOwnership } from '../middleware/authMiddleware';
 import { z } from 'zod';
 import { ShippingCalculator } from '../services/shippingCalculator';
 import { lockCampaignRow, lockOrderRow } from '../services/orderLocks';
@@ -653,7 +653,7 @@ router.patch('/:id', requireAuth, requireOrderOrCampaignOwnership, asyncHandler(
 }));
 
 // PUT /api/orders/:id - Atualiza um pedido completo (com itens)
-router.put('/:id', requireAuth, requireOrderOwnership, asyncHandler(async (req, res) => {
+router.put('/:id', requireAuth, requireOrderOrCampaignOwnership, asyncHandler(async (req, res) => {
   const { id } = req.params;
   const data = updateOrderWithItemsSchema.parse(req.body);
 
@@ -723,7 +723,7 @@ router.put('/:id', requireAuth, requireOrderOwnership, asyncHandler(async (req, 
 }));
 
 // POST /api/orders/:id/items - Adiciona item ao pedido
-router.post('/:id/items', requireAuth, requireOrderOwnership, asyncHandler(async (req, res) => {
+router.post('/:id/items', requireAuth, requireOrderOrCampaignOwnership, asyncHandler(async (req, res) => {
   const { id } = req.params;
   const data = addItemSchema.parse(req.body);
 
@@ -781,7 +781,7 @@ router.post('/:id/items', requireAuth, requireOrderOwnership, asyncHandler(async
 }));
 
 // DELETE /api/orders/:id/items/:itemId - Remove item do pedido
-router.delete('/:id/items/:itemId', requireAuth, requireOrderOwnership, asyncHandler(async (req, res) => {
+router.delete('/:id/items/:itemId', requireAuth, requireOrderOrCampaignOwnership, asyncHandler(async (req, res) => {
   const { id, itemId } = req.params;
 
   // Verifica o status da campanha
