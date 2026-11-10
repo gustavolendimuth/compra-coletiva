@@ -65,6 +65,9 @@ tmpclaude-*
 playwright-report/
 output/
 
+# Plans
+.tasks
+
 # Preview de worktree
 .preview-worktree.state
 
