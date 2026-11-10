@@ -15,6 +15,7 @@ import { Card, Input, ConfirmModal } from "@/components/ui";
 import IconButton from "@/components/IconButton";
 import OrderCard from "@/components/campaign/OrderCard";
 import { formatCurrency } from "@/lib/utils";
+import { canTogglePayment, isOrderLocked } from "@/lib/orderPaymentPermissions";
 import { Order } from "@/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { getCustomerDisplayName } from "../utils";
@@ -94,8 +95,16 @@ export function OrdersTab({
   const canManageOrder = (order: Order) =>
     isAdmin || isCreator || order.userId === currentUserId;
 
-  const canDeleteOrder = (order: Order) =>
-    isAdmin || (isActive && order.userId === currentUserId);
+  // Visitante vê as ações do pedido em aberto para ser levado ao login
+  const showPaymentToggle = (order: Order) =>
+    (!isLoggedIn || canManageOrder(order)) && canTogglePayment(order, isAdmin || isCreator);
+
+  const showEdit = (order: Order) =>
+    (!isLoggedIn || canManageOrder(order)) && !isOrderLocked(order);
+
+  const showDelete = (order: Order) =>
+    !isOrderLocked(order) &&
+    (!isLoggedIn ? isActive : isAdmin || (isActive && order.userId === currentUserId));
 
   return (
     <div className="pb-20 md:pb-0">
@@ -201,8 +210,9 @@ export function OrdersTab({
                 key={order.id}
                 order={order}
                 showView={!isLoggedIn || canViewOrder(order)}
-                showManage={!isLoggedIn || canManageOrder(order)}
-                showDelete={!isLoggedIn ? isActive : canDeleteOrder(order)}
+                showPaymentToggle={showPaymentToggle(order)}
+                showEdit={showEdit(order)}
+                showDelete={showDelete(order)}
                 onView={wrapAction(() => onViewOrder(order))}
                 onTogglePayment={wrapAction(() => onTogglePayment(order))}
                 onEdit={wrapAction(() => onEditOrder(order))}
@@ -324,29 +334,29 @@ export function OrdersTab({
                               title="Visualizar pedido"
                             />
                           )}
-                          {(!isLoggedIn || canManageOrder(order)) && (
-                            <>
-                              <IconButton
-                                size="sm"
-                                variant={order.isPaid ? "success" : "secondary"}
-                                icon={<Upload className="w-5 h-5" />}
-                                onClick={wrapAction(() => onTogglePayment(order))}
-                                title={
-                                  order.isPaid
-                                    ? "Marcar como não pago"
-                                    : "Enviar comprovante de pagamento"
-                                }
-                              />
-                              <IconButton
-                                size="sm"
-                                variant="secondary"
-                                icon={<Edit className="w-4 h-4" />}
-                                onClick={wrapAction(() => onEditOrder(order))}
-                                title="Editar pedido"
-                              />
-                            </>
+                          {showPaymentToggle(order) && (
+                            <IconButton
+                              size="sm"
+                              variant={order.isPaid ? "success" : "secondary"}
+                              icon={<Upload className="w-5 h-5" />}
+                              onClick={wrapAction(() => onTogglePayment(order))}
+                              title={
+                                order.isPaid
+                                  ? "Marcar como não pago"
+                                  : "Enviar comprovante de pagamento"
+                              }
+                            />
                           )}
-                          {(!isLoggedIn ? isActive : canDeleteOrder(order)) && (
+                          {showEdit(order) && (
+                            <IconButton
+                              size="sm"
+                              variant="secondary"
+                              icon={<Edit className="w-4 h-4" />}
+                              onClick={wrapAction(() => onEditOrder(order))}
+                              title="Editar pedido"
+                            />
+                          )}
+                          {showDelete(order) && (
                             <IconButton
                               size="sm"
                               variant="danger"

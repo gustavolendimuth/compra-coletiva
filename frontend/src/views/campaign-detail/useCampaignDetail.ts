@@ -20,6 +20,7 @@ import { removeMask, applyPixMask } from "@/lib/pixMasks";
 import { getApiErrorMessage } from "@/lib/apiError";
 import { canMarkPaidWithoutProof } from "@/lib/orderPaymentPermissions";
 import { useOrderModal } from "@/hooks/useOrderModal";
+import { createProductWithImage, updateProductWithImage } from "./productWithImage";
 import type { AddressData } from "@/components/ui/AddressForm";
 import {
   getPaymentReleaseTrigger,
@@ -31,13 +32,6 @@ interface ProductForm {
   price: string;
   weight: string;
   imageUrl?: string;
-}
-
-interface UpdateProductPayload {
-  productId: string;
-  data: UpdateProductDto;
-  imageFile?: File | null;
-  removeImage?: boolean;
 }
 
 type SortField =
@@ -391,24 +385,16 @@ export function useCampaignDetail() {
 
   // Product mutations
   const createProductMutation = useMutation({
-    mutationFn: async ({
-      data,
-      imageFile,
-    }: {
-      data: CreateProductDto;
-      imageFile?: File | null;
-    }) => {
-      const createdProduct = await productApi.create(data);
-
-      if (imageFile) {
-        await productApi.uploadImage(createdProduct.id, imageFile);
-      }
-
-      return createdProduct;
-    },
-    onSuccess: () => {
+    mutationFn: createProductWithImage,
+    onSuccess: ({ imageError }) => {
       queryClient.invalidateQueries({ queryKey: ["products", campaignId] });
-      toast.success("Produto adicionado!");
+      if (imageError) {
+        toast.error(
+          `Produto adicionado, mas a imagem não foi enviada: ${getApiErrorMessage(imageError, "erro no upload")}`
+        );
+      } else {
+        toast.success("Produto adicionado!");
+      }
       setIsProductModalOpen(false);
       setProductForm({
         name: "",
@@ -418,39 +404,28 @@ export function useCampaignDetail() {
       });
       setNewProductImageFile(null);
     },
-    onError: () => toast.error("Erro ao adicionar produto"),
+    onError: (error) => toast.error(getApiErrorMessage(error, "Erro ao adicionar produto")),
   });
 
   const updateProductMutation = useMutation({
-    mutationFn: async ({
-      productId,
-      data,
-      imageFile,
-      removeImage,
-    }: UpdateProductPayload) => {
-      const updatedProduct = await productApi.update(productId, data);
-
-      if (removeImage && !imageFile) {
-        await productApi.deleteImage(productId);
-      }
-
-      if (imageFile) {
-        await productApi.uploadImage(productId, imageFile);
-      }
-
-      return updatedProduct;
-    },
-    onSuccess: () => {
+    mutationFn: updateProductWithImage,
+    onSuccess: ({ imageError }) => {
       queryClient.invalidateQueries({ queryKey: ["products", campaignId] });
       queryClient.invalidateQueries({ queryKey: ["orders", campaignId] });
       queryClient.invalidateQueries({ queryKey: ["analytics", campaignId] });
-      toast.success("Produto atualizado!");
+      if (imageError) {
+        toast.error(
+          `Produto atualizado, mas a imagem não foi enviada: ${getApiErrorMessage(imageError, "erro no upload")}`
+        );
+      } else {
+        toast.success("Produto atualizado!");
+      }
       setIsEditProductModalOpen(false);
       setEditingProduct(null);
       setEditProductImageFile(null);
       setShouldRemoveEditProductImage(false);
     },
-    onError: () => toast.error("Erro ao atualizar produto"),
+    onError: (error) => toast.error(getApiErrorMessage(error, "Erro ao atualizar produto")),
   });
 
   const deleteProductMutation = useMutation({

@@ -67,3 +67,6 @@ output/
 
 # Preview de worktree
 .preview-worktree.state
+
+# Comprovantes PIX gravados em dev/preview
+backend/private-uploads/

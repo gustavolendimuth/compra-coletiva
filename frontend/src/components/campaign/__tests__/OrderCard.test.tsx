@@ -16,7 +16,8 @@ const renderOrderCard = (overrides: Partial<Parameters<typeof OrderCard>[0]> = {
   const props = {
     order: createMockOrder(),
     showView: false,
-    showManage: false,
+    showPaymentToggle: false,
+    showEdit: false,
     showDelete: false,
     ...defaultCallbacks,
     ...overrides,
@@ -112,16 +113,23 @@ describe("OrderCard", () => {
       expect(screen.queryByTitle("Visualizar pedido")).not.toBeInTheDocument();
     });
 
-    it("deve renderizar botoes de pagamento e edicao quando showManage e true", () => {
+    it("deve renderizar botao de pagamento quando showPaymentToggle e true", () => {
       const order = createMockOrder({ isPaid: false });
-      renderOrderCard({ order, showManage: true });
+      renderOrderCard({ order, showPaymentToggle: true });
 
       expect(screen.getByTitle("Enviar comprovante de pagamento")).toBeInTheDocument();
-      expect(screen.getByTitle("Editar pedido")).toBeInTheDocument();
+      expect(screen.queryByTitle("Editar pedido")).not.toBeInTheDocument();
     });
 
-    it("nao deve renderizar botoes de pagamento e edicao quando showManage e false", () => {
-      renderOrderCard({ showManage: false });
+    it("deve renderizar botao de edicao quando showEdit e true", () => {
+      renderOrderCard({ showEdit: true });
+
+      expect(screen.getByTitle("Editar pedido")).toBeInTheDocument();
+      expect(screen.queryByTitle("Enviar comprovante de pagamento")).not.toBeInTheDocument();
+    });
+
+    it("nao deve renderizar botoes de pagamento e edicao quando os flags sao false", () => {
+      renderOrderCard({ showPaymentToggle: false, showEdit: false });
 
       expect(screen.queryByTitle("Enviar comprovante de pagamento")).not.toBeInTheDocument();
       expect(screen.queryByTitle("Marcar como não pago")).not.toBeInTheDocument();
@@ -143,7 +151,8 @@ describe("OrderCard", () => {
     it("nao deve renderizar secao de acoes quando todos os flags sao false", () => {
       const { container } = renderOrderCard({
         showView: false,
-        showManage: false,
+        showPaymentToggle: false,
+        showEdit: false,
         showDelete: false,
       });
 
@@ -152,7 +161,7 @@ describe("OrderCard", () => {
 
     it("deve renderizar todos os botoes quando todos os flags sao true", () => {
       const order = createMockOrder({ isPaid: false });
-      renderOrderCard({ order, showView: true, showManage: true, showDelete: true });
+      renderOrderCard({ order, showView: true, showPaymentToggle: true, showEdit: true, showDelete: true });
 
       expect(screen.getByTitle("Visualizar pedido")).toBeInTheDocument();
       expect(screen.getByTitle("Enviar comprovante de pagamento")).toBeInTheDocument();
@@ -174,7 +183,7 @@ describe("OrderCard", () => {
     it("deve chamar onTogglePayment ao clicar no botao de pagamento", async () => {
       const onTogglePayment = vi.fn();
       const order = createMockOrder({ isPaid: false });
-      renderOrderCard({ order, showManage: true, onTogglePayment });
+      renderOrderCard({ order, showPaymentToggle: true, onTogglePayment });
 
       await userEvent.click(screen.getByTitle("Enviar comprovante de pagamento"));
 
@@ -183,7 +192,7 @@ describe("OrderCard", () => {
 
     it("deve chamar onEdit ao clicar no botao de editar", async () => {
       const onEdit = vi.fn();
-      renderOrderCard({ showManage: true, onEdit });
+      renderOrderCard({ showEdit: true, onEdit });
 
       await userEvent.click(screen.getByTitle("Editar pedido"));
 
@@ -221,7 +230,7 @@ describe("OrderCard", () => {
 
     it("deve exibir titulo 'Marcar como nao pago' no botao de pagamento quando isPaid e true", () => {
       const order = createMockOrder({ isPaid: true });
-      renderOrderCard({ order, showManage: true });
+      renderOrderCard({ order, showPaymentToggle: true });
 
       expect(screen.getByTitle("Marcar como não pago")).toBeInTheDocument();
       expect(screen.queryByTitle("Enviar comprovante de pagamento")).not.toBeInTheDocument();
@@ -229,7 +238,7 @@ describe("OrderCard", () => {
 
     it("deve exibir titulo 'Enviar comprovante de pagamento' no botao quando isPaid e false", () => {
       const order = createMockOrder({ isPaid: false });
-      renderOrderCard({ order, showManage: true });
+      renderOrderCard({ order, showPaymentToggle: true });
 
       expect(screen.getByTitle("Enviar comprovante de pagamento")).toBeInTheDocument();
       expect(screen.queryByTitle("Marcar como não pago")).not.toBeInTheDocument();

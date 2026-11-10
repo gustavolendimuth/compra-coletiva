@@ -324,11 +324,12 @@ describe("OverviewTab", () => {
       expect(mockCallbacks.onTogglePayment).toHaveBeenCalledWith(mockOrders[0]);
     });
 
-    it("should render edit button for each customer", () => {
+    it("should render edit button only for unpaid orders", () => {
       render(<OverviewTab {...defaultProps} />);
 
+      // Alice está paga: pedido pago fica travado para edição
       const editButtons = screen.getAllByTitle(/editar pedido/i);
-      expect(editButtons).toHaveLength(mockAnalytics.byCustomer.length);
+      expect(editButtons).toHaveLength(1);
     });
 
     it("should call onEditOrder when edit button is clicked", async () => {
@@ -338,7 +339,7 @@ describe("OverviewTab", () => {
       const editButtons = screen.getAllByTitle(/editar pedido/i);
       await user.click(editButtons[0]);
 
-      expect(mockCallbacks.onEditOrder).toHaveBeenCalledWith(mockOrders[0]);
+      expect(mockCallbacks.onEditOrder).toHaveBeenCalledWith(mockOrders[1]);
     });
   });
 
@@ -516,9 +517,10 @@ describe("OverviewTab", () => {
       );
       const editButtons = screen.getAllByTitle(/editar pedido/i);
 
+      // Admin desmarca o pago, mas não edita pedido pago
       expect(viewButtons).toHaveLength(2);
       expect(paymentButtons).toHaveLength(2);
-      expect(editButtons).toHaveLength(2);
+      expect(editButtons).toHaveLength(1);
     });
 
     it("should show view button on all orders for campaign creator", async () => {
@@ -553,12 +555,12 @@ describe("OverviewTab", () => {
     it("should show all buttons only on own order for regular user", async () => {
       const { useAuth } = await import("@/contexts/AuthContext");
       vi.mocked(useAuth).mockReturnValue({
-        user: { id: "u1", role: "CUSTOMER", name: "Alice", email: "alice@test.com" },
+        user: { id: "u2", role: "CUSTOMER", name: "Bob", email: "bob@test.com" },
       } as ReturnType<typeof useAuth>);
 
       render(<OverviewTab {...permissionProps} />);
 
-      // u1 (Alice) should see view, payment, and edit on their own order
+      // u2 (Bob, pendente) should see view, payment, and edit on their own order
       const viewButtons = screen.getAllByTitle(/visualizar pedido/i);
       const paymentButtons = screen.getAllByTitle(
         /marcar como não pago|enviar comprovante de pagamento/i
@@ -568,6 +570,21 @@ describe("OverviewTab", () => {
       expect(viewButtons).toHaveLength(1);
       expect(paymentButtons).toHaveLength(1);
       expect(editButtons).toHaveLength(1);
+    });
+
+    it("participant sees only view on own paid order", async () => {
+      const { useAuth } = await import("@/contexts/AuthContext");
+      vi.mocked(useAuth).mockReturnValue({
+        user: { id: "u1", role: "CUSTOMER", name: "Alice", email: "alice@test.com" },
+      } as ReturnType<typeof useAuth>);
+
+      render(<OverviewTab {...permissionProps} />);
+
+      expect(screen.getAllByTitle(/visualizar pedido/i)).toHaveLength(1);
+      expect(
+        screen.queryByTitle(/marcar como não pago|enviar comprovante de pagamento/i)
+      ).not.toBeInTheDocument();
+      expect(screen.queryByTitle(/editar pedido/i)).not.toBeInTheDocument();
     });
 
     it("should show no buttons on other users' orders for regular user", async () => {
@@ -601,9 +618,10 @@ describe("OverviewTab", () => {
       );
       const editButtons = screen.getAllByTitle(/editar pedido/i);
 
+      // Pedido pago (Alice) só tem visualizar
       expect(viewButtons).toHaveLength(2);
-      expect(paymentButtons).toHaveLength(2);
-      expect(editButtons).toHaveLength(2);
+      expect(paymentButtons).toHaveLength(1);
+      expect(editButtons).toHaveLength(1);
     });
 
     it("deve chamar requireAuth ao clicar em visualizar sem estar autenticado", async () => {

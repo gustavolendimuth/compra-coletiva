@@ -3,6 +3,7 @@ import { Modal, Button, Input, Select, Badge } from "@/components/ui";
 import IconButton from "@/components/IconButton";
 import { OrderChat } from "@/components/campaign";
 import { formatCurrency } from "@/lib/utils";
+import { isOrderLocked } from "@/lib/orderPaymentPermissions";
 import { PaymentProofPreview } from "./PaymentProofPreview";
 import { Order, Product } from "@/api";
 import type { OrderFormItem } from "@/api/types";
@@ -388,7 +389,7 @@ export function ViewOrderModal({
 
           {/* Botões de Ação */}
           <div className="flex gap-3 pt-4">
-            {isActive && canEdit && (
+            {isActive && canEdit && !isOrderLocked(order) && (
               <Button onClick={onEdit} className="flex-1 gap-2">
                 <Edit className="w-4 h-4" />
                 Editar Pedido

@@ -67,6 +67,14 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
     previousPathname.current = pathname;
   }, [pathname, isOpen, onClose]);
 
+  // Fecha ao abrir o modal de login/cadastro: senão o menu continua aberto por cima
+  // da página depois que a pessoa entra
+  useEffect(() => {
+    if (!isOpen) return;
+    window.addEventListener('openAuthModal', onClose);
+    return () => window.removeEventListener('openAuthModal', onClose);
+  }, [isOpen, onClose]);
+
   // Handle escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {

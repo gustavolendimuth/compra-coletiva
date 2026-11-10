@@ -450,6 +450,27 @@ describe('OrderModals', () => {
       });
     });
 
+    describe('Botão Editar Pedido', () => {
+      it('aparece em pedido pendente de campanha ativa para quem pode editar', () => {
+        render(<ViewOrderModal {...defaultProps} />);
+
+        expect(screen.getByRole('button', { name: /editar pedido/i })).toBeInTheDocument();
+      });
+
+      // Pedido pago fica travado no backend: o botão levava a um modal que não salvava
+      it('não aparece em pedido pago', () => {
+        render(<ViewOrderModal {...defaultProps} order={{ ...mockOrder, isPaid: true }} />);
+
+        expect(screen.queryByRole('button', { name: /editar pedido/i })).not.toBeInTheDocument();
+      });
+
+      it('não aparece com a campanha fechada', () => {
+        render(<ViewOrderModal {...defaultProps} isActive={false} />);
+
+        expect(screen.queryByRole('button', { name: /editar pedido/i })).not.toBeInTheDocument();
+      });
+    });
+
     describe('Order Items', () => {
       it('should display all order items', () => {
         render(<ViewOrderModal {...defaultProps} />);

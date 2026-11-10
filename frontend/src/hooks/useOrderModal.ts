@@ -5,6 +5,7 @@ import { orderApi, profileService, Order, Product } from '@/api';
 import type { OrderForm } from '@/api/types';
 import { useOrderAutosave } from './useOrderAutosave';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { isOrderLocked, PAID_ORDER_LOCKED_MESSAGE } from '@/lib/orderPaymentPermissions';
 
 interface UseOrderModalOptions {
   orders: Order[] | undefined;
@@ -182,8 +183,8 @@ export function useOrderModal({
         closeEditOrderModal();
       }
     },
-    onError: (_error, variables) => {
-      toast.error('Erro ao atualizar pedido');
+    onError: (error, variables) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao atualizar pedido'));
       if (variables.isAutosave) {
         autosave._markError();
       }
@@ -231,6 +232,11 @@ export function useOrderModal({
   }, []);
 
   const openEditOrderModal = useCallback((order: Order) => {
+    // Pedido pago não aceita alteração; sem a trava o modal deixava mudar e não salvava
+    if (isOrderLocked(order)) {
+      toast.error(PAID_ORDER_LOCKED_MESSAGE);
+      return;
+    }
     setEditingOrder(order);
     setEditOrderForm({
       campaignId: campaignId || '',
@@ -246,6 +252,11 @@ export function useOrderModal({
   const handleAddToOrder = useCallback(async (product: Product) => {
     requireAuth(async () => {
       const existingOrder = orders?.find((o) => o.userId === user?.id);
+
+      if (existingOrder && isOrderLocked(existingOrder)) {
+        toast.error(PAID_ORDER_LOCKED_MESSAGE);
+        return;
+      }
 
       if (existingOrder) {
         const items = existingOrder.items.map((item) => ({

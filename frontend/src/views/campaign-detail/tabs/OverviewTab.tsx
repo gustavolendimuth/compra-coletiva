@@ -4,6 +4,7 @@ import IconButton from "@/components/IconButton";
 import { CampaignChat } from "@/components/campaign";
 import { Skeleton } from "@/components/Skeleton";
 import { formatCurrency } from "@/lib/utils";
+import { canTogglePayment, isOrderLocked } from "@/lib/orderPaymentPermissions";
 import { getImageUrl } from "@/lib/imageUrl";
 import { Order, Product, CampaignAnalytics, Campaign } from "@/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -409,24 +410,28 @@ export function OverviewTab({
                             )}
                             {order && (!user || isAdmin || order.userId === user?.id) && (
                               <>
-                                <IconButton
-                                  size="sm"
-                                  variant={item.isPaid ? "success" : "secondary"}
-                                  icon={<Upload className="w-5 h-5" />}
-                                  onClick={!user ? () => requireAuth(() => {}) : () => onTogglePayment(order)}
-                                  title={
-                                    item.isPaid
-                                      ? "Marcar como não pago"
-                                      : "Enviar comprovante de pagamento"
-                                  }
-                                />
-                                <IconButton
-                                  size="sm"
-                                  variant="secondary"
-                                  icon={<Edit className="w-4 h-4" />}
-                                  onClick={!user ? () => requireAuth(() => {}) : () => onEditOrder(order)}
-                                  title="Editar pedido"
-                                />
+                                {canTogglePayment(order, isAdmin || isCreator) && (
+                                  <IconButton
+                                    size="sm"
+                                    variant={item.isPaid ? "success" : "secondary"}
+                                    icon={<Upload className="w-5 h-5" />}
+                                    onClick={!user ? () => requireAuth(() => {}) : () => onTogglePayment(order)}
+                                    title={
+                                      item.isPaid
+                                        ? "Marcar como não pago"
+                                        : "Enviar comprovante de pagamento"
+                                    }
+                                  />
+                                )}
+                                {!isOrderLocked(order) && (
+                                  <IconButton
+                                    size="sm"
+                                    variant="secondary"
+                                    icon={<Edit className="w-4 h-4" />}
+                                    onClick={!user ? () => requireAuth(() => {}) : () => onEditOrder(order)}
+                                    title="Editar pedido"
+                                  />
+                                )}
                               </>
                             )}
                           </div>

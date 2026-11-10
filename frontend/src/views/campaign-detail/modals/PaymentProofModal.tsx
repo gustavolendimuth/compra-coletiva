@@ -4,6 +4,7 @@ import { ImageUpload } from '@/components/ui/ImageUpload';
 import Button from '@/components/ui/Button';
 import { Order } from '@/api/types';
 import { usePaymentProofFile } from '@/hooks/usePaymentProofFile';
+import { formatCurrency } from '@/lib/utils';
 
 interface PaymentProofModalProps {
   isOpen: boolean;
@@ -78,7 +79,7 @@ export function PaymentProofModal({
             <strong>Cliente:</strong> {order?.customer.name}
           </p>
           <p className="text-sm text-blue-800 mt-1">
-            <strong>Total:</strong> R$ {order?.total.toFixed(2)}
+            <strong>Total:</strong> {order ? formatCurrency(order.total) : ''}
           </p>
         </div>
 

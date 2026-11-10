@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * Middleware for route protection
+ * Proxy (antigo middleware) para proteção de rotas
  * - /admin/* requires ADMIN role
  * - /perfil/* requires authentication
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Get auth token from cookies
