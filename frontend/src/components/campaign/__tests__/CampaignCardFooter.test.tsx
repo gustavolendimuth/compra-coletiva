@@ -80,14 +80,35 @@ describe('CampaignCardFooter', () => {
   });
 
   describe('Deadline Display - Same Day', () => {
-    it.skip('should show hours remaining when ending today', () => {
-      // Note: This test is skipped because the logic uses Math.ceil on diffDays,
-      // meaning any positive time will ceil to at least 1 day
-      // To show hours, the implementation would need refactoring
+    it('should show hours remaining when ending today', () => {
+      const inThreeHours = new Date(mockNow.getTime() + 3 * 60 * 60 * 1000);
+      const campaign = createMockCampaign({
+        deadline: inThreeHours.toISOString(),
+      });
+      render(<CampaignCardFooter campaign={campaign} />);
+
+      expect(screen.getByText('Encerra em 3h')).toBeInTheDocument();
     });
 
-    it.skip('should use red styling for same day deadline', () => {
-      // Note: Same reason as above - skipped due to ceil logic
+    it('should round partial hours up when ending today', () => {
+      const inThirtyMinutes = new Date(mockNow.getTime() + 30 * 60 * 1000);
+      const campaign = createMockCampaign({
+        deadline: inThirtyMinutes.toISOString(),
+      });
+      render(<CampaignCardFooter campaign={campaign} />);
+
+      expect(screen.getByText('Encerra em 1h')).toBeInTheDocument();
+    });
+
+    it('should use red styling for same day deadline', () => {
+      const inThreeHours = new Date(mockNow.getTime() + 3 * 60 * 60 * 1000);
+      const campaign = createMockCampaign({
+        deadline: inThreeHours.toISOString(),
+      });
+      render(<CampaignCardFooter campaign={campaign} />);
+
+      const badge = screen.getByText('Encerra em 3h').parentElement;
+      expect(badge).toHaveClass('text-red-600', 'bg-red-50');
     });
   });
 

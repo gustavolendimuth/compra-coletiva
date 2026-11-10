@@ -19,7 +19,8 @@ function getDeadlineInfo(deadline: string) {
     };
   }
 
-  if (diffDays === 0) {
+  // Menos de 24h: diffDays já arredondou para 1, então decide pelo tempo restante
+  if (diffMs < 1000 * 60 * 60 * 24) {
     const diffHours = Math.ceil(diffMs / (1000 * 60 * 60));
     return {
       text: `Encerra em ${diffHours}h`,
