@@ -13,12 +13,16 @@ vi.mock('@/contexts/AuthContext', () => ({
 
 // Mock OrderCard component
 vi.mock('@/components/campaign/OrderCard', () => ({
-  default: ({ order, showView, showPayment, showEdit, showDelete, onView, onEdit, onDelete, onTogglePayment }: Record<string, unknown>) => (
+  default: ({ order, showView, showManage, showDelete, onView, onEdit, onDelete, onTogglePayment }: Record<string, unknown>) => (
     <div data-testid={`order-card-${(order as { id: string }).id}`}>
       <span>Order: {(order as { customer: { name: string } }).customer.name}</span>
       {showView && <button onClick={onView as () => void}>View</button>}
-      {showPayment && <button onClick={onTogglePayment as () => void}>Toggle Payment</button>}
-      {showEdit && <button onClick={onEdit as () => void}>Edit</button>}
+      {showManage && (
+        <>
+          <button onClick={onEdit as () => void}>Edit</button>
+          <button onClick={onTogglePayment as () => void}>Toggle Payment</button>
+        </>
+      )}
       {showDelete && <button onClick={onDelete as () => void}>Delete</button>}
     </div>
   ),
@@ -416,17 +420,9 @@ describe('OrdersTab', () => {
       const viewButtons = screen.queryAllByTitle(/visualizar pedido/i);
       expect(viewButtons.length).toBe(3);
 
-      // Criador marca pagamento em todos os pedidos (PATCH /orders/:id/payment aceita o criador)
-      expect(screen.queryAllByTitle(/marcar como|enviar comprovante/i).length).toBe(3);
-      // Mas não edita pedido alheio (PUT /orders/:id só aceita dono ou ADMIN)
+      // No manage buttons since creator-1 doesn't own any of these orders
+      expect(screen.queryAllByTitle(/marcar como|enviar comprovante/i).length).toBe(0);
       expect(screen.queryAllByTitle(/editar pedido/i).length).toBe(0);
-    });
-
-    it('should show payment but not edit on mobile cards for creator', () => {
-      render(<OrdersTab {...defaultProps} currentUserId="creator-1" isAdmin={false} isCreator={true} />);
-
-      expect(screen.getAllByText('Toggle Payment')).toHaveLength(3);
-      expect(screen.queryAllByText('Edit')).toHaveLength(0);
     });
 
     it('should not show delete button for regular user when campaign is not active', () => {
@@ -476,7 +472,7 @@ describe('OrdersTab', () => {
     it('deve exibir botoes de acao nos cards mobile quando nao autenticado', () => {
       render(<OrdersTab {...unauthProps} />);
 
-      // Mobile OrderCard mock renders View/Edit/Toggle Payment/Delete when showView/showPayment/showEdit/showDelete are true
+      // Mobile OrderCard mock renders View/Edit/Toggle Payment/Delete when showView/showManage/showDelete are true
       expect(screen.queryAllByRole('button', { name: /^view$/i }).length).toBe(3);
       expect(screen.queryAllByRole('button', { name: /^edit$/i }).length).toBe(3);
       expect(screen.queryAllByRole('button', { name: /toggle payment/i }).length).toBe(3);

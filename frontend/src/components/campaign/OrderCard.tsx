@@ -15,8 +15,7 @@ import IconButton from "@/components/IconButton";
 interface OrderCardProps {
   order: Order;
   showView: boolean;
-  showPayment: boolean;
-  showEdit: boolean;
+  showManage: boolean;
   showDelete: boolean;
   onView: () => void;
   onTogglePayment: () => void;
@@ -27,8 +26,7 @@ interface OrderCardProps {
 export default function OrderCard({
   order,
   showView,
-  showPayment,
-  showEdit,
+  showManage,
   showDelete,
   onView,
   onTogglePayment,
@@ -98,7 +96,7 @@ export default function OrderCard({
           </div>
         </div>
 
-        {(showView || showPayment || showEdit || showDelete) && (
+        {(showView || showManage || showDelete) && (
           <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
             {showView && (
               <IconButton
@@ -110,25 +108,25 @@ export default function OrderCard({
                 className="flex-1"
               />
             )}
-            {showPayment && (
-              <IconButton
-                size="sm"
-                variant={order.isPaid ? "success" : "secondary"}
-                icon={<Upload className="w-4 h-4" />}
-                onClick={onTogglePayment}
-                title={order.isPaid ? "Marcar como não pago" : "Enviar comprovante de pagamento"}
-                className="flex-1"
-              />
-            )}
-            {showEdit && (
-              <IconButton
-                size="sm"
-                variant="secondary"
-                icon={<Edit className="w-4 h-4" />}
-                onClick={onEdit}
-                title="Editar pedido"
-                className="flex-1"
-              />
+            {showManage && (
+              <>
+                <IconButton
+                  size="sm"
+                  variant={order.isPaid ? "success" : "secondary"}
+                  icon={<Upload className="w-4 h-4" />}
+                  onClick={onTogglePayment}
+                  title={order.isPaid ? "Marcar como não pago" : "Enviar comprovante de pagamento"}
+                  className="flex-1"
+                />
+                <IconButton
+                  size="sm"
+                  variant="secondary"
+                  icon={<Edit className="w-4 h-4" />}
+                  onClick={onEdit}
+                  title="Editar pedido"
+                  className="flex-1"
+                />
+              </>
             )}
             {showDelete && (
               <IconButton
