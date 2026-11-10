@@ -40,6 +40,13 @@ npm test --workspace=frontend
 - TypeScript throughout, 2-space indent, double quotes, semicolons.
 - Components: PascalCase. Hooks: `useX`. Services: `*.service.ts`. Tests: `*.test.ts(x)`.
 
+## Testing changes in a worktree
+
+- Toda alteração ou feature que tocar o frontend termina com teste no browser: depois de implementar, abra as telas afetadas e confira o fluxo de verdade antes de dar o trabalho por concluído. Testes automatizados não substituem esse passo.
+- Sempre que for testar no browser trabalhando numa worktree, suba o app com `npm run preview:start` a partir dela e use as URLs que ele imprime. Não use o `docker-compose up` nem as portas 5173/3000: elas servem o código do checkout principal, não o da worktree.
+- **Sempre rode `npm run preview:stop` ao terminar de validar** — não deixe processos de preview rodando.
+- Detalhes (banco, emails, login Google) em `docs/development.md`.
+
 ## Testing Guidelines
 
 - Place tests in `src/**/__tests__` or as `*.test.ts(x)`.

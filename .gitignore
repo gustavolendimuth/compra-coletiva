@@ -64,3 +64,6 @@ tmpclaude-*
 # Playwright test results
 playwright-report/
 output/
+
+# Preview de worktree
+.preview-worktree.state
