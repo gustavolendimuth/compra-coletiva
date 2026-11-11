@@ -210,7 +210,7 @@ router.get("/check-name", async (req: Request, res: Response): Promise<void> => 
         : null,
     });
   } catch (error) {
-    console.error("Erro ao verificar nome:", error);
+    console.error("Erro ao verificar nome:", safeError(error));
     res.status(500).json({
       error: "INTERNAL_ERROR",
       message: "Erro ao verificar nome",
@@ -333,7 +333,7 @@ router.post("/register", registerRateLimiter, async (req: Request, res: Response
       await queueWelcomeEmail(user.id, user.name, user.email);
       console.log(`[Auth] Welcome email queued for user ${user.id}`);
     } catch (emailError) {
-      console.error('[Auth] Failed to queue welcome email:', emailError);
+      console.error('[Auth] Failed to queue welcome email:', safeError(emailError));
       // Não falha o registro se o email falhar
     }
 
@@ -366,7 +366,7 @@ router.post("/register", registerRateLimiter, async (req: Request, res: Response
       accessToken: tokens.accessToken,
     });
   } catch (error) {
-    console.error("Erro ao registrar usuário:", error);
+    console.error("Erro ao registrar usuário:", safeError(error));
     res.status(500).json({
       error: "INTERNAL_ERROR",
       message: "Erro ao criar usuário",
@@ -588,7 +588,7 @@ router.post(
         message: "Logout realizado com sucesso",
       });
     } catch (error) {
-      console.error("Erro ao fazer logout:", error);
+      console.error("Erro ao fazer logout:", safeError(error));
       res.status(500).json({
         error: "INTERNAL_ERROR",
         message: "Erro ao processar logout",
@@ -643,7 +643,7 @@ router.get(
         },
       });
     } catch (error) {
-      console.error("Erro ao buscar dados do usuário:", error);
+      console.error("Erro ao buscar dados do usuário:", safeError(error));
       res.status(500).json({
         error: "INTERNAL_ERROR",
         message: "Erro ao buscar dados do usuário",
@@ -716,7 +716,7 @@ router.get("/google/callback", (req: Request, res: Response, next) => {
         }
 
         if (err || !user) {
-          if (err) console.error("Erro no callback do Google:", err);
+          if (err) console.error("Erro no callback do Google:", safeError(err));
           res.redirect(`${frontendUrl}/login?error=auth_failed`);
           return;
         }
@@ -741,7 +741,7 @@ router.get("/google/callback", (req: Request, res: Response, next) => {
         // Sem token nem dados do usuário na URL
         res.redirect(`${frontendUrl}/auth/callback`);
       } catch (error) {
-        console.error("Erro no callback do Google:", error);
+        console.error("Erro no callback do Google:", safeError(error));
         res.redirect(`${frontendUrl}/login?error=auth_failed`);
       }
     }
@@ -801,13 +801,13 @@ router.post(
         await queuePasswordResetEmail(user.id, user.name, user.email, token);
         console.log(`[Auth] Password reset email queued for user ${user.id}`);
       } catch (emailError) {
-        console.error('[Auth] Failed to queue password reset email:', emailError);
+        console.error('[Auth] Failed to queue password reset email:', safeError(emailError));
         // Não falha a requisição se o email falhar
       }
 
       // Log para desenvolvimento
       if (process.env.NODE_ENV === "development") {
-        console.log(`🔑 Password reset token para ${email}: ${token}`);
+        console.log(`🔑 Password reset token para o usuário ${user.id}: ${token}`);
         console.log(
           `Link: ${
             process.env.FRONTEND_URL || "http://localhost:5173"
@@ -822,7 +822,7 @@ router.post(
           process.env.NODE_ENV !== "production" && { token }),
       });
     } catch (error) {
-      console.error("Erro ao solicitar reset de senha:", error);
+      console.error("Erro ao solicitar reset de senha:", safeError(error));
       res.status(500).json({
         error: "INTERNAL_ERROR",
         message: "Erro ao processar solicitação",
@@ -919,7 +919,7 @@ router.post(
 
       res.json({ message: "Senha alterada com sucesso" });
     } catch (error) {
-      console.error("Erro ao resetar senha:", error);
+      console.error("Erro ao resetar senha:", safeError(error));
       res.status(500).json({
         error: "INTERNAL_ERROR",
         message: "Erro ao resetar senha",
@@ -1035,7 +1035,7 @@ router.patch(
         },
       });
     } catch (error) {
-      console.error("Erro ao atualizar perfil:", error);
+      console.error("Erro ao atualizar perfil:", safeError(error));
       res.status(500).json({
         error: "INTERNAL_ERROR",
         message: "Erro ao atualizar perfil",
@@ -1153,7 +1153,7 @@ router.patch(
         city = city || geoResult.city;
         state = state || geoResult.state;
       } catch (geoError) {
-        console.warn("[CompleteAddress] Falha na geocodificação:", geoError);
+        console.warn("[CompleteAddress] Falha na geocodificação:", safeError(geoError));
       }
 
       const updatedUser = await prisma.user.update({
@@ -1201,7 +1201,7 @@ router.patch(
         user: updatedUser,
       });
     } catch (error) {
-      console.error("[CompleteAddress] Erro ao completar endereço:", error);
+      console.error("[CompleteAddress] Erro ao completar endereço:", safeError(error));
 
       if (error instanceof z.ZodError) {
         res.status(400).json({
