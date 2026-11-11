@@ -107,7 +107,7 @@ Proof: `cd backend && npx jest src/services/__tests__/shippingCalculator.test.ts
 **C14** - Pedido esvaziado → `subtotal = 0`, `shippingFee = 0`, `total = 0` após o recálculo (crit. 12)
 Proof: `cd backend && npx jest src/services/__tests__/shippingCalculator.test.ts -t "emptied order"`
 
-**C15** - `distributeProportionally`: soma = total e nenhuma parcela < 0; `0.05` com `[1,1,1,0.0001]` sem negativo; 2000 casos pseudo-aleatórios com semente fixa (crit. 13, regra)
+**C15** - `distributeProportionally`: soma = total e nenhuma parcela < 0; `0.05` com `[1,1,1,0.0001]` dá exatamente `[0.01, 0.02, 0.02, 0]` (o algoritmo antigo dava `-0.01` à última parcela) (crit. 13, regra)
 Proof: `cd backend && npx jest src/utils/money.test.ts -t "never negative and sums exactly"`
 
 **C16** - Recálculo da campanha com `shippingCost = 0.05` e pesos `[1,1,1,0.0001]`: soma de `shippingFee` = 0.05, nenhuma < 0 (crit. 13, pedidos)
@@ -140,7 +140,7 @@ Proof: PG harness + `[pg] src/services/__tests__/orderCleanupService.pg.test.ts 
 
 ### S7 - Concorrência na criação de pedido · 3 files · 45 KB · ~11k
 
-**C24** - `[pg]` Dois `POST /api/orders` paralelos do mesmo usuário/campanha → exatamente 1 pedido para o par e cada resposta ∈ {200, 201, 409} (crit. 20)
+**C24** - `[pg]` Dois `POST /api/orders` paralelos do mesmo usuário/campanha → exatamente 1 pedido para o par e as respostas são exatamente `[200, 200, 200, 201]`: o lock de campanha serializa as requisições, então o `409` não é alcançável aqui (o mapeamento P2002 → 409 é provado no teste mockado "duplicate order returns 409") (crit. 20)
 Proof: PG harness + `[pg] src/routes/__tests__/orders-concurrency.pg.test.ts -t "parallel create keeps one order"`
 
 **C25** - `[pg]` O banco rejeita segundo pedido com o mesmo (`campaignId`, `userId`) (crit. 20, índice)
@@ -177,3 +177,10 @@ Aritmética (wc -c/4 dos arquivos tocados, piso): S1 ~26k, S2 ~7k (orders.ts já
 - Decidido no meio do build pelo usuário: nada
 - Abandonado: checar pago/status fora de tx em `DELETE /:id/items` para não mexer no mock de `orders-items-delete.test.ts` - descartado por consistência com as outras 3 rotas de itens; o mock ganhou `$transaction`/`$queryRaw`/`recalculateCampaignTotals`, asserções intactas
 
+## Testes enxugados, em 2026-11-11
+
+- C15: o laço de 2000 casos pseudo-aleatórios saiu (um caminho para muitas entradas); fica o caso determinístico com o resultado exato.
+- C24: o teste `.pg` passou a exigir os status exatos; antes ele ficava verde sem o lock de campanha.
+- `orders-payment-rules` ganhou: criador/ADMIN desmarcando pago (comprovante apagado, três campos zerados) e troca de comprovante com bytes inválidos → 400 sem apagar o anterior.
+- `orders-integrity`: o controle confere os itens gravados com preço do banco (`unitPrice`, `subtotal`); saíram 3 casos cujo setup nunca era usado.
+- `products-delete.test.ts` (mock) fica, porque os `.pg` não rodam no CI.

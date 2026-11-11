@@ -120,16 +120,16 @@ Proof: `cd backend && timeout 300 npx jest src/services/__tests__/geocodingServi
 Proof: `cd backend && timeout 300 npx jest src/utils/__tests__/boundedTtlCache.test.ts -t "24h"`
 Proof: `cd backend && timeout 300 npx jest src/services/__tests__/geocodingService.test.ts -t "24h"`
 
-**C23** - `POST /api/auth/login` (sucesso, 401 e 500 com erro do Prisma citando o e-mail) não loga e-mail, senha, token nem body
+**C23** - `POST /api/auth/login` (500 com erro do Prisma citando o e-mail) não loga e-mail, senha, token nem body
 Proof: `cd backend && timeout 300 npx jest src/routes/__tests__/auth-logs.test.ts -t "login"`
 
-**C24** - `POST /api/auth/refresh` (sucesso e 500) não loga e-mail nem token
+**C24** - `POST /api/auth/refresh` (500) não loga e-mail nem token
 Proof: `cd backend && timeout 300 npx jest src/routes/__tests__/auth-logs.test.ts -t "refresh"`
 
-**C25** - `PATCH /api/auth/complete-phone` (200, 400 e 500) não loga body, telefone, e-mail nem token
+**C25** - `PATCH /api/auth/complete-phone` (200 e 500) não loga body, telefone, e-mail nem token
 Proof: `cd backend && timeout 300 npx jest src/routes/__tests__/auth-logs.test.ts -t "complete-phone"`
 
-**C26** - Conexão Socket.IO (autenticada, token inválido, erro de banco citando e-mail) não loga e-mail nem token
+**C26** - Conexão Socket.IO (autenticada e erro de banco citando e-mail) não loga e-mail nem token
 Proof: `cd backend && timeout 300 npx jest src/services/__tests__/socketAuth.test.ts -t "logs no email"`
 
 **C27** - Envio de e-mail (`EmailService.send` sucesso/falha/exceção, Gmail e Resend com erro citando o destinatário) não loga o endereço
@@ -172,3 +172,12 @@ S1 ~10k + S2 ~8k + S4 ~2k + S5 ~18k = ~38k (backend/infra, surface: backend `src
 - **Boundary:** feature completa (S1-S5, C1-C27 verdes) em `028af21`: S1, S2, S4, S5 em `50b1f58`..`92cf472`; S3 (C16, C17) em `028af21` sobre `92cf472`. C13/C14 refeitos no Next **16.4.5** (13 ok, exit 0), C15 verde no matcher do Next 16, C18 verde com o `backend/package-lock.json` regenerado de novo, C19/C20 refeitos (imagem builda, uid 1000 grava). Próximo passo: Verifier do orquestrador sobre `7ea7b59..028af21`.
 - **Settled mid-build:** nada novo do usuário. Seguido o "Until answered": U3 (nodemailer/zod fora; C17 aceita só essas `high`), U4 (sem `script-src`), U5 (Next 16 + React 19 é desta task), U6 (links antigos quebram), U2 (Dockerfile não-root). `docker build` da base `b764854` já falhava (lockfile do backend dessincronizado) - corrigido como row do `Landing`. Audit final `--omit=dev` (raiz e `backend/`): 0 critical, 2 high (`nodemailer`, `zod`), 3 moderate, 5 low. No S3: `npm dedupe` deixou um React só (19) na raiz, inclusive para o `@react-email` do backend (suíte do backend verde); `next lint` removido → `eslint src` com flat config no frontend e no backend (o backend usava o eslint 8 içado do frontend sem declarar; agora declara `eslint`/`typescript-eslint`/`globals`); regras novas do `eslint-plugin-react-hooks` 7 que o código viola (`set-state-in-effect`, `purity`, `use-memo`, `immutability`, 24 ocorrências) ficam `warn` - refatorar é fora do escopo; regras de antes do upgrade mantidas como estavam.
 - **Abandoned:** no teste `auth-logs` "login: 500", tirei a senha da mensagem do erro falso do Prisma: o critério é "erro do Prisma citando o e-mail", e um erro do Prisma no `findUnique` não carrega a senha (o teste tinha ido além do check; o código loga `safeError`, sem o objeto cru). `pkill -f "next start -p 5391"` mata o próprio shell (exit 144) - usar `539[1]`, e mesmo assim rodar a prova de dentro de um script, porque a linha de comando do shell que a contém casa com `5391`. Não renomeei `middleware.ts` → `proxy.ts` (só deprecado no 16, ainda roda; mexeria em `src/__tests__/middleware.test.ts`). Não commitei `next-env.d.ts` regenerado pelo Next 16 (passa a importar `.next/types/*`, quebraria `tsc` sem build); `next build`/`next dev` o reescrevem e `next dev` cria `frontend/AGENTS.md` - fica sujo na árvore (`.gitignore` fora do meu escopo).
+
+## Testes enxugados, em 2026-11-11
+
+- C23-C26: saíram os casos de log que passavam também no código antigo (login com sucesso e 401, refresh com sucesso, complete-phone 400, socket com token inválido): esses caminhos nunca logaram dado pessoal, então o teste não podia falhar. Ficam os casos que pegam a volta do log cru.
+- C2/C3: os dois boots reais viraram um (ACCESS ausente + REFRESH fraco): exit 1, os dois nomes na saída e o valor fraco ausente.
+- C7 (`rateLimitStore`): "once per minute" agora avança o relógio (30 s: nenhum log novo; 62 s: segundo log); antes passava com intervalo de 1 s.
+- C21: "overwriting does not evict" reescrito (a, b, a, c → b sai, a fica); a versão antiga não falhava sem o `delete` antes do `set`.
+- CORS ganhou a origem estranha (sem `access-control-allow-origin`); segredos ganharam o caso de exatamente 32 caracteres.
+- `backend/src/config/passport.test.ts` foi apagado: 13 testes `expect(true).toBe(true)`; o comportamento está em `passportGoogle.test.ts`.

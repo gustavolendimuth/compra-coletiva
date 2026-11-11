@@ -63,7 +63,7 @@ Proof: `cd backend && npx jest src/services/__tests__/socketService.test.ts -t "
 **C4** - `order-created`, `order-updated`, `order-deleted`, `order-status-changed` em `campaign-<id>` carregam exatamente `{ orderId, campaignId }` (crit. 4; table-driven sobre os 4)
 Proof: `cd backend && npx jest src/services/__tests__/socketService.test.ts -t "order event payload"`
 
-**C5** - Nenhum evento em `campaign-<id>` contém `email`, `pixKey`, `pixName`, `pixType`, `paymentProofUrl`, `paymentProofKey` em qualquer nível (crit. 5; table-driven sobre todos os emitters da sala)
+**C5** - Nenhum evento em `campaign-<id>` contém `email`, `pixKey`, `pixName`, `pixType`, `paymentProofUrl`, `paymentProofKey` em qualquer nível (crit. 5; table-driven sobre os emitters da sala que levam dados; os `order-*` têm o payload exato `{orderId, campaignId}` provado em C4)
 Proof: `cd backend && npx jest src/services/__tests__/socketService.test.ts -t "campaign room never carries sensitive keys"`
 
 **C6** - `creator-typing` para `userId` sem pedido em campanha do emissor não chega em `user-<userId>`; com pedido, chega (crit. 6)
@@ -106,7 +106,8 @@ Proof: `cd backend && npx jest src/routes/__tests__/orders-payment-proof.test.ts
 Proof: `cd backend && npx jest src/services/__tests__/fileUpload.test.ts -t "payment proof S3 without ACL"`
 
 **C17** - Comprovante novo LOCAL é gravado em `PRIVATE_UPLOAD_DIR` e `GET /uploads/payment-proofs/<arquivo>` → `404` (crit. 14)
-Proof: `cd backend && npx jest src/utils/__tests__/uploadsStatic.test.ts -t "payment proof not served"`
+Proof: `cd backend && npx jest src/utils/__tests__/uploadsStatic.test.ts -t "payment proof not served"` (o 404, com o arquivo legado ainda na pasta pública)
+Proof: `cd backend && npx jest src/routes/__tests__/upload-signature.test.ts -t "payment proof url is the endpoint"` (gravado na pasta privada)
 
 **C18** - `PATCH /api/orders/:id/payment` grava `paymentProofUrl = /api/orders/<id>/payment-proof` (crit. 15, URL não pública para novos)
 Proof: `cd backend && npx jest src/routes/__tests__/upload-signature.test.ts -t "payment proof url is the endpoint"`
@@ -122,7 +123,7 @@ Proof: `cd frontend && npx vitest run src/views/campaign-detail/modals/__tests__
 
 ### S5 - Respostas de API não vazam dados de terceiros · 6 files · 110 KB · ~27k
 
-**C22** - `GET /api/campaigns/:idOrSlug` e `GET /api/campaigns`: `pixKey`/`pixName`/`pixType` só para criador, ADMIN, ou requisitante com pedido + `paymentReleased=true` + `status != ARCHIVED` (crit. 16; table-driven: anônimo, sem pedido, pedido não liberado, pedido liberado, liberado+ARCHIVED, criador, ADMIN)
+**C22** - `GET /api/campaigns/:idOrSlug` e `GET /api/campaigns`: `pixKey`/`pixName`/`pixType` só para criador, ADMIN, ou requisitante com pedido + `paymentReleased=true` + `status != ARCHIVED` (crit. 16; table-driven no detalhe: anônimo, sem pedido, pedido não liberado, pedido liberado, liberado+ARCHIVED, criador, ADMIN; na listagem e nas sugestões de busca, as linhas que provam a ligação: comprador com pedido liberado e anônimo)
 Proof: `cd backend && npx jest src/routes/__tests__/campaigns-pix.test.ts -t "pix visibility"`
 
 **C23** - As duas rotas trazem `hasPixConfigured: boolean` (crit. 16)
@@ -163,3 +164,10 @@ Aritmética (wc -c/4, floor): S1 ~15k + S2 ~12k + S3 ~23k + S4 ~19k + S5 ~27k = 
 - Onde parou: batch único fechado, C1-C26 verdes em `a583a1b` (base `7ea7b59`). Próximo: Verifier sobre `7ea7b59..HEAD` (orquestrador), depois `order-integrity` no mesmo worktree.
 - Decidido no meio do build: nada com o usuário; portas novas estão em `Landing`. Falha pré-existente em `frontend/.../OrdersTab.test.tsx` "should show view button on all orders for creator" (falha igual na base `7ea7b59`), não tocada.
 - Abandonado: escapar também `>` e `&` no JSON-LD - quebraria o valor literal `</script>` do crit. 9; só `<` (+ U+2028/2029) é escapado.
+
+## Testes enxugados, em 2026-11-11
+
+- C5: as linhas `order-*` da tabela saíram (o payload exato está em C4) e a linha `user-typing` também (export sem uso em produção). As linhas restantes comparam o payload inteiro depois da limpeza, inclusive com `Date`.
+- C17: o teste "new local proof" saiu porque o 404 dele não podia falhar (o arquivo nunca está na pasta pública); a prova ficou dividida entre o teste legado e o de `upload-signature`.
+- C22: a listagem passou de 7 para 2 linhas (é a mesma função do detalhe); entraram as sugestões de busca, que não tinham teste e são um caminho de vazamento da chave PIX.
+- `orders-payment-proof`: entrou arquivo LOCAL com bytes desconhecidos → `application/octet-stream` + `attachment`, `Cache-Control: private, no-store`, a pasta pública legada e a chave que escapa das pastas → 404.

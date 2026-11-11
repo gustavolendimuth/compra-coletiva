@@ -167,8 +167,8 @@ Proof: `cd frontend && npx vitest run --configLoader runner src/contexts/__tests
 Proof: `cd frontend && npx vitest run --configLoader runner src/api/__tests__/refreshSession.test.ts -t "single refresh in flight"`
 
 **C35** - Visitante sem cookie em `/admin` e `/perfil` → redirect `/campanhas?requireLogin=true&redirectTo=<rota>`; com `auth-token=1` `/perfil` passa
-Proof: `cd frontend && npx vitest run --configLoader runner src/__tests__/middleware.test.ts -t "redirects visitor"`
-Proof: `cd frontend && npx vitest run --configLoader runner src/__tests__/middleware.test.ts -t "session indicator"`
+Proof: `cd frontend && npx vitest run --configLoader runner src/__tests__/proxy.test.ts -t "redirects visitor"`
+Proof: `cd frontend && npx vitest run --configLoader runner src/__tests__/proxy.test.ts -t "session indicator"`
 
 ## Swept
 
@@ -190,3 +190,10 @@ Aritmética (wc -c / 4, floor): S1 ~24k (inclui `campaigns.ts` 41 KB), S2 ~8k, S
 - Decidido no build (sem usuário): linha de Landing "Primeira conexão do store" (C5 ficou vermelho com fail-fast puro); `passport.test.ts` (testes só-documentação `expect(true)`) teve o texto do caso de reativação reescrito para o comportamento novo; `.env.example` deixa de anunciar `JWT_REFRESH_EXPIRES_IN`; `OrdersTab.test.tsx > should show view button on all orders for creator` já falha na base `7ea7b59` (não é regressão).
 - Abandonado: store com `enableOfflineQueue` padrão (requisições esperariam reconexão com Redis caído) e `passOnStoreError` da lib (log por requisição); script de prova do backfill dentro de `prisma/migrations/` (Prisma trataria a pasta como migração) - movido para `backend/scripts/checks/`.
 - Correção pós-build (orquestrador): `auth-password.test.ts` chamava `request-password-reset` com o store Redis real; o ioredis ficava reconectando e o Jest não encerrava (prova pendurada). Corrigido mockando `rateLimitStore` com `MemoryStore` nesse arquivo (como os demais testes de rota) e fechando o client no shutdown (`index.ts`); `--detectOpenHandles` limpo nos arquivos novos. Commit `634bd57`.
+
+## Testes enxugados, em 2026-11-11
+
+- C35 aponta para `src/__tests__/proxy.test.ts`: `frontend/middleware.ts` virou `frontend/src/proxy.ts` (o Next só carrega o proxy ao lado de `src/app`) e o teste foi renomeado junto. `proxyLocation.test.ts` falha se sobrar um `middleware.ts`/`proxy.ts` fora do lugar.
+- C14 e C18: "rotates the refresh token" e "cookie lasts 30 days" agora casam o mesmo teste (rotação, novo token funciona, `Max-Age=2592000`, antigo → 401).
+- `consumeRefreshToken` ganhou a tabela de decisão em `tokenService.test.ts` (assinatura inválida, sessão ausente, userId diferente, `count === 0`, sessão expirada, consumido).
+- Corrigidos testes que ficavam verdes com o código quebrado: "deleted user is not reactivated" (o laço não asseria nada), "deleted user gets 401" (agora confere cookie limpo e nenhuma sessão), "missing state"/"mismatched state" (+ state de tamanho diferente e state limpo no callback).
