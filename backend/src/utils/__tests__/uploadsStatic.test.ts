@@ -40,4 +40,16 @@ describe("mountUploadsStatic", () => {
     const res = await request(createApp()).get("/uploads/payment-proofs/legacy.png");
     expect(res.status).toBe(404);
   });
+
+  // No Railway o serviço tem um volume só: o diretório privado pode ficar dentro do público
+  it("private dir nested in the served dir is never served", async () => {
+    const privateDir = path.join(publicDir, "private");
+    fs.mkdirSync(path.join(privateDir, "payment-proofs"), { recursive: true });
+    fs.writeFileSync(path.join(privateDir, "payment-proofs", "new.png"), PNG_BYTES);
+    const app = express();
+    mountUploadsStatic(app, publicDir, privateDir);
+
+    const res = await request(app).get("/uploads/private/payment-proofs/new.png");
+    expect(res.status).toBe(404);
+  });
 });
