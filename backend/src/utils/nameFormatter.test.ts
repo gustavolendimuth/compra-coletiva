@@ -53,9 +53,9 @@ describe('nameFormatter', () => {
     });
 
     it('should return original value for invalid inputs', () => {
-      expect(capitalizeName(null as any)).toBe(null);
-      expect(capitalizeName(undefined as any)).toBe(undefined);
-      expect(capitalizeName(123 as any)).toBe(123);
+      expect(capitalizeName(null as unknown as string)).toBe(null);
+      expect(capitalizeName(undefined as unknown as string)).toBe(undefined);
+      expect(capitalizeName(123 as unknown as string)).toBe(123);
     });
   });
 });

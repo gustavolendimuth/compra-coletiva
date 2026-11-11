@@ -3,7 +3,7 @@
  * Helpers for building full image URLs from backend responses
  */
 
-import { API_URL } from '@/api';
+import { PUBLIC_API_URL } from "@/lib/env";
 
 /**
  * Build full image URL from backend response
@@ -28,9 +28,9 @@ export function getImageUrl(imageUrl?: string): string | null {
     return imageUrl;
   }
   
-  // Local storage paths need API_URL prefix
-  // API_URL already has the correct protocol (http:// or https://)
-  return `${API_URL}${imageUrl}`;
+  // Local storage paths need public API prefix.
+  // Do not use INTERNAL_API_URL here to avoid SSR/client hydration mismatch.
+  return `${PUBLIC_API_URL}${imageUrl}`;
 }
 
 /**

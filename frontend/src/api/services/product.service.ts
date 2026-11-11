@@ -33,6 +33,33 @@ export const productService = {
     apiClient.patch<Product>(`/products/${id}`, data).then(res => res.data),
 
   /**
+   * Upload product image
+   * @param id - Product ID
+   * @param file - Image file
+   */
+  uploadImage: async (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append("image", file);
+
+    return apiClient.post<{ message: string; imageUrl: string }>(
+      `/products/${id}/image`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    ).then((res) => res.data);
+  },
+
+  /**
+   * Delete product image
+   * @param id - Product ID
+   */
+  deleteImage: (id: string) =>
+    apiClient.delete(`/products/${id}/image`).then(res => res.data),
+
+  /**
    * Delete a product
    * @param id - Product ID
    */

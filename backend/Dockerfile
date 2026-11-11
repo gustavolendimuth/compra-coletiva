@@ -9,6 +9,7 @@ WORKDIR /app
 # Copia package.json e prisma schema primeiro
 COPY package*.json ./
 COPY prisma ./prisma
+COPY scripts/fix-prisma-engine-permissions.js ./scripts/fix-prisma-engine-permissions.js
 
 # Instala dependências (postinstall automaticamente gera Prisma Client)
 RUN npm install

@@ -4,16 +4,18 @@
  */
 
 import crypto from 'crypto';
-import { NotificationType } from '@prisma/client';
+import { NotificationType, Prisma } from '@prisma/client';
 import { getEmailConfig } from '../config/email';
 
 export interface NotificationMetadata {
   campaignSlug?: string;
   campaignId?: string;
+  campaignName?: string;
   orderId?: string;
   isQuestion?: boolean;
   messageId?: string;
-  [key: string]: any;
+  senderName?: string;
+  [key: string]: Prisma.InputJsonValue | undefined;
 }
 
 export class LinkBuilder {
@@ -44,16 +46,17 @@ export class LinkBuilder {
       case 'CAMPAIGN_READY_TO_SEND':
       case 'CAMPAIGN_STATUS_CHANGED':
       case 'CAMPAIGN_ARCHIVED':
+      case 'PAYMENT_RELEASED':
         // Link direto para a campanha
-        return `${baseUrl}/campaigns/${campaignSlug}`;
+        return `${baseUrl}/campanhas/${campaignSlug}`;
 
       case 'NEW_MESSAGE':
         if (metadata.isQuestion) {
           // Link para tab de Q&A da campanha
-          return `${baseUrl}/campaigns/${campaignSlug}?tab=questions`;
+          return `${baseUrl}/campanhas/${campaignSlug}?openQuestions=true`;
         } else {
           // Link para chat do pedido
-          return `${baseUrl}/campaigns/${campaignSlug}?tab=orders&orderId=${metadata.orderId}&openChat=true`;
+          return `${baseUrl}/campanhas/${campaignSlug}?tab=orders&orderId=${metadata.orderId}&openChat=true`;
         }
 
       default:
@@ -139,7 +142,7 @@ export class LinkBuilder {
    */
   static buildCampaignLink(campaignSlug: string): string {
     const baseUrl = this.getBaseUrl();
-    return `${baseUrl}/campaigns/${campaignSlug}`;
+    return `${baseUrl}/campanhas/${campaignSlug}`;
   }
 
   /**

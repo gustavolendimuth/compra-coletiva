@@ -11,7 +11,8 @@ import type {
   CreateCampaignDto,
   UpdateCampaignDto,
   CloneCampaignDto,
-  DistanceResult
+  DistanceResult,
+  CampaignOrdersSummaryResponse
 } from '../types';
 
 export const campaignService = {
@@ -112,6 +113,15 @@ export const campaignService = {
   },
 
   /**
+   * Get a plain-text summary of all campaign orders for sharing
+   * @param idOrSlug - Campaign ID or slug
+   */
+  getOrdersSummary: (idOrSlug: string) =>
+    apiClient
+      .get<CampaignOrdersSummaryResponse>(`/campaigns/${idOrSlug}/orders-summary`)
+      .then((res) => res.data),
+
+  /**
    * Clone a campaign with all its products
    * @param idOrSlug - Campaign ID or slug to clone
    * @param data - New campaign data (name and optional description)
@@ -149,12 +159,19 @@ export const campaignService = {
     apiClient.delete(`/campaigns/${idOrSlug}/image`).then(res => res.data),
 
   /**
-   * Calculate distance from a CEP to a campaign's pickup location
+   * Calculate distance to a campaign's pickup location
    */
-  getDistance: (idOrSlug: string, fromZipCode: string) =>
+  getDistance: (
+    idOrSlug: string,
+    params: { zipCode?: string; coords?: { lat: number; lng: number } }
+  ) =>
     apiClient
       .get<DistanceResult>(`/campaigns/${idOrSlug}/distance`, {
-        params: { fromZipCode: fromZipCode.replace(/\D/g, '') },
+        params: {
+          fromZipCode: params.zipCode ? params.zipCode.replace(/\D/g, "") : undefined,
+          fromLat: params.coords?.lat,
+          fromLng: params.coords?.lng,
+        },
       })
       .then((res) => res.data),
 };

@@ -1,6 +1,7 @@
 'use client';
+/* eslint-disable @next/next/no-img-element */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -16,10 +17,12 @@ import { Campaign } from "@/api";
 import { getImageUrl } from "@/lib/imageUrl";
 import toast from "react-hot-toast";
 import { CampaignActionButtons } from "./CampaignActionButtons";
+import { ImageLightbox } from "@/components/ui";
 
 interface CampaignHeaderProps {
   campaign: Campaign;
   canEditCampaign: boolean;
+  canGenerateOrdersSummary: boolean;
   ordersCount: number;
   onEditDeadline: () => void;
   onEditPix: () => void;
@@ -37,6 +40,7 @@ interface CampaignHeaderProps {
 export function CampaignHeader({
   campaign,
   canEditCampaign,
+  canGenerateOrdersSummary,
   ordersCount,
   onEditDeadline,
   onEditPix,
@@ -54,11 +58,18 @@ export function CampaignHeader({
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [editedDescription, setEditedDescription] = useState("");
+  const [isImageUnavailable, setIsImageUnavailable] = useState(false);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   const isActive = campaign.status === "ACTIVE";
   const isClosed = campaign.status === "CLOSED";
 
   const imageUrl = getImageUrl(campaign.imageUrl);
+  const shouldShowImage = Boolean(imageUrl) && !isImageUnavailable;
+
+  useEffect(() => {
+    setIsImageUnavailable(false);
+  }, [imageUrl]);
 
   const handleNameClick = () => {
     if (!canEditCampaign) {
@@ -96,45 +107,56 @@ export function CampaignHeader({
     <div className="mb-4 md:mb-6">
       <Link
         href="/campanhas"
-        className="inline-flex items-center text-primary-600 hover:text-primary-700 mb-3 md:mb-4"
+        className="inline-flex items-center text-sky-600 hover:text-sky-800 mb-3 md:mb-4 font-medium transition-colors"
       >
         <ArrowLeft className="w-4 h-4 mr-2" />
         Voltar
       </Link>
 
       {/* Layout: Imagem à esquerda + Título/Descrição à direita */}
-      <div className="flex flex-row gap-3 md:gap-4 mb-4">
+      <div className="flex flex-row gap-4 md:gap-6 mb-4">
         {/* Imagem da Campanha - Quadrado à esquerda */}
-        {imageUrl ? (
-          <div className="relative flex-shrink-0 w-24 h-24 md:w-32 md:h-32 rounded-lg overflow-hidden bg-gray-100 shadow-sm">
+        {shouldShowImage ? (
+          <div className="relative flex-shrink-0 w-24 h-24 md:w-48 md:h-48 rounded-2xl overflow-hidden bg-sky-50 shadow-sm">
             <img
-              src={imageUrl}
+              src={imageUrl || undefined}
               alt={campaign.name}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover cursor-zoom-in"
+              onError={() => setIsImageUnavailable(true)}
+              onClick={() => setIsLightboxOpen(true)}
             />
             {canEditCampaign && (
               <button
                 onClick={onImageUpload}
-                className="absolute top-1 right-1 p-1 bg-white rounded-full shadow-md hover:bg-gray-50 transition-colors border border-gray-200"
+                className="absolute top-1 right-1 p-1 bg-white/90 rounded-full shadow-md hover:bg-white transition-colors border border-sky-100"
                 title="Alterar imagem"
               >
-                <Edit className="w-3 h-3 text-gray-700" />
+                <Edit className="w-3 h-3 text-sky-700" />
               </button>
             )}
           </div>
         ) : canEditCampaign ? (
           <button
             onClick={onImageUpload}
-            className="flex-shrink-0 w-24 h-24 md:w-32 md:h-32 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-all duration-200 flex flex-col items-center justify-center gap-1 bg-gray-50"
+            className="flex-shrink-0 w-24 h-24 md:w-48 md:h-48 border-2 border-dashed border-sky-200 rounded-2xl hover:border-sky-400 hover:bg-sky-50 transition-all duration-200 flex flex-col items-center justify-center gap-1 bg-cream-50"
             title="Adicionar imagem da campanha"
           >
-            <ImageIcon className="w-6 h-6 md:w-8 md:h-8 text-gray-400" />
-            <span className="text-xs text-gray-500 hidden md:block">Adicionar</span>
+            <ImageIcon className="w-6 h-6 md:w-8 md:h-8 text-sky-300" />
+            <span className="text-xs text-sky-400 hidden md:block">
+              {imageUrl ? "Reenviar" : "Adicionar"}
+            </span>
           </button>
-        ) : null}
+        ) : (
+          <div className="flex-shrink-0 w-24 h-24 md:w-48 md:h-48 rounded-2xl bg-sky-50 border border-sky-100 flex flex-col items-center justify-center gap-1">
+            <ImageIcon className="w-6 h-6 md:w-8 md:h-8 text-sky-300" />
+            <span className="text-[10px] md:text-xs text-sky-400 text-center px-2">
+              Imagem indisponível
+            </span>
+          </div>
+        )}
 
         {/* Conteúdo: Apenas Nome no mobile, Nome + Descrição + Deadline no desktop */}
-        <div className="flex-1 min-w-0 h-24 md:h-auto flex flex-col justify-center">
+        <div className="flex-1 min-w-0 h-24 md:h-48 flex flex-col justify-center">
           {/* Nome */}
           {isEditingName ? (
             <div className="mb-1 md:mb-2">
@@ -152,15 +174,15 @@ export function CampaignHeader({
                   }
                 }}
                 autoFocus
-                className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 px-2 py-1 border-2 border-primary-500"
+                className="text-xl md:text-2xl lg:text-3xl font-bold text-sky-900 px-2 py-1 border-2 border-sky-400"
               />
-              <p className="text-xs text-gray-500 mt-1 hidden md:block">
+              <p className="text-xs text-sky-500 mt-1 hidden md:block">
                 Pressione Enter para salvar, Esc para cancelar
               </p>
             </div>
           ) : (
             <h1
-              className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 mb-0 md:mb-2 cursor-pointer hover:text-primary-600 transition-colors line-clamp-2 leading-tight"
+              className="font-display text-xl md:text-2xl lg:text-3xl font-bold text-sky-900 mb-0 md:mb-2 cursor-pointer hover:text-sky-600 transition-colors line-clamp-2 leading-tight"
               onClick={handleNameClick}
               title="Clique para editar"
             >
@@ -173,7 +195,7 @@ export function CampaignHeader({
             <>
               {campaign.description ? (
                 <p
-                  className="hidden md:block text-sm text-gray-600 mb-1 md:mb-2 cursor-pointer hover:text-primary-600 transition-colors"
+                  className="hidden md:block text-sm text-sky-700 mb-1 md:mb-2 cursor-pointer hover:text-sky-600 transition-colors"
                   onClick={handleDescriptionClick}
                   title="Clique para editar"
                 >
@@ -181,7 +203,7 @@ export function CampaignHeader({
                 </p>
               ) : (
                 <p
-                  className="hidden md:block text-sm text-gray-400 mb-1 md:mb-2 cursor-pointer hover:text-primary-400 transition-colors italic"
+                  className="hidden md:block text-sm text-sky-500/70 mb-1 md:mb-2 cursor-pointer hover:text-sky-400 transition-colors italic"
                   onClick={handleDescriptionClick}
                   title="Clique para adicionar descrição"
                 >
@@ -194,15 +216,14 @@ export function CampaignHeader({
           {/* Deadline - Hidden on mobile in this section, shown below */}
           {campaign.deadline && (
             <div
-              className={`hidden md:inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium mt-2 ${
-                new Date(campaign.deadline) < new Date()
-                  ? "bg-red-100 text-red-800 border border-red-300"
-                  : new Date(campaign.deadline).getTime() -
-                      new Date().getTime() <
-                    24 * 60 * 60 * 1000
+              className={`hidden md:inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium mt-2 ${new Date(campaign.deadline) < new Date()
+                ? "bg-red-100 text-red-800 border border-red-300"
+                : new Date(campaign.deadline).getTime() -
+                  new Date().getTime() <
+                  24 * 60 * 60 * 1000
                   ? "bg-yellow-100 text-yellow-800 border border-yellow-300"
-                  : "bg-blue-100 text-blue-800 border border-blue-300"
-              }`}
+                  : "bg-sky-100 text-sky-800 border border-sky-200"
+                }`}
             >
               <Clock className="w-4 h-4" />
               <span className="text-sm">
@@ -262,9 +283,9 @@ export function CampaignHeader({
             }}
             autoFocus
             rows={3}
-            className="text-gray-600 px-2 py-1 border-2 border-primary-500"
+            className="text-sky-700/80 px-2 py-1 border-2 border-sky-400"
           />
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-sky-500 mt-1">
             Pressione Enter para salvar, Shift+Enter para nova linha, Esc
             para cancelar
           </p>
@@ -273,7 +294,7 @@ export function CampaignHeader({
         <div className="md:hidden mb-4">
           {campaign.description ? (
             <p
-              className="text-sm text-gray-600 cursor-pointer hover:text-primary-600 transition-colors"
+              className="text-sm text-sky-700 cursor-pointer hover:text-sky-600 transition-colors"
               onClick={handleDescriptionClick}
               title="Clique para editar"
             >
@@ -281,7 +302,7 @@ export function CampaignHeader({
             </p>
           ) : (
             <p
-              className="text-sm text-gray-400 cursor-pointer hover:text-primary-400 transition-colors italic"
+              className="text-sm text-sky-500/70 cursor-pointer hover:text-sky-400 transition-colors italic"
               onClick={handleDescriptionClick}
               title="Clique para adicionar descrição"
             >
@@ -297,15 +318,14 @@ export function CampaignHeader({
         {/* Deadline on mobile */}
         {campaign.deadline && (
           <div
-            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium ${
-              new Date(campaign.deadline) < new Date()
-                ? "bg-red-100 text-red-800 border border-red-300"
-                : new Date(campaign.deadline).getTime() -
-                    new Date().getTime() <
-                  24 * 60 * 60 * 1000
+            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium ${new Date(campaign.deadline) < new Date()
+              ? "bg-red-100 text-red-800 border border-red-300"
+              : new Date(campaign.deadline).getTime() -
+                new Date().getTime() <
+                24 * 60 * 60 * 1000
                 ? "bg-yellow-100 text-yellow-800 border border-yellow-300"
-                : "bg-blue-100 text-blue-800 border border-blue-300"
-            }`}
+                : "bg-sky-100 text-sky-800 border border-sky-200"
+              }`}
           >
             <Clock className="w-4 h-4" />
             <span className="text-sm">
@@ -350,7 +370,7 @@ export function CampaignHeader({
 
       {/* Endereço de retirada resumido */}
       {campaign.pickupAddress && (
-        <div className="text-sm text-gray-500 flex items-center gap-1 mb-4">
+        <div className="text-sm text-sky-500 flex items-center gap-1 mb-4">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="w-4 h-4 flex-shrink-0"
@@ -373,11 +393,21 @@ export function CampaignHeader({
         </div>
       )}
 
+      {imageUrl && (
+        <ImageLightbox
+          src={imageUrl}
+          alt={campaign.name}
+          isOpen={isLightboxOpen}
+          onClose={() => setIsLightboxOpen(false)}
+        />
+      )}
+
       {/* Action Buttons */}
       <div className="mb-4">
         <CampaignActionButtons
           campaign={campaign}
           canEditCampaign={canEditCampaign}
+          canGenerateOrdersSummary={canGenerateOrdersSummary}
           ordersCount={ordersCount}
           onEditPix={onEditPix}
           onCloseCampaign={onCloseCampaign}
@@ -393,33 +423,29 @@ export function CampaignHeader({
       {/* Alert Banner */}
       {!isActive && (
         <div
-          className={`rounded-lg p-4 mb-4 flex items-start gap-3 ${
-            isClosed
-              ? "bg-yellow-50 border border-yellow-200"
-              : "bg-blue-50 border border-blue-200"
-          }`}
+          className={`rounded-2xl p-4 mb-4 flex items-start gap-3 ${isClosed
+            ? "bg-amber-50 border border-amber-200"
+            : "bg-sky-50 border border-sky-200"
+            }`}
         >
           <AlertCircle
-            className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
-              isClosed ? "text-yellow-600" : "text-blue-600"
-            }`}
+            className={`w-5 h-5 flex-shrink-0 mt-0.5 ${isClosed ? "text-amber-600" : "text-sky-600"
+              }`}
           />
           <div>
             <h3
-              className={`font-semibold mb-1 ${
-                isClosed ? "text-yellow-900" : "text-blue-900"
-              }`}
+              className={`font-semibold mb-1 ${isClosed ? "text-amber-900" : "text-sky-900"
+                }`}
             >
               {isClosed ? "Campanha Fechada" : "Campanha Enviada"}
             </h3>
             <p
-              className={`text-sm ${
-                isClosed ? "text-yellow-800" : "text-blue-800"
-              }`}
+              className={`text-sm ${isClosed ? "text-amber-800/80" : "text-sky-800/80"
+                }`}
             >
               {isClosed
-                ? "Esta campanha está fechada. Não é possível adicionar ou alterar produtos e pedidos."
-                : "Esta campanha foi marcada como enviada. Não é possível adicionar ou alterar produtos e pedidos."}
+                ? "Esta campanha foi fechada. A fatura será enviada ao fornecedor. Não é possível adicionar ou alterar produtos e pedidos."
+                : "Esta campanha foi marcada como enviada. A fatura foi enviada ao fornecedor. Não é possível adicionar ou alterar produtos e pedidos."}
             </p>
           </div>
         </div>

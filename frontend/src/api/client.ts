@@ -112,26 +112,16 @@ apiClient.interceptors.response.use(
     originalRequest._retry = true;
     isRefreshing = true;
 
-    const refreshToken = authStorage.getRefreshToken();
-
-    if (!refreshToken) {
-      // No refresh token, clear auth and reject
-      authStorage.clearAuth();
-      processQueue(new Error("No refresh token"));
-      isRefreshing = false;
-      return Promise.reject(error);
-    }
-
     try {
-      // Try to refresh the access token using authClient to avoid circular dependency
-      // RefreshToken is now sent via HttpOnly cookie automatically (withCredentials: true)
-      // But we also send in body for backward compatibility with older backend versions
-      const response = await authClient.post<RefreshResponse>("/auth/refresh", {
-        refreshToken,
-      });
+      // Try to refresh the access token using authClient to avoid circular dependency.
+      // Refresh token is sent via HttpOnly cookie automatically (withCredentials: true).
+      const response = await authClient.post<RefreshResponse>("/auth/refresh");
 
-      const { accessToken } = response.data;
+      const { accessToken, user } = response.data;
       authStorage.setAccessToken(accessToken);
+      if (user) {
+        authStorage.setUser(user);
+      }
 
       // Update Socket.IO token when access token is refreshed
       try {

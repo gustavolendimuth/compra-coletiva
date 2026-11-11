@@ -35,29 +35,19 @@ export const authService = {
 
   /**
    * Refresh access token using refresh token
-   * RefreshToken is automatically sent via HttpOnly cookie (withCredentials: true)
-   * Body param kept for backward compatibility
-   * @param refreshToken - Current refresh token (optional, cookie is preferred)
+   * Refresh token is sent automatically via HttpOnly cookie (withCredentials: true)
    * @returns New access token
    */
-  refresh: (refreshToken?: string) =>
+  refresh: () =>
     authClient
-      .post<RefreshResponse>(
-        "/auth/refresh",
-        refreshToken ? { refreshToken } : {}
-      )
+      .post<RefreshResponse>("/auth/refresh")
       .then((res) => res.data),
 
   /**
    * Logout and invalidate refresh token
-   * RefreshToken is automatically read from HttpOnly cookie on the server
-   * Body param kept for backward compatibility
-   * @param refreshToken - Refresh token to invalidate (optional, cookie is preferred)
+   * Refresh token is automatically read from HttpOnly cookie on the server
    */
-  logout: (refreshToken?: string) =>
-    authClient
-      .post<void>("/auth/logout", refreshToken ? { refreshToken } : {})
-      .then((res) => res.data),
+  logout: () => apiClient.post<void>("/auth/logout").then((res) => res.data),
 
   /**
    * Get current user information

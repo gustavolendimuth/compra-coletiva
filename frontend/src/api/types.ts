@@ -12,8 +12,17 @@ export interface StoredUser {
   email: string;
   name: string;
   phone?: string;
+  hasPassword?: boolean;
   phoneCompleted?: boolean;
   addressCompleted?: boolean;
+  legalAcceptanceRequired?: boolean;
+  termsAcceptedAt?: string | null;
+  termsAcceptedVersion?: string | null;
+  privacyAcceptedAt?: string | null;
+  privacyAcceptedVersion?: string | null;
+  salesDisclaimerAcceptedAt?: string | null;
+  salesDisclaimerAcceptedVersion?: string | null;
+  hideNameInCampaigns?: boolean;
   role: "ADMIN" | "CAMPAIGN_CREATOR" | "CUSTOMER";
   googleId?: string;
   defaultZipCode?: string | null;
@@ -31,6 +40,9 @@ export interface RegisterRequest {
   email: string;
   password: string;
   phone: string;
+  acceptTerms: boolean;
+  acceptPrivacy: boolean;
+  hideNameInCampaigns?: boolean;
   role?: "CUSTOMER" | "CAMPAIGN_CREATOR";
 }
 
@@ -42,11 +54,11 @@ export interface LoginRequest {
 export interface AuthResponse {
   user: StoredUser;
   accessToken: string;
-  refreshToken: string;
 }
 
 export interface RefreshResponse {
   accessToken: string;
+  user: StoredUser;
 }
 
 export interface CompletePhoneRequest {
@@ -58,6 +70,11 @@ export interface CompletePhoneRequest {
 // ============================================================================
 
 export type PixKeyType = "CPF" | "CNPJ" | "EMAIL" | "PHONE" | "RANDOM";
+export type PaymentReleaseTrigger =
+  | "ON_ACTIVE"
+  | "ON_CLOSED"
+  | "ON_SENT"
+  | "ON_SHIPPING_UPDATED";
 
 export interface Campaign {
   id: string;
@@ -75,6 +92,9 @@ export interface Campaign {
   pixType?: PixKeyType;
   pixName?: string;
   pixVisibleAtStatus: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED";
+  paymentReleaseTrigger: PaymentReleaseTrigger;
+  paymentReleased: boolean;
+  paymentReleasedAt?: string | null;
   pickupZipCode?: string;
   pickupAddress?: string;
   pickupAddressNumber?: string;
@@ -96,6 +116,7 @@ export interface ProductPreview {
   id: string;
   name: string;
   price: number;
+  imageUrl?: string;
 }
 
 export interface CampaignWithProducts extends Campaign {
@@ -134,6 +155,7 @@ export interface CreateCampaignDto {
   pixType?: PixKeyType;
   pixName?: string;
   pixVisibleAtStatus?: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED";
+  paymentReleaseTrigger?: PaymentReleaseTrigger;
   pickupZipCode?: string;
   pickupAddress?: string;
   pickupAddressNumber?: string;
@@ -146,13 +168,14 @@ export interface CreateCampaignDto {
 export interface UpdateCampaignDto {
   name?: string;
   description?: string;
-  deadline?: string;
+  deadline?: string | null;
   shippingCost?: number;
   status?: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED";
   pixKey?: string | null;
   pixType?: PixKeyType | null;
   pixName?: string | null;
   pixVisibleAtStatus?: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED";
+  paymentReleaseTrigger?: PaymentReleaseTrigger;
   pickupZipCode?: string;
   pickupAddress?: string;
   pickupAddressNumber?: string;
@@ -167,6 +190,16 @@ export interface CloneCampaignDto {
   description?: string;
 }
 
+export interface CampaignOrdersSummaryResponse {
+  campaignId: string;
+  campaignName: string;
+  campaignSlug: string | null;
+  generatedAt: string;
+  ordersCount: number;
+  totalAmount: number;
+  summaryText: string;
+}
+
 // ============================================================================
 // Product Types
 // ============================================================================
@@ -177,6 +210,9 @@ export interface Product {
   name: string;
   price: number;
   weight: number;
+  imageUrl?: string;
+  imageKey?: string;
+  imageStorageType?: "S3" | "LOCAL";
   createdAt: string;
   updatedAt: string;
 }
@@ -230,9 +266,50 @@ export interface Order {
   paymentProofStorageType?: 'S3' | 'LOCAL';
 }
 
+export interface PublicOrderSummary {
+  alias: string;
+  isPaid: boolean;
+  subtotal: number;
+  shippingFee: number;
+  total: number;
+  itemsCount: number;
+  quantityTotal: number;
+  createdAt: string;
+  // Present only for authenticated users
+  id?: string;
+  userId?: string;
+  items?: Array<{
+    quantity: number;
+    unitPrice: number;
+    subtotal: number;
+    product: { name: string };
+  }>;
+}
+
+export interface PublicOrdersResponse {
+  campaignId: string;
+  totals: {
+    orders: number;
+    totalWithShipping: number;
+    totalWithoutShipping: number;
+    totalShipping: number;
+    totalItems: number;
+    totalQuantity: number;
+    paidTotal: number;
+    unpaidTotal: number;
+  };
+  orders: PublicOrderSummary[];
+}
+
 export interface CreateOrderDto {
   campaignId: string;
   items: Array<{ productId: string; quantity: number }>;
+  userId?: string;
+  customer?: {
+    name: string;
+    email: string;
+    phone?: string;
+  };
 }
 
 export interface OrderFormItem {
@@ -361,11 +438,12 @@ export interface Notification {
     | "CAMPAIGN_READY_TO_SEND"
     | "CAMPAIGN_STATUS_CHANGED"
     | "CAMPAIGN_ARCHIVED"
-    | "NEW_MESSAGE";
+    | "NEW_MESSAGE"
+    | "PAYMENT_RELEASED";
   title: string;
   message: string;
   isRead: boolean;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
 }
@@ -445,7 +523,7 @@ export interface Analytics {
     quantity: number;
   }>;
   byCustomer: Array<{
-    customerName: string;
+    customerAlias: string;
     total: number;
     isPaid: boolean;
   }>;
@@ -533,6 +611,7 @@ export interface UpdateProfileDto {
   phone?: string;
   currentPassword?: string;
   newPassword?: string;
+  hideNameInCampaigns?: boolean;
 }
 
 export interface UpdateProfileResponse {
@@ -575,7 +654,40 @@ export interface ExportDataResponse {
     notifications: Notification[];
     feedback: Feedback[];
     emailPreference?: EmailPreference;
+    legalAcceptanceLogs?: Array<{
+      id: string;
+      documentType: "TERMS" | "PRIVACY" | "SALES_DISCLAIMER";
+      documentVersion: string;
+      acceptedAt: string;
+      ipAddress?: string | null;
+      userAgent?: string | null;
+      context?: string | null;
+    }>;
   };
+}
+
+export interface LegalAcceptanceRequest {
+  acceptTerms: boolean;
+  acceptPrivacy: boolean;
+}
+
+export interface LegalAcceptanceResponse {
+  message: string;
+  user: Pick<
+    StoredUser,
+    | "id"
+    | "legalAcceptanceRequired"
+    | "termsAcceptedAt"
+    | "termsAcceptedVersion"
+    | "privacyAcceptedAt"
+    | "privacyAcceptedVersion"
+  >;
+}
+
+export interface SalesDisclaimerAcceptanceResponse {
+  message: string;
+  version: string;
+  acceptedAt: string;
 }
 
 // ============================================================================
@@ -729,6 +841,7 @@ export interface ListCampaignsParams {
 export interface AdminMessage {
   id: string;
   message: string;
+  answer?: string;
   spamScore: number;
   createdAt: string;
   author: {
@@ -792,7 +905,7 @@ export interface AuditLog {
   action: AuditAction;
   targetType: AuditTargetType;
   targetId: string | null;
-  details: any;
+  details: unknown;
   ipAddress: string | null;
   userAgent: string | null;
   createdAt: string;
@@ -913,4 +1026,9 @@ export interface DistanceResult {
     longitude: number;
   };
   distanceKm: number;
+  route?: {
+    coordinates: Array<[number, number]>;
+    durationMin?: number;
+  };
 }
+

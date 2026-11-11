@@ -23,7 +23,7 @@ vi.mock('@/api', async () => {
 
 // Mock hooks
 vi.mock('@/hooks/useDebounce', () => ({
-  useDebounce: (value: any) => value,
+  useDebounce: (value: unknown) => value,
 }));
 
 vi.mock('@/hooks/useIntersectionObserver', () => ({
@@ -408,3 +408,4 @@ describe('CampaignList', () => {
     });
   });
 });
+

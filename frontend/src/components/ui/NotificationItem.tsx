@@ -3,7 +3,7 @@
  * Individual notification item with click and delete actions
  */
 
-import { X, Bell, Archive, CheckCircle, MessageCircle } from 'lucide-react';
+import { X, Bell, Archive, CheckCircle, MessageCircle, CreditCard } from 'lucide-react';
 import type { Notification } from '../../api/types';
 
 interface NotificationItemProps {
@@ -44,6 +44,8 @@ export function NotificationItem({
         return <Archive className="w-5 h-5 text-gray-600 flex-shrink-0" />;
       case 'NEW_MESSAGE':
         return <MessageCircle className="w-5 h-5 text-blue-600 flex-shrink-0" />;
+      case 'PAYMENT_RELEASED':
+        return <CreditCard className="w-5 h-5 text-green-600 flex-shrink-0" />;
       default:
         return <Bell className="w-5 h-5 text-blue-600 flex-shrink-0" />;
     }

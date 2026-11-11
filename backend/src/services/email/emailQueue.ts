@@ -8,7 +8,7 @@ import { NotificationType } from '@prisma/client';
 import { NotificationMetadata } from '../../utils/linkBuilder';
 
 export interface EmailJobData {
-  type: 'notification' | 'welcome' | 'password-reset' | 'email-verification';
+  type: 'notification' | 'welcome' | 'password-reset' | 'email-verification' | 'order-created';
 
   // Para notificações
   notificationId?: string;
@@ -19,6 +19,9 @@ export interface EmailJobData {
   title?: string;
   message?: string;
   metadata?: NotificationMetadata;
+  campaignName?: string;
+  campaignSlug?: string;
+  orderId?: string;
 
   // Para password reset e email verification
   resetToken?: string;
@@ -207,6 +210,43 @@ export async function queueEmailVerificationEmail(
     console.log(`[EmailQueue] Queued email verification for user ${userId}`);
   } catch (error) {
     console.error('[EmailQueue] Failed to queue email verification:', error);
+    throw error;
+  }
+}
+
+/**
+ * Adiciona job de email de pedido criado à fila
+ */
+export async function queueOrderCreatedEmail(
+  userId: string,
+  userName: string,
+  userEmail: string,
+  campaignName: string,
+  campaignSlug: string,
+  orderId: string
+): Promise<void> {
+  const queue = getEmailQueue();
+
+  try {
+    await queue.add(
+      'send-order-created-email',
+      {
+        type: 'order-created',
+        userId,
+        userName,
+        userEmail,
+        campaignName,
+        campaignSlug,
+        orderId,
+      },
+      {
+        priority: 2,
+      }
+    );
+
+    console.log(`[EmailQueue] Queued order created email for user ${userId}`);
+  } catch (error) {
+    console.error('[EmailQueue] Failed to queue order created email:', error);
     throw error;
   }
 }

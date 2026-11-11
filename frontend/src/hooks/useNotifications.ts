@@ -46,6 +46,7 @@ export function useNotifications() {
 
       // Show toast notification
       toast.success(notification.title, {
+        id: `notification-${notification.id}`,
         duration: 4000,
         icon: '🔔',
       });
@@ -111,6 +112,7 @@ export function useNotifications() {
       case 'CAMPAIGN_READY_TO_SEND':
       case 'CAMPAIGN_STATUS_CHANGED':
       case 'CAMPAIGN_ARCHIVED':
+      case 'PAYMENT_RELEASED':
         if (campaignSlug) {
           router.push(`/campanhas/${campaignSlug}`);
         }

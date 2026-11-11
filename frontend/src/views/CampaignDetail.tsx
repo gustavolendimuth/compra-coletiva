@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
 import { useCampaignDetail } from "./campaign-detail/useCampaignDetail";
 import { LoadingSkeleton } from "./campaign-detail/LoadingSkeleton";
 import { CampaignHeader } from "./campaign-detail";
@@ -12,19 +11,19 @@ import { QuestionsTab } from "./campaign-detail/tabs/QuestionsTab";
 import { CampaignModals } from "./campaign-detail/CampaignModals";
 
 export default function CampaignDetail() {
-  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<
     "overview" | "products" | "orders" | "shipping" | "questions"
   >("overview");
   const hook = useCampaignDetail();
+  const { shouldOpenQuestionsTab, setShouldOpenQuestionsTab } = hook;
 
   // Handle navigation from notifications
   useEffect(() => {
-    if (hook.shouldOpenQuestionsTab) {
+    if (shouldOpenQuestionsTab) {
       setActiveTab("questions");
-      hook.setShouldOpenQuestionsTab(false);
+      setShouldOpenQuestionsTab(false);
     }
-  }, [hook.shouldOpenQuestionsTab, hook.setShouldOpenQuestionsTab]);
+  }, [shouldOpenQuestionsTab, setShouldOpenQuestionsTab]);
 
   if (!hook.campaign) {
     return <LoadingSkeleton />;
@@ -36,11 +35,12 @@ export default function CampaignDetail() {
         <CampaignHeader
           campaign={hook.campaign}
           canEditCampaign={hook.canEditCampaign}
+          canGenerateOrdersSummary={hook.canGenerateOrdersSummary}
           ordersCount={hook.orders?.length || 0}
           onEditDeadline={hook.handleOpenEditDeadline}
           onEditPix={hook.handleOpenPixModal}
           onCloseCampaign={() => hook.setIsCloseConfirmOpen(true)}
-          onReopenCampaign={() => hook.setIsReopenConfirmOpen(true)}
+          onReopenCampaign={hook.handleOpenReopenModal}
           onMarkAsSent={() => hook.setIsSentConfirmOpen(true)}
           onUpdateCampaign={hook.handleUpdateCampaign}
           onCloneCampaign={hook.handleOpenCloneModal}
@@ -67,11 +67,9 @@ export default function CampaignDetail() {
           orders={hook.orders || []}
           isActive={hook.isActive}
           canEditCampaign={hook.canEditCampaign}
-          onViewOrder={(order) => {
-            hook.setViewingOrder(order);
-            hook.setIsViewOrderModalOpen(true);
-          }}
+          onViewOrder={hook.orderModal.handleViewOrder}
           onTogglePayment={hook.orderModal.handleTogglePayment}
+          onEditOrder={hook.handleOpenEditOrder}
           onAddToOrder={hook.orderModal.handleAddToOrder}
           onEditAddress={hook.handleOpenAddressModal}
         />
@@ -97,18 +95,16 @@ export default function CampaignDetail() {
           orders={hook.orders || []}
           filteredOrders={hook.filteredOrders || []}
           isActive={hook.isActive}
-          canEditCampaign={hook.canEditCampaign}
-          currentUserId={user?.id}
+          currentUserId={hook.currentUserId}
+          isAdmin={hook.isAdmin}
+          isCreator={hook.isCreator}
           orderSearch={hook.orderSearch}
           sortField={hook.orderSortField}
           sortDirection={hook.orderSortDirection}
           onAddOrder={hook.orderModal.handleAddOrder}
-          onViewOrder={(order) => {
-            hook.setViewingOrder(order);
-            hook.setIsViewOrderModalOpen(true);
-          }}
+          onViewOrder={hook.orderModal.handleViewOrder}
           onTogglePayment={hook.orderModal.handleTogglePayment}
-          onEditOrder={hook.openEditOrderModal}
+          onEditOrder={hook.handleOpenEditOrder}
           onDeleteOrder={hook.handleDeleteOrder}
           onSearchChange={hook.setOrderSearch}
           onSort={hook.handleSort}
@@ -118,7 +114,6 @@ export default function CampaignDetail() {
       {activeTab === "shipping" && hook.campaign && (
         <ShippingTab
           campaign={hook.campaign}
-          isActive={hook.isActive}
           canEditCampaign={hook.canEditCampaign}
           onEditShipping={() => {
             hook.setShippingCost(String(hook.campaign!.shippingCost));

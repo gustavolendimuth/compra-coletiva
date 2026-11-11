@@ -1,4 +1,4 @@
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import { geocodingService } from "../services/geocodingService";
 
@@ -6,7 +6,7 @@ const router = Router();
 
 const asyncHandler =
   (fn: (req: Request, res: Response) => Promise<void>) =>
-  (req: Request, res: Response, next: any) =>
+  (req: Request, res: Response, next: NextFunction) =>
     fn(req, res).catch(next);
 
 const cepParamSchema = z.object({

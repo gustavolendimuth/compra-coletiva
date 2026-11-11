@@ -10,19 +10,33 @@ import {
   orderApi,
   analyticsApi,
   Product,
+  CreateProductDto,
+  UpdateProductDto,
+  type PaymentReleaseTrigger,
 } from "@/api";
 import { Order } from "@/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { removeMask, applyPixMask } from "@/lib/pixMasks";
+import { getApiErrorMessage } from "@/lib/apiError";
 import { useOrderModal } from "@/hooks/useOrderModal";
 import type { AddressData } from "@/components/ui/AddressForm";
+import {
+  getPaymentReleaseTrigger,
+  getPixVisibleAtStatusForTrigger,
+} from "@/lib/paymentRelease";
 
 interface ProductForm {
-  campaignId: string;
   name: string;
   price: string;
   weight: string;
   imageUrl?: string;
+}
+
+interface UpdateProductPayload {
+  productId: string;
+  data: UpdateProductDto;
+  imageFile?: File | null;
+  removeImage?: boolean;
 }
 
 type SortField =
@@ -33,6 +47,42 @@ type SortField =
   | "isPaid";
 type SortDirection = "asc" | "desc";
 type ProductSortField = "name" | "price" | "weight";
+
+function safeSessionStorageSet(key: string, value: string): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(key, value);
+  } catch {
+    // Ignore restricted storage errors in private browsing contexts.
+  }
+}
+
+function safeSessionStorageGet(key: string): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    return window.sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeSessionStorageRemove(key: string): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.sessionStorage.removeItem(key);
+  } catch {
+    // Ignore restricted storage errors in private browsing contexts.
+  }
+}
 
 export function useCampaignDetail() {
   const params = useParams();
@@ -71,28 +121,33 @@ export function useCampaignDetail() {
 
   // Form states
   const [productForm, setProductForm] = useState<ProductForm>({
-    campaignId: "",
     name: "",
     price: "",
     weight: "",
     imageUrl: "",
   });
 
-  const [editProductForm, setEditProductForm] = useState({
+  const [editProductForm, setEditProductForm] = useState<ProductForm>({
     name: "",
     price: "",
     weight: "",
     imageUrl: "",
   });
+  const [newProductImageFile, setNewProductImageFile] = useState<File | null>(null);
+  const [editProductImageFile, setEditProductImageFile] = useState<File | null>(null);
+  const [shouldRemoveEditProductImage, setShouldRemoveEditProductImage] = useState(false);
 
   const [shippingCost, setShippingCost] = useState("");
   const [deadlineForm, setDeadlineForm] = useState("");
+  const [reopenDeadlineForm, setReopenDeadlineForm] = useState("");
+  const [shouldRemoveDeadlineOnReopen, setShouldRemoveDeadlineOnReopen] = useState(false);
   const [cloneName, setCloneName] = useState("");
   const [cloneDescription, setCloneDescription] = useState("");
   const [pixKey, setPixKey] = useState("");
   const [pixType, setPixType] = useState<"CPF" | "CNPJ" | "EMAIL" | "PHONE" | "RANDOM" | "">("");
   const [pixName, setPixName] = useState("");
-  const [pixVisibleAtStatus, setPixVisibleAtStatus] = useState<"ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED">("ACTIVE");
+  const [paymentReleaseTrigger, setPaymentReleaseTrigger] =
+    useState<PaymentReleaseTrigger>("ON_ACTIVE");
 
   // Campaign inline edit states
   const [isEditingName, setIsEditingName] = useState(false);
@@ -118,7 +173,25 @@ export function useCampaignDetail() {
     enabled: !!slug,
   });
 
+  const formatDateTimeForInput = (isoDateTime: string) => {
+    const dt = new Date(isoDateTime);
+    const year = dt.getFullYear();
+    const month = (dt.getMonth() + 1).toString().padStart(2, "0");
+    const day = dt.getDate().toString().padStart(2, "0");
+    const hours = dt.getHours().toString().padStart(2, "0");
+    const minutes = dt.getMinutes().toString().padStart(2, "0");
+    const seconds = dt.getSeconds().toString().padStart(2, "0");
+
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+  };
+
   const campaignId = campaign?.id;
+  const isAdmin = user?.role === "ADMIN";
+  const isCreator = campaign?.creatorId === user?.id;
+  const canViewAllOrders =
+    !!campaign &&
+    !!user &&
+    (isAdmin || isCreator);
 
   const { data: products, isLoading: isProductsLoading } = useQuery({
     queryKey: ["products", campaignId],
@@ -127,8 +200,47 @@ export function useCampaignDetail() {
   });
 
   const { data: orders, isLoading: isOrdersLoading } = useQuery({
-    queryKey: ["orders", campaignId],
-    queryFn: () => orderApi.getByCampaign(campaignId!),
+    queryKey: ["orders", campaignId, user?.id, canViewAllOrders ? "all" : "public"],
+    queryFn: async () => {
+      if (!campaignId) {
+        return [];
+      }
+
+      if (canViewAllOrders) {
+        return orderApi.getByCampaign(campaignId);
+      }
+
+      const publicData = await orderApi.getPublicByCampaign(campaignId);
+      return publicData.orders.map((po) => ({
+        id: po.id ?? "",
+        campaignId,
+        userId: po.userId ?? "",
+        customer: { id: "", name: po.alias, email: "" },
+        isPaid: po.isPaid,
+        isSeparated: false,
+        subtotal: po.subtotal,
+        shippingFee: po.shippingFee,
+        total: po.total,
+        createdAt: po.createdAt,
+        updatedAt: po.createdAt,
+        items: (po.items ?? []).map((item) => ({
+          id: "",
+          orderId: po.id ?? "",
+          productId: "",
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          subtotal: item.subtotal,
+          product: {
+            id: "",
+            name: item.product.name,
+            price: item.unitPrice,
+            campaignId: campaignId,
+            createdAt: "",
+            updatedAt: "",
+          },
+        })),
+      })) as Order[];
+    },
     enabled: !!campaignId,
   });
 
@@ -142,18 +254,12 @@ export function useCampaignDetail() {
   const pathname = usePathname();
   const router = useRouter();
 
-  // Clear PIX key when type changes to avoid inconsistencies
-  useEffect(() => {
-    if (pixType) {
-      setPixKey("");
-    }
-  }, [pixType]);
-
   // Computed states
   const isActive = campaign?.status === "ACTIVE";
   const isClosed = campaign?.status === "CLOSED";
   const isSent = campaign?.status === "SENT";
-  const canEditCampaign = campaign?.creatorId === user?.id;
+  const canEditCampaign = campaign?.creatorId === user?.id || isAdmin;
+  const canGenerateOrdersSummary = canEditCampaign || user?.role === "ADMIN";
 
   // Alphabetical products for modal dropdown
   const alphabeticalProducts = useMemo(() => {
@@ -165,7 +271,16 @@ export function useCampaignDetail() {
   const orderModal = useOrderModal({
     orders,
     campaignId,
-    user: user ? { id: user.id, name: user.name } : null,
+    user: user
+      ? {
+          id: user.id,
+          name: user.name,
+          role: user.role,
+          salesDisclaimerAcceptedVersion: user.salesDisclaimerAcceptedVersion,
+        }
+      : null,
+    canCreateOrdersForOthers: canViewAllOrders,
+    canMarkPaidWithoutProof: canEditCampaign,
     isActive,
     requireAuth,
     products: alphabeticalProducts,
@@ -186,15 +301,31 @@ export function useCampaignDetail() {
   const [shouldOpenQuestionsTab, setShouldOpenQuestionsTab] = useState(false);
 
   useEffect(() => {
-    if (searchParams?.get('openQuestions') === 'true') {
+    const shouldOpenQuestions =
+      searchParams?.get("openQuestions") === "true" ||
+      searchParams?.get("tab") === "questions";
+
+    if (shouldOpenQuestions) {
       setShouldOpenQuestionsTab(true);
+    }
+
+    const shouldOpenOrderChat =
+      searchParams?.get("openChat") === "true" &&
+      !!searchParams?.get("orderId");
+
+    if (shouldOpenOrderChat) {
+      safeSessionStorageSet(
+        "campaignNavigationState",
+        JSON.stringify({
+          openOrderChat: true,
+          orderId: searchParams?.get("orderId"),
+        })
+      );
     }
   }, [searchParams]);
 
   useEffect(() => {
-    const storedState = typeof window !== 'undefined'
-      ? sessionStorage.getItem('campaignNavigationState')
-      : null;
+    const storedState = safeSessionStorageGet("campaignNavigationState");
 
     if (!storedState) return;
 
@@ -210,13 +341,13 @@ export function useCampaignDetail() {
       if (order) {
         setViewingOrder(order);
         setIsViewOrderModalOpen(true);
-        sessionStorage.removeItem('campaignNavigationState');
+        safeSessionStorageRemove("campaignNavigationState");
       }
     }
 
     if (state?.openQuestionsTab) {
       setShouldOpenQuestionsTab(true);
-      sessionStorage.removeItem('campaignNavigationState');
+      safeSessionStorageRemove("campaignNavigationState");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orders]);
@@ -259,30 +390,55 @@ export function useCampaignDetail() {
 
   // Product mutations
   const createProductMutation = useMutation({
-    mutationFn: productApi.create,
+    mutationFn: async ({
+      data,
+      imageFile,
+    }: {
+      data: CreateProductDto;
+      imageFile?: File | null;
+    }) => {
+      const createdProduct = await productApi.create(data);
+
+      if (imageFile) {
+        await productApi.uploadImage(createdProduct.id, imageFile);
+      }
+
+      return createdProduct;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products", campaignId] });
       toast.success("Produto adicionado!");
       setIsProductModalOpen(false);
       setProductForm({
-        campaignId: campaignId || "",
         name: "",
         price: "",
         weight: "",
         imageUrl: "",
       });
+      setNewProductImageFile(null);
     },
     onError: () => toast.error("Erro ao adicionar produto"),
   });
 
   const updateProductMutation = useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       productId,
       data,
-    }: {
-      productId: string;
-      data: Partial<Product>;
-    }) => productApi.update(productId, data),
+      imageFile,
+      removeImage,
+    }: UpdateProductPayload) => {
+      const updatedProduct = await productApi.update(productId, data);
+
+      if (removeImage && !imageFile) {
+        await productApi.deleteImage(productId);
+      }
+
+      if (imageFile) {
+        await productApi.uploadImage(productId, imageFile);
+      }
+
+      return updatedProduct;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products", campaignId] });
       queryClient.invalidateQueries({ queryKey: ["orders", campaignId] });
@@ -290,6 +446,8 @@ export function useCampaignDetail() {
       toast.success("Produto atualizado!");
       setIsEditProductModalOpen(false);
       setEditingProduct(null);
+      setEditProductImageFile(null);
+      setShouldRemoveEditProductImage(false);
     },
     onError: () => toast.error("Erro ao atualizar produto"),
   });
@@ -319,7 +477,7 @@ export function useCampaignDetail() {
 
   const updateDeadlineMutation = useMutation({
     mutationFn: (deadline: string | null) =>
-      campaignApi.update(slug!, { deadline: deadline || undefined }),
+      campaignApi.update(slug!, { deadline }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["campaign", slug] });
       toast.success("Data limite atualizada!");
@@ -333,7 +491,8 @@ export function useCampaignDetail() {
       pixKey?: string | null;
       pixType?: "CPF" | "CNPJ" | "EMAIL" | "PHONE" | "RANDOM" | null;
       pixName?: string | null;
-      pixVisibleAtStatus?: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED";
+      paymentReleaseTrigger?: PaymentReleaseTrigger;
+      pixVisibleAtStatus?: "ACTIVE" | "CLOSED" | "SENT";
     }) => campaignApi.update(slug!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["campaign", slug] });
@@ -371,8 +530,36 @@ export function useCampaignDetail() {
       setIsReopenConfirmOpen(false);
       setIsSentConfirmOpen(false);
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Erro ao atualizar status");
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, "Erro ao atualizar status"));
+    },
+  });
+
+  const reopenCampaignMutation = useMutation({
+    mutationFn: async ({
+      status,
+      deadline,
+    }: {
+      status: "ACTIVE" | "CLOSED";
+      deadline?: string | null;
+    }) => {
+      if (deadline !== undefined) {
+        await campaignApi.update(slug!, { deadline });
+      }
+
+      return campaignApi.updateStatus(slug!, status);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["campaign", slug] });
+      queryClient.invalidateQueries({ queryKey: ["orders", campaignId] });
+      queryClient.invalidateQueries({ queryKey: ["analytics", campaignId] });
+      toast.success("Campanha reaberta com sucesso!");
+      setIsReopenConfirmOpen(false);
+      setReopenDeadlineForm("");
+      setShouldRemoveDeadlineOnReopen(false);
+    },
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, "Erro ao reabrir campanha"));
     },
   });
 
@@ -412,23 +599,39 @@ export function useCampaignDetail() {
   // Product handlers
   const handleCreateProduct = (e: React.FormEvent) => {
     e.preventDefault();
-    createProductMutation.mutate({
-      ...productForm,
+    if (!campaignId) {
+      toast.error("Campanha ainda não carregada");
+      return;
+    }
+
+    const payload: CreateProductDto = {
+      campaignId,
+      name: productForm.name,
       price: parseFloat(productForm.price) || 0,
       weight: parseFloat(productForm.weight) || 0,
+    };
+
+    createProductMutation.mutate({
+      data: payload,
+      imageFile: newProductImageFile,
     });
   };
 
   const handleEditProduct = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProduct) return;
+
+    const payload: UpdateProductDto = {
+      name: editProductForm.name,
+      price: parseFloat(editProductForm.price) || 0,
+      weight: parseFloat(editProductForm.weight) || 0,
+    };
+
     updateProductMutation.mutate({
       productId: editingProduct.id,
-      data: {
-        ...editProductForm,
-        price: parseFloat(editProductForm.price) || 0,
-        weight: parseFloat(editProductForm.weight) || 0,
-      },
+      data: payload,
+      imageFile: editProductImageFile,
+      removeImage: shouldRemoveEditProductImage,
     });
   };
 
@@ -438,13 +641,45 @@ export function useCampaignDetail() {
       name: product.name,
       price: String(product.price),
       weight: String(product.weight),
-      imageUrl: "",
+      imageUrl: product.imageUrl || "",
     });
+    setEditProductImageFile(null);
+    setShouldRemoveEditProductImage(false);
     setIsEditProductModalOpen(true);
   };
 
   const handleDeleteProduct = (productId: string) => {
     deleteProductMutation.mutate(productId);
+  };
+
+  const handleNewProductImageSelect = (file: File) => {
+    setNewProductImageFile(file);
+  };
+
+  const handleNewProductImageRemove = () => {
+    setNewProductImageFile(null);
+  };
+
+  const handleEditProductImageSelect = (file: File) => {
+    setEditProductImageFile(file);
+    setShouldRemoveEditProductImage(false);
+  };
+
+  const handleEditProductImageRemove = () => {
+    setEditProductImageFile(null);
+    setShouldRemoveEditProductImage(Boolean(editingProduct?.imageUrl));
+  };
+
+  const closeAddProductModal = () => {
+    setIsProductModalOpen(false);
+    setNewProductImageFile(null);
+  };
+
+  const closeEditProductModal = () => {
+    setIsEditProductModalOpen(false);
+    setEditingProduct(null);
+    setEditProductImageFile(null);
+    setShouldRemoveEditProductImage(false);
   };
 
   // Campaign handlers
@@ -458,15 +693,28 @@ export function useCampaignDetail() {
     updateDeadlineMutation.mutate(deadlineForm || null);
   };
 
+  const handleRemoveDeadline = () => {
+    updateDeadlineMutation.mutate(null);
+  };
+
   const handleUpdatePix = (e: React.FormEvent) => {
     e.preventDefault();
     const cleanPixKey = pixKey ? removeMask(pixKey, pixType) : null;
+    const pixVisibleAtStatus = getPixVisibleAtStatusForTrigger(paymentReleaseTrigger);
     updatePixMutation.mutate({
       pixKey: cleanPixKey,
       pixType: pixType || null,
       pixName: pixName || null,
+      paymentReleaseTrigger,
       pixVisibleAtStatus,
     });
+  };
+
+  const handlePixTypeChange = (value: "CPF" | "CNPJ" | "EMAIL" | "PHONE" | "RANDOM" | "") => {
+    if (pixType && pixType !== value) {
+      setPixKey("");
+    }
+    setPixType(value);
   };
 
   const handleRemovePix = () => {
@@ -474,6 +722,7 @@ export function useCampaignDetail() {
       pixKey: null,
       pixType: null,
       pixName: null,
+      paymentReleaseTrigger: "ON_ACTIVE",
       pixVisibleAtStatus: "ACTIVE",
     });
   };
@@ -561,26 +810,85 @@ export function useCampaignDetail() {
     }
   };
 
-  const handleReopenCampaign = () => {
-    const hasOrders = orders && orders.length > 0;
-    const newStatus = hasOrders ? "CLOSED" : "ACTIVE";
-    handleUpdateStatus(newStatus);
+  const handleReopenDeadlineChange = (value: string) => {
+    setReopenDeadlineForm(value);
+    if (value) {
+      setShouldRemoveDeadlineOnReopen(false);
+    }
+  };
+
+  const handleToggleRemoveDeadlineOnReopen = (removeDeadline: boolean) => {
+    setShouldRemoveDeadlineOnReopen(removeDeadline);
+    if (removeDeadline) {
+      setReopenDeadlineForm("");
+    }
+  };
+
+  const handleReopenCampaign = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!campaign) return;
+
+    const hasCurrentDeadline = Boolean(campaign.deadline);
+    const parsedReopenDeadline = reopenDeadlineForm ? new Date(reopenDeadlineForm) : null;
+    const now = new Date();
+
+    if (parsedReopenDeadline && Number.isNaN(parsedReopenDeadline.getTime())) {
+      toast.error("Informe uma data limite válida.");
+      return;
+    }
+
+    if (hasCurrentDeadline) {
+      if (!shouldRemoveDeadlineOnReopen && !parsedReopenDeadline) {
+        toast.error("Defina uma nova data limite posterior ou remova a data limite para reabrir.");
+        return;
+      }
+
+      if (!shouldRemoveDeadlineOnReopen && parsedReopenDeadline) {
+        const currentDeadline = new Date(campaign.deadline!);
+
+        if (parsedReopenDeadline <= currentDeadline) {
+          toast.error("A nova data limite deve ser posterior à data limite atual.");
+          return;
+        }
+
+        if (parsedReopenDeadline <= now) {
+          toast.error("A nova data limite deve ser uma data futura.");
+          return;
+        }
+      }
+    } else if (parsedReopenDeadline && parsedReopenDeadline <= now) {
+      toast.error("A data limite deve ser uma data futura.");
+      return;
+    }
+
+    const newStatus = campaign.status === "SENT" ? "CLOSED" : "ACTIVE";
+    let deadlineToPersist: string | null | undefined = undefined;
+
+    if (shouldRemoveDeadlineOnReopen) {
+      deadlineToPersist = null;
+    } else if (parsedReopenDeadline) {
+      deadlineToPersist = reopenDeadlineForm;
+    }
+
+    reopenCampaignMutation.mutate({
+      status: newStatus,
+      deadline: deadlineToPersist,
+    });
   };
 
   const handleOpenEditDeadline = () => {
     setIsEditDeadlineModalOpen(true);
     if (campaign?.deadline) {
-      const dt = new Date(campaign.deadline);
-      const year = dt.getFullYear();
-      const month = (dt.getMonth() + 1).toString().padStart(2, "0");
-      const day = dt.getDate().toString().padStart(2, "0");
-      const hours = dt.getHours().toString().padStart(2, "0");
-      const minutes = dt.getMinutes().toString().padStart(2, "0");
-      const seconds = dt.getSeconds().toString().padStart(2, "0");
-      setDeadlineForm(`${year}-${month}-${day}T${hours}:${minutes}:${seconds}`);
+      setDeadlineForm(formatDateTimeForInput(campaign.deadline));
     } else {
       setDeadlineForm("");
     }
+  };
+
+  const handleOpenReopenModal = () => {
+    setIsReopenConfirmOpen(true);
+    setShouldRemoveDeadlineOnReopen(false);
+    setReopenDeadlineForm(campaign?.deadline ? formatDateTimeForInput(campaign.deadline) : "");
   };
 
   const handleOpenPixModal = () => {
@@ -592,12 +900,17 @@ export function useCampaignDetail() {
       setPixKey(maskedPixKey);
       setPixType(campaign.pixType || "");
       setPixName(campaign.pixName || "");
-      setPixVisibleAtStatus(campaign.pixVisibleAtStatus || "ACTIVE");
+      setPaymentReleaseTrigger(
+        getPaymentReleaseTrigger(
+          campaign.paymentReleaseTrigger,
+          campaign.pixVisibleAtStatus
+        )
+      );
     } else {
       setPixKey("");
       setPixType("");
       setPixName("");
-      setPixVisibleAtStatus("ACTIVE");
+      setPaymentReleaseTrigger("ON_ACTIVE");
     }
   };
 
@@ -678,6 +991,10 @@ export function useCampaignDetail() {
     isClosed,
     isSent,
     canEditCampaign,
+    canGenerateOrdersSummary,
+    isAdmin: isAdmin ?? false,
+    isCreator: isCreator ?? false,
+    currentUserId: user?.id,
 
     // Navigation state
     shouldOpenQuestionsTab,
@@ -686,13 +1003,18 @@ export function useCampaignDetail() {
     // Product Modal State
     isProductModalOpen,
     setIsProductModalOpen,
+    closeAddProductModal,
     productForm,
     setProductForm,
+    newProductImageFile,
     isEditProductModalOpen,
     setIsEditProductModalOpen,
+    closeEditProductModal,
     editingProduct,
     editProductForm,
     setEditProductForm,
+    editProductImageFile,
+    shouldRemoveEditProductImage,
 
     // Order Modal State (delegated to useOrderModal)
     ...orderModal,
@@ -709,6 +1031,10 @@ export function useCampaignDetail() {
     setIsEditDeadlineModalOpen,
     deadlineForm,
     setDeadlineForm,
+    reopenDeadlineForm,
+    setReopenDeadlineForm,
+    shouldRemoveDeadlineOnReopen,
+    setShouldRemoveDeadlineOnReopen,
 
     // PIX Modal State
     isPixModalOpen,
@@ -717,10 +1043,11 @@ export function useCampaignDetail() {
     setPixKey,
     pixType,
     setPixType,
+    handlePixTypeChange,
     pixName,
     setPixName,
-    pixVisibleAtStatus,
-    setPixVisibleAtStatus,
+    paymentReleaseTrigger,
+    setPaymentReleaseTrigger,
 
     // Confirm Dialog State
     isCloseConfirmOpen,
@@ -765,8 +1092,13 @@ export function useCampaignDetail() {
     handleEditProduct,
     openEditProductModal,
     handleDeleteProduct,
+    handleNewProductImageSelect,
+    handleNewProductImageRemove,
+    handleEditProductImageSelect,
+    handleEditProductImageRemove,
     handleUpdateShipping,
     handleUpdateDeadline,
+    handleRemoveDeadline,
     handleUpdatePix,
     handleRemovePix,
     handleUpdateStatus,
@@ -782,7 +1114,10 @@ export function useCampaignDetail() {
     handleSort,
     handleProductSort,
     handleReopenCampaign,
+    handleReopenDeadlineChange,
+    handleToggleRemoveDeadlineOnReopen,
     handleOpenEditDeadline,
+    handleOpenReopenModal,
     handleOpenPixModal,
     handleOpenAddressModal,
     handleUpdateAddress,
@@ -801,6 +1136,7 @@ export function useCampaignDetail() {
     updateProductMutation,
     updateShippingMutation,
     updateDeadlineMutation,
+    reopenCampaignMutation,
     updatePixMutation,
     updateStatusMutation,
     cloneCampaignMutation,

@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient, FeedbackType, FeedbackStatus } from '@prisma/client';
+import { PrismaClient, FeedbackType, FeedbackStatus, Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { requireAuth, requireRole, optionalAuth } from '../middleware/authMiddleware';
 import { asyncHandler } from '../middleware/errorHandler';
@@ -72,9 +72,9 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     const { type, status, limit = '50', offset = '0' } = req.query;
 
-    const where: any = {};
-    if (type) where.type = type;
-    if (status) where.status = status;
+    const where: Prisma.FeedbackWhereInput = {};
+    if (typeof type === "string") where.type = type as FeedbackType;
+    if (typeof status === "string") where.status = status as FeedbackStatus;
 
     const [feedbacks, total] = await Promise.all([
       prisma.feedback.findMany({

@@ -64,7 +64,12 @@ describe('useOrderModal', () => {
     }),
   ];
 
-  const mockUser = { id: 'user-1', name: 'Test User' };
+  const mockUser = {
+    id: 'user-1',
+    name: 'Test User',
+    role: 'CUSTOMER' as const,
+    salesDisclaimerAcceptedVersion: '2026-03-12',
+  };
   const mockRequireAuth = vi.fn((cb: () => void) => cb());
 
   const defaultOptions = {
@@ -104,6 +109,8 @@ describe('useOrderModal', () => {
       expect(result.current.isEditOrderModalOpen).toBe(false);
       expect(result.current.isViewOrderModalOpen).toBe(false);
       expect(result.current.isPaymentProofModalOpen).toBe(false);
+      expect(result.current.isRemovePaymentProofConfirmOpen).toBe(false);
+      expect(result.current.isAdminCustomerModalOpen).toBe(false);
     });
 
     it('should return null for editing/viewing orders initially', () => {
@@ -113,6 +120,7 @@ describe('useOrderModal', () => {
       expect(result.current.editingOrder).toBeNull();
       expect(result.current.viewingOrder).toBeNull();
       expect(result.current.orderForPayment).toBeNull();
+      expect(result.current.orderForPaymentRemoval).toBeNull();
     });
 
     it('should return autosave state', () => {
@@ -131,7 +139,11 @@ describe('useOrderModal', () => {
       expect(typeof result.current.handleAddToOrder).toBe('function');
       expect(typeof result.current.handleEditOrder).toBe('function');
       expect(typeof result.current.handleDeleteOrder).toBe('function');
+      expect(typeof result.current.handleOpenEditOrder).toBe('function');
+      expect(typeof result.current.handleViewOrder).toBe('function');
       expect(typeof result.current.handleEditOrderFromView).toBe('function');
+      expect(typeof result.current.closeRemovePaymentProofConfirm).toBe('function');
+      expect(typeof result.current.handleConfirmRemovePaymentProof).toBe('function');
       expect(typeof result.current.handleTogglePayment).toBe('function');
       expect(typeof result.current.handlePaymentProofSubmit).toBe('function');
       expect(typeof result.current.openEditOrderModal).toBe('function');
@@ -365,6 +377,124 @@ describe('useOrderModal', () => {
         });
       });
     });
+
+    it('should open admin/customer modal when canCreateOrdersForOthers is true', () => {
+      const wrapper = createWrapper();
+      const { result } = renderHook(
+        () => useOrderModal({ ...defaultOptions, canCreateOrdersForOthers: true }),
+        { wrapper }
+      );
+
+      act(() => {
+        result.current.handleAddOrder();
+      });
+
+      expect(result.current.isAdminCustomerModalOpen).toBe(true);
+      expect(result.current.isEditOrderModalOpen).toBe(false);
+    });
+  });
+
+  describe('handleCreateAdminOrder', () => {
+    it('should create own order when mode is self and no existing order', async () => {
+      const wrapper = createWrapper();
+      const { result } = renderHook(
+        () =>
+          useOrderModal({
+            ...defaultOptions,
+            orders: [],
+            canCreateOrdersForOthers: true,
+          }),
+        { wrapper }
+      );
+
+      act(() => {
+        result.current.setAdminCustomerForm({
+          mode: 'self',
+          name: '',
+          email: '',
+          phone: '',
+        });
+      });
+
+      act(() => {
+        result.current.handleCreateAdminOrder();
+      });
+
+      await waitFor(() => {
+        expect(orderApi.create).toHaveBeenCalled();
+        expect(vi.mocked(orderApi.create).mock.calls[0][0]).toEqual({
+          campaignId: 'campaign-1',
+          items: [],
+        });
+      });
+    });
+
+    it('should open existing own order when mode is self and own order already exists', () => {
+      const wrapper = createWrapper();
+      const { result } = renderHook(
+        () =>
+          useOrderModal({
+            ...defaultOptions,
+            canCreateOrdersForOthers: true,
+          }),
+        { wrapper }
+      );
+
+      act(() => {
+        result.current.setAdminCustomerForm({
+          mode: 'self',
+          name: '',
+          email: '',
+          phone: '',
+        });
+      });
+
+      act(() => {
+        result.current.handleCreateAdminOrder();
+      });
+
+      expect(orderApi.create).not.toHaveBeenCalled();
+      expect(result.current.isEditOrderModalOpen).toBe(true);
+      expect(result.current.editingOrder?.id).toBe('order-1');
+    });
+
+    it('should create order for another user when mode is customer', async () => {
+      const wrapper = createWrapper();
+      const { result } = renderHook(
+        () =>
+          useOrderModal({
+            ...defaultOptions,
+            canCreateOrdersForOthers: true,
+          }),
+        { wrapper }
+      );
+
+      act(() => {
+        result.current.setAdminCustomerForm({
+          mode: 'customer',
+          name: 'Maria Silva',
+          email: 'maria@example.com',
+          phone: '(11) 99999-9999',
+        });
+      });
+
+      act(() => {
+        result.current.handleCreateAdminOrder();
+      });
+
+      await waitFor(() => {
+        expect(orderApi.create).toHaveBeenCalled();
+        expect(vi.mocked(orderApi.create).mock.calls[0][0]).toEqual({
+          campaignId: 'campaign-1',
+          items: [],
+          customer: {
+            name: 'Maria Silva',
+            email: 'maria@example.com',
+            phone: '(11) 99999-9999',
+          },
+        });
+      });
+    });
   });
 
   describe('handleDeleteOrder', () => {
@@ -406,7 +536,109 @@ describe('useOrderModal', () => {
     });
   });
 
+  describe('handleViewOrder', () => {
+    it('should require authentication before opening view order modal', () => {
+      const wrapper = createWrapper();
+      const { result } = renderHook(() => useOrderModal(defaultOptions), { wrapper });
+      const order = createMockOrder({ id: 'order-view' });
+
+      act(() => {
+        result.current.handleViewOrder(order);
+      });
+
+      expect(mockRequireAuth).toHaveBeenCalled();
+    });
+
+    it('should open view order modal when auth callback is executed', () => {
+      const wrapper = createWrapper();
+      const { result } = renderHook(() => useOrderModal(defaultOptions), { wrapper });
+      const order = createMockOrder({ id: 'order-view' });
+
+      act(() => {
+        result.current.handleViewOrder(order);
+      });
+
+      expect(result.current.isViewOrderModalOpen).toBe(true);
+      expect(result.current.viewingOrder).toEqual(order);
+    });
+
+    it('should not open view order modal when auth callback is not executed', () => {
+      const wrapper = createWrapper();
+      const requireAuthWithoutCallback = vi.fn();
+      const { result } = renderHook(
+        () => useOrderModal({ ...defaultOptions, requireAuth: requireAuthWithoutCallback }),
+        { wrapper }
+      );
+      const order = createMockOrder({ id: 'order-view' });
+
+      act(() => {
+        result.current.handleViewOrder(order);
+      });
+
+      expect(requireAuthWithoutCallback).toHaveBeenCalled();
+      expect(result.current.isViewOrderModalOpen).toBe(false);
+      expect(result.current.viewingOrder).toBeNull();
+    });
+  });
+
+  describe('handleOpenEditOrder', () => {
+    it('should require authentication before opening edit order modal', () => {
+      const wrapper = createWrapper();
+      const { result } = renderHook(() => useOrderModal(defaultOptions), { wrapper });
+      const order = createMockOrder({ id: 'order-edit' });
+
+      act(() => {
+        result.current.handleOpenEditOrder(order);
+      });
+
+      expect(mockRequireAuth).toHaveBeenCalled();
+    });
+
+    it('should open edit order modal when auth callback is executed', () => {
+      const wrapper = createWrapper();
+      const { result } = renderHook(() => useOrderModal(defaultOptions), { wrapper });
+      const order = createMockOrder({ id: 'order-edit' });
+
+      act(() => {
+        result.current.handleOpenEditOrder(order);
+      });
+
+      expect(result.current.isEditOrderModalOpen).toBe(true);
+      expect(result.current.editingOrder).toEqual(order);
+    });
+
+    it('should not open edit order modal when auth callback is not executed', () => {
+      const wrapper = createWrapper();
+      const requireAuthWithoutCallback = vi.fn();
+      const { result } = renderHook(
+        () => useOrderModal({ ...defaultOptions, requireAuth: requireAuthWithoutCallback }),
+        { wrapper }
+      );
+      const order = createMockOrder({ id: 'order-edit' });
+
+      act(() => {
+        result.current.handleOpenEditOrder(order);
+      });
+
+      expect(requireAuthWithoutCallback).toHaveBeenCalled();
+      expect(result.current.isEditOrderModalOpen).toBe(false);
+      expect(result.current.editingOrder).toBeNull();
+    });
+  });
+
   describe('handleTogglePayment', () => {
+    it('should require authentication before toggling payment', () => {
+      const wrapper = createWrapper();
+      const { result } = renderHook(() => useOrderModal(defaultOptions), { wrapper });
+      const unpaidOrder = createMockOrder({ id: 'order-unpaid', isPaid: false });
+
+      act(() => {
+        result.current.handleTogglePayment(unpaidOrder);
+      });
+
+      expect(mockRequireAuth).toHaveBeenCalled();
+    });
+
     it('should open payment proof modal for unpaid order', () => {
       const wrapper = createWrapper();
       const { result } = renderHook(() => useOrderModal(defaultOptions), { wrapper });
@@ -420,7 +652,25 @@ describe('useOrderModal', () => {
       expect(result.current.orderForPayment).toEqual(unpaidOrder);
     });
 
-    it('should trigger updatePayment mutation for paid order (toggle off)', async () => {
+    it('should not open payment proof modal when auth callback is not executed', () => {
+      const wrapper = createWrapper();
+      const requireAuthWithoutCallback = vi.fn();
+      const { result } = renderHook(
+        () => useOrderModal({ ...defaultOptions, requireAuth: requireAuthWithoutCallback }),
+        { wrapper }
+      );
+      const unpaidOrder = createMockOrder({ id: 'order-unpaid', isPaid: false });
+
+      act(() => {
+        result.current.handleTogglePayment(unpaidOrder);
+      });
+
+      expect(requireAuthWithoutCallback).toHaveBeenCalled();
+      expect(result.current.isPaymentProofModalOpen).toBe(false);
+      expect(result.current.orderForPayment).toBeNull();
+    });
+
+    it('should trigger updatePayment mutation for paid order without payment proof', async () => {
       const wrapper = createWrapper();
       const { result } = renderHook(() => useOrderModal(defaultOptions), { wrapper });
       const paidOrder = createMockOrder({ id: 'order-paid', isPaid: true });
@@ -432,6 +682,70 @@ describe('useOrderModal', () => {
       await waitFor(() => {
         expect(orderApi.updatePayment).toHaveBeenCalled();
       });
+
+      expect(result.current.isRemovePaymentProofConfirmOpen).toBe(false);
+    });
+
+    it('should open remove proof confirm modal for paid order with payment proof', () => {
+      const wrapper = createWrapper();
+      const { result } = renderHook(() => useOrderModal(defaultOptions), { wrapper });
+      const paidOrderWithProof = createMockOrder({
+        id: 'order-paid-proof',
+        isPaid: true,
+        paymentProofUrl: 'uploads/proof.jpg',
+      });
+
+      act(() => {
+        result.current.handleTogglePayment(paidOrderWithProof);
+      });
+
+      expect(result.current.isRemovePaymentProofConfirmOpen).toBe(true);
+      expect(result.current.orderForPaymentRemoval).toEqual(paidOrderWithProof);
+      expect(orderApi.updatePayment).not.toHaveBeenCalled();
+    });
+
+    it('should remove payment proof when confirmation modal is confirmed', async () => {
+      const wrapper = createWrapper();
+      const { result } = renderHook(() => useOrderModal(defaultOptions), { wrapper });
+      const paidOrderWithProof = createMockOrder({
+        id: 'order-paid-proof',
+        isPaid: true,
+        paymentProofUrl: 'uploads/proof.jpg',
+      });
+
+      act(() => {
+        result.current.handleTogglePayment(paidOrderWithProof);
+      });
+      act(() => {
+        result.current.handleConfirmRemovePaymentProof();
+      });
+
+      await waitFor(() => {
+        expect(orderApi.updatePayment).toHaveBeenCalledWith('order-paid-proof', false, undefined);
+      });
+    });
+
+    it('should cancel payment toggle when confirmation modal is closed', async () => {
+      const wrapper = createWrapper();
+      const { result } = renderHook(() => useOrderModal(defaultOptions), { wrapper });
+      const paidOrderWithProof = createMockOrder({
+        id: 'order-paid-proof',
+        isPaid: true,
+        paymentProofUrl: 'uploads/proof.jpg',
+      });
+
+      act(() => {
+        result.current.handleTogglePayment(paidOrderWithProof);
+      });
+      act(() => {
+        result.current.closeRemovePaymentProofConfirm();
+      });
+
+      await waitFor(() => {
+        expect(orderApi.updatePayment).not.toHaveBeenCalled();
+      });
+      expect(result.current.isRemovePaymentProofConfirmOpen).toBe(false);
+      expect(result.current.orderForPaymentRemoval).toBeNull();
     });
   });
 

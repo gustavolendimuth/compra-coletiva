@@ -4,7 +4,7 @@ import { QuestionsTab } from '../QuestionsTab';
 
 // Mock CampaignQuestionsPanel component
 vi.mock('@/components/campaign', () => ({
-  CampaignQuestionsPanel: ({ campaignId }: any) => (
+  CampaignQuestionsPanel: ({ campaignId }: unknown) => (
     <div data-testid="campaign-questions-panel">
       Campaign Questions: {campaignId}
     </div>
@@ -126,7 +126,7 @@ describe('QuestionsTab', () => {
     });
 
     it('should handle undefined campaignId gracefully', () => {
-      render(<QuestionsTab campaignId={undefined as any} canEditCampaign={true} />);
+      render(<QuestionsTab campaignId={undefined as unknown} canEditCampaign={true} />);
 
       expect(screen.queryByText('Moderar Perguntas')).toBeInTheDocument();
     });
@@ -181,3 +181,4 @@ describe('QuestionsTab', () => {
     });
   });
 });
+

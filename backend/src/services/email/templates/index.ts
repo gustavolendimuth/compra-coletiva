@@ -14,8 +14,10 @@ import {
 } from './notifications/CampaignReadyToSend';
 import { NewMessage, NewMessageProps } from './notifications/NewMessage';
 import { CampaignArchived, CampaignArchivedProps } from './notifications/CampaignArchived';
+import { PaymentReleased, PaymentReleasedProps } from './notifications/PaymentReleased';
 import { Welcome, WelcomeProps } from './system/Welcome';
 import { PasswordReset, PasswordResetProps } from './system/PasswordReset';
+import { OrderCreated, OrderCreatedProps } from './system/OrderCreated';
 
 export interface EmailTemplateData {
   userName: string;
@@ -109,6 +111,23 @@ export async function renderNotificationEmail(
       break;
     }
 
+    case 'PAYMENT_RELEASED': {
+      const props: PaymentReleasedProps = {
+        userName: data.userName,
+        campaignName: data.metadata.campaignName || 'Campanha',
+        pixKey: data.metadata.pixKey?.toString() || 'Consulte na campanha',
+        pixType: data.metadata.pixType?.toString() || 'PIX',
+        pixName: data.metadata.pixName?.toString(),
+        actionUrl,
+        unsubscribeUrl,
+        preferencesUrl,
+      };
+      html = await render(PaymentReleased(props));
+      subject = `💰 Pagamento liberado: ${data.metadata.campaignName || 'Campanha'}`;
+      templateName = 'payment-released';
+      break;
+    }
+
     default:
       throw new Error(`Unknown notification type: ${type}`);
   }
@@ -165,6 +184,34 @@ export async function renderPasswordResetEmail(
   const html = await render(PasswordReset(props));
   const subject = '🔒 Redefinir sua senha';
   const templateName = 'password-reset';
+
+  return { html, subject, templateName };
+}
+
+/**
+ * Renderiza template de pedido criado
+ */
+export async function renderOrderCreatedEmail(
+  userName: string,
+  userId: string,
+  campaignName: string,
+  campaignSlug: string
+): Promise<RenderedEmail> {
+  const actionUrl = LinkBuilder.buildCampaignLink(campaignSlug);
+  const unsubscribeUrl = LinkBuilder.buildUnsubscribeLink(userId);
+  const preferencesUrl = LinkBuilder.buildPreferencesLink();
+
+  const props: OrderCreatedProps = {
+    userName,
+    campaignName,
+    actionUrl,
+    unsubscribeUrl,
+    preferencesUrl,
+  };
+
+  const html = await render(OrderCreated(props));
+  const subject = `🛒 Pedido criado em ${campaignName}`;
+  const templateName = 'order-created';
 
   return { html, subject, templateName };
 }

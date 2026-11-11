@@ -1,14 +1,22 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { orderApi, Order, Product } from '@/api';
+import { orderApi, profileService, Order, Product } from '@/api';
 import type { OrderForm } from '@/api/types';
 import { useOrderAutosave } from './useOrderAutosave';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 interface UseOrderModalOptions {
   orders: Order[] | undefined;
   campaignId: string | undefined;
-  user: { id: string; name: string } | null;
+  user: {
+    id: string;
+    name: string;
+    role?: "ADMIN" | "CAMPAIGN_CREATOR" | "CUSTOMER";
+    salesDisclaimerAcceptedVersion?: string | null;
+  } | null;
+  canCreateOrdersForOthers?: boolean;
+  canMarkPaidWithoutProof?: boolean;
   isActive: boolean;
   requireAuth: (callback: () => void) => void;
   products: Product[];
@@ -18,6 +26,8 @@ export function useOrderModal({
   orders,
   campaignId,
   user,
+  canCreateOrdersForOthers = false,
+  canMarkPaidWithoutProof = false,
   isActive,
   requireAuth,
 }: UseOrderModalOptions) {
@@ -27,9 +37,27 @@ export function useOrderModal({
   const [isEditOrderModalOpen, setIsEditOrderModalOpen] = useState(false);
   const [isViewOrderModalOpen, setIsViewOrderModalOpen] = useState(false);
   const [isPaymentProofModalOpen, setIsPaymentProofModalOpen] = useState(false);
+  const [isRemovePaymentProofConfirmOpen, setIsRemovePaymentProofConfirmOpen] =
+    useState(false);
+  const [isAdminCustomerModalOpen, setIsAdminCustomerModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
   const [orderForPayment, setOrderForPayment] = useState<Order | null>(null);
+  const [orderForPaymentRemoval, setOrderForPaymentRemoval] = useState<Order | null>(
+    null
+  );
+  const [hasAcceptedSalesDisclaimer, setHasAcceptedSalesDisclaimer] = useState<boolean>(
+    !!user?.salesDisclaimerAcceptedVersion
+  );
+  const [isSalesDisclaimerModalOpen, setIsSalesDisclaimerModalOpen] = useState(false);
+  const [isSalesDisclaimerLoading, setIsSalesDisclaimerLoading] = useState(false);
+  const disclaimerResolveRef = useRef<((value: boolean) => void) | null>(null);
+  const [adminCustomerForm, setAdminCustomerForm] = useState({
+    mode: 'self' as 'self' | 'customer',
+    name: '',
+    email: '',
+    phone: '',
+  });
   const [editOrderForm, setEditOrderForm] = useState<OrderForm>({
     campaignId: '',
     items: [],
@@ -49,6 +77,61 @@ export function useOrderModal({
     },
   }) as ReturnType<typeof useOrderAutosave> & { _markSaved: () => void; _markError: () => void };
 
+  useEffect(() => {
+    setHasAcceptedSalesDisclaimer(!!user?.salesDisclaimerAcceptedVersion);
+  }, [user?.id, user?.salesDisclaimerAcceptedVersion]);
+
+  useEffect(() => {
+    return () => {
+      if (disclaimerResolveRef.current) {
+        disclaimerResolveRef.current(false);
+        disclaimerResolveRef.current = null;
+      }
+    };
+  }, []);
+
+  const closeSalesDisclaimerModal = useCallback((accepted: boolean) => {
+    setIsSalesDisclaimerModalOpen(false);
+    if (disclaimerResolveRef.current) {
+      disclaimerResolveRef.current(accepted);
+      disclaimerResolveRef.current = null;
+    }
+  }, []);
+
+  const openSalesDisclaimerModal = useCallback(() => {
+    return new Promise<boolean>((resolve) => {
+      disclaimerResolveRef.current = resolve;
+      setIsSalesDisclaimerModalOpen(true);
+    });
+  }, []);
+
+  const handleCancelSalesDisclaimer = useCallback(() => {
+    toast("Pedido cancelado. Confirme a isenção de vendas para continuar.");
+    closeSalesDisclaimerModal(false);
+  }, [closeSalesDisclaimerModal]);
+
+  const handleConfirmSalesDisclaimer = useCallback(async () => {
+    setIsSalesDisclaimerLoading(true);
+    try {
+      await profileService.acceptSalesDisclaimer();
+      setHasAcceptedSalesDisclaimer(true);
+      toast.success("Ciência da isenção de vendas registrada.");
+      closeSalesDisclaimerModal(true);
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error, "Não foi possível registrar a ciência da isenção."));
+      closeSalesDisclaimerModal(false);
+    } finally {
+      setIsSalesDisclaimerLoading(false);
+    }
+  }, [closeSalesDisclaimerModal]);
+
+  const ensureSalesDisclaimerAccepted = useCallback(async (): Promise<boolean> => {
+    if (!user || user.role === "ADMIN" || hasAcceptedSalesDisclaimer) {
+      return true;
+    }
+    return openSalesDisclaimerModal();
+  }, [hasAcceptedSalesDisclaimer, openSalesDisclaimerModal, user]);
+
   // Mutations
   const createOrderMutation = useMutation({
     mutationFn: orderApi.create,
@@ -57,9 +140,15 @@ export function useOrderModal({
       queryClient.invalidateQueries({ queryKey: ['orders', campaignId] });
       queryClient.invalidateQueries({ queryKey: ['analytics', campaignId] });
     },
-    onError: (err) => {
+    onError: (err: unknown) => {
       console.error('[createOrderMutation] onError:', err);
-      toast.error('Erro ao criar pedido');
+      const errorCode = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      if (errorCode === "SALES_DISCLAIMER_REQUIRED") {
+        setHasAcceptedSalesDisclaimer(false);
+        toast.error("Confirme a isenção de responsabilidade por vendas para continuar.");
+        return;
+      }
+      toast.error(getApiErrorMessage(err, 'Erro ao criar pedido'));
     },
   });
 
@@ -128,8 +217,8 @@ export function useOrderModal({
       setIsPaymentProofModalOpen(false);
       setOrderForPayment(null);
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Erro ao atualizar pagamento');
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao atualizar pagamento'));
     },
   });
 
@@ -200,6 +289,10 @@ export function useOrderModal({
           toast.error('Erro: Nome de usuário não encontrado');
           return;
         }
+        const canCreate = await ensureSalesDisclaimerAccepted();
+        if (!canCreate) {
+          return;
+        }
 
         toast.success(`Pedido criado com "${product.name}"!`);
 
@@ -225,11 +318,17 @@ export function useOrderModal({
         });
       }
     });
-  }, [orders, user, campaignId, requireAuth, createOrderMutation, updateOrderWithItemsMutation]);
+  }, [orders, user, campaignId, requireAuth, createOrderMutation, updateOrderWithItemsMutation, ensureSalesDisclaimerAccepted]);
 
   const handleAddOrder = useCallback(() => {
     console.log('[handleAddOrder] Chamado');
     requireAuth(async () => {
+      if (canCreateOrdersForOthers) {
+        setAdminCustomerForm({ mode: 'self', name: '', email: '', phone: '' });
+        setIsAdminCustomerModalOpen(true);
+        return;
+      }
+
       console.log('[handleAddOrder] Auth OK, user:', user?.id);
       const existingOrder = orders?.find((o) => o.userId === user?.id);
       console.log('[handleAddOrder] existingOrder:', existingOrder?.id || 'NENHUM');
@@ -240,6 +339,10 @@ export function useOrderModal({
       } else {
         if (!user?.name) {
           toast.error('Erro: Nome de usuário não encontrado');
+          return;
+        }
+        const canCreate = await ensureSalesDisclaimerAccepted();
+        if (!canCreate) {
           return;
         }
 
@@ -262,7 +365,87 @@ export function useOrderModal({
         });
       }
     });
-  }, [orders, user, campaignId, requireAuth, openEditOrderModal, createOrderMutation]);
+  }, [canCreateOrdersForOthers, orders, user, campaignId, requireAuth, openEditOrderModal, createOrderMutation, ensureSalesDisclaimerAccepted]);
+
+  const handleCreateAdminOrder = useCallback(() => {
+    requireAuth(async () => {
+      if (adminCustomerForm.mode === 'self') {
+        const existingOwnOrder = orders?.find((o) => o.userId === user?.id);
+        if (existingOwnOrder) {
+          setIsAdminCustomerModalOpen(false);
+          setAdminCustomerForm({ mode: 'self', name: '', email: '', phone: '' });
+          openEditOrderModal(existingOwnOrder);
+          return;
+        }
+        const canCreate = await ensureSalesDisclaimerAccepted();
+        if (!canCreate) {
+          return;
+        }
+
+        createOrderMutation.mutate(
+          {
+            campaignId: campaignId || '',
+            items: [],
+          },
+          {
+            onSuccess: (newOrder: Order) => {
+              setIsAdminCustomerModalOpen(false);
+              setAdminCustomerForm({ mode: 'self', name: '', email: '', phone: '' });
+              setEditingOrder(newOrder);
+              setEditOrderForm({
+                campaignId: campaignId || '',
+                items: [],
+              });
+              setIsEditOrderModalOpen(true);
+            },
+          }
+        );
+        return;
+      }
+
+      const trimmedName = adminCustomerForm.name.trim();
+      const trimmedEmail = adminCustomerForm.email.trim().toLowerCase();
+      const trimmedPhone = adminCustomerForm.phone.trim();
+
+      if (!trimmedName) {
+        toast.error('Nome do cliente é obrigatório');
+        return;
+      }
+
+      if (!trimmedEmail) {
+        toast.error('Email do cliente é obrigatório');
+        return;
+      }
+      const canCreate = await ensureSalesDisclaimerAccepted();
+      if (!canCreate) {
+        return;
+      }
+
+      createOrderMutation.mutate(
+        {
+          campaignId: campaignId || '',
+          items: [],
+          customer: {
+            name: trimmedName,
+            email: trimmedEmail,
+            phone: trimmedPhone || undefined,
+          },
+        },
+        {
+          onSuccess: (newOrder: Order) => {
+            setIsAdminCustomerModalOpen(false);
+            setAdminCustomerForm({ mode: 'self', name: '', email: '', phone: '' });
+            setEditingOrder(newOrder);
+            setEditOrderForm({
+              campaignId: campaignId || '',
+              items: [],
+            });
+            setIsEditOrderModalOpen(true);
+          },
+        }
+      );
+    });
+  }, [adminCustomerForm.email, adminCustomerForm.mode, adminCustomerForm.name, adminCustomerForm.phone, campaignId, createOrderMutation, ensureSalesDisclaimerAccepted, openEditOrderModal, orders, requireAuth, user?.id]);
 
   const handleEditOrder = useCallback((e: React.FormEvent) => {
     e.preventDefault();
@@ -283,6 +466,12 @@ export function useOrderModal({
     deleteOrderMutation.mutate(orderId);
   }, [deleteOrderMutation]);
 
+  const handleOpenEditOrder = useCallback((order: Order) => {
+    requireAuth(() => {
+      openEditOrderModal(order);
+    });
+  }, [openEditOrderModal, requireAuth]);
+
   const handleEditOrderFromView = useCallback(() => {
     if (viewingOrder) {
       setIsViewOrderModalOpen(false);
@@ -290,17 +479,45 @@ export function useOrderModal({
     }
   }, [viewingOrder, openEditOrderModal]);
 
+  const handleViewOrder = useCallback((order: Order) => {
+    requireAuth(() => {
+      setViewingOrder(order);
+      setIsViewOrderModalOpen(true);
+    });
+  }, [requireAuth]);
+
+  const closeRemovePaymentProofConfirm = useCallback(() => {
+    setIsRemovePaymentProofConfirmOpen(false);
+    setOrderForPaymentRemoval(null);
+  }, []);
+
+  const handleConfirmRemovePaymentProof = useCallback(() => {
+    if (!orderForPaymentRemoval) return;
+    updatePaymentMutation.mutate({
+      orderId: orderForPaymentRemoval.id,
+      isPaid: false,
+    });
+  }, [orderForPaymentRemoval, updatePaymentMutation]);
+
   const handleTogglePayment = useCallback((order: Order) => {
-    if (!order.isPaid) {
-      setOrderForPayment(order);
-      setIsPaymentProofModalOpen(true);
-    } else {
-      updatePaymentMutation.mutate({
-        orderId: order.id,
-        isPaid: false,
-      });
-    }
-  }, [updatePaymentMutation]);
+    requireAuth(() => {
+      if (!order.isPaid) {
+        setOrderForPayment(order);
+        setIsPaymentProofModalOpen(true);
+      } else {
+        const hasPaymentProof = Boolean(order.paymentProofUrl || order.paymentProofKey);
+        if (hasPaymentProof) {
+          setOrderForPaymentRemoval(order);
+          setIsRemovePaymentProofConfirmOpen(true);
+          return;
+        }
+        updatePaymentMutation.mutate({
+          orderId: order.id,
+          isPaid: false,
+        });
+      }
+    });
+  }, [requireAuth, updatePaymentMutation]);
 
   const handlePaymentProofSubmit = useCallback((file: File) => {
     if (!orderForPayment) return;
@@ -308,6 +525,14 @@ export function useOrderModal({
       orderId: orderForPayment.id,
       isPaid: true,
       file,
+    });
+  }, [orderForPayment, updatePaymentMutation]);
+
+  const handleMarkPaidWithoutProof = useCallback(() => {
+    if (!orderForPayment) return;
+    updatePaymentMutation.mutate({
+      orderId: orderForPayment.id,
+      isPaid: true,
     });
   }, [orderForPayment, updatePaymentMutation]);
 
@@ -346,8 +571,18 @@ export function useOrderModal({
     setViewingOrder,
     isPaymentProofModalOpen,
     setIsPaymentProofModalOpen,
+    isRemovePaymentProofConfirmOpen,
+    setIsRemovePaymentProofConfirmOpen,
+    isSalesDisclaimerModalOpen,
+    isSalesDisclaimerLoading,
+    isAdminCustomerModalOpen,
+    setIsAdminCustomerModalOpen,
     orderForPayment,
     setOrderForPayment,
+    orderForPaymentRemoval,
+    setOrderForPaymentRemoval,
+    adminCustomerForm,
+    setAdminCustomerForm,
 
     // Autosave
     isAutosaving: autosave.isAutosaving,
@@ -358,9 +593,18 @@ export function useOrderModal({
     handleAddToOrder,
     handleEditOrder,
     handleDeleteOrder,
+    handleOpenEditOrder,
+    handleViewOrder,
     handleEditOrderFromView,
+    handleCreateAdminOrder,
+    closeRemovePaymentProofConfirm,
+    handleConfirmRemovePaymentProof,
     handleTogglePayment,
     handlePaymentProofSubmit,
+    handleMarkPaidWithoutProof,
+    canMarkPaidWithoutProof,
+    handleConfirmSalesDisclaimer,
+    handleCancelSalesDisclaimer,
     openEditOrderModal,
     closeEditOrderModal,
 
@@ -370,3 +614,4 @@ export function useOrderModal({
     updatePaymentMutation,
   };
 }
+

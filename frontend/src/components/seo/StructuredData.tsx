@@ -37,7 +37,7 @@ type StructuredDataProps =
   | { type: 'organization'; data: Omit<OrganizationSchema, '@context' | '@type'> }
   | { type: 'website'; data: Omit<WebSiteSchema, '@context' | '@type'> }
   | { type: 'breadcrumb'; data: Omit<BreadcrumbSchema, '@context' | '@type'> }
-  | { type: 'custom'; data: Record<string, any> };
+  | { type: 'custom'; data: Record<string, unknown> };
 
 /**
  * Componente para adicionar dados estruturados (JSON-LD) para SEO
@@ -70,7 +70,7 @@ type StructuredDataProps =
  * }} />
  */
 export function StructuredData({ type, data }: StructuredDataProps) {
-  let schema: Record<string, any>;
+  let schema: Record<string, unknown>;
 
   switch (type) {
     case 'organization':
@@ -107,3 +107,4 @@ export function StructuredData({ type, data }: StructuredDataProps) {
     />
   );
 }
+

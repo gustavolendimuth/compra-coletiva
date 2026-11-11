@@ -2,6 +2,7 @@
 
 // Card components
 export { CampaignCard } from './CampaignCard';
+export { CampaignCardBanner } from './CampaignCardBanner';
 export { CampaignCardHeader } from './CampaignCardHeader';
 export { CampaignCardBody } from './CampaignCardBody';
 export { CampaignCardFooter } from './CampaignCardFooter';

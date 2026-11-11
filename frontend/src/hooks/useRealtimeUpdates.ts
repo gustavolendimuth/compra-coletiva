@@ -23,7 +23,7 @@ export const useRealtimeUpdates = ({
     console.log(`📌 Joined campaign room: ${campaignId}`);
 
     // Listener para quando um pedido é criado
-    const handleOrderCreated = (data: any) => {
+    const handleOrderCreated = (data: unknown) => {
       console.log('📦 Order created:', data);
       queryClient.refetchQueries({ queryKey: ['orders', campaignId] });
       queryClient.refetchQueries({ queryKey: ['campaign', campaignId] });
@@ -31,7 +31,7 @@ export const useRealtimeUpdates = ({
     };
 
     // Listener para quando um pedido é atualizado
-    const handleOrderUpdated = (data: any) => {
+    const handleOrderUpdated = (data: unknown) => {
       console.log('🔄 Order updated:', data);
       queryClient.refetchQueries({ queryKey: ['orders', campaignId] });
       queryClient.refetchQueries({ queryKey: ['campaign', campaignId] });
@@ -39,7 +39,7 @@ export const useRealtimeUpdates = ({
     };
 
     // Listener para quando um pedido é deletado
-    const handleOrderDeleted = (data: any) => {
+    const handleOrderDeleted = (data: unknown) => {
       console.log('🗑️ Order deleted:', data);
       queryClient.refetchQueries({ queryKey: ['orders', campaignId] });
       queryClient.refetchQueries({ queryKey: ['campaign', campaignId] });
@@ -47,7 +47,7 @@ export const useRealtimeUpdates = ({
     };
 
     // Listener específico para mudanças de status (pago/separado)
-    const handleOrderStatusChanged = (data: any) => {
+    const handleOrderStatusChanged = (data: unknown) => {
       console.log('✅ Order status changed:', data);
       queryClient.refetchQueries({ queryKey: ['orders', campaignId] });
       queryClient.refetchQueries({ queryKey: ['campaign', campaignId] });
@@ -55,7 +55,7 @@ export const useRealtimeUpdates = ({
     };
 
     // Listener para quando a campanha é atualizada
-    const handleCampaignUpdated = (data: any) => {
+    const handleCampaignUpdated = (data: unknown) => {
       console.log('📋 Campaign updated:', data);
       queryClient.refetchQueries({ queryKey: ['campaign', campaignId] });
       queryClient.refetchQueries({ queryKey: ['orders', campaignId] });
@@ -81,3 +81,4 @@ export const useRealtimeUpdates = ({
     };
   }, [campaignId, enabled, queryClient]);
 };
+

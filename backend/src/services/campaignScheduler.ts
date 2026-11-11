@@ -1,4 +1,5 @@
 import { prisma } from '../index';
+import { PaymentReleaseService } from './paymentReleaseService';
 
 /**
  * Fecha automaticamente grupos que passaram da data limite
@@ -7,26 +8,50 @@ export async function closeExpiredCampaigns() {
   const now = new Date();
 
   try {
-    const result = await prisma.campaign.updateMany({
+    const expiredCampaigns = await prisma.campaign.findMany({
       where: {
         status: 'ACTIVE',
         deadline: {
           lte: now
         }
       },
+      select: { id: true }
+    });
+
+    if (expiredCampaigns.length === 0) {
+      return 0;
+    }
+
+    await prisma.campaign.updateMany({
+      where: {
+        id: { in: expiredCampaigns.map(campaign => campaign.id) }
+      },
       data: {
         status: 'CLOSED'
       }
     });
 
-    if (result.count > 0) {
-      console.log(`[CampaignScheduler] Closed ${result.count} expired campaign(s)`);
+    await Promise.all(
+      expiredCampaigns.map(async (campaign) => {
+        try {
+          await PaymentReleaseService.checkAndReleaseForCampaign(campaign.id);
+        } catch (error) {
+          console.error(
+            `[CampaignScheduler] Failed to check payment release for campaign ${campaign.id}:`,
+            error
+          );
+        }
+      })
+    );
+
+    if (expiredCampaigns.length > 0) {
+      console.log(`[CampaignScheduler] Closed ${expiredCampaigns.length} expired campaign(s)`);
     }
 
-    return result.count;
+    return expiredCampaigns.length;
   } catch (error) {
     console.error('[CampaignScheduler] Error closing expired campaigns:', error);
-    throw error;
+    return 0;
   }
 }
 
@@ -38,11 +63,11 @@ export function startCampaignScheduler(intervalMs: number = 60000) {
   console.log('[CampaignScheduler] Starting scheduler...');
 
   // Executa imediatamente ao iniciar
-  closeExpiredCampaigns();
+  void closeExpiredCampaigns();
 
   // Configura intervalo para execução periódica
   const interval = setInterval(() => {
-    closeExpiredCampaigns();
+    void closeExpiredCampaigns();
   }, intervalMs);
 
   // Retorna função para parar o scheduler

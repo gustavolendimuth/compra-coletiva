@@ -95,7 +95,7 @@ export const UnansweredQuestionItem = ({
             </span>
           </div>
           <ul className="text-sm text-yellow-800 space-y-1">
-            {message.metadata.factors.map((factor: any, idx: number) => (
+            {message.metadata.factors.map((factor, idx: number) => (
               <li key={idx} className="flex items-start gap-2">
                 <span className="text-yellow-600 flex-shrink-0">•</span>
                 <span className="break-words">{factor.description}</span>
@@ -146,3 +146,4 @@ export const UnansweredQuestionItem = ({
     </div>
   );
 };
+

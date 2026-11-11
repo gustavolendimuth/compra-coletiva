@@ -2,6 +2,7 @@
  * Avatar Component
  * Displays user avatar with fallback to initials
  */
+/* eslint-disable @next/next/no-img-element */
 
 interface AvatarProps {
   src?: string | null;

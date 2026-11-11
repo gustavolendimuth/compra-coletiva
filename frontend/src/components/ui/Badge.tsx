@@ -11,26 +11,20 @@ interface BadgeProps {
   className?: string;
 }
 
-/**
- * Badge Component - Design System Primitive
- *
- * Mobile-friendly status badges with consistent design system colors.
- * Uses semantic color variants for different states.
- */
 export const Badge = ({
   children,
   variant = 'neutral',
   size = 'md',
   className
 }: BadgeProps) => {
-  const baseClasses = 'inline-flex items-center font-medium rounded-full whitespace-nowrap';
+  const baseClasses = 'inline-flex items-center font-semibold rounded-full whitespace-nowrap';
 
   const variants: Record<BadgeVariant, string> = {
-    success: 'bg-green-100 text-green-800',
-    warning: 'bg-yellow-100 text-yellow-800',
-    danger: 'bg-red-100 text-red-800',
-    info: 'bg-blue-100 text-blue-800',
-    neutral: 'bg-gray-100 text-gray-800'
+    success: 'bg-emerald-100 text-emerald-700',
+    warning: 'bg-amber-100 text-amber-800',
+    danger: 'bg-red-100 text-red-700',
+    info: 'bg-sky-100 text-sky-700',
+    neutral: 'bg-sky-50 text-sky-700/70'
   };
 
   const sizes: Record<BadgeSize, string> = {
@@ -46,9 +40,6 @@ export const Badge = ({
   );
 };
 
-/**
- * StatusBadge - Convenience component for campaign/order status
- */
 interface StatusBadgeProps {
   status: 'active' | 'closed' | 'sent' | 'archived' | 'pending' | 'paid' | 'unpaid';
   className?: string;

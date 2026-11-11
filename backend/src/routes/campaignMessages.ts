@@ -1,8 +1,9 @@
 import { Router } from 'express';
+import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../index';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
-import { requireAuth, requireCampaignOwnership } from '../middleware/authMiddleware';
+import { requireAuth } from '../middleware/authMiddleware';
 import { SpamDetectionService } from '../services/spamDetectionService';
 import { NotificationService } from '../services/notificationService';
 import {
@@ -161,7 +162,7 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
       spamScore: spamAnalysis.score,
       metadata: {
         factors: spamAnalysis.factors
-      } as any,
+      } as unknown as Prisma.InputJsonValue,
       isPublic: false
     },
     include: {

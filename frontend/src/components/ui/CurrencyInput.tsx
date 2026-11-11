@@ -152,13 +152,13 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
         {label && (
           <label
             htmlFor={id}
-            className="block mb-2 text-sm font-medium text-gray-700"
+            className="block mb-2 text-sm font-medium text-sky-800"
           >
             {label}
           </label>
         )}
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 select-none">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sky-500 select-none font-medium">
             R$
           </span>
           <input
@@ -175,22 +175,22 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
             autoFocus={autoFocus}
             placeholder={placeholder}
             className={cn(
-              "w-full pl-10 pr-4 py-2",
-              "bg-white text-gray-900 placeholder:text-gray-400",
+              "w-full pl-10 pr-4 py-2.5",
+              "bg-white text-sky-900 placeholder:text-sky-400/60",
               "[color-scheme:light]",
-              "text-base", // 16px minimum to prevent iOS zoom
-              "border border-gray-300 rounded-lg",
-              "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent",
-              "disabled:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50",
-              "transition-colors",
-              error && "border-red-500 focus:ring-red-500",
+              "text-base",
+              "border border-sky-200 rounded-xl",
+              "focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent",
+              "disabled:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50",
+              "transition-all",
+              error && "border-red-400 focus:ring-red-400",
               className
             )}
           />
         </div>
-        {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+        {error && <p className="mt-1.5 text-sm text-red-600">{error}</p>}
         {helperText && !error && (
-          <p className="mt-1 text-sm text-gray-500">{helperText}</p>
+          <p className="mt-1.5 text-sm text-sky-600/70">{helperText}</p>
         )}
       </div>
     );

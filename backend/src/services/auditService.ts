@@ -5,7 +5,7 @@
 
 import { Request } from 'express';
 import { prisma } from '../index';
-import { AuditAction, AuditTargetType, AuditLog } from '@prisma/client';
+import { AuditAction, AuditTargetType, AuditLog, Prisma } from '@prisma/client';
 
 export interface AuditLogSearchFilters {
   adminId?: string;
@@ -35,7 +35,7 @@ export class AuditService {
     action: AuditAction,
     targetType: AuditTargetType,
     targetId?: string,
-    details?: any,
+    details?: Prisma.InputJsonValue,
     req?: Request
   ): Promise<AuditLog> {
     const ipAddress = req ? this.getClientIp(req) : undefined;
@@ -69,7 +69,7 @@ export class AuditService {
       limit = 50,
     } = filters;
 
-    const where: any = {};
+    const where: Prisma.AuditLogWhereInput = {};
 
     if (adminId) where.adminId = adminId;
     if (action) where.action = action;
@@ -169,7 +169,7 @@ export class AuditService {
    * Estatísticas de auditoria
    */
   static async getStats(startDate?: Date, endDate?: Date) {
-    const where: any = {};
+    const where: Prisma.AuditLogWhereInput = {};
 
     if (startDate || endDate) {
       where.createdAt = {};

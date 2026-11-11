@@ -6,11 +6,12 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { adminService } from '@/api';
+import type { AuditAction, AuditLog, AuditTargetType } from '@/api/types';
 
 export function Audit() {
   const [page, setPage] = useState(1);
-  const [action, setAction] = useState('');
-  const [targetType, setTargetType] = useState('');
+  const [action, setAction] = useState<AuditAction | ''>('');
+  const [targetType, setTargetType] = useState<AuditTargetType | ''>('');
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'audit', page, action, targetType],
@@ -18,8 +19,8 @@ export function Audit() {
       adminService.listAuditLogs({
         page,
         limit: 20,
-        ...(action && { action: action as any }),
-        ...(targetType && { targetType: targetType as any }),
+        ...(action && { action }),
+        ...(targetType && { targetType }),
       }),
   });
 
@@ -70,7 +71,7 @@ export function Audit() {
             </label>
             <select
               value={action}
-              onChange={(e) => setAction(e.target.value)}
+              onChange={(e) => setAction(e.target.value as AuditAction | '')}
               className="w-full px-4 py-2 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">Todas</option>
@@ -90,7 +91,7 @@ export function Audit() {
             </label>
             <select
               value={targetType}
-              onChange={(e) => setTargetType(e.target.value)}
+              onChange={(e) => setTargetType(e.target.value as AuditTargetType | '')}
               className="w-full px-4 py-2 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">Todos</option>
@@ -132,13 +133,13 @@ export function Audit() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {data.data.logs.map((log: any) => (
+                {data.data.logs.map((log: AuditLog) => (
                   <tr key={log.id} className="hover:bg-gray-50">
                     <td className="px-4 py-4">
                       <div className="text-sm font-medium text-gray-900">
-                        {log.admin.name}
+                        {log.admin?.name || 'Sistema'}
                       </div>
-                      <div className="text-xs text-gray-400">{log.admin.email}</div>
+                      <div className="text-xs text-gray-400">{log.admin?.email || '-'}</div>
                     </td>
                     <td className="px-4 py-4">
                       <span
@@ -191,3 +192,4 @@ export function Audit() {
     </div>
   );
 }
+

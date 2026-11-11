@@ -1,7 +1,9 @@
+import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { API_URL } from '@/api/config';
 import type { CampaignListResponse } from '@/api';
 import { CampaignListPage } from './CampaignListPage';
+import { CreateCampaignFromQuery } from './CreateCampaignFromQuery';
 
 export const metadata: Metadata = {
   title: 'Campanhas',
@@ -33,5 +35,12 @@ async function getInitialCampaigns(): Promise<CampaignListResponse | null> {
 
 export default async function CampanhasPage() {
   const initialData = await getInitialCampaigns();
-  return <CampaignListPage initialData={initialData} />;
+  return (
+    <>
+      <CampaignListPage initialData={initialData} />
+      <Suspense fallback={null}>
+        <CreateCampaignFromQuery />
+      </Suspense>
+    </>
+  );
 }

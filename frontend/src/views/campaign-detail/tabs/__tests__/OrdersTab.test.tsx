@@ -3,23 +3,34 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { OrdersTab } from '../OrdersTab';
 import { createMockOrder } from '@/__tests__/mock-data';
+import { useAuth } from '@/contexts/AuthContext';
+
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: vi.fn(() => ({
+    requireAuth: vi.fn(),
+  })),
+}));
 
 // Mock OrderCard component
 vi.mock('@/components/campaign/OrderCard', () => ({
-  default: ({ order, onView, onEdit, onDelete, onTogglePayment }: any) => (
-    <div data-testid={`order-card-${order.id}`}>
-      <span>Order: {order.customer.name}</span>
-      <button onClick={onView}>View</button>
-      <button onClick={onEdit}>Edit</button>
-      <button onClick={onDelete}>Delete</button>
-      <button onClick={onTogglePayment}>Toggle Payment</button>
+  default: ({ order, showView, showManage, showDelete, onView, onEdit, onDelete, onTogglePayment }: Record<string, unknown>) => (
+    <div data-testid={`order-card-${(order as { id: string }).id}`}>
+      <span>Order: {(order as { customer: { name: string } }).customer.name}</span>
+      {showView && <button onClick={onView as () => void}>View</button>}
+      {showManage && (
+        <>
+          <button onClick={onEdit as () => void}>Edit</button>
+          <button onClick={onTogglePayment as () => void}>Toggle Payment</button>
+        </>
+      )}
+      {showDelete && <button onClick={onDelete as () => void}>Delete</button>}
     </div>
   ),
 }));
 
 // Mock IconButton component
 vi.mock('@/components/IconButton', () => ({
-  default: ({ onClick, children, icon, ...props }: any) => (
+  default: ({ onClick, children, icon, ...props }: unknown) => (
     <button onClick={onClick} {...props}>
       {children}
     </button>
@@ -30,6 +41,7 @@ describe('OrdersTab', () => {
   const mockOrders = [
     createMockOrder({
       id: 'order-1',
+      userId: 'u1',
       customer: { id: 'u1', name: 'Alice', email: 'alice@test.com' },
       subtotal: 100,
       shippingFee: 10,
@@ -38,6 +50,7 @@ describe('OrdersTab', () => {
     }),
     createMockOrder({
       id: 'order-2',
+      userId: 'u2',
       customer: { id: 'u2', name: 'Bob', email: 'bob@test.com' },
       subtotal: 200,
       shippingFee: 20,
@@ -46,6 +59,7 @@ describe('OrdersTab', () => {
     }),
     createMockOrder({
       id: 'order-3',
+      userId: 'u3',
       customer: { id: 'u3', name: 'Charlie', email: 'charlie@test.com' },
       subtotal: 150,
       shippingFee: 15,
@@ -68,7 +82,8 @@ describe('OrdersTab', () => {
     orders: mockOrders,
     filteredOrders: mockOrders,
     isActive: true,
-    canEditCampaign: true,
+    isAdmin: true,
+    isCreator: false,
     currentUserId: 'user-1',
     orderSearch: '',
     sortField: 'customerName' as const,
@@ -303,8 +318,8 @@ describe('OrdersTab', () => {
       const user = userEvent.setup();
       render(<OrdersTab {...defaultProps} />);
 
-      // Find payment toggle buttons
-      const paymentButtons = screen.getAllByTitle(/marcar como/i);
+      // Find payment/upload buttons
+      const paymentButtons = screen.getAllByTitle(/marcar como|enviar comprovante/i);
       if (paymentButtons.length > 0) {
         await user.click(paymentButtons[0]);
         expect(mockCallbacks.onTogglePayment).toHaveBeenCalled();
@@ -374,38 +389,154 @@ describe('OrdersTab', () => {
   });
 
   describe('Permissions', () => {
-    it('should show payment toggle button only when user can edit campaign', () => {
-      render(<OrdersTab {...defaultProps} canEditCampaign={true} />);
+    it('should show all action buttons for admin on all orders', () => {
+      render(<OrdersTab {...defaultProps} currentUserId="admin-1" isAdmin={true} />);
 
-      expect(screen.queryAllByTitle(/marcar como/i).length).toBeGreaterThan(0);
-    });
-
-    it('should not show payment toggle button when user cannot edit campaign', () => {
-      render(<OrdersTab {...defaultProps} canEditCampaign={false} />);
-
-      expect(screen.queryAllByTitle(/marcar como/i).length).toBe(0);
-    });
-
-    it('should show edit button only when campaign is active', () => {
-      render(<OrdersTab {...defaultProps} isActive={true} />);
-
+      expect(screen.queryAllByTitle(/visualizar pedido/i).length).toBeGreaterThan(0);
+      expect(screen.queryAllByTitle(/marcar como|enviar comprovante/i).length).toBeGreaterThan(0);
       expect(screen.queryAllByTitle(/editar pedido/i).length).toBeGreaterThan(0);
+      expect(screen.queryAllByTitle(/remover pedido/i).length).toBeGreaterThan(0);
     });
 
-    it('should not show edit button when campaign is not active', () => {
-      render(<OrdersTab {...defaultProps} isActive={false} />);
+    it('should show action buttons only on own order for regular user', () => {
+      render(<OrdersTab {...defaultProps} currentUserId="u1" isAdmin={false} isCreator={false} />);
 
-      expect(screen.queryAllByTitle(/editar pedido/i).length).toBe(0);
+      // u1 owns order-1 only — desktop table shows 1 of each
+      const viewButtons = screen.queryAllByTitle(/visualizar pedido/i);
+      const paymentButtons = screen.queryAllByTitle(/marcar como|enviar comprovante/i);
+      const editButtons = screen.queryAllByTitle(/editar pedido/i);
+      const deleteButtons = screen.queryAllByTitle(/remover pedido/i);
+
+      expect(viewButtons.length).toBe(1);
+      expect(paymentButtons.length).toBe(1);
+      expect(editButtons.length).toBe(1);
+      expect(deleteButtons.length).toBe(1);
     });
 
-    it('should show delete button only for campaign editors and when active', () => {
-      render(<OrdersTab {...defaultProps} isActive={true} canEditCampaign={true} />);
+    it('should show view and manage buttons on all orders for creator', () => {
+      render(<OrdersTab {...defaultProps} currentUserId="creator-1" isAdmin={false} isCreator={true} />);
+
+      // Creator sees view on all 3 orders in desktop table
+      const viewButtons = screen.queryAllByTitle(/visualizar pedido/i);
+      expect(viewButtons.length).toBe(3);
+
+      // Creator manages all orders even without owning any of them
+      expect(screen.queryAllByTitle(/marcar como|enviar comprovante/i).length).toBe(3);
+      expect(screen.queryAllByTitle(/editar pedido/i).length).toBe(3);
+    });
+
+    it('should not show delete button for regular user when campaign is not active', () => {
+      render(<OrdersTab {...defaultProps} isActive={false} isAdmin={false} currentUserId="u1" />);
+
+      expect(screen.queryAllByTitle(/remover pedido/i).length).toBe(0);
+    });
+
+    it('should show delete button for admin even when campaign is not active', () => {
+      render(<OrdersTab {...defaultProps} isActive={false} isAdmin={true} currentUserId="admin-1" />);
 
       expect(screen.queryAllByTitle(/remover pedido/i).length).toBeGreaterThan(0);
     });
 
-    it('should not show delete button when user cannot edit campaign', () => {
-      render(<OrdersTab {...defaultProps} isActive={true} canEditCampaign={false} />);
+    it('should not show any action buttons when user has no matching order and is not admin or creator', () => {
+      render(<OrdersTab {...defaultProps} currentUserId="unknown-user" isAdmin={false} isCreator={false} />);
+
+      expect(screen.queryAllByTitle(/visualizar pedido/i).length).toBe(0);
+      expect(screen.queryAllByTitle(/marcar como|enviar comprovante/i).length).toBe(0);
+      expect(screen.queryAllByTitle(/editar pedido/i).length).toBe(0);
+      expect(screen.queryAllByTitle(/remover pedido/i).length).toBe(0);
+    });
+  });
+
+  describe('Usuário não autenticado', () => {
+    const unauthProps = {
+      ...defaultProps,
+      currentUserId: undefined,
+      isAdmin: false,
+      isCreator: false,
+    };
+
+    beforeEach(() => {
+      vi.mocked(useAuth).mockReturnValue({ requireAuth: vi.fn() } as ReturnType<typeof useAuth>);
+    });
+
+    it('deve exibir botoes de acao para todos os pedidos na tabela quando nao autenticado', () => {
+      render(<OrdersTab {...unauthProps} />);
+
+      // 3 orders × 1 desktop table = 3 view buttons, 3 payment, 3 edit, 3 delete
+      expect(screen.queryAllByTitle(/visualizar pedido/i).length).toBe(3);
+      expect(screen.queryAllByTitle(/marcar como|enviar comprovante/i).length).toBe(3);
+      expect(screen.queryAllByTitle(/editar pedido/i).length).toBe(3);
+      expect(screen.queryAllByTitle(/remover pedido/i).length).toBe(3);
+    });
+
+    it('deve exibir botoes de acao nos cards mobile quando nao autenticado', () => {
+      render(<OrdersTab {...unauthProps} />);
+
+      // Mobile OrderCard mock renders View/Edit/Toggle Payment/Delete when showView/showManage/showDelete are true
+      expect(screen.queryAllByRole('button', { name: /^view$/i }).length).toBe(3);
+      expect(screen.queryAllByRole('button', { name: /^edit$/i }).length).toBe(3);
+      expect(screen.queryAllByRole('button', { name: /toggle payment/i }).length).toBe(3);
+      expect(screen.queryAllByRole('button', { name: /^delete$/i }).length).toBe(3);
+    });
+
+    it('deve chamar requireAuth ao clicar em visualizar sem estar autenticado', async () => {
+      const user = userEvent.setup();
+      const requireAuthMock = vi.fn();
+      vi.mocked(useAuth).mockReturnValue({ requireAuth: requireAuthMock } as ReturnType<typeof useAuth>);
+
+      render(<OrdersTab {...unauthProps} />);
+
+      const viewButtons = screen.getAllByTitle(/visualizar pedido/i);
+      await user.click(viewButtons[0]);
+
+      expect(requireAuthMock).toHaveBeenCalledTimes(1);
+      expect(mockCallbacks.onViewOrder).not.toHaveBeenCalled();
+    });
+
+    it('deve chamar requireAuth ao clicar em pagamento sem estar autenticado', async () => {
+      const user = userEvent.setup();
+      const requireAuthMock = vi.fn();
+      vi.mocked(useAuth).mockReturnValue({ requireAuth: requireAuthMock } as ReturnType<typeof useAuth>);
+
+      render(<OrdersTab {...unauthProps} />);
+
+      const paymentButtons = screen.getAllByTitle(/marcar como|enviar comprovante/i);
+      await user.click(paymentButtons[0]);
+
+      expect(requireAuthMock).toHaveBeenCalledTimes(1);
+      expect(mockCallbacks.onTogglePayment).not.toHaveBeenCalled();
+    });
+
+    it('deve chamar requireAuth ao clicar em editar sem estar autenticado', async () => {
+      const user = userEvent.setup();
+      const requireAuthMock = vi.fn();
+      vi.mocked(useAuth).mockReturnValue({ requireAuth: requireAuthMock } as ReturnType<typeof useAuth>);
+
+      render(<OrdersTab {...unauthProps} />);
+
+      const editButtons = screen.getAllByTitle(/editar pedido/i);
+      await user.click(editButtons[0]);
+
+      expect(requireAuthMock).toHaveBeenCalledTimes(1);
+      expect(mockCallbacks.onEditOrder).not.toHaveBeenCalled();
+    });
+
+    it('deve chamar requireAuth ao clicar em remover sem estar autenticado', async () => {
+      const user = userEvent.setup();
+      const requireAuthMock = vi.fn();
+      vi.mocked(useAuth).mockReturnValue({ requireAuth: requireAuthMock } as ReturnType<typeof useAuth>);
+
+      render(<OrdersTab {...unauthProps} isActive={true} />);
+
+      const deleteButtons = screen.getAllByTitle(/remover pedido/i);
+      await user.click(deleteButtons[0]);
+
+      expect(requireAuthMock).toHaveBeenCalledTimes(1);
+      expect(mockCallbacks.onDeleteOrder).not.toHaveBeenCalled();
+    });
+
+    it('nao deve exibir botao de remover quando campanha esta inativa e usuario nao autenticado', () => {
+      render(<OrdersTab {...unauthProps} isActive={false} />);
 
       expect(screen.queryAllByTitle(/remover pedido/i).length).toBe(0);
     });
@@ -434,3 +565,4 @@ describe('OrdersTab', () => {
     });
   });
 });
+

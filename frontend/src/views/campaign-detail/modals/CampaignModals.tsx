@@ -1,8 +1,15 @@
-import { Modal, Button, Input, Textarea, CurrencyInput } from "@/components/ui";
+import {
+  Modal,
+  Button,
+  Input,
+  Textarea,
+  CurrencyInput,
+  PaymentReleaseTriggerField,
+} from "@/components/ui";
 import { AddressForm, type AddressData } from "@/components/ui/AddressForm";
 import DateTimeInput from "@/components/DateTimeInput";
 import ConfirmDialog from "@/components/ConfirmDialog";
-import { Campaign, PixKeyType } from "@/api";
+import { Campaign, PixKeyType, type PaymentReleaseTrigger } from "@/api";
 import { applyPixMask, getPixPlaceholder } from "@/lib/pixMasks";
 
 interface CloneModalProps {
@@ -165,26 +172,135 @@ export function CloseConfirmDialog({
 
 interface ReopenConfirmDialogProps {
   isOpen: boolean;
+  campaign: Campaign | null;
+  deadlineForm: string;
+  shouldRemoveDeadline: boolean;
+  isPending: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onChangeDeadline: (deadline: string) => void;
+  onToggleRemoveDeadline: (removeDeadline: boolean) => void;
+  onSubmit: (e: React.FormEvent) => void;
 }
 
 export function ReopenConfirmDialog({
   isOpen,
+  campaign,
+  deadlineForm,
+  shouldRemoveDeadline,
+  isPending,
   onClose,
-  onConfirm,
+  onChangeDeadline,
+  onToggleRemoveDeadline,
+  onSubmit,
 }: ReopenConfirmDialogProps) {
+  const currentDeadline = campaign?.deadline
+    ? new Date(campaign.deadline).toLocaleString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      })
+    : null;
+
   return (
-    <ConfirmDialog
-      isOpen={isOpen}
-      onClose={onClose}
-      onConfirm={onConfirm}
-      title="Reabrir Campanha"
-      message="Deseja reabrir esta campanha? Será possível adicionar e alterar pedidos e produtos novamente. A data limite será resetada."
-      confirmText="Reabrir"
-      cancelText="Cancelar"
-      variant="info"
-    />
+    <Modal isOpen={isOpen} onClose={onClose} title="Reabrir Campanha">
+      <form onSubmit={onSubmit} className="space-y-4">
+        <p className="text-sm text-gray-600">
+          Ao reabrir, será possível adicionar e alterar pedidos e produtos novamente.
+        </p>
+
+        {currentDeadline ? (
+          <div className="space-y-4">
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+              <p className="text-sm text-red-800">
+                Data limite atual: <strong>{currentDeadline}</strong>
+              </p>
+              <p className="text-sm text-red-700 mt-1">
+                Para reabrir, defina uma nova data limite posterior à atual ou remova a data limite.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-gray-700">Escolha como reabrir</p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => onToggleRemoveDeadline(false)}
+                  className={`w-full rounded-lg border p-3 text-left transition-colors ${
+                    !shouldRemoveDeadline
+                      ? "border-blue-300 bg-blue-50 text-blue-800 shadow-sm"
+                      : "border-gray-300 bg-white text-gray-700"
+                  }`}
+                  aria-pressed={!shouldRemoveDeadline}
+                >
+                  <p className="text-sm font-semibold">Definir nova data limite</p>
+                  <p className="text-xs mt-1">
+                    Informe uma data futura para manter o fechamento automático.
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onToggleRemoveDeadline(true)}
+                  className={`w-full rounded-lg border p-3 text-left transition-colors ${
+                    shouldRemoveDeadline
+                      ? "border-green-300 bg-green-50 text-green-800 shadow-sm"
+                      : "border-gray-300 bg-white text-gray-700"
+                  }`}
+                  aria-pressed={shouldRemoveDeadline}
+                >
+                  <p className="text-sm font-semibold">Remover data limite</p>
+                  <p className="text-xs mt-1">
+                    A campanha ficará aberta sem prazo automático.
+                  </p>
+                </button>
+              </div>
+            </div>
+
+            {!shouldRemoveDeadline ? (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nova data e hora limite
+                </label>
+                <DateTimeInput value={deadlineForm} onChange={onChangeDeadline} autoFocus />
+              </div>
+            ) : (
+              <div className="rounded-lg border border-green-200 bg-green-50 p-3">
+                <p className="text-sm text-green-800">
+                  A data limite atual será removida ao confirmar a reabertura.
+                </p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Data e hora limite (opcional)
+            </label>
+            <DateTimeInput value={deadlineForm} onChange={onChangeDeadline} autoFocus />
+            <p className="text-sm text-gray-500 mt-2">
+              Se preenchida, a campanha será fechada automaticamente nessa data.
+            </p>
+          </div>
+        )}
+
+        <div className="flex gap-3 pt-4">
+          <Button type="submit" disabled={isPending} className="flex-1 whitespace-nowrap">
+            {isPending ? "Reabrindo..." : "Reabrir"}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onClose}
+            disabled={isPending}
+            className="whitespace-nowrap"
+          >
+            Cancelar
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -218,13 +334,13 @@ interface PixModalProps {
   pixKey: string | undefined;
   pixType: PixKeyType | "" | undefined;
   pixName: string | undefined;
-  pixVisibleAtStatus: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED" | undefined;
+  paymentReleaseTrigger: PaymentReleaseTrigger | undefined;
   isPending: boolean;
   onClose: () => void;
   onChangePixKey: (value: string) => void;
   onChangePixType: (value: PixKeyType | "") => void;
   onChangePixName: (value: string) => void;
-  onChangePixVisibleAtStatus: (value: "ACTIVE" | "CLOSED" | "SENT" | "ARCHIVED") => void;
+  onChangePaymentReleaseTrigger: (value: PaymentReleaseTrigger) => void;
   onSubmit: (e: React.FormEvent) => void;
   onRemove?: () => void;
 }
@@ -234,13 +350,13 @@ export function PixModal({
   pixKey,
   pixType,
   pixName,
-  pixVisibleAtStatus,
+  paymentReleaseTrigger,
   isPending,
   onClose,
   onChangePixKey,
   onChangePixType,
   onChangePixName,
-  onChangePixVisibleAtStatus,
+  onChangePaymentReleaseTrigger,
   onSubmit,
   onRemove,
 }: PixModalProps) {
@@ -255,7 +371,7 @@ export function PixModal({
           </label>
           <select
             value={pixType || ''}
-            onChange={(e) => onChangePixType(e.target.value as any)}
+            onChange={(e) => onChangePixType(e.target.value as PixKeyType | "")}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
             autoFocus
           >
@@ -290,23 +406,11 @@ export function PixModal({
           placeholder="Nome do titular da conta PIX"
         />
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Mostrar PIX quando a campanha estiver
-          </label>
-          <select
-            value={pixVisibleAtStatus || 'ACTIVE'}
-            onChange={(e) => onChangePixVisibleAtStatus(e.target.value as any)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
-          >
-            <option value="ACTIVE">Ativa</option>
-            <option value="CLOSED">Fechada</option>
-            <option value="SENT">Enviada</option>
-          </select>
-          <p className="text-sm text-gray-500 mt-2">
-            O PIX será exibido em destaque quando a campanha atingir este status.
-          </p>
-        </div>
+        <PaymentReleaseTriggerField
+          value={paymentReleaseTrigger || "ON_ACTIVE"}
+          onChange={onChangePaymentReleaseTrigger}
+          disabled={isPending}
+        />
 
         <div className="flex gap-3 pt-4">
           <Button
@@ -462,3 +566,4 @@ export function CloneModal({
     </Modal>
   );
 }
+

@@ -10,6 +10,7 @@ interface PaymentProofModalProps {
   onClose: () => void;
   order: Order | null;
   onSubmit: (file: File) => void;
+  onMarkPaidWithoutProof?: () => void;
   isPending: boolean;
 }
 
@@ -33,6 +34,7 @@ export function PaymentProofModal({
   onClose,
   order,
   onSubmit,
+  onMarkPaidWithoutProof,
   isPending,
 }: PaymentProofModalProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -90,14 +92,15 @@ export function PaymentProofModal({
             onImageRemove={handleImageRemove}
             maxSizeMB={5}
             disabled={isPending}
+            acceptPdf
           />
         </div>
 
         {/* Instructions */}
         <div className="text-xs text-gray-500 space-y-1">
-          <p>• Formatos aceitos: JPEG, PNG, WebP</p>
+          <p>• Formatos aceitos: JPEG, PNG, WebP ou PDF</p>
           <p>• Tamanho máximo: 5MB</p>
-          <p>• Faça upload da captura de tela do comprovante PIX</p>
+          <p>• Faça upload da captura de tela ou PDF do comprovante PIX</p>
         </div>
 
         {/* Actions */}
@@ -109,6 +112,17 @@ export function PaymentProofModal({
           >
             {isPending ? 'Enviando...' : 'Marcar como Pago'}
           </Button>
+          {onMarkPaidWithoutProof && (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onMarkPaidWithoutProof}
+              disabled={isPending}
+              className="flex-1 w-full sm:w-auto"
+            >
+              Marcar como Pago sem Comprovante
+            </Button>
+          )}
           <Button
             type="button"
             variant="secondary"

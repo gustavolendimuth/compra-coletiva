@@ -22,7 +22,7 @@ export const QuestionForm = ({
   isSubmitting,
 }: QuestionFormProps) => {
   return (
-    <form onSubmit={onSubmit} className="p-3 md:p-4 border-t bg-gray-50">
+    <form onSubmit={onSubmit} className="p-3 md:p-4 border-t border-sky-100 bg-sky-50/40">
       <div className="space-y-2">
         <Textarea
           value={question}
@@ -38,7 +38,7 @@ export const QuestionForm = ({
           maxLength={1000}
         />
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-sky-500">
             {question.length}/1000 caracteres
           </span>
           <Button

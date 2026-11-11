@@ -47,6 +47,16 @@ model User {
   deletedAt     DateTime? // Timestamp de exclusão (soft delete)
   deletedReason String?   // Motivo opcional da exclusão
 
+  // Consentimento legal (LGPD)
+  legalAcceptanceRequired      Boolean   @default(false) // Somente novos usuários podem ficar pendentes
+  termsAcceptedAt              DateTime?
+  termsAcceptedVersion         String?
+  privacyAcceptedAt            DateTime?
+  privacyAcceptedVersion       String?
+  salesDisclaimerAcceptedAt    DateTime?
+  salesDisclaimerAcceptedVersion String?
+  hideNameInCampaigns          Boolean   @default(false) // Oculta nome nas campanhas e mostra apelido público
+
   // Campaign Chat - Reputation & Rate Limiting
   messageCount  Int      @default(0)      // Total de perguntas feitas
   answeredCount Int      @default(0)      // Total de respostas fornecidas (criadores apenas)
@@ -67,6 +77,7 @@ model User {
   emailPreference          EmailPreference?
   emailLogs                EmailLog[]
   adminAuditLogs           AuditLog[]            @relation("AdminAuditLogs")
+  legalAcceptanceLogs      LegalAcceptanceLog[]
 
   @@map("users")
   @@index([email])
@@ -74,6 +85,7 @@ model User {
   @@index([name])
   @@index([phone])
   @@index([deletedAt])
+  @@index([legalAcceptanceRequired])
 }
 
 model Notification {
@@ -98,6 +110,7 @@ enum NotificationType {
   CAMPAIGN_STATUS_CHANGED
   CAMPAIGN_ARCHIVED
   NEW_MESSAGE
+  PAYMENT_RELEASED
 }
 
 model Session {
@@ -159,7 +172,12 @@ model Campaign {
   pixKey              String?         // Chave PIX (CPF, CNPJ, email, telefone ou aleatória)
   pixType             PixKeyType?     // Tipo da chave PIX
   pixName             String?         // Nome do titular da conta PIX
-  pixVisibleAtStatus  CampaignStatus  @default(ACTIVE) // Status em que o PIX deve ser exibido
+  pixVisibleAtStatus  CampaignStatus  @default(ACTIVE) // @deprecated - usar paymentReleaseTrigger
+
+  // Controle de liberação de pagamento
+  paymentReleaseTrigger PaymentReleaseTrigger @default(ON_ACTIVE) // Quando liberar o pagamento
+  paymentReleased       Boolean               @default(false)     // Se o pagamento já foi liberado
+  paymentReleasedAt     DateTime?                                 // Quando foi liberado
 
   // Endereço de Retirada
   pickupZipCode       String?   // CEP (formato: XXXXX-XXX)
@@ -194,6 +212,9 @@ model Product {
   name        String
   price       Float
   weight      Float
+  imageUrl    String?           // URL da imagem do produto (S3 ou local)
+  imageKey    String?           // Chave do arquivo no storage
+  imageStorageType ImageStorageType? // Tipo de armazenamento (S3/LOCAL)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -299,6 +320,13 @@ enum PixKeyType {
   RANDOM
 }
 
+enum PaymentReleaseTrigger {
+  ON_ACTIVE            // Liberar imediatamente ao criar (status ACTIVE)
+  ON_CLOSED            // Liberar quando status mudar para CLOSED
+  ON_SENT              // Liberar quando status mudar para SENT
+  ON_SHIPPING_UPDATED  // Liberar quando frete > 0 for definido
+}
+
 enum ImageStorageType {
   S3
   LOCAL
@@ -389,6 +417,7 @@ model EmailPreference {
   campaignStatusChanged Boolean @default(true)
   campaignArchived      Boolean @default(true)
   newMessage            Boolean @default(true)
+  paymentReleased       Boolean @default(true)
 
   // Digest (futuro)
   digestEnabled   Boolean @default(false)
@@ -469,6 +498,28 @@ model AuditLog {
   @@index([action])
   @@index([targetType, targetId])
   @@index([createdAt])
+}
+
+model LegalAcceptanceLog {
+  id              String            @id @default(cuid())
+  userId          String
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentType    LegalDocumentType
+  documentVersion String
+  acceptedAt      DateTime          @default(now())
+  ipAddress       String?
+  userAgent       String?
+  context         String?
+
+  @@map("legal_acceptance_logs")
+  @@index([userId, documentType, acceptedAt])
+  @@index([acceptedAt])
+}
+
+enum LegalDocumentType {
+  TERMS
+  PRIVACY
+  SALES_DISCLAIMER
 }
 
 enum AuditAction {

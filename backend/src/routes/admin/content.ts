@@ -9,7 +9,7 @@ import { prisma } from '../../index';
 import { asyncHandler, AppError } from '../../middleware/errorHandler';
 import { requireAuth } from '../../middleware/authMiddleware';
 import { adminAuth } from '../../middleware/adminMiddleware';
-import { AuditAction, AuditTargetType } from '@prisma/client';
+import { AuditAction, AuditTargetType, Prisma } from '@prisma/client';
 
 const router = Router();
 
@@ -39,7 +39,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const { page, limit, status, search } = listCampaignsSchema.parse(req.query);
 
-    const where: any = {};
+    const where: Prisma.CampaignWhereInput = {};
 
     if (status) {
       where.status = status;
@@ -223,7 +223,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const { page, limit, minSpamScore = 50 } = listMessagesSchema.parse(req.query);
 
-    const where: any = {
+    const where: Prisma.CampaignMessageWhereInput = {
       spamScore: {
         gte: minSpamScore,
       },

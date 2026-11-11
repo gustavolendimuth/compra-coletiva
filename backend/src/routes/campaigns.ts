@@ -4,18 +4,20 @@ import { prisma } from "../index";
 import { asyncHandler, AppError } from "../middleware/errorHandler";
 import {
   requireAuth,
-  requireRole,
   requireCampaignOwnership,
   optionalAuth,
 } from "../middleware/authMiddleware";
 import { z } from "zod";
 import { InvoiceGenerator } from "../services/invoiceGenerator";
+import { OrderSummaryGenerator } from "../services/orderSummaryGenerator";
 import { ShippingCalculator } from "../services/shippingCalculator";
 import { generateUniqueSlug } from "../utils/slugify";
 import { uploadCampaignImage } from "../middleware/uploadMiddleware";
 import { ImageUploadService } from "../services/imageUploadService";
 import { geocodingService } from "../services/geocodingService";
+import { routingService } from "../services/routingService";
 import { haversineDistance, getBoundingBox } from "../utils/distance";
+import { PaymentReleaseService } from "../services/paymentReleaseService";
 
 const router = Router();
 
@@ -54,6 +56,9 @@ const createCampaignSchema = z.object({
   pixType: z.enum(["CPF", "CNPJ", "EMAIL", "PHONE", "RANDOM"]).optional(),
   pixName: z.string().optional(),
   pixVisibleAtStatus: z.enum(["ACTIVE", "CLOSED", "SENT", "ARCHIVED"]).default("ACTIVE"),
+  paymentReleaseTrigger: z
+    .enum(["ON_ACTIVE", "ON_CLOSED", "ON_SENT", "ON_SHIPPING_UPDATED"])
+    .optional(),
   // Endereço de retirada (opcional na criação - pode ser adicionado depois)
   pickupZipCode: z.string().regex(/^\d{5}-?\d{3}$/, "CEP deve ter o formato XXXXX-XXX").optional(),
   pickupAddress: z.string().min(1, "Endereço é obrigatório").optional(),
@@ -81,6 +86,9 @@ const updateCampaignSchema = z.object({
   pixType: z.enum(["CPF", "CNPJ", "EMAIL", "PHONE", "RANDOM"]).nullable().optional(),
   pixName: z.string().nullable().optional(),
   pixVisibleAtStatus: z.enum(["ACTIVE", "CLOSED", "SENT", "ARCHIVED"]).optional(),
+  paymentReleaseTrigger: z
+    .enum(["ON_ACTIVE", "ON_CLOSED", "ON_SENT", "ON_SHIPPING_UPDATED"])
+    .optional(),
   // Endereço de retirada (opcional na atualização)
   pickupZipCode: z.string().regex(/^\d{5}-?\d{3}$/).optional(),
   pickupAddress: z.string().min(1).optional(),
@@ -99,6 +107,121 @@ const cloneCampaignSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
 });
+
+const distanceQuerySchema = z
+  .object({
+    fromZipCode: z.string().regex(/^\d{5}-?\d{3}$/).optional(),
+    fromLat: z.coerce.number().min(-90).max(90).optional(),
+    fromLng: z.coerce.number().min(-180).max(180).optional(),
+  })
+  .refine(
+    (data) =>
+      Boolean(data.fromZipCode) ||
+      (data.fromLat !== undefined && data.fromLng !== undefined),
+    {
+      message: "fromZipCode ou fromLat/fromLng são obrigatórios",
+    }
+  );
+
+interface PickupLocationInput {
+  pickupZipCode?: string | null;
+  pickupAddress?: string | null;
+  pickupAddressNumber?: string | null;
+  pickupNeighborhood?: string | null;
+  pickupCity?: string | null;
+  pickupState?: string | null;
+}
+
+interface PickupLocationGeocodingResult {
+  pickupZipCode?: string;
+  pickupNeighborhood?: string;
+  pickupCity?: string;
+  pickupState?: string;
+  pickupLatitude: number;
+  pickupLongitude: number;
+}
+
+function normalizeText(value?: string | null): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+// Resolve coordenadas usando CEP (primário) com fallback para endereço digitado.
+async function resolvePickupLocation(
+  input: PickupLocationInput
+): Promise<PickupLocationGeocodingResult | null> {
+  const zipCode = normalizeText(input.pickupZipCode);
+  const address = normalizeText(input.pickupAddress);
+  const addressNumber = normalizeText(input.pickupAddressNumber) || "";
+  const pickupNeighborhood = normalizeText(input.pickupNeighborhood);
+  let pickupCity = normalizeText(input.pickupCity);
+  let pickupState = normalizeText(input.pickupState);
+
+  if (zipCode) {
+    try {
+      const geoResult = await geocodingService.geocodeCEP(zipCode, addressNumber);
+      return {
+        pickupZipCode: geoResult.zipCode,
+        pickupNeighborhood: pickupNeighborhood || geoResult.neighborhood || undefined,
+        pickupCity: pickupCity || geoResult.city || undefined,
+        pickupState: pickupState || geoResult.state || undefined,
+        pickupLatitude: geoResult.latitude,
+        pickupLongitude: geoResult.longitude,
+      };
+    } catch (error) {
+      console.warn("[Campaign] Falha na geocodificação por CEP, tentando fallback:", error);
+    }
+  }
+
+  if (zipCode && (!pickupCity || !pickupState)) {
+    try {
+      const addressFromCep = await geocodingService.getAddressFromCEP(zipCode);
+      pickupCity = pickupCity || normalizeText(addressFromCep.city);
+      pickupState = pickupState || normalizeText(addressFromCep.state);
+    } catch (error) {
+      console.warn("[Campaign] Falha ao complementar cidade/estado pelo CEP:", error);
+    }
+  }
+
+  if (address && pickupCity && pickupState) {
+    try {
+      const coords = await geocodingService.getCoordinates(
+        address,
+        addressNumber,
+        pickupCity,
+        pickupState
+      );
+      return {
+        pickupZipCode: zipCode,
+        pickupNeighborhood,
+        pickupCity,
+        pickupState,
+        pickupLatitude: coords.latitude,
+        pickupLongitude: coords.longitude,
+      };
+    } catch (error) {
+      console.warn("[Campaign] Falha na geocodificação por endereço completo:", error);
+    }
+  }
+
+  if (pickupCity && pickupState) {
+    try {
+      const coords = await geocodingService.getCoordinates("", "", pickupCity, pickupState);
+      return {
+        pickupZipCode: zipCode,
+        pickupNeighborhood,
+        pickupCity,
+        pickupState,
+        pickupLatitude: coords.latitude,
+        pickupLongitude: coords.longitude,
+      };
+    } catch (error) {
+      console.warn("[Campaign] Falha na geocodificação por cidade/estado:", error);
+    }
+  }
+
+  return null;
+}
 
 // Função auxiliar para buscar IDs de campanhas usando unaccent (busca sem acentos)
 async function searchCampaignIds(searchTerm: string): Promise<string[]> {
@@ -347,7 +470,8 @@ router.get(
     });
 
     const hasMore = campaigns.length > limit;
-    let data: any[] = hasMore ? campaigns.slice(0, -1) : campaigns;
+    let data: Array<(typeof campaigns)[number] & { distance?: number | null }> =
+      hasMore ? campaigns.slice(0, -1) : campaigns;
     const nextCursor =
       hasMore && data.length > 0 ? data[data.length - 1].id : null;
 
@@ -357,7 +481,7 @@ router.get(
     if (userCoords) {
       const distanceLimit = maxDistance || 50;
       data = data
-        .map((campaign: any) => {
+        .map((campaign) => {
           if (campaign.pickupLatitude && campaign.pickupLongitude) {
             const dist = haversineDistance(
               userCoords!.latitude,
@@ -369,8 +493,8 @@ router.get(
           }
           return { ...campaign, distance: null };
         })
-        .filter((c: any) => c.distance !== null && c.distance <= distanceLimit)
-        .sort((a: any, b: any) => (a.distance || 0) - (b.distance || 0));
+        .filter((c) => c.distance !== null && c.distance <= distanceLimit)
+        .sort((a, b) => (a.distance || 0) - (b.distance || 0));
     }
 
     // Se temos resultados de busca mas poucos, adicionar sugestões
@@ -409,11 +533,7 @@ router.get(
   "/:idOrSlug/distance",
   asyncHandler(async (req, res) => {
     const { idOrSlug } = req.params;
-    const fromZipCode = typeof req.query.fromZipCode === "string" ? req.query.fromZipCode : "";
-
-    if (!fromZipCode) {
-      throw new AppError(400, "fromZipCode é obrigatório");
-    }
+    const { fromZipCode, fromLat, fromLng } = distanceQuerySchema.parse(req.query);
 
     // Buscar campanha
     let campaign = await prisma.campaign.findUnique({
@@ -454,15 +574,40 @@ router.get(
       throw new AppError(400, "Campanha não possui endereço de retirada com coordenadas");
     }
 
-    // Geocodificar CEP do usuário
-    const fromGeo = await geocodingService.geocodeCEP(fromZipCode);
+    // Geocodificar CEP do usuário (ou usar coordenadas informadas)
+    const fromGeo = fromZipCode
+      ? await geocodingService.geocodeCEP(fromZipCode)
+      : {
+          zipCode: "",
+          city: "",
+          state: "",
+          latitude: fromLat!,
+          longitude: fromLng!,
+        };
 
-    const distanceKm = haversineDistance(
-      fromGeo.latitude,
-      fromGeo.longitude,
-      campaign.pickupLatitude,
-      campaign.pickupLongitude
-    );
+    let distanceKm: number;
+    let route:
+      | { coordinates: Array<[number, number]>; durationMin?: number }
+      | undefined;
+    try {
+      const routeResult = await routingService.getRoute(
+        { latitude: fromGeo.latitude, longitude: fromGeo.longitude },
+        { latitude: campaign.pickupLatitude, longitude: campaign.pickupLongitude }
+      );
+      distanceKm = routeResult.distanceKm;
+      route = {
+        coordinates: routeResult.coordinates,
+        durationMin: routeResult.durationMin,
+      };
+    } catch (error) {
+      console.warn("[Campaign] Falha ao calcular rota, usando linha reta:", error);
+      distanceKm = haversineDistance(
+        fromGeo.latitude,
+        fromGeo.longitude,
+        campaign.pickupLatitude,
+        campaign.pickupLongitude
+      );
+    }
 
     res.json({
       campaignId: campaign.id,
@@ -483,6 +628,7 @@ router.get(
         longitude: campaign.pickupLongitude,
       },
       distanceKm,
+      route,
     });
   })
 );
@@ -494,15 +640,6 @@ async function findCampaignByIdOrSlug(idOrSlug: string) {
     where: { slug: idOrSlug },
     include: {
       products: true,
-      orders: {
-        include: {
-          items: {
-            include: {
-              product: true,
-            },
-          },
-        },
-      },
       _count: { select: { products: true, orders: true } },
     },
   });
@@ -513,15 +650,6 @@ async function findCampaignByIdOrSlug(idOrSlug: string) {
       where: { id: idOrSlug },
       include: {
         products: true,
-        orders: {
-          include: {
-            items: {
-              include: {
-                product: true,
-              },
-            },
-          },
-        },
         _count: { select: { products: true, orders: true } },
       },
     });
@@ -551,9 +679,8 @@ router.get(
       throw new AppError(404, "Campaign not found");
     }
 
-    const ordersCount = campaign.orders?.length || 0;
-    const itemsCount =
-      campaign.orders?.reduce((sum: number, order: any) => sum + (order.items?.length || 0), 0) || 0;
+    const ordersCount = campaign._count?.orders || 0;
+    const itemsCount = 0;
     const productsCount = campaign.products?.length || 0;
     const totalMs = Date.now() - totalStart;
     console.log(
@@ -572,32 +699,48 @@ router.post(
     const data = createCampaignSchema.parse(req.body);
 
     // Convert deadline string to Date object for Prisma
-    const prismaData: any = { ...data };
-    if (data.deadline) {
-      prismaData.deadline = new Date(data.deadline);
-    }
+    const prismaData: Prisma.CampaignUncheckedCreateInput = {
+      name: data.name,
+      description: data.description,
+      deadline: data.deadline ? new Date(data.deadline) : null,
+      shippingCost: data.shippingCost,
+      pixKey: data.pixKey,
+      pixType: data.pixType,
+      pixName: data.pixName,
+      pixVisibleAtStatus: data.pixVisibleAtStatus,
+      paymentReleaseTrigger:
+        data.paymentReleaseTrigger ||
+        PaymentReleaseService.mapPixVisibleAtStatusToTrigger(data.pixVisibleAtStatus),
+      pickupZipCode: data.pickupZipCode,
+      pickupAddress: data.pickupAddress,
+      pickupAddressNumber: data.pickupAddressNumber,
+      pickupComplement: data.pickupComplement,
+      pickupNeighborhood: data.pickupNeighborhood,
+      pickupCity: data.pickupCity,
+      pickupState: data.pickupState,
+      creatorId: req.user!.id,
+      slug: "",
+    };
 
     // Geocodificar endereço de retirada para obter coordenadas
-    if (data.pickupZipCode && data.pickupAddress) {
-      try {
-        const geoResult = await geocodingService.geocodeCEP(
-          data.pickupZipCode,
-          data.pickupAddressNumber
-        );
-        prismaData.pickupZipCode = geoResult.zipCode;
-        prismaData.pickupNeighborhood = prismaData.pickupNeighborhood || geoResult.neighborhood;
-        prismaData.pickupCity = prismaData.pickupCity || geoResult.city;
-        prismaData.pickupState = prismaData.pickupState || geoResult.state;
-        prismaData.pickupLatitude = geoResult.latitude;
-        prismaData.pickupLongitude = geoResult.longitude;
-      } catch (error) {
-        console.warn("[Campaign] Falha na geocodificação:", error);
-        // Continua sem coordenadas - endereço ainda será salvo
-      }
-    }
+    const pickupLocation = await resolvePickupLocation({
+      pickupZipCode: data.pickupZipCode,
+      pickupAddress: data.pickupAddress,
+      pickupAddressNumber: data.pickupAddressNumber,
+      pickupNeighborhood: data.pickupNeighborhood,
+      pickupCity: data.pickupCity,
+      pickupState: data.pickupState,
+    });
 
-    // Adiciona o creatorId do usuário autenticado
-    prismaData.creatorId = req.user!.id;
+    if (pickupLocation) {
+      prismaData.pickupZipCode = pickupLocation.pickupZipCode || prismaData.pickupZipCode;
+      prismaData.pickupNeighborhood =
+        prismaData.pickupNeighborhood || pickupLocation.pickupNeighborhood;
+      prismaData.pickupCity = prismaData.pickupCity || pickupLocation.pickupCity;
+      prismaData.pickupState = prismaData.pickupState || pickupLocation.pickupState;
+      prismaData.pickupLatitude = pickupLocation.pickupLatitude;
+      prismaData.pickupLongitude = pickupLocation.pickupLongitude;
+    }
 
     // Generate unique slug from campaign name
     prismaData.slug = await generateUniqueSlug(data.name);
@@ -617,6 +760,15 @@ router.post(
         data: prismaData,
       });
     });
+
+    try {
+      await PaymentReleaseService.checkAndReleaseForCampaign(campaign.id);
+    } catch (error) {
+      console.error(
+        `[Campaigns] Failed to check payment release on create for campaign ${campaign.id}:`,
+        error
+      );
+    }
 
     res.status(201).json(campaign);
   })
@@ -723,13 +875,29 @@ router.patch(
     // Find campaign by slug or ID to get the actual ID
     let campaign = await prisma.campaign.findUnique({
       where: { slug: idOrSlug },
-      select: { id: true },
+      select: {
+        id: true,
+        pickupZipCode: true,
+        pickupAddress: true,
+        pickupAddressNumber: true,
+        pickupNeighborhood: true,
+        pickupCity: true,
+        pickupState: true,
+      },
     });
 
     if (!campaign) {
       campaign = await prisma.campaign.findUnique({
         where: { id: idOrSlug },
-        select: { id: true },
+        select: {
+          id: true,
+          pickupZipCode: true,
+          pickupAddress: true,
+          pickupAddressNumber: true,
+          pickupNeighborhood: true,
+          pickupCity: true,
+          pickupState: true,
+        },
       });
     }
 
@@ -740,7 +908,7 @@ router.patch(
     const campaignId = campaign.id;
 
     // Convert deadline string to Date object for Prisma
-    const prismaData: any = { ...data };
+    const prismaData: Prisma.CampaignUncheckedUpdateInput = { ...data };
     if (data.deadline !== undefined) {
       prismaData.deadline = data.deadline ? new Date(data.deadline) : null;
     }
@@ -750,21 +918,54 @@ router.patch(
       prismaData.slug = await generateUniqueSlug(data.name, campaignId);
     }
 
-    // Geocodificar se o endereço de retirada foi atualizado
-    if (data.pickupZipCode && data.pickupAddress) {
-      try {
-        const geoResult = await geocodingService.geocodeCEP(
-          data.pickupZipCode,
-          data.pickupAddressNumber
-        );
-        prismaData.pickupZipCode = geoResult.zipCode;
-        prismaData.pickupNeighborhood = prismaData.pickupNeighborhood || geoResult.neighborhood;
-        prismaData.pickupCity = prismaData.pickupCity || geoResult.city;
-        prismaData.pickupState = prismaData.pickupState || geoResult.state;
-        prismaData.pickupLatitude = geoResult.latitude;
-        prismaData.pickupLongitude = geoResult.longitude;
-      } catch (error) {
-        console.warn("[Campaign] Falha na geocodificação:", error);
+    if (data.paymentReleaseTrigger) {
+      prismaData.paymentReleaseTrigger = data.paymentReleaseTrigger;
+    } else if (data.pixVisibleAtStatus) {
+      prismaData.paymentReleaseTrigger = PaymentReleaseService.mapPixVisibleAtStatusToTrigger(
+        data.pixVisibleAtStatus
+      );
+    }
+
+    const isPixBeingRemoved =
+      (data.pixKey === null || data.pixType === null) &&
+      (data.pixKey !== undefined || data.pixType !== undefined);
+
+    if (isPixBeingRemoved) {
+      prismaData.paymentReleased = false;
+      prismaData.paymentReleasedAt = null;
+    }
+
+    // Geocodificar se qualquer campo de endereço de retirada foi atualizado
+    const pickupFieldsUpdated =
+      data.pickupZipCode !== undefined ||
+      data.pickupAddress !== undefined ||
+      data.pickupAddressNumber !== undefined ||
+      data.pickupNeighborhood !== undefined ||
+      data.pickupCity !== undefined ||
+      data.pickupState !== undefined;
+
+    if (pickupFieldsUpdated) {
+      const pickupLocation = await resolvePickupLocation({
+        pickupZipCode: data.pickupZipCode ?? campaign.pickupZipCode,
+        pickupAddress: data.pickupAddress ?? campaign.pickupAddress,
+        pickupAddressNumber: data.pickupAddressNumber ?? campaign.pickupAddressNumber,
+        pickupNeighborhood: data.pickupNeighborhood ?? campaign.pickupNeighborhood,
+        pickupCity: data.pickupCity ?? campaign.pickupCity,
+        pickupState: data.pickupState ?? campaign.pickupState,
+      });
+
+      if (pickupLocation) {
+        prismaData.pickupZipCode = pickupLocation.pickupZipCode || prismaData.pickupZipCode;
+        prismaData.pickupNeighborhood =
+          prismaData.pickupNeighborhood || pickupLocation.pickupNeighborhood;
+        prismaData.pickupCity = prismaData.pickupCity || pickupLocation.pickupCity;
+        prismaData.pickupState = prismaData.pickupState || pickupLocation.pickupState;
+        prismaData.pickupLatitude = pickupLocation.pickupLatitude;
+        prismaData.pickupLongitude = pickupLocation.pickupLongitude;
+      } else {
+        // Evita manter coordenadas antigas quando endereço foi alterado e não geocodificou.
+        prismaData.pickupLatitude = null;
+        prismaData.pickupLongitude = null;
       }
     }
 
@@ -776,6 +977,15 @@ router.patch(
     // Se o shippingCost foi atualizado, redistribuir frete para todos os pedidos
     if (data.shippingCost !== undefined) {
       await ShippingCalculator.distributeShipping(campaignId);
+    }
+
+    try {
+      await PaymentReleaseService.checkAndReleaseForCampaign(campaignId);
+    } catch (error) {
+      console.error(
+        `[Campaigns] Failed to check payment release on update for campaign ${campaignId}:`,
+        error
+      );
     }
 
     res.json(updatedCampaign);
@@ -812,6 +1022,15 @@ router.patch(
       where: { id: campaign.id },
       data: { status },
     });
+
+    try {
+      await PaymentReleaseService.checkAndReleaseForCampaign(campaign.id);
+    } catch (error) {
+      console.error(
+        `[Campaigns] Failed to check payment release on status change for campaign ${campaign.id}:`,
+        error
+      );
+    }
 
     res.json(updatedCampaign);
   })
@@ -884,6 +1103,107 @@ router.get(
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     res.send(pdfBuffer);
+  })
+);
+
+// GET /api/campaigns/:idOrSlug/orders-summary - Gera resumo textual dos pedidos para compartilhar
+router.get(
+  "/:idOrSlug/orders-summary",
+  requireAuth,
+  requireCampaignOwnership,
+  asyncHandler(async (req, res) => {
+    const { idOrSlug } = req.params;
+
+    let campaign = await prisma.campaign.findUnique({
+      where: { slug: idOrSlug },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        orders: {
+          orderBy: { createdAt: "asc" },
+          select: {
+            subtotal: true,
+            shippingFee: true,
+            total: true,
+            isPaid: true,
+            customer: {
+              select: {
+                name: true,
+              },
+            },
+            items: {
+              select: {
+                quantity: true,
+                product: {
+                  select: {
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!campaign) {
+      campaign = await prisma.campaign.findUnique({
+        where: { id: idOrSlug },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          orders: {
+            orderBy: { createdAt: "asc" },
+            select: {
+              subtotal: true,
+              shippingFee: true,
+              total: true,
+              isPaid: true,
+              customer: {
+                select: {
+                  name: true,
+                },
+              },
+              items: {
+                select: {
+                  quantity: true,
+                  product: {
+                    select: {
+                      name: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+    }
+
+    if (!campaign) {
+      throw new AppError(404, "Campaign not found");
+    }
+
+    const summary = OrderSummaryGenerator.generate({
+      campaignId: campaign.id,
+      campaignName: campaign.name,
+      campaignSlug: campaign.slug,
+      orders: campaign.orders.map((order) => ({
+        customerName: order.customer?.name || "Sem nome",
+        subtotal: order.subtotal,
+        shippingFee: order.shippingFee,
+        total: order.total,
+        isPaid: order.isPaid,
+        items: order.items.map((item) => ({
+          quantity: item.quantity,
+          productName: item.product?.name || "Produto removido",
+        })),
+      })),
+    });
+
+    res.json(summary);
   })
 );
 

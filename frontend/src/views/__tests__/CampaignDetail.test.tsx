@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders, mockAuthContext } from "@/__tests__/test-utils";
 import {
@@ -262,17 +262,19 @@ describe("CampaignDetail", () => {
 
       // Initially on Overview tab - check desktop version (first one)
       const overviewTabs = screen.getAllByRole("button", {
-        name: /visão geral/i,
+        name: /^visão geral$/i,
       });
-      expect(overviewTabs[0]).toHaveClass("text-primary-600");
+      expect(overviewTabs[0]).toHaveClass("text-sky-600");
+      expect(overviewTabs[0]).toHaveClass("border-sky-500");
 
       // Click Products tab (desktop version)
-      const productsTabs = screen.getAllByRole("button", { name: /produtos/i });
+      const productsTabs = screen.getAllByRole("button", { name: /^produtos$/i });
       await user.click(productsTabs[0]);
 
       // Products tab should be active
       await waitFor(() => {
-        expect(productsTabs[0]).toHaveClass("text-primary-600");
+        expect(productsTabs[0]).toHaveClass("text-sky-600");
+        expect(productsTabs[0]).toHaveClass("border-sky-500");
       });
     });
 
@@ -304,10 +306,11 @@ describe("CampaignDetail", () => {
       });
 
       // Overview tab is default, should show analytics
-      // Check that we're showing products and orders
+      // Check that we're showing products and analytics sections
       await waitFor(() => {
         expect(screen.getAllByText("Product 1")[0]).toBeInTheDocument();
-        expect(screen.getAllByText("Customer 1")[0]).toBeInTheDocument();
+        expect(screen.getByText(/resumo financeiro/i)).toBeInTheDocument();
+        expect(screen.getByText(/por pessoa/i)).toBeInTheDocument();
       });
     });
   });
@@ -324,7 +327,7 @@ describe("CampaignDetail", () => {
       });
 
       // Click products tab (desktop version - first one)
-      const productsTabs = screen.getAllByRole("button", { name: /produtos/i });
+      const productsTabs = screen.getAllByRole("button", { name: /^produtos$/i });
       await user.click(productsTabs[0]);
 
       await waitFor(() => {
@@ -346,7 +349,7 @@ describe("CampaignDetail", () => {
       });
 
       // Click on the Products tab
-      const productsTabs = screen.getAllByRole("button", { name: /produtos/i });
+      const productsTabs = screen.getAllByRole("button", { name: /^produtos$/i });
       await user.click(productsTabs[0]);
 
       // Wait for the Products tab content to render - look for tab header
@@ -378,7 +381,7 @@ describe("CampaignDetail", () => {
         expect(screen.getAllByText("Test Campaign")[0]).toBeInTheDocument();
       });
 
-      const productsTabs = screen.getAllByRole("button", { name: /produtos/i });
+      const productsTabs = screen.getAllByRole("button", { name: /^produtos$/i });
       await user.click(productsTabs[0]);
 
       await waitFor(() => {
@@ -402,13 +405,67 @@ describe("CampaignDetail", () => {
         expect(screen.getAllByText("Test Campaign")[0]).toBeInTheDocument();
       });
 
-      const productsTabs = screen.getAllByRole("button", { name: /produtos/i });
+      const productsTabs = screen.getAllByRole("button", { name: /^produtos$/i });
       await user.click(productsTabs[0]);
 
       await waitFor(() => {
         expect(
           screen.getByText(/nenhum produto cadastrado/i)
         ).toBeInTheDocument();
+      });
+    });
+
+    it("should create product with campaignId from loaded campaign", async () => {
+      const user = userEvent.setup();
+      vi.mocked(productApi.create).mockResolvedValue(
+        createMockFullProduct({
+          id: "product-new",
+          campaignId: "campaign-1",
+          name: "Produto novo",
+          price: 10,
+          weight: 200,
+        })
+      );
+
+      renderWithProviders(<CampaignDetail />, {
+        authContext: mockAuthContext,
+      });
+
+      await waitFor(() => {
+        expect(screen.getAllByText("Test Campaign")[0]).toBeInTheDocument();
+      });
+
+      const productsTabs = screen.getAllByRole("button", { name: /^produtos$/i });
+      await user.click(productsTabs[0]);
+
+      await waitFor(() => {
+        expect(screen.getAllByRole("button", { name: /adicionar produto/i }).length).toBeGreaterThan(0);
+      });
+
+      const addProductButton = screen.getAllByRole("button", { name: /adicionar produto/i })[0];
+      await user.click(addProductButton);
+
+      await waitFor(() => {
+        expect(screen.getByRole("heading", { name: /adicionar produto/i })).toBeInTheDocument();
+      });
+
+      await user.type(screen.getByLabelText(/nome do produto/i), "Produto novo");
+      await user.type(screen.getByLabelText(/preço/i), "10");
+      await user.type(screen.getByLabelText(/peso/i), "200");
+
+      const addProductDialog = screen.getByRole("dialog", { name: /adicionar produto/i });
+      await user.click(within(addProductDialog).getByRole("button", { name: /^adicionar$/i }));
+
+      await waitFor(() => {
+        expect(productApi.create).toHaveBeenCalled();
+      });
+
+      const [firstPayload] = vi.mocked(productApi.create).mock.calls[0];
+      expect(firstPayload).toEqual({
+          campaignId: "campaign-1",
+          name: "Produto novo",
+          price: 10,
+          weight: 200,
       });
     });
   });
@@ -424,7 +481,7 @@ describe("CampaignDetail", () => {
         expect(screen.getAllByText("Test Campaign")[0]).toBeInTheDocument();
       });
 
-      const ordersTabs = screen.getAllByRole("button", { name: /pedidos/i });
+      const ordersTabs = screen.getAllByRole("button", { name: /^pedidos$/i });
       await user.click(ordersTabs[0]);
 
       // Just verify the orders tab was activated and content is rendered
@@ -450,7 +507,7 @@ describe("CampaignDetail", () => {
         expect(screen.getAllByText("Test Campaign")[0]).toBeInTheDocument();
       });
 
-      const ordersTabs = screen.getAllByRole("button", { name: /pedidos/i });
+      const ordersTabs = screen.getAllByRole("button", { name: /^pedidos$/i });
       await user.click(ordersTabs[0]);
 
       await waitFor(() => {
@@ -470,7 +527,7 @@ describe("CampaignDetail", () => {
         expect(screen.getAllByText("Test Campaign")[0]).toBeInTheDocument();
       });
 
-      const ordersTabs = screen.getAllByRole("button", { name: /pedidos/i });
+      const ordersTabs = screen.getAllByRole("button", { name: /^pedidos$/i });
       await user.click(ordersTabs[0]);
 
       // Wait for the search input to appear
@@ -503,7 +560,7 @@ describe("CampaignDetail", () => {
         expect(screen.getAllByText("Test Campaign")[0]).toBeInTheDocument();
       });
 
-      const ordersTabs = screen.getAllByRole("button", { name: /pedidos/i });
+      const ordersTabs = screen.getAllByRole("button", { name: /^pedidos$/i });
       await user.click(ordersTabs[0]);
 
       await waitFor(() => {
@@ -523,12 +580,86 @@ describe("CampaignDetail", () => {
         expect(screen.getAllByText("Test Campaign")[0]).toBeInTheDocument();
       });
 
-      const shippingTabs = screen.getAllByRole("button", { name: /frete/i });
+      const shippingTabs = screen.getAllByRole("button", { name: /^frete$/i });
       await user.click(shippingTabs[0]);
 
       await waitFor(() => {
         // Should show shipping cost
         expect(screen.getByText(/R\$\s*50,00/)).toBeInTheDocument();
+      });
+    });
+
+    it("should allow editing shipping when campaign is closed", async () => {
+      const user = userEvent.setup();
+      const closedCampaign = createMockCampaignFull({
+        ...mockCampaign,
+        status: "CLOSED",
+      });
+      vi.mocked(campaignApi.getBySlug).mockResolvedValue(closedCampaign);
+
+      renderWithProviders(<CampaignDetail />, {
+        authContext: mockAuthContext,
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/campanha fechada/i)).toBeInTheDocument();
+      });
+
+      const shippingTabs = screen.getAllByRole("button", { name: /^frete$/i });
+      await user.click(shippingTabs[0]);
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /editar frete/i })).toBeInTheDocument();
+      });
+    });
+
+    it("should allow editing shipping when campaign is sent", async () => {
+      const user = userEvent.setup();
+      const sentCampaign = createMockCampaignFull({
+        ...mockCampaign,
+        status: "SENT",
+      });
+      vi.mocked(campaignApi.getBySlug).mockResolvedValue(sentCampaign);
+
+      renderWithProviders(<CampaignDetail />, {
+        authContext: mockAuthContext,
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/campanha enviada/i)).toBeInTheDocument();
+      });
+
+      const shippingTabs = screen.getAllByRole("button", { name: /^frete$/i });
+      await user.click(shippingTabs[0]);
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /editar frete/i })).toBeInTheDocument();
+      });
+    });
+
+    it("should not allow editing shipping when campaign is archived", async () => {
+      const user = userEvent.setup();
+      const archivedCampaign = createMockCampaignFull({
+        ...mockCampaign,
+        status: "ARCHIVED",
+      });
+      vi.mocked(campaignApi.getBySlug).mockResolvedValue(archivedCampaign);
+
+      renderWithProviders(<CampaignDetail />, {
+        authContext: mockAuthContext,
+      });
+
+      await waitFor(() => {
+        expect(screen.getAllByText("Test Campaign")[0]).toBeInTheDocument();
+      });
+
+      const shippingTabs = screen.getAllByRole("button", { name: /^frete$/i });
+      await user.click(shippingTabs[0]);
+
+      await waitFor(() => {
+        expect(
+          screen.queryByRole("button", { name: /editar frete/i })
+        ).not.toBeInTheDocument();
       });
     });
   });
@@ -631,6 +762,78 @@ describe("CampaignDetail", () => {
       expect(
         screen.queryByRole("button", { name: /moderar/i })
       ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("PIX Configuration", () => {
+    it("should keep existing pixKey when opening modal and saving without changes", async () => {
+      const user = userEvent.setup();
+      const campaignWithPix = createMockCampaignFull({
+        ...mockCampaign,
+        pixType: "EMAIL",
+        pixKey: "qa-modal@example.com",
+        pixName: "Conta QA",
+        paymentReleaseTrigger: "ON_SHIPPING_UPDATED",
+      });
+      vi.mocked(campaignApi.getBySlug).mockResolvedValue(campaignWithPix);
+      vi.mocked(campaignApi.update).mockResolvedValue(campaignWithPix);
+
+      renderWithProviders(<CampaignDetail />, {
+        authContext: mockAuthContext,
+      });
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /configurar pix/i })).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole("button", { name: /configurar pix/i }));
+
+      await waitFor(() => {
+        const pixInput = screen.getByLabelText(/chave pix/i) as HTMLInputElement;
+        expect(pixInput.value).toBe("qa-modal@example.com");
+      });
+
+      await user.click(screen.getByRole("button", { name: /^salvar$/i }));
+
+      await waitFor(() => {
+        expect(campaignApi.update).toHaveBeenCalledWith(
+          "campaign-1",
+          expect.objectContaining({
+            pixKey: "qa-modal@example.com",
+            pixType: "EMAIL",
+          })
+        );
+      });
+    });
+
+    it("should clear pixKey when user changes pixType in modal", async () => {
+      const user = userEvent.setup();
+      const campaignWithPix = createMockCampaignFull({
+        ...mockCampaign,
+        pixType: "EMAIL",
+        pixKey: "qa-modal@example.com",
+        pixName: "Conta QA",
+        paymentReleaseTrigger: "ON_SHIPPING_UPDATED",
+      });
+      vi.mocked(campaignApi.getBySlug).mockResolvedValue(campaignWithPix);
+
+      renderWithProviders(<CampaignDetail />, {
+        authContext: mockAuthContext,
+      });
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /configurar pix/i })).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole("button", { name: /configurar pix/i }));
+
+      const typeSelect = screen.getByRole("combobox");
+      await user.selectOptions(typeSelect, "CPF");
+
+      await waitFor(() => {
+        const pixInput = screen.getByLabelText(/chave pix/i) as HTMLInputElement;
+        expect(pixInput.value).toBe("");
+      });
     });
   });
 

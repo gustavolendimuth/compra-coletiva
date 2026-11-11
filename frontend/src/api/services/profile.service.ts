@@ -12,6 +12,9 @@ import type {
   VerifyEmailResponse,
   DeleteAccountDto,
   ExportDataResponse,
+  LegalAcceptanceRequest,
+  LegalAcceptanceResponse,
+  SalesDisclaimerAcceptanceResponse,
 } from '../types';
 
 export const profileService = {
@@ -65,4 +68,22 @@ export const profileService = {
    */
   exportData: () =>
     apiClient.get<ExportDataResponse>('/profile/export').then((res) => res.data),
+
+  /**
+   * Registra aceite de Termos e Política de Privacidade
+   */
+  acceptLegalTerms: (data: LegalAcceptanceRequest) =>
+    apiClient
+      .post<LegalAcceptanceResponse>('/profile/legal-acceptance', data)
+      .then((res) => res.data),
+
+  /**
+   * Registra ciência da isenção de responsabilidade por vendas
+   */
+  acceptSalesDisclaimer: () =>
+    apiClient
+      .post<SalesDisclaimerAcceptanceResponse>('/profile/accept-sales-disclaimer', {
+        accepted: true,
+      })
+      .then((res) => res.data),
 };

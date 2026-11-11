@@ -1,12 +1,12 @@
 /**
  * Template: Boas-vindas
- * Enviado quando usuário se cadastra
+ * Enviado quando usuario se cadastra
  */
 
-import * as React from 'react';
-import { Text, Heading } from '@react-email/components';
-import { BaseEmail } from '../base/BaseEmail';
-import { Button } from '../base/Button';
+import * as React from "react";
+import { Text, Heading, Section } from "@react-email/components";
+import { BaseEmail, colors } from "../base/BaseEmail";
+import { Button } from "../base/Button";
 
 export interface WelcomeProps {
   userName: string;
@@ -27,70 +27,151 @@ export function Welcome({
       unsubscribeUrl={unsubscribeUrl}
       preferencesUrl={preferencesUrl}
     >
-      <Heading style={h1Style}>
-        👋 Bem-vindo ao Compra Coletiva!
-      </Heading>
+      <Heading style={h1Style}>Bem-vindo ao Compra Coletiva!</Heading>
 
       <Text style={paragraphStyle}>
-        Olá, <strong>{userName}</strong>!
+        Ola, <strong>{userName}</strong>!
       </Text>
 
       <Text style={paragraphStyle}>
-        Estamos felizes em ter você conosco! Sua conta foi criada com sucesso.
+        Estamos felizes em ter voce conosco! Sua conta foi criada com sucesso.
       </Text>
 
-      <Text style={paragraphStyle}>
-        Com o Compra Coletiva, você pode:
-      </Text>
+      <Section style={featuresContainerStyle}>
+        <Text style={featuresTitle}>Com o Compra Coletiva, voce pode:</Text>
 
-      <ul style={listStyle}>
-        <li style={listItemStyle}>Criar grupos de compra e economizar comprando em quantidade</li>
-        <li style={listItemStyle}>Participar de campanhas existentes e aproveitar melhores preços</li>
-        <li style={listItemStyle}>Gerenciar seus pedidos e acompanhar entregas</li>
-        <li style={listItemStyle}>Conversar com organizadores e tirar dúvidas</li>
-      </ul>
+        <table cellPadding="0" cellSpacing="0" style={{ width: "100%" }}>
+          <tr>
+            <td style={featureIconCellStyle}>
+              <div style={featureIconStyle}>
+                <span style={{ fontSize: "18px" }}>&#x1f4e6;</span>
+              </div>
+            </td>
+            <td style={featureTextCellStyle}>
+              <Text style={featureTextStyle}>
+                Criar grupos de compra e economizar comprando em quantidade
+              </Text>
+            </td>
+          </tr>
+          <tr>
+            <td style={featureIconCellStyle}>
+              <div style={featureIconStyle}>
+                <span style={{ fontSize: "18px" }}>&#x1f91d;</span>
+              </div>
+            </td>
+            <td style={featureTextCellStyle}>
+              <Text style={featureTextStyle}>
+                Participar de campanhas e aproveitar melhores precos
+              </Text>
+            </td>
+          </tr>
+          <tr>
+            <td style={featureIconCellStyle}>
+              <div style={featureIconStyle}>
+                <span style={{ fontSize: "18px" }}>&#x1f4cb;</span>
+              </div>
+            </td>
+            <td style={featureTextCellStyle}>
+              <Text style={featureTextStyle}>
+                Gerenciar seus pedidos e acompanhar entregas
+              </Text>
+            </td>
+          </tr>
+          <tr>
+            <td style={featureIconCellStyle}>
+              <div style={featureIconStyle}>
+                <span style={{ fontSize: "18px" }}>&#x1f4ac;</span>
+              </div>
+            </td>
+            <td style={featureTextCellStyle}>
+              <Text style={featureTextStyle}>
+                Conversar com organizadores e tirar duvidas
+              </Text>
+            </td>
+          </tr>
+        </table>
+      </Section>
 
-      <Button href={homeUrl}>
-        Explorar Campanhas
-      </Button>
+      <div style={{ textAlign: "center" }}>
+        <Button href={homeUrl}>Explorar Campanhas</Button>
+      </div>
 
       <Text style={helpTextStyle}>
-        Dúvidas? Entre em contato conosco a qualquer momento.
+        Duvidas? Entre em contato conosco a qualquer momento.
       </Text>
     </BaseEmail>
   );
 }
 
 const h1Style: React.CSSProperties = {
-  color: '#111827',
-  fontSize: '24px',
-  fontWeight: 'bold',
-  margin: '0 0 24px 0',
-  lineHeight: '32px',
+  color: colors.primary900,
+  fontSize: "26px",
+  fontWeight: "700",
+  fontFamily: '"Fraunces", Georgia, "Times New Roman", serif',
+  margin: "0 0 24px 0",
+  lineHeight: "34px",
 };
 
 const paragraphStyle: React.CSSProperties = {
-  color: '#374151',
-  fontSize: '16px',
-  lineHeight: '24px',
-  margin: '0 0 16px 0',
+  color: colors.primary900,
+  fontSize: "15px",
+  lineHeight: "24px",
+  margin: "0 0 16px 0",
+  fontFamily: '"DM Sans", Arial, Helvetica, sans-serif',
 };
 
-const listStyle: React.CSSProperties = {
-  color: '#374151',
-  fontSize: '16px',
-  lineHeight: '24px',
-  margin: '0 0 16px 0',
-  paddingLeft: '20px',
+const featuresContainerStyle: React.CSSProperties = {
+  backgroundColor: colors.cream50,
+  borderRadius: "12px",
+  padding: "20px",
+  margin: "24px 0",
+  border: `1px solid ${colors.cream200}`,
 };
 
-const listItemStyle: React.CSSProperties = {
-  marginBottom: '8px',
+const featuresTitle: React.CSSProperties = {
+  color: colors.terracotta500,
+  fontSize: "14px",
+  fontWeight: "600",
+  fontFamily: '"DM Sans", Arial, Helvetica, sans-serif',
+  margin: "0 0 16px 0",
+  letterSpacing: "0.02em",
+  textTransform: "uppercase" as const,
+};
+
+const featureIconCellStyle: React.CSSProperties = {
+  width: "36px",
+  verticalAlign: "top",
+  paddingBottom: "12px",
+};
+
+const featureIconStyle: React.CSSProperties = {
+  width: "32px",
+  height: "32px",
+  backgroundColor: colors.primary50,
+  borderRadius: "8px",
+  textAlign: "center",
+  lineHeight: "32px",
+};
+
+const featureTextCellStyle: React.CSSProperties = {
+  verticalAlign: "middle",
+  paddingLeft: "8px",
+  paddingBottom: "12px",
+};
+
+const featureTextStyle: React.CSSProperties = {
+  color: colors.primary900,
+  fontSize: "14px",
+  lineHeight: "20px",
+  margin: "0",
+  fontFamily: '"DM Sans", Arial, Helvetica, sans-serif',
 };
 
 const helpTextStyle: React.CSSProperties = {
-  color: '#6b7280',
-  fontSize: '14px',
-  lineHeight: '20px',
-  margin: '24px 0 0 0',
+  color: colors.primary700,
+  fontSize: "13px",
+  lineHeight: "20px",
+  margin: "24px 0 0 0",
+  opacity: "0.7",
+  fontFamily: '"DM Sans", Arial, Helvetica, sans-serif',
 };

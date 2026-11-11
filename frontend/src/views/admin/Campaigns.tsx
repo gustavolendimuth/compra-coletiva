@@ -6,11 +6,12 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { adminService } from '@/api';
+import type { Campaign, ListCampaignsParams } from '@/api/types';
 
 export function Campaigns() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState<string>('');
+  const [status, setStatus] = useState<ListCampaignsParams['status'] | ''>('');
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'campaigns', page, search, status],
@@ -19,7 +20,7 @@ export function Campaigns() {
         page,
         limit: 20,
         ...(search && { search }),
-        ...(status && { status: status as any }),
+        ...(status && { status }),
       }),
   });
 
@@ -59,7 +60,7 @@ export function Campaigns() {
             </label>
             <select
               value={status}
-              onChange={(e) => setStatus(e.target.value)}
+              onChange={(e) => setStatus(e.target.value as ListCampaignsParams['status'] | '')}
               className="w-full px-4 py-2 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">Todos</option>
@@ -104,7 +105,7 @@ export function Campaigns() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {data.data.campaigns.map((campaign: any) => (
+                {data.data.campaigns.map((campaign: Campaign & { creator: { name: string; email: string } }) => (
                   <tr key={campaign.id} className="hover:bg-gray-50">
                     <td className="px-4 py-4">
                       <div className="text-sm font-medium text-gray-900">
@@ -137,10 +138,10 @@ export function Campaigns() {
                       </span>
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-600">
-                      {campaign._count.products}
+                      {campaign._count?.products ?? 0}
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-600">
-                      {campaign._count.orders}
+                      {campaign._count?.orders ?? 0}
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-400">
                       {new Date(campaign.createdAt).toLocaleDateString('pt-BR')}
@@ -178,3 +179,4 @@ export function Campaigns() {
     </div>
   );
 }
+

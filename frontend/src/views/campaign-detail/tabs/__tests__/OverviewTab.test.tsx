@@ -11,7 +11,7 @@ import {
 
 // Mock CampaignChat component
 vi.mock("@/components/campaign", () => ({
-  CampaignChat: ({ campaignId, isCreator }: any) => (
+  CampaignChat: ({ campaignId, isCreator }: unknown) => (
     <div data-testid="campaign-chat">
       <span>Campaign Chat: {campaignId}</span>
       <span>Is Creator: {String(isCreator)}</span>
@@ -21,7 +21,7 @@ vi.mock("@/components/campaign", () => ({
 
 // Mock IconButton component
 vi.mock("@/components/IconButton", () => ({
-  default: ({ onClick, children, icon, title, ...props }: any) => (
+  default: ({ onClick, children, icon, title, ...props }: unknown) => (
     <button onClick={onClick} title={title} {...props}>
       {children}
     </button>
@@ -33,6 +33,14 @@ vi.mock("../../CampaignLocationSection", () => ({
   CampaignLocationSection: () => (
     <div data-testid="campaign-location-section">Location Section</div>
   ),
+}));
+
+// Mock useAuth to return an admin user so all action buttons are visible
+vi.mock("@/contexts/AuthContext", () => ({
+  useAuth: vi.fn(() => ({
+    user: { id: "admin-user", role: "ADMIN", name: "Admin", email: "admin@test.com" },
+    requireAuth: vi.fn(),
+  })),
 }));
 
 describe("OverviewTab", () => {
@@ -79,8 +87,8 @@ describe("OverviewTab", () => {
     totalPaid: 300,
     totalUnpaid: 250,
     byCustomer: [
-      { customerName: "Alice", total: 110, isPaid: true },
-      { customerName: "Bob", total: 220, isPaid: false },
+      { customerAlias: "Alice", total: 110, isPaid: true },
+      { customerAlias: "Bob", total: 220, isPaid: false },
     ],
     byProduct: [
       { productId: "product-1", productName: "Product A", quantity: 5 },
@@ -98,6 +106,7 @@ describe("OverviewTab", () => {
   const mockCallbacks = {
     onViewOrder: vi.fn(),
     onTogglePayment: vi.fn(),
+    onEditOrder: vi.fn(),
     onAddToOrder: vi.fn(),
   };
 
@@ -135,7 +144,7 @@ describe("OverviewTab", () => {
     });
 
     it("should not render location section when no pickupAddress", () => {
-      render(<OverviewTab {...defaultProps} />);
+      render(<OverviewTab {...defaultProps} canEditCampaign={false} />);
 
       expect(screen.queryByTestId("campaign-location-section")).not.toBeInTheDocument();
     });
@@ -280,57 +289,56 @@ describe("OverviewTab", () => {
     it("should render view order button for each customer", () => {
       render(<OverviewTab {...defaultProps} />);
 
-      const viewButtons = screen.queryAllByTitle(/visualizar pedido/i);
-      // If buttons don't have title attribute, check for buttons by role
-      if (viewButtons.length === 0) {
-        const allButtons = screen.getAllByRole("button");
-        expect(allButtons.length).toBeGreaterThan(0);
-      } else {
-        expect(viewButtons.length).toBeGreaterThan(0);
-      }
+      const viewButtons = screen.getAllByTitle(/visualizar pedido/i);
+      expect(viewButtons).toHaveLength(mockAnalytics.byCustomer.length);
     });
 
     it("should call onViewOrder when view button is clicked", async () => {
       const user = userEvent.setup();
       render(<OverviewTab {...defaultProps} />);
 
-      const viewButtons = screen.queryAllByTitle(/visualizar pedido/i);
-      // If title attribute exists, use it; otherwise skip this test
-      if (viewButtons.length > 0) {
-        await user.click(viewButtons[0]);
-        expect(mockCallbacks.onViewOrder).toHaveBeenCalled();
-      } else {
-        // Component might not have title attributes - test passes
-        expect(true).toBe(true);
-      }
+      const viewButtons = screen.getAllByTitle(/visualizar pedido/i);
+      await user.click(viewButtons[0]);
+
+      expect(mockCallbacks.onViewOrder).toHaveBeenCalledWith(mockOrders[0]);
     });
 
     it("should render payment toggle button for each customer", () => {
       render(<OverviewTab {...defaultProps} />);
 
-      const paymentButtons = screen.queryAllByTitle(/marcar como/i);
-      // If buttons don't have title attribute, check for buttons by role
-      if (paymentButtons.length === 0) {
-        const allButtons = screen.getAllByRole("button");
-        expect(allButtons.length).toBeGreaterThan(0);
-      } else {
-        expect(paymentButtons.length).toBeGreaterThan(0);
-      }
+      const paymentButtons = screen.getAllByTitle(
+        /marcar como não pago|enviar comprovante de pagamento/i
+      );
+      expect(paymentButtons).toHaveLength(mockAnalytics.byCustomer.length);
     });
 
     it("should call onTogglePayment when payment button is clicked", async () => {
       const user = userEvent.setup();
       render(<OverviewTab {...defaultProps} />);
 
-      const paymentButtons = screen.queryAllByTitle(/marcar como/i);
-      // If title attribute exists, use it; otherwise skip this test
-      if (paymentButtons.length > 0) {
-        await user.click(paymentButtons[0]);
-        expect(mockCallbacks.onTogglePayment).toHaveBeenCalled();
-      } else {
-        // Component might not have title attributes - test passes
-        expect(true).toBe(true);
-      }
+      const paymentButtons = screen.getAllByTitle(
+        /marcar como não pago|enviar comprovante de pagamento/i
+      );
+      await user.click(paymentButtons[0]);
+
+      expect(mockCallbacks.onTogglePayment).toHaveBeenCalledWith(mockOrders[0]);
+    });
+
+    it("should render edit button for each customer", () => {
+      render(<OverviewTab {...defaultProps} />);
+
+      const editButtons = screen.getAllByTitle(/editar pedido/i);
+      expect(editButtons).toHaveLength(mockAnalytics.byCustomer.length);
+    });
+
+    it("should call onEditOrder when edit button is clicked", async () => {
+      const user = userEvent.setup();
+      render(<OverviewTab {...defaultProps} />);
+
+      const editButtons = screen.getAllByTitle(/editar pedido/i);
+      await user.click(editButtons[0]);
+
+      expect(mockCallbacks.onEditOrder).toHaveBeenCalledWith(mockOrders[0]);
     });
   });
 
@@ -470,4 +478,225 @@ describe("OverviewTab", () => {
       expect(screen.getByText("Por Pessoa")).toBeInTheDocument();
     });
   });
+
+  describe("Role-based Permissions", () => {
+    const permissionOrders = [
+      createMockOrder({
+        id: "order-1",
+        userId: "u1",
+        customer: { id: "u1", name: "Alice", email: "alice@test.com" },
+        isPaid: true,
+        total: 110,
+      }),
+      createMockOrder({
+        id: "order-2",
+        userId: "u2",
+        customer: { id: "u2", name: "Bob", email: "bob@test.com" },
+        isPaid: false,
+        total: 220,
+      }),
+    ];
+
+    const permissionProps = {
+      ...defaultProps,
+      orders: permissionOrders,
+    };
+
+    it("should show all action buttons on all orders for admin user", async () => {
+      const { useAuth } = await import("@/contexts/AuthContext");
+      vi.mocked(useAuth).mockReturnValue({
+        user: { id: "admin-user", role: "ADMIN", name: "Admin", email: "admin@test.com" },
+      } as ReturnType<typeof useAuth>);
+
+      render(<OverviewTab {...permissionProps} />);
+
+      const viewButtons = screen.getAllByTitle(/visualizar pedido/i);
+      const paymentButtons = screen.getAllByTitle(
+        /marcar como não pago|enviar comprovante de pagamento/i
+      );
+      const editButtons = screen.getAllByTitle(/editar pedido/i);
+
+      expect(viewButtons).toHaveLength(2);
+      expect(paymentButtons).toHaveLength(2);
+      expect(editButtons).toHaveLength(2);
+    });
+
+    it("should show view button on all orders for campaign creator", async () => {
+      const { useAuth } = await import("@/contexts/AuthContext");
+      vi.mocked(useAuth).mockReturnValue({
+        user: { id: "user-1", role: "CUSTOMER", name: "Creator", email: "creator@test.com" },
+      } as ReturnType<typeof useAuth>);
+
+      render(<OverviewTab {...permissionProps} />);
+
+      const viewButtons = screen.getAllByTitle(/visualizar pedido/i);
+      expect(viewButtons).toHaveLength(2);
+    });
+
+    it("should not show payment/edit buttons on others' orders for creator", async () => {
+      const { useAuth } = await import("@/contexts/AuthContext");
+      vi.mocked(useAuth).mockReturnValue({
+        user: { id: "user-1", role: "CUSTOMER", name: "Creator", email: "creator@test.com" },
+      } as ReturnType<typeof useAuth>);
+
+      render(<OverviewTab {...permissionProps} />);
+
+      // Creator (user-1) is not u1 or u2, so no payment/edit buttons
+      expect(
+        screen.queryByTitle(/marcar como não pago|enviar comprovante de pagamento/i)
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTitle(/editar pedido/i)
+      ).not.toBeInTheDocument();
+    });
+
+    it("should show all buttons only on own order for regular user", async () => {
+      const { useAuth } = await import("@/contexts/AuthContext");
+      vi.mocked(useAuth).mockReturnValue({
+        user: { id: "u1", role: "CUSTOMER", name: "Alice", email: "alice@test.com" },
+      } as ReturnType<typeof useAuth>);
+
+      render(<OverviewTab {...permissionProps} />);
+
+      // u1 (Alice) should see view, payment, and edit on their own order
+      const viewButtons = screen.getAllByTitle(/visualizar pedido/i);
+      const paymentButtons = screen.getAllByTitle(
+        /marcar como não pago|enviar comprovante de pagamento/i
+      );
+      const editButtons = screen.getAllByTitle(/editar pedido/i);
+
+      expect(viewButtons).toHaveLength(1);
+      expect(paymentButtons).toHaveLength(1);
+      expect(editButtons).toHaveLength(1);
+    });
+
+    it("should show no buttons on other users' orders for regular user", async () => {
+      const { useAuth } = await import("@/contexts/AuthContext");
+      vi.mocked(useAuth).mockReturnValue({
+        user: { id: "u1", role: "CUSTOMER", name: "Alice", email: "alice@test.com" },
+      } as ReturnType<typeof useAuth>);
+
+      render(<OverviewTab {...permissionProps} />);
+
+      // Only 1 view button total (own order), so Bob's entry has no buttons
+      const viewButtons = screen.getAllByTitle(/visualizar pedido/i);
+      expect(viewButtons).toHaveLength(1);
+
+      // Verify Bob's name is rendered but has no associated buttons
+      expect(screen.getByText("Bob")).toBeInTheDocument();
+    });
+
+    it("deve exibir todos os botoes de acao para todos os pedidos quando usuario nao esta autenticado", async () => {
+      const { useAuth } = await import("@/contexts/AuthContext");
+      vi.mocked(useAuth).mockReturnValue({
+        user: null,
+        requireAuth: vi.fn(),
+      } as ReturnType<typeof useAuth>);
+
+      render(<OverviewTab {...permissionProps} />);
+
+      const viewButtons = screen.getAllByTitle(/visualizar pedido/i);
+      const paymentButtons = screen.getAllByTitle(
+        /marcar como não pago|enviar comprovante de pagamento/i
+      );
+      const editButtons = screen.getAllByTitle(/editar pedido/i);
+
+      expect(viewButtons).toHaveLength(2);
+      expect(paymentButtons).toHaveLength(2);
+      expect(editButtons).toHaveLength(2);
+    });
+
+    it("deve chamar requireAuth ao clicar em visualizar sem estar autenticado", async () => {
+      const userEvent = (await import("@testing-library/user-event")).default;
+      const { useAuth } = await import("@/contexts/AuthContext");
+      const requireAuthMock = vi.fn();
+      vi.mocked(useAuth).mockReturnValue({
+        user: null,
+        requireAuth: requireAuthMock,
+      } as ReturnType<typeof useAuth>);
+
+      render(<OverviewTab {...permissionProps} />);
+
+      const viewButtons = screen.getAllByTitle(/visualizar pedido/i);
+      await userEvent.setup().click(viewButtons[0]);
+
+      expect(requireAuthMock).toHaveBeenCalledTimes(1);
+      expect(mockCallbacks.onViewOrder).not.toHaveBeenCalled();
+    });
+
+    it("deve chamar requireAuth ao clicar em pagamento sem estar autenticado", async () => {
+      const userEvent = (await import("@testing-library/user-event")).default;
+      const { useAuth } = await import("@/contexts/AuthContext");
+      const requireAuthMock = vi.fn();
+      vi.mocked(useAuth).mockReturnValue({
+        user: null,
+        requireAuth: requireAuthMock,
+      } as ReturnType<typeof useAuth>);
+
+      render(<OverviewTab {...permissionProps} />);
+
+      const paymentButtons = screen.getAllByTitle(
+        /marcar como não pago|enviar comprovante de pagamento/i
+      );
+      await userEvent.setup().click(paymentButtons[0]);
+
+      expect(requireAuthMock).toHaveBeenCalledTimes(1);
+      expect(mockCallbacks.onTogglePayment).not.toHaveBeenCalled();
+    });
+
+    it("deve chamar requireAuth ao clicar em editar sem estar autenticado", async () => {
+      const userEvent = (await import("@testing-library/user-event")).default;
+      const { useAuth } = await import("@/contexts/AuthContext");
+      const requireAuthMock = vi.fn();
+      vi.mocked(useAuth).mockReturnValue({
+        user: null,
+        requireAuth: requireAuthMock,
+      } as ReturnType<typeof useAuth>);
+
+      render(<OverviewTab {...permissionProps} />);
+
+      const editButtons = screen.getAllByTitle(/editar pedido/i);
+      await userEvent.setup().click(editButtons[0]);
+
+      expect(requireAuthMock).toHaveBeenCalledTimes(1);
+      expect(mockCallbacks.onEditOrder).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Botao Pedir sem autenticacao", () => {
+    it("deve chamar requireAuth ao clicar em Pedir quando usuario nao esta autenticado", async () => {
+      const { useAuth } = await import("@/contexts/AuthContext");
+      const requireAuthMock = vi.fn();
+      vi.mocked(useAuth).mockReturnValue({
+        user: null,
+        requireAuth: requireAuthMock,
+      } as ReturnType<typeof useAuth>);
+
+      const user = userEvent.setup();
+      render(<OverviewTab {...defaultProps} isActive={true} />);
+
+      const pedirButtons = screen.getAllByRole("button", { name: /pedir/i });
+      await user.click(pedirButtons[0]);
+
+      expect(requireAuthMock).toHaveBeenCalledTimes(1);
+      expect(mockCallbacks.onAddToOrder).not.toHaveBeenCalled();
+    });
+
+    it("deve chamar onAddToOrder ao clicar em Pedir quando usuario esta autenticado", async () => {
+      const { useAuth } = await import("@/contexts/AuthContext");
+      vi.mocked(useAuth).mockReturnValue({
+        user: { id: "u1", role: "CUSTOMER", name: "Alice", email: "alice@test.com" },
+        requireAuth: vi.fn(),
+      } as ReturnType<typeof useAuth>);
+
+      const user = userEvent.setup();
+      render(<OverviewTab {...defaultProps} isActive={true} />);
+
+      const pedirButtons = screen.getAllByRole("button", { name: /pedir/i });
+      await user.click(pedirButtons[0]);
+
+      expect(mockCallbacks.onAddToOrder).toHaveBeenCalledTimes(1);
+    });
+  });
 });
+

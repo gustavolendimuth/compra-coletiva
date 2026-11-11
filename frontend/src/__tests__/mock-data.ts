@@ -42,6 +42,9 @@ export const createMockCampaign = (
     shippingCost: 50.0,
     creatorId: 'user-1',
     pixVisibleAtStatus: 'CLOSED',
+    paymentReleaseTrigger: 'ON_CLOSED',
+    paymentReleased: false,
+    paymentReleasedAt: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     _count: {
@@ -64,7 +67,7 @@ export const createMockCampaign = (
 // Mock Campaign List Response Factory
 export const createMockCampaignListResponse = (
   campaigns: CampaignWithProducts[] = [],
-  overrides: Partial<any> = {}
+  overrides: Partial<unknown> = {}
 ) => ({
   data: campaigns,
   suggestions: [],
@@ -240,11 +243,13 @@ export const createMockAnalytics = (
   byCustomer: [
     {
       customerName: 'Customer 1',
+      customerAlias: 'Customer 1',
       total: 250.0,
       isPaid: true,
     },
     {
       customerName: 'Customer 2',
+      customerAlias: 'Customer 2',
       total: 300.0,
       isPaid: false,
     },
@@ -269,6 +274,9 @@ export const createMockCampaignFull = (
     shippingCost: 50.0,
     creatorId: 'user-1',
     pixVisibleAtStatus: 'CLOSED',
+    paymentReleaseTrigger: 'ON_CLOSED',
+    paymentReleased: false,
+    paymentReleasedAt: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     _count: {
@@ -333,3 +341,4 @@ export const mockMessageNotification = createMockNotification({
   isRead: false,
   metadata: { campaignSlug: 'test-campaign', orderId: 'order-1', isQuestion: false },
 });
+

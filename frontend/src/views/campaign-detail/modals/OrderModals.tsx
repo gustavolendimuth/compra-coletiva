@@ -1,4 +1,5 @@
-import { Plus, Trash2, Edit, Check, Loader } from "lucide-react";
+import { Plus, Trash2, Edit, Check, Loader, FileText, ExternalLink } from "lucide-react";
+/* eslint-disable @next/next/no-img-element */
 import { Modal, Button, Input, Select, Badge } from "@/components/ui";
 import IconButton from "@/components/IconButton";
 import { OrderChat } from "@/components/campaign";
@@ -36,6 +37,110 @@ interface AddOrderModalProps extends OrderModalBaseProps {
   lastSaved?: Date | null;
 }
 
+interface AdminCreateOrderModalProps {
+  isOpen: boolean;
+  form: {
+    mode: "self" | "customer";
+    name: string;
+    email: string;
+    phone: string;
+  };
+  isPending?: boolean;
+  onClose: () => void;
+  onChange: (form: { mode: "self" | "customer"; name: string; email: string; phone: string }) => void;
+  onSubmit: () => void;
+}
+
+export function AdminCreateOrderModal({
+  isOpen,
+  form,
+  isPending = false,
+  onClose,
+  onChange,
+  onSubmit,
+}: AdminCreateOrderModalProps) {
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Novo Pedido">
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-sky-700 mb-2">
+            Para quem e o pedido?
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              variant={form.mode === "self" ? "primary" : "secondary"}
+              onClick={() => onChange({ ...form, mode: "self" })}
+            >
+              Pedido para mim
+            </Button>
+            <Button
+              type="button"
+              variant={form.mode === "customer" ? "primary" : "secondary"}
+              onClick={() => onChange({ ...form, mode: "customer" })}
+            >
+              Para outro usuario
+            </Button>
+          </div>
+        </div>
+
+        {form.mode === "customer" && (
+          <>
+            <p className="text-sm text-sky-700">
+              Informe os dados do cliente. Se o email ja existir, o pedido sera vinculado ao usuario existente.
+            </p>
+
+            <div>
+              <label className="block text-sm font-medium text-sky-700 mb-2">
+                Nome do cliente *
+              </label>
+              <Input
+                type="text"
+                value={form.name}
+                onChange={(e) => onChange({ ...form, name: e.target.value })}
+                placeholder="Ex: Maria Silva"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-sky-700 mb-2">
+                Email do cliente *
+              </label>
+              <Input
+                type="email"
+                value={form.email}
+                onChange={(e) => onChange({ ...form, email: e.target.value })}
+                placeholder="cliente@email.com"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-sky-700 mb-2">
+                Telefone (opcional)
+              </label>
+              <Input
+                type="text"
+                value={form.phone}
+                onChange={(e) => onChange({ ...form, phone: e.target.value })}
+                placeholder="(11) 99999-9999"
+              />
+            </div>
+          </>
+        )}
+
+        <div className="flex gap-3 pt-2">
+          <Button type="button" variant="secondary" onClick={onClose} className="w-full">
+            Cancelar
+          </Button>
+          <Button type="button" onClick={onSubmit} className="w-full" disabled={isPending}>
+            {isPending ? "Criando..." : "Continuar"}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export function AddOrderModal({
   isOpen,
   form,
@@ -70,7 +175,7 @@ export function AddOrderModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-sky-700 mb-2">
             Produtos *
           </label>
           {form.items.map((item, index) => (
@@ -200,16 +305,16 @@ export function ViewOrderModal({
       {order && (
         <div className="space-y-4">
           {/* Informações do Pedido */}
-          <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+          <div className="bg-sky-50 rounded-2xl p-4 space-y-3">
             <div>
-              <span className="text-sm text-gray-500">Cliente</span>
-              <p className="font-semibold text-gray-900">
+              <span className="text-sm text-sky-600">Cliente</span>
+              <p className="font-semibold text-sky-900">
                 {order.customer.name}
               </p>
             </div>
 
             <div>
-              <span className="text-sm text-gray-500">Status de Pagamento</span>
+              <span className="text-sm text-sky-600">Status de Pagamento</span>
               <p
                 className={`font-medium ${
                   order.isPaid ? "text-green-600" : "text-red-600"
@@ -222,22 +327,22 @@ export function ViewOrderModal({
 
           {/* Produtos do Pedido */}
           <div>
-            <h4 className="font-semibold text-gray-900 mb-2">Produtos</h4>
-            <div className="border rounded-lg divide-y">
+            <h4 className="font-semibold text-sky-900 mb-2">Produtos</h4>
+            <div className="border border-sky-100 rounded-2xl divide-y divide-sky-100">
               {order.items.map((item, index) => (
                 <div
                   key={index}
                   className="p-3 flex justify-between items-center"
                 >
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900">
+                    <p className="font-medium text-sky-900">
                       {item.product.name}
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-sky-600">
                       {item.quantity}x {formatCurrency(item.unitPrice)}
                     </p>
                   </div>
-                  <p className="font-semibold text-gray-900">
+                  <p className="font-semibold text-sky-900">
                     {formatCurrency(item.subtotal)}
                   </p>
                 </div>
@@ -246,22 +351,22 @@ export function ViewOrderModal({
           </div>
 
           {/* Resumo Financeiro */}
-          <div className="bg-primary-50 rounded-lg p-4 space-y-2">
+          <div className="bg-sky-50 rounded-2xl p-4 space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Subtotal</span>
-              <span className="font-medium text-gray-900">
+              <span className="text-sky-600">Subtotal</span>
+              <span className="font-medium text-sky-900">
                 {formatCurrency(order.subtotal)}
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Frete</span>
-              <span className="font-medium text-gray-900">
+              <span className="text-sky-600">Frete</span>
+              <span className="font-medium text-sky-900">
                 {formatCurrency(order.shippingFee)}
               </span>
             </div>
-            <div className="flex justify-between text-lg font-bold pt-2 border-t border-primary-200">
-              <span className="text-gray-900">Total</span>
-              <span className="text-primary-600">
+            <div className="flex justify-between text-lg font-bold pt-2 border-t border-sky-200">
+              <span className="text-sky-900">Total</span>
+              <span className="text-sky-600">
                 {formatCurrency(order.total)}
               </span>
             </div>
@@ -270,16 +375,38 @@ export function ViewOrderModal({
           {/* Comprovante de Pagamento */}
           {order.paymentProofUrl && (
             <div>
-              <h4 className="font-semibold text-gray-900 mb-2">
+              <h4 className="font-semibold text-sky-900 mb-2">
                 Comprovante de Pagamento
               </h4>
-              <div className="border rounded-lg overflow-hidden">
-                <img
-                  src={getImageUrl(order.paymentProofUrl) || undefined}
-                  alt="Comprovante PIX"
-                  className="w-full h-auto"
-                />
-              </div>
+              {order.paymentProofUrl.toLowerCase().endsWith('.pdf') || order.paymentProofUrl.toLowerCase().includes('application/pdf') ? (
+                <div className="border rounded-lg overflow-hidden bg-gray-50">
+                  <iframe
+                    src={getImageUrl(order.paymentProofUrl) || undefined}
+                    title="Comprovante PIX"
+                    className="w-full h-96"
+                  />
+                  <div className="p-3 border-t flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-red-500 flex-shrink-0" />
+                    <a
+                      href={getImageUrl(order.paymentProofUrl) || undefined}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-sky-600 hover:underline flex items-center gap-1"
+                    >
+                      Abrir PDF em nova aba
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <div className="border rounded-lg overflow-hidden">
+                  <img
+                    src={getImageUrl(order.paymentProofUrl) || undefined}
+                    alt="Comprovante PIX"
+                    className="w-full h-auto"
+                  />
+                </div>
+              )}
             </div>
           )}
 

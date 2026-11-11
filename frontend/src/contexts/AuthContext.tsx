@@ -1,9 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { authStorage, StoredUser, PendingActionData } from '../lib/authStorage';
 import { authApi, RegisterRequest, LoginRequest } from '../lib/authApi';
 import { reconnectSocket } from '../lib/socket';
+import { getApiErrorDetails, getApiErrorMessage } from '../lib/apiError';
 import toast from 'react-hot-toast';
 
 interface AuthContextType {
@@ -40,6 +41,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
+  const needsCompleteProfile = useCallback(
+    (currentUser: StoredUser | null): boolean =>
+      !!currentUser &&
+      (!!currentUser.legalAcceptanceRequired ||
+        !currentUser.phoneCompleted ||
+        !currentUser.addressCompleted),
+    []
+  );
+
+  const redirectToCompleteProfileIfNeeded = useCallback(
+    (currentUser: StoredUser | null): boolean => {
+      if (!needsCompleteProfile(currentUser)) {
+        return false;
+      }
+
+      if (typeof window !== "undefined" && window.location.pathname !== "/completar-perfil") {
+        window.location.href = "/completar-perfil";
+      }
+      return true;
+    },
+    [needsCompleteProfile]
+  );
+
   // Initialize auth on mount
   useEffect(() => {
     const initAuth = async () => {
@@ -52,22 +76,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const currentUser = await authApi.me(accessToken);
           setUser(currentUser);
           authStorage.setUser(currentUser);
+          redirectToCompleteProfileIfNeeded(currentUser);
         } catch (error) {
           // Token invalid, try to refresh
-          const refreshToken = authStorage.getRefreshToken();
-          if (refreshToken) {
-            try {
-              const { accessToken: newAccessToken } = await authApi.refresh(refreshToken);
-              authStorage.setAccessToken(newAccessToken);
-              const currentUser = await authApi.me(newAccessToken);
-              setUser(currentUser);
-              authStorage.setUser(currentUser);
-            } catch {
-              // Refresh failed, clear auth
-              authStorage.clearAuth();
-              setUser(null);
-            }
-          } else {
+          try {
+            const response = await authApi.refresh();
+            authStorage.setAccessToken(response.accessToken);
+            authStorage.setUser(response.user);
+            setUser(response.user);
+            redirectToCompleteProfileIfNeeded(response.user);
+          } catch {
             authStorage.clearAuth();
             setUser(null);
           }
@@ -78,7 +96,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     initAuth();
-  }, []);
+  }, [redirectToCompleteProfileIfNeeded]);
 
   // Listen for pending action execution after email/password login
   useEffect(() => {
@@ -100,11 +118,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (data: LoginRequest) => {
     try {
       const response = await authApi.login(data);
-      authStorage.setAuth(response.accessToken, response.refreshToken, response.user);
+      authStorage.setAuth(response.accessToken, response.user);
       setUser(response.user);
       // Reconnect socket with new auth token
       reconnectSocket();
       toast.success(`Bem-vindo, ${response.user.name}!`);
+
+      if (redirectToCompleteProfileIfNeeded(response.user)) {
+        return;
+      }
 
       // Execute pending action if exists
       if (pendingAction) {
@@ -113,8 +135,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setPendingAction(null);
         }, 100);
       }
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Erro ao fazer login';
+    } catch (error: unknown) {
+      const message = getApiErrorMessage(error, 'Erro ao fazer login');
       toast.error(message);
       throw error;
     }
@@ -123,11 +145,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = async (data: RegisterRequest) => {
     try {
       const response = await authApi.register(data);
-      authStorage.setAuth(response.accessToken, response.refreshToken, response.user);
+      authStorage.setAuth(response.accessToken, response.user);
       setUser(response.user);
       // Reconnect socket with new auth token
       reconnectSocket();
       toast.success(`Conta criada com sucesso! Bem-vindo, ${response.user.name}!`);
+
+      if (redirectToCompleteProfileIfNeeded(response.user)) {
+        return;
+      }
 
       // Execute pending action if exists
       if (pendingAction) {
@@ -136,18 +162,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setPendingAction(null);
         }, 100);
       }
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Erro ao criar conta';
+    } catch (error: unknown) {
+      const details = getApiErrorDetails<Array<{ message?: string }>>(error);
+      const detailMessage =
+        Array.isArray(details) && details.length > 0
+          ? details[0]?.message
+          : null;
+      const message = detailMessage || getApiErrorMessage(error, 'Erro ao criar conta');
       toast.error(message);
       throw error;
     }
   };
 
   const logout = async () => {
-    const refreshToken = authStorage.getRefreshToken();
-    if (refreshToken) {
+    const accessToken = authStorage.getAccessToken();
+    if (accessToken) {
       try {
-        await authApi.logout(refreshToken);
+        await authApi.logout();
       } catch (error) {
         // Ignore logout errors
       }
@@ -225,3 +256,4 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
+

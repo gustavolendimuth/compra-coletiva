@@ -1,28 +1,11 @@
-import { useEffect, useRef } from 'react';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-
-const pinIcon = L.divIcon({
-  className: '',
-  html: `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="40" viewBox="0 0 32 40">
-    <defs>
-      <linearGradient id="pinGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stop-color="#ef4444"/>
-        <stop offset="100%" stop-color="#b91c1c"/>
-      </linearGradient>
-    </defs>
-    <path d="M16 0C7.16 0 0 7.16 0 16c0 5.09 2.36 9.65 6.04 12.68L14.4 38.4a2 2 0 003.2 0l8.36-9.72C29.64 25.65 32 21.09 32 16c0-8.84-7.16-16-16-16z" fill="url(#pinGrad)" stroke="#991b1b" stroke-width="1"/>
-    <circle cx="16" cy="16" r="6" fill="white"/>
-  </svg>`,
-  iconSize: [32, 40],
-  iconAnchor: [16, 40],
-  popupAnchor: [0, -40],
-});
+import { useEffect, useRef } from "react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 interface MapMarker {
   position: [number, number];
   popup?: string;
-  color?: 'blue' | 'red' | 'green';
+  color?: "blue" | "red" | "green" | "gray";
 }
 
 interface MapProps {
@@ -33,15 +16,48 @@ interface MapProps {
     from: [number, number];
     to: [number, number];
   };
+  routePath?: Array<[number, number]>;
   className?: string;
 }
+
+const markerColors: Record<NonNullable<MapMarker["color"]>, string> = {
+  blue: "#2563eb",
+  red: "#dc2626",
+  green: "#16a34a",
+  gray: "#4b5563",
+};
+
+const pinIconCache = new globalThis.Map<string, L.Icon>();
+
+const getPinIcon = (color: string) => {
+  const cached = pinIconCache.get(color);
+  if (cached) return cached;
+
+  const svg = `
+    <svg width="32" height="48" viewBox="0 0 32 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M16 1.5C8.268 1.5 2 7.768 2 15.5C2 26.5 16 46.5 16 46.5C16 46.5 30 26.5 30 15.5C30 7.768 23.732 1.5 16 1.5Z" fill="${color}" stroke="#1f2937" stroke-width="2"/>
+      <circle cx="16" cy="15.5" r="6" fill="#ffffff"/>
+    </svg>
+  `.trim();
+  const encodedSvg = encodeURIComponent(svg);
+  const icon = L.icon({
+    iconUrl: `data:image/svg+xml,${encodedSvg}`,
+    iconSize: [32, 48],
+    iconAnchor: [16, 46],
+    popupAnchor: [0, -42],
+  });
+
+  pinIconCache.set(color, icon);
+  return icon;
+};
 
 export function Map({
   center,
   zoom = 15,
   markers = [],
   showRoute,
-  className = '',
+  routePath,
+  className = "",
 }: MapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -54,24 +70,36 @@ export function Map({
     mapInstanceRef.current = map;
 
     // Add OpenStreetMap tile layer
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     }).addTo(map);
 
     // Add markers
     markers.forEach((marker) => {
-      const m = L.marker(marker.position, { icon: pinIcon }).addTo(map);
+      const color = markerColors[marker.color ?? "blue"];
+      const m = L.marker(marker.position, {
+        icon: getPinIcon(color),
+      }).addTo(map);
       if (marker.popup) {
         m.bindPopup(marker.popup);
       }
     });
 
-    // Add route line
-    if (showRoute) {
+    // Add route line (prefer detailed path when available)
+    if (routePath && routePath.length > 1) {
+      L.polyline(routePath, {
+        color: "#3b82f6",
+        weight: 4,
+      }).addTo(map);
+
+      const bounds = L.latLngBounds(routePath);
+      map.fitBounds(bounds, { padding: [50, 50] });
+    } else if (showRoute) {
       L.polyline([showRoute.from, showRoute.to], {
-        color: '#3b82f6',
+        color: "#3b82f6",
         weight: 3,
-        dashArray: '10, 10',
+        dashArray: "10, 10",
       }).addTo(map);
 
       // Fit bounds to show both points
@@ -83,12 +111,12 @@ export function Map({
       map.remove();
       mapInstanceRef.current = null;
     };
-  }, [center, zoom, markers, showRoute]);
+  }, [center, zoom, markers, showRoute, routePath]);
 
   return (
     <div
       ref={mapRef}
-      className={`h-[200px] md:h-[300px] w-full rounded-lg overflow-hidden ${className}`}
+      className={`relative z-0 h-[200px] md:h-[300px] w-full rounded-lg overflow-hidden ${className}`}
     />
   );
 }

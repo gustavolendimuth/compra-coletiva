@@ -58,8 +58,9 @@ async function main() {
 
         console.log(`✓ Generated slug for "${campaign.name}": ${slug}`);
         successCount++;
-      } catch (error: any) {
-        console.error(`✗ Error processing campaign "${campaign.name}":`, error.message);
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Unknown error";
+        console.error(`✗ Error processing campaign "${campaign.name}":`, message);
         errorCount++;
       }
     }
@@ -91,4 +92,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
-

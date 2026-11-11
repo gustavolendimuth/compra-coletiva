@@ -1,6 +1,5 @@
-import { useAuth } from '@/contexts/AuthContext';
 import { AddProductModal, EditProductModal } from './modals/ProductModals';
-import { EditOrderModal, ViewOrderModal } from './modals/OrderModals';
+import { AdminCreateOrderModal, EditOrderModal, ViewOrderModal } from './modals/OrderModals';
 import {
   ShippingModal,
   DeadlineModal,
@@ -13,32 +12,38 @@ import {
 } from './modals/CampaignModals';
 import { ImageUploadModal } from './modals/ImageUploadModal';
 import { PaymentProofModal } from './modals/PaymentProofModal';
+import { useCampaignDetail } from './useCampaignDetail';
+import { Button, ConfirmModal, Modal } from '@/components/ui';
 
 interface CampaignModalsProps {
-  hook: any;
+  hook: ReturnType<typeof useCampaignDetail>;
 }
 
 export function CampaignModals({ hook }: CampaignModalsProps) {
-  const { user } = useAuth();
-
   return (
     <>
       <AddProductModal
         isOpen={hook.isProductModalOpen}
         form={hook.productForm}
         isPending={hook.createProductMutation?.isPending || false}
-        onClose={() => hook.setIsProductModalOpen(false)}
-        onChange={hook.setProductForm}
+        onClose={hook.closeAddProductModal}
+        onChange={(form) => hook.setProductForm(form)}
         onSubmit={hook.handleCreateProduct}
+        onImageSelect={hook.handleNewProductImageSelect}
+        onImageRemove={hook.handleNewProductImageRemove}
       />
 
       <EditProductModal
         isOpen={hook.isEditProductModalOpen}
         form={hook.editProductForm}
         isPending={hook.updateProductMutation?.isPending || false}
-        onClose={() => hook.setIsEditProductModalOpen(false)}
-        onChange={hook.setEditProductForm}
+        onClose={hook.closeEditProductModal}
+        onChange={(form) => hook.setEditProductForm(form)}
         onSubmit={hook.handleEditProduct}
+        currentImageUrl={hook.editProductForm.imageUrl}
+        shouldHideCurrentImage={hook.shouldRemoveEditProductImage}
+        onImageSelect={hook.handleEditProductImageSelect}
+        onImageRemove={hook.handleEditProductImageRemove}
       />
 
       <EditOrderModal
@@ -46,16 +51,64 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
         form={hook.editOrderForm}
         products={hook.alphabeticalProducts || hook.products || []}
         onClose={hook.closeEditOrderModal}
-        onChange={hook.setEditOrderForm}
+        onChange={(form) =>
+          hook.setEditOrderForm((prev) => ({
+            ...prev,
+            items: form.items,
+          }))
+        }
         isAutosaving={hook.isAutosaving}
         lastSaved={hook.lastSaved}
       />
+
+      <AdminCreateOrderModal
+        isOpen={hook.isAdminCustomerModalOpen}
+        form={hook.adminCustomerForm}
+        isPending={hook.createOrderMutation?.isPending || false}
+        onClose={() => {
+          hook.setIsAdminCustomerModalOpen(false);
+          hook.setAdminCustomerForm({ mode: "self", name: "", email: "", phone: "" });
+        }}
+        onChange={(form) => hook.setAdminCustomerForm(form)}
+        onSubmit={hook.handleCreateAdminOrder}
+      />
+
+      <Modal
+        isOpen={hook.isSalesDisclaimerModalOpen}
+        onClose={hook.handleCancelSalesDisclaimer}
+        title="Confirmação de Isenção de Vendas"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-sky-900 leading-relaxed">
+            Antes de criar pedido, confirme ciência: a plataforma não realiza a venda e não se responsabiliza por transações entre usuários.
+          </p>
+          <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
+            <Button
+              variant="secondary"
+              onClick={hook.handleCancelSalesDisclaimer}
+              disabled={hook.isSalesDisclaimerLoading}
+              className="w-full sm:w-auto"
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              onClick={hook.handleConfirmSalesDisclaimer}
+              disabled={hook.isSalesDisclaimerLoading}
+              className="w-full sm:w-auto"
+            >
+              {hook.isSalesDisclaimerLoading ? "Registrando..." : "Confirmo a ciência"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <ViewOrderModal
         isOpen={hook.isViewOrderModalOpen}
         order={hook.viewingOrder}
         isActive={hook.isActive}
-        canEdit={!!(user?.id === hook.viewingOrder?.userId || hook.canEditCampaign)}
+        canEdit={hook.canEditCampaign}
         onClose={() => {
           hook.setIsViewOrderModalOpen(false);
           hook.setViewingOrder(null);
@@ -72,6 +125,33 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
           hook.setOrderForPayment(null);
         }}
         onSubmit={hook.handlePaymentProofSubmit}
+        onMarkPaidWithoutProof={hook.canMarkPaidWithoutProof ? hook.handleMarkPaidWithoutProof : undefined}
+      />
+
+      <ConfirmModal
+        isOpen={hook.isRemovePaymentProofConfirmOpen}
+        onClose={hook.closeRemovePaymentProofConfirm}
+        onConfirm={hook.handleConfirmRemovePaymentProof}
+        title="Remover Comprovante de Pagamento"
+        message={
+          hook.orderForPaymentRemoval ? (
+            <>
+              <p>
+                O pedido de <strong>{hook.orderForPaymentRemoval.customer.name}</strong> já tem
+                comprovante enviado.
+              </p>
+              <p className="mt-2 text-sm text-sky-600">
+                Confirma remover o comprovante e marcar o pedido como não pago?
+              </p>
+            </>
+          ) : (
+            'Confirma remover o comprovante e marcar o pedido como não pago?'
+          )
+        }
+        confirmText="Remover Comprovante"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={hook.updatePaymentMutation?.isPending || false}
       />
 
       <ShippingModal
@@ -85,16 +165,13 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
 
       <DeadlineModal
         isOpen={hook.isEditDeadlineModalOpen}
-        campaign={hook.campaign}
+        campaign={hook.campaign ?? null}
         deadlineForm={hook.deadlineForm}
         isPending={hook.updateDeadlineMutation?.isPending || false}
         onClose={() => hook.setIsEditDeadlineModalOpen(false)}
         onChange={hook.setDeadlineForm}
         onSubmit={hook.handleUpdateDeadline}
-        onRemove={() => {
-          hook.setDeadlineForm('');
-          hook.handleUpdateDeadline({ preventDefault: () => {} } as React.FormEvent);
-        }}
+        onRemove={hook.handleRemoveDeadline}
       />
 
       <PixModal
@@ -102,13 +179,13 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
         pixKey={hook.pixKey}
         pixType={hook.pixType}
         pixName={hook.pixName}
-        pixVisibleAtStatus={hook.pixVisibleAtStatus}
+        paymentReleaseTrigger={hook.paymentReleaseTrigger}
         isPending={hook.updatePixMutation?.isPending || false}
         onClose={() => hook.setIsPixModalOpen(false)}
         onChangePixKey={hook.setPixKey}
-        onChangePixType={hook.setPixType}
+        onChangePixType={hook.handlePixTypeChange}
         onChangePixName={hook.setPixName}
-        onChangePixVisibleAtStatus={hook.setPixVisibleAtStatus}
+        onChangePaymentReleaseTrigger={hook.setPaymentReleaseTrigger}
         onSubmit={hook.handleUpdatePix}
         onRemove={hook.handleRemovePix}
       />
@@ -121,8 +198,14 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
 
       <ReopenConfirmDialog
         isOpen={hook.isReopenConfirmOpen}
+        campaign={hook.campaign ?? null}
+        deadlineForm={hook.reopenDeadlineForm || ''}
+        shouldRemoveDeadline={hook.shouldRemoveDeadlineOnReopen || false}
+        isPending={hook.reopenCampaignMutation?.isPending || false}
         onClose={() => hook.setIsReopenConfirmOpen(false)}
-        onConfirm={hook.handleReopenCampaign}
+        onChangeDeadline={hook.handleReopenDeadlineChange}
+        onToggleRemoveDeadline={hook.handleToggleRemoveDeadlineOnReopen}
+        onSubmit={hook.handleReopenCampaign}
       />
 
       <SentConfirmDialog
@@ -133,7 +216,7 @@ export function CampaignModals({ hook }: CampaignModalsProps) {
 
       <CloneModal
         isOpen={hook.isCloneModalOpen}
-        campaign={hook.campaign}
+        campaign={hook.campaign ?? null}
         cloneName={hook.cloneName}
         cloneDescription={hook.cloneDescription}
         isPending={hook.cloneCampaignMutation?.isPending || false}

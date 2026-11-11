@@ -36,6 +36,7 @@ const updatePreferencesSchema = z.object({
   campaignStatusChanged: z.boolean().optional(),
   campaignArchived: z.boolean().optional(),
   newMessage: z.boolean().optional(),
+  paymentReleased: z.boolean().optional(),
   digestEnabled: z.boolean().optional(),
   digestFrequency: z.enum(['DAILY', 'WEEKLY', 'MONTHLY']).optional(),
 });

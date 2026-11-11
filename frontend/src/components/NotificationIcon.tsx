@@ -13,10 +13,14 @@ import { useNotifications } from '../hooks/useNotifications';
 import { NotificationDropdown } from './NotificationDropdown';
 
 export function NotificationIcon() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const { unreadCount } = useNotifications();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
+
+  if (isLoading) {
+    return <div className="w-9 h-9 rounded-md bg-gray-100 animate-pulse" />;
+  }
 
   if (!isAuthenticated) {
     return null;

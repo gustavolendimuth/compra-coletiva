@@ -1,17 +1,17 @@
 /**
  * Template: Reset de senha
- * Enviado quando usuário solicita recuperação de senha
+ * Enviado quando usuario solicita recuperacao de senha
  */
 
-import * as React from 'react';
-import { Text, Heading } from '@react-email/components';
-import { BaseEmail } from '../base/BaseEmail';
-import { Button } from '../base/Button';
+import * as React from "react";
+import { Text, Heading, Section } from "@react-email/components";
+import { BaseEmail, colors } from "../base/BaseEmail";
+import { Button } from "../base/Button";
 
 export interface PasswordResetProps {
   userName: string;
   resetUrl: string;
-  expiresIn: string; // Ex: "1 hora"
+  expiresIn: string;
   unsubscribeUrl: string;
   preferencesUrl: string;
 }
@@ -29,67 +29,86 @@ export function PasswordReset({
       unsubscribeUrl={unsubscribeUrl}
       preferencesUrl={preferencesUrl}
     >
-      <Heading style={h1Style}>
-        🔒 Redefinir senha
-      </Heading>
+      <Heading style={h1Style}>Redefinir senha</Heading>
 
       <Text style={paragraphStyle}>
-        Olá, <strong>{userName}</strong>!
+        Ola, <strong>{userName}</strong>!
       </Text>
 
       <Text style={paragraphStyle}>
-        Você solicitou a redefinição da sua senha no Compra Coletiva.
+        Voce solicitou a redefinicao da sua senha no Compra Coletiva.
       </Text>
 
       <Text style={paragraphStyle}>
-        Clique no botão abaixo para criar uma nova senha:
+        Clique no botao abaixo para criar uma nova senha:
       </Text>
 
-      <Button href={resetUrl}>
-        Redefinir Senha
-      </Button>
+      <div style={{ textAlign: "center" }}>
+        <Button href={resetUrl}>Redefinir Senha</Button>
+      </div>
 
-      <Text style={warningStyle}>
-        ⚠️ Este link expira em <strong>{expiresIn}</strong>.
-      </Text>
+      <Section style={warningStyle}>
+        <table cellPadding="0" cellSpacing="0">
+          <tr>
+            <td style={{ verticalAlign: "top", paddingRight: "10px" }}>
+              <span style={{ fontSize: "16px" }}>&#x23F3;</span>
+            </td>
+            <td>
+              <Text style={warningTextStyle}>
+                Este link expira em <strong>{expiresIn}</strong>. Apos esse
+                periodo, sera necessario solicitar um novo link.
+              </Text>
+            </td>
+          </tr>
+        </table>
+      </Section>
 
       <Text style={helpTextStyle}>
-        Se você não solicitou a redefinição de senha, ignore este email.
-        Sua senha permanecerá inalterada.
+        Se voce nao solicitou a redefinicao de senha, ignore este email. Sua
+        senha permanecera inalterada.
       </Text>
     </BaseEmail>
   );
 }
 
 const h1Style: React.CSSProperties = {
-  color: '#111827',
-  fontSize: '24px',
-  fontWeight: 'bold',
-  margin: '0 0 24px 0',
-  lineHeight: '32px',
+  color: colors.primary900,
+  fontSize: "26px",
+  fontWeight: "700",
+  fontFamily: '"Fraunces", Georgia, "Times New Roman", serif',
+  margin: "0 0 24px 0",
+  lineHeight: "34px",
 };
 
 const paragraphStyle: React.CSSProperties = {
-  color: '#374151',
-  fontSize: '16px',
-  lineHeight: '24px',
-  margin: '0 0 16px 0',
+  color: colors.primary900,
+  fontSize: "15px",
+  lineHeight: "24px",
+  margin: "0 0 16px 0",
+  fontFamily: '"DM Sans", Arial, Helvetica, sans-serif',
 };
 
 const warningStyle: React.CSSProperties = {
-  color: '#dc2626',
-  fontSize: '14px',
-  lineHeight: '20px',
-  margin: '16px 0',
-  padding: '12px',
-  backgroundColor: '#fef2f2',
-  borderLeft: '4px solid #dc2626',
-  borderRadius: '4px',
+  backgroundColor: "#fef3c7",
+  border: "1px solid #fde68a",
+  borderRadius: "12px",
+  padding: "16px",
+  margin: "20px 0",
+};
+
+const warningTextStyle: React.CSSProperties = {
+  color: "#92400e",
+  fontSize: "13px",
+  lineHeight: "20px",
+  margin: "0",
+  fontFamily: '"DM Sans", Arial, Helvetica, sans-serif',
 };
 
 const helpTextStyle: React.CSSProperties = {
-  color: '#6b7280',
-  fontSize: '14px',
-  lineHeight: '20px',
-  margin: '24px 0 0 0',
+  color: colors.primary700,
+  fontSize: "13px",
+  lineHeight: "20px",
+  margin: "24px 0 0 0",
+  opacity: "0.7",
+  fontFamily: '"DM Sans", Arial, Helvetica, sans-serif',
 };

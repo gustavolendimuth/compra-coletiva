@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Providers } from './providers';
 import { StructuredData } from '@/components/seo/StructuredData';
+import { GlobalErrorBoundary } from '@/components/shared/GlobalErrorBoundary';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -102,7 +103,9 @@ export default function RootLayout({
             },
           }}
         />
-        <Providers>{children}</Providers>
+        <GlobalErrorBoundary>
+          <Providers>{children}</Providers>
+        </GlobalErrorBoundary>
       </body>
     </html>
   );

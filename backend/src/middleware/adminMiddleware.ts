@@ -5,7 +5,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { AppError } from './errorHandler';
-import { AuditAction, AuditTargetType } from '@prisma/client';
+import { AuditAction, AuditTargetType, Prisma } from '@prisma/client';
 import { AuditService } from '../services/auditService';
 
 /**
@@ -32,7 +32,7 @@ export const logAdminAction = (action: AuditAction, targetType: AuditTargetType)
     const originalJson = res.json.bind(res);
 
     // Override json to log after successful response
-    res.json = function (body: any) {
+    res.json = ((body: unknown) => {
       // Extract targetId from params or body
       const targetId = req.params.id || req.body?.id || req.body?.targetId;
 
@@ -42,19 +42,19 @@ export const logAdminAction = (action: AuditAction, targetType: AuditTargetType)
         action,
         targetType,
         targetId,
-        {
+        toInputJsonValue({
           method: req.method,
           path: req.path,
           query: req.query,
           body: sanitizeBody(req.body),
-        },
+        }),
         req
       ).catch((error) => {
         console.error('Erro ao registrar log de auditoria:', error);
       });
 
       return originalJson(body);
-    } as any;
+    }) as Response["json"];
 
     next();
   };
@@ -63,12 +63,12 @@ export const logAdminAction = (action: AuditAction, targetType: AuditTargetType)
 /**
  * Remove campos sensíveis do body antes de logar
  */
-function sanitizeBody(body: any): any {
+function sanitizeBody(body: unknown): unknown {
   if (!body || typeof body !== 'object') {
     return body;
   }
 
-  const sanitized = { ...body };
+  const sanitized: Record<string, unknown> = { ...(body as Record<string, unknown>) };
   const sensitiveFields = ['password', 'currentPassword', 'newPassword', 'token', 'refreshToken'];
 
   for (const field of sensitiveFields) {
@@ -78,6 +78,10 @@ function sanitizeBody(body: any): any {
   }
 
   return sanitized;
+}
+
+function toInputJsonValue(value: unknown): Prisma.InputJsonValue {
+  return JSON.parse(JSON.stringify(value ?? null)) as Prisma.InputJsonValue;
 }
 
 /**

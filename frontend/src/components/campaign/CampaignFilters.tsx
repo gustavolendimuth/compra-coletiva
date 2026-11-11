@@ -1,4 +1,4 @@
-import { Search, X, Filter, ChevronDown } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/Input";
@@ -114,7 +114,7 @@ export function CampaignFilters({
     <div className="space-y-4">
       {/* Barra de busca */}
       <div className="relative">
-        <Search className="w-5 h-5 absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 z-10" />
+        <Search className="w-5 h-5 absolute left-4 top-1/2 transform -translate-y-1/2 text-sky-400 z-10" />
         <Input
           type="text"
           placeholder="Buscar campanhas ou produtos..."
@@ -126,7 +126,7 @@ export function CampaignFilters({
           <button
             type="button"
             onClick={() => onSearchChange("")}
-            className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100 z-10"
+            className="absolute right-4 top-1/2 transform -translate-y-1/2 text-sky-400 hover:text-sky-600 transition-colors p-1 rounded-full hover:bg-sky-50 z-10"
             title="Limpar busca"
           >
             <X className="w-5 h-5" />
@@ -137,7 +137,7 @@ export function CampaignFilters({
       {/* Filtros rápidos e status */}
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
         {/* Filtros rápidos (tabs) */}
-        <div className="flex gap-2 overflow-x-auto pb-3 sm:pb-0 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
+        <div className="flex gap-2 overflow-x-auto pb-3 sm:pb-0 scrollbar-thin scrollbar-thumb-sky-200 scrollbar-track-transparent hover:scrollbar-thumb-sky-300">
           <QuickFilterButton
             active={activeQuickFilter === "all"}
             onClick={() => handleQuickFilter("all")}
@@ -175,7 +175,7 @@ export function CampaignFilters({
         <div className="flex items-center gap-3">
           {/* Contador */}
           {total !== undefined && (
-            <span className="text-sm text-gray-500 whitespace-nowrap">
+            <span className="text-sm text-sky-500/60 whitespace-nowrap font-medium">
               {total} {total === 1 ? "campanha" : "campanhas"}
             </span>
           )}
@@ -185,28 +185,31 @@ export function CampaignFilters({
             <button
               type="button"
               onClick={() => setIsStatusOpen(!isStatusOpen)}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-white/80 border border-sky-200/70 rounded-2xl text-sm font-medium text-sky-800 hover:bg-sky-50 transition-colors shadow-sm"
             >
-              <Filter className="w-4 h-4" />
+              <svg className="w-4 h-4 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
               <span>{selectedStatus?.label || "Status"}</span>
-              <ChevronDown
-                className={`w-4 h-4 transition-transform ${
-                  isStatusOpen ? "rotate-180" : ""
-                }`}
-              />
+              <svg
+                className={`w-4 h-4 text-sky-400 transition-transform ${isStatusOpen ? "rotate-180" : ""}`}
+                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
             </button>
 
             {isStatusOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10 py-1">
+              <div className="absolute right-0 mt-2 w-52 bg-white border border-sky-100 rounded-2xl shadow-lg shadow-sky-100/50 z-10 py-2 overflow-hidden">
                 {statusOptions.map((option) => (
                   <button
                     key={option.value ?? "all"}
                     type="button"
                     onClick={() => handleStatusChange(option.value)}
-                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors ${
+                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
                       filters.status === option.value
-                        ? "text-primary-600 font-medium bg-primary-50"
-                        : "text-gray-700"
+                        ? "text-sky-700 font-medium bg-sky-50"
+                        : "text-sky-800/70 hover:bg-sky-50/60"
                     }`}
                   >
                     {option.label}
@@ -247,8 +250,8 @@ function QuickFilterButton({
       onClick={onClick}
       className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
         active
-          ? "bg-primary-600 text-white shadow-md"
-          : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300"
+          ? "bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-md shadow-sky-300/30"
+          : "bg-white/80 text-sky-700 border border-sky-200/60 hover:bg-sky-50 hover:border-sky-300"
       }`}
     >
       {children}

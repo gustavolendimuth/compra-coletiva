@@ -1,0 +1,90 @@
+.navbar {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.navbarScrolled {
+  background: rgba(254, 253, 248, 0.92);
+  box-shadow: 0 1px 12px rgba(0, 0, 0, 0.06);
+}
+
+.floatCard {
+  animation: floatCard 6s ease-in-out infinite;
+}
+
+.floatCardDelay {
+  animation-delay: -2s;
+}
+
+.floatCardDelay2 {
+  animation-delay: -4s;
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  animation: revealUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.revealD1 {
+  animation-delay: 0.1s;
+}
+
+.revealD2 {
+  animation-delay: 0.2s;
+}
+
+.revealD3 {
+  animation-delay: 0.35s;
+}
+
+.revealD4 {
+  animation-delay: 0.5s;
+}
+
+.revealD5 {
+  animation-delay: 0.65s;
+}
+
+.scrollIndicator {
+  animation: scrollBounce 2s ease-in-out infinite;
+}
+
+.campaignCard {
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.4s ease;
+}
+
+.campaignCard:hover {
+  transform: translateY(-6px) scale(1.01);
+  box-shadow: 0 20px 60px -15px rgba(14, 165, 233, 0.15), 0 8px 24px -8px rgba(0, 0, 0, 0.08);
+}
+
+@keyframes floatCard {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+
+  50% {
+    transform: translateY(-12px) rotate(1deg);
+  }
+}
+
+@keyframes revealUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scrollBounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(8px);
+  }
+}

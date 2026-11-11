@@ -90,9 +90,9 @@ export function ProfileHeader({ user, onAvatarUpdate }: ProfileHeaderProps) {
       </div>
 
       <div className="text-center">
-        <h1 className="text-xl md:text-2xl font-bold text-gray-900">{user.name}</h1>
-        <p className="text-sm text-gray-500">{user.email}</p>
-        <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+        <h1 className="text-xl md:text-2xl font-display font-bold text-sky-900">{user.name}</h1>
+        <p className="text-sm text-sky-600">{user.email}</p>
+        <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full bg-sky-100 text-sky-700">
           {user.role === 'ADMIN' ? 'Administrador' : user.role === 'CAMPAIGN_CREATOR' ? 'Criador' : 'Cliente'}
         </span>
       </div>

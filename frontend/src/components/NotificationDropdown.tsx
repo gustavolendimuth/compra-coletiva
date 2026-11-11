@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { NotificationItem } from './ui/NotificationItem';
 import { useNotifications } from '../hooks/useNotifications';
+import type { Notification } from '@/api/types';
 import { Loader2 } from 'lucide-react';
 import { Portal } from './ui/Portal';
 
@@ -120,7 +121,7 @@ export function NotificationDropdown({
 
   if (!isOpen) return null;
 
-  const handleItemClick = (notification: any) => {
+  const handleItemClick = (notification: Notification) => {
     handleNotificationClick(notification);
     onClose();
   };
@@ -200,3 +201,4 @@ export function NotificationDropdown({
     </Portal>
   );
 }
+

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { AddOrderModal, EditOrderModal, ViewOrderModal } from '../OrderModals';
+import { AddOrderModal, AdminCreateOrderModal, EditOrderModal, ViewOrderModal } from '../OrderModals';
 import { createMockOrder, createMockFullProduct } from '@/__tests__/mock-data';
 
 // Mock OrderChat component
@@ -12,6 +12,66 @@ vi.mock('@/components/campaign', () => ({
 }));
 
 describe('OrderModals', () => {
+  describe('AdminCreateOrderModal', () => {
+    const mockOnClose = vi.fn();
+    const mockOnChange = vi.fn();
+    const mockOnSubmit = vi.fn();
+
+    const defaultProps = {
+      isOpen: true,
+      form: {
+        mode: 'self' as const,
+        name: '',
+        email: '',
+        phone: '',
+      },
+      isPending: false,
+      onClose: mockOnClose,
+      onChange: mockOnChange,
+      onSubmit: mockOnSubmit,
+    };
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it('should render mode options', () => {
+      render(<AdminCreateOrderModal {...defaultProps} />);
+
+      expect(screen.getByRole('button', { name: /pedido para mim/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /para outro usuario/i })).toBeInTheDocument();
+    });
+
+    it('should show customer fields when mode is customer', () => {
+      render(
+        <AdminCreateOrderModal
+          {...defaultProps}
+          form={{ mode: 'customer', name: '', email: '', phone: '' }}
+        />
+      );
+
+      expect(screen.getByText(/nome do cliente/i)).toBeInTheDocument();
+      expect(screen.getByText(/email do cliente/i)).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/cliente@email\.com/i)).toBeInTheDocument();
+    });
+
+    it('should hide customer fields when mode is self', () => {
+      render(<AdminCreateOrderModal {...defaultProps} />);
+
+      expect(screen.queryByText(/nome do cliente/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/email do cliente/i)).not.toBeInTheDocument();
+    });
+
+    it('should call onSubmit when clicking continue', async () => {
+      const user = userEvent.setup();
+      render(<AdminCreateOrderModal {...defaultProps} />);
+
+      await user.click(screen.getByRole('button', { name: /continuar/i }));
+
+      expect(mockOnSubmit).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('AddOrderModal', () => {
     const mockProducts = [
       createMockFullProduct({ id: 'product-1', name: 'Product A', price: 50.0 }),

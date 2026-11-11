@@ -8,6 +8,7 @@ import { useMutation } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { Card, Input, Button } from '@/components/ui';
 import { profileService } from '@/api';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 interface EmailSectionProps {
   currentEmail: string;
@@ -26,8 +27,8 @@ export function EmailSection({ currentEmail, hasPassword }: EmailSectionProps) {
       setVerificationSent(true);
       toast.success('Email de verificação enviado!');
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.message || 'Erro ao solicitar troca';
+    onError: (error: unknown) => {
+      const message = getApiErrorMessage(error, 'Erro ao solicitar troca');
       toast.error(message);
     },
   });
@@ -52,7 +53,7 @@ export function EmailSection({ currentEmail, hasPassword }: EmailSectionProps) {
 
   return (
     <Card className="p-4 md:p-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">Email</h2>
+      <h2 className="text-lg font-semibold text-sky-900 mb-4">Email</h2>
 
       {verificationSent ? (
         <div className="text-center py-4">
@@ -61,10 +62,10 @@ export function EmailSection({ currentEmail, hasPassword }: EmailSectionProps) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
           </div>
-          <p className="text-gray-700 mb-2">
+          <p className="text-sky-800 mb-2">
             Enviamos um email de verificação para <strong>{newEmail}</strong>
           </p>
-          <p className="text-sm text-gray-500 mb-4">
+          <p className="text-sm text-sky-600 mb-4">
             Clique no link no email para confirmar a alteração. O link expira em 24 horas.
           </p>
           <Button variant="secondary" onClick={handleCancel}>
@@ -92,7 +93,7 @@ export function EmailSection({ currentEmail, hasPassword }: EmailSectionProps) {
             />
           )}
 
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-sky-600">
             Um email de verificação será enviado para o novo endereço.
           </p>
 
@@ -107,7 +108,7 @@ export function EmailSection({ currentEmail, hasPassword }: EmailSectionProps) {
         </form>
       ) : (
         <div className="flex justify-between items-center">
-          <p className="text-sm text-gray-700">{currentEmail}</p>
+          <p className="text-sm text-sky-800">{currentEmail}</p>
           <Button variant="secondary" onClick={() => setIsEditing(true)}>
             Alterar
           </Button>
@@ -118,3 +119,4 @@ export function EmailSection({ currentEmail, hasPassword }: EmailSectionProps) {
 }
 
 export default EmailSection;
+

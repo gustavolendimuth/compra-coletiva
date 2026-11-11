@@ -16,7 +16,7 @@ interface AuthTabsProps {
  */
 export const AuthTabs = ({ activeTab, onTabChange }: AuthTabsProps) => {
   return (
-    <div className="flex border-b border-gray-200">
+    <div className="flex border-b border-sky-100">
       <Tab
         label="Entrar"
         isActive={activeTab === 'login'}
@@ -43,10 +43,10 @@ const Tab = ({ label, isActive, onClick }: TabProps) => {
       type="button"
       onClick={onClick}
       className={cn(
-        'flex-1 min-h-[44px] py-4 text-center font-medium transition-colors', // Touch-friendly
+        'flex-1 min-h-[44px] py-4 text-center font-semibold text-sm transition-colors',
         isActive
-          ? 'text-blue-600 border-b-2 border-blue-600'
-          : 'text-gray-500 hover:text-gray-700'
+          ? 'text-sky-700 border-b-2 border-sky-500'
+          : 'text-sky-400 hover:text-sky-600'
       )}
     >
       {label}

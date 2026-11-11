@@ -57,8 +57,8 @@ function getDeadlineInfo(deadline: string) {
       day: '2-digit',
       month: '2-digit'
     }),
-    colorClass: 'text-gray-600',
-    bgClass: 'bg-gray-50'
+    colorClass: 'text-sky-600',
+    bgClass: 'bg-sky-50'
   };
 }
 
@@ -70,10 +70,10 @@ export function CampaignCardFooter({ campaign }: CampaignCardFooterProps) {
   });
 
   return (
-    <div className="pt-3 border-t border-gray-100">
+    <div className="pt-3 border-t border-sky-100/60">
       <div className="flex items-center justify-between text-xs">
         {/* Data de criação */}
-        <div className="flex items-center gap-1 text-gray-400">
+        <div className="flex items-center gap-1 text-sky-500">
           <Calendar className="w-3.5 h-3.5" />
           <span>{createdDate}</span>
         </div>

@@ -1,15 +1,15 @@
-import dynamic from 'next/dynamic';
+import dynamic from "next/dynamic";
 
 // Dynamic import to avoid SSR issues with Leaflet
 const Map = dynamic(
-  () => import('@/components/ui/Map').then((mod) => ({ default: mod.Map })),
+  () => import("@/components/ui/Map").then((mod) => ({ default: mod.Map })),
   {
     ssr: false,
     loading: () => (
-      <div className="h-[200px] md:h-[300px] w-full rounded-lg bg-gray-100 flex items-center justify-center">
-        <p className="text-gray-500">Carregando mapa...</p>
+      <div className="h-[380px] sm:h-[360px] md:h-[420px] lg:h-[480px] w-full rounded-2xl bg-sky-50 flex items-center justify-center">
+        <p className="text-sky-600">Carregando mapa...</p>
       </div>
-    )
+    ),
   }
 );
 
@@ -17,21 +17,26 @@ interface CampaignLocationMapProps {
   pickupCoords: [number, number];
   pickupLabel?: string;
   fromCoords?: [number, number] | null;
+  routePath?: Array<[number, number]>;
 }
 
 export function CampaignLocationMap({
   pickupCoords,
-  pickupLabel = 'Local de retirada',
+  pickupLabel = "Local de retirada",
   fromCoords,
+  routePath,
 }: CampaignLocationMapProps) {
-  const markers = [
-    { position: pickupCoords, popup: pickupLabel },
-  ];
+  const markers: Array<{
+    position: [number, number];
+    popup: string;
+    color: "blue" | "green";
+  }> = [{ position: pickupCoords, popup: pickupLabel, color: "blue" }];
 
   if (fromCoords) {
     markers.push({
       position: fromCoords,
-      popup: 'Seu endereço',
+      popup: "Seu endereço",
+      color: "green",
     });
   }
 
@@ -40,7 +45,9 @@ export function CampaignLocationMap({
       center={pickupCoords}
       zoom={fromCoords ? 12 : 15}
       markers={markers}
+      routePath={routePath}
       showRoute={fromCoords ? { from: fromCoords, to: pickupCoords } : undefined}
+      className="h-[380px] sm:h-[360px] md:h-[420px] lg:h-[480px]"
     />
   );
 }

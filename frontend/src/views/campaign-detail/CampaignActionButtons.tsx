@@ -1,4 +1,5 @@
 import {
+  ClipboardList,
   Copy,
   QrCode,
   FileText,
@@ -9,6 +10,7 @@ import {
   ShoppingBag,
   MapPin,
 } from "lucide-react";
+import { useState } from "react";
 import IconButton from "@/components/IconButton";
 import { Campaign, campaignApi } from "@/api";
 import toast from "react-hot-toast";
@@ -16,6 +18,7 @@ import toast from "react-hot-toast";
 interface CampaignActionButtonsProps {
   campaign: Campaign;
   canEditCampaign: boolean;
+  canGenerateOrdersSummary: boolean;
   ordersCount: number;
   onEditPix: () => void;
   onCloseCampaign: () => void;
@@ -30,6 +33,7 @@ interface CampaignActionButtonsProps {
 export function CampaignActionButtons({
   campaign,
   canEditCampaign,
+  canGenerateOrdersSummary,
   ordersCount,
   onEditPix,
   onCloseCampaign,
@@ -40,9 +44,27 @@ export function CampaignActionButtons({
   onAddOrder,
   onEditAddress,
 }: CampaignActionButtonsProps) {
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const isActive = campaign.status === "ACTIVE";
   const isClosed = campaign.status === "CLOSED";
   const isSent = campaign.status === "SENT";
+
+  const copyToClipboard = async (text: string) => {
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.left = "-9999px";
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    document.execCommand("copy");
+    document.body.removeChild(textarea);
+  };
 
   return (
     <div className="space-y-3">
@@ -131,6 +153,35 @@ export function CampaignActionButtons({
           >
             <span className="hidden sm:inline">Gerar Fatura</span>
             <span className="sm:hidden">Fatura</span>
+          </IconButton>
+        )}
+
+        {ordersCount > 0 && canGenerateOrdersSummary && (
+          <IconButton
+            size="sm"
+            variant="secondary"
+            icon={<ClipboardList className="w-4 h-4" />}
+            onClick={async () => {
+              try {
+                setIsGeneratingSummary(true);
+                const summary = await campaignApi.getOrdersSummary(campaign.slug || campaign.id);
+                await copyToClipboard(summary.summaryText);
+                toast.success("Resumo copiado! Pronto para enviar no WhatsApp.");
+              } catch (error) {
+                toast.error("Erro ao gerar resumo dos pedidos");
+              } finally {
+                setIsGeneratingSummary(false);
+              }
+            }}
+            disabled={isGeneratingSummary}
+            className="text-xs sm:text-sm whitespace-nowrap"
+          >
+            <span className="hidden sm:inline">
+              {isGeneratingSummary ? "Gerando Resumo..." : "Copiar Resumo Pedidos"}
+            </span>
+            <span className="sm:hidden">
+              {isGeneratingSummary ? "Gerando..." : "Resumo"}
+            </span>
           </IconButton>
         )}
 

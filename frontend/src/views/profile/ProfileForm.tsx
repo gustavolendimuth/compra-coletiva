@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import { Card, Input, PhoneInput, Button } from '@/components/ui';
 import { profileService } from '@/api';
 import type { StoredUser } from '@/api/types';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 interface ProfileFormProps {
   user: StoredUser;
@@ -18,6 +19,9 @@ interface ProfileFormProps {
 export function ProfileForm({ user, onUpdate }: ProfileFormProps) {
   const [name, setName] = useState(user.name);
   const [phone, setPhone] = useState(user.phone || '');
+  const [hideNameInCampaigns, setHideNameInCampaigns] = useState(
+    user.hideNameInCampaigns ?? false
+  );
   const [isEditing, setIsEditing] = useState(false);
 
   const updateMutation = useMutation({
@@ -27,8 +31,8 @@ export function ProfileForm({ user, onUpdate }: ProfileFormProps) {
       toast.success('Perfil atualizado!');
       setIsEditing(false);
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.message || 'Erro ao atualizar';
+    onError: (error: unknown) => {
+      const message = getApiErrorMessage(error, 'Erro ao atualizar');
       toast.error(message);
     },
   });
@@ -36,13 +40,16 @@ export function ProfileForm({ user, onUpdate }: ProfileFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const updates: { name?: string; phone?: string } = {};
+    const updates: { name?: string; phone?: string; hideNameInCampaigns?: boolean } = {};
 
     if (name !== user.name) {
       updates.name = name;
     }
     if (phone !== (user.phone || '')) {
       updates.phone = phone;
+    }
+    if (hideNameInCampaigns !== (user.hideNameInCampaigns ?? false)) {
+      updates.hideNameInCampaigns = hideNameInCampaigns;
     }
 
     if (Object.keys(updates).length === 0) {
@@ -56,12 +63,13 @@ export function ProfileForm({ user, onUpdate }: ProfileFormProps) {
   const handleCancel = () => {
     setName(user.name);
     setPhone(user.phone || '');
+    setHideNameInCampaigns(user.hideNameInCampaigns ?? false);
     setIsEditing(false);
   };
 
   return (
     <Card className="p-4 md:p-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">Dados Pessoais</h2>
+      <h2 className="text-lg font-semibold text-sky-900 mb-4">Dados Pessoais</h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
@@ -78,6 +86,19 @@ export function ProfileForm({ user, onUpdate }: ProfileFormProps) {
           onChange={setPhone}
           disabled={!isEditing}
         />
+
+        <label className="flex items-start gap-2 text-sm text-sky-700">
+          <input
+            type="checkbox"
+            checked={hideNameInCampaigns}
+            onChange={(e) => setHideNameInCampaigns(e.target.checked)}
+            disabled={!isEditing}
+            className="mt-0.5 rounded border-sky-300 text-sky-600 focus:ring-sky-500"
+          />
+          <span>
+            Mascarar meu nome nas campanhas com apelido divertido.
+          </span>
+        </label>
 
         <div className="flex justify-end gap-2 pt-2">
           {isEditing ? (
@@ -101,3 +122,4 @@ export function ProfileForm({ user, onUpdate }: ProfileFormProps) {
 }
 
 export default ProfileForm;
+

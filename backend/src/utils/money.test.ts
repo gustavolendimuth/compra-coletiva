@@ -192,9 +192,9 @@ describe('Money Utility', () => {
     });
 
     it('should reject non-numbers', () => {
-      expect(Money.isValid('100' as any)).toBe(false);
-      expect(Money.isValid(null as any)).toBe(false);
-      expect(Money.isValid(undefined as any)).toBe(false);
+      expect(Money.isValid('100' as unknown as number)).toBe(false);
+      expect(Money.isValid(null as unknown as number)).toBe(false);
+      expect(Money.isValid(undefined as unknown as number)).toBe(false);
     });
   });
 });

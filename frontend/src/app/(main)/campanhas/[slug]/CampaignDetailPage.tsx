@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import { useCampaignDetail } from '@/views/campaign-detail';
 import { LoadingSkeleton } from '@/views/campaign-detail/LoadingSkeleton';
 import { CampaignHeader } from '@/views/campaign-detail';
@@ -14,19 +13,19 @@ import { QuestionsTab } from '@/views/campaign-detail/tabs/QuestionsTab';
 import { CampaignModals } from '@/views/campaign-detail/CampaignModals';
 
 export function CampaignDetailPage() {
-  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<
     'overview' | 'products' | 'orders' | 'shipping' | 'questions'
   >('overview');
   const hook = useCampaignDetail();
+  const { shouldOpenQuestionsTab, setShouldOpenQuestionsTab } = hook;
 
   // Handle navigation from notifications
   useEffect(() => {
-    if (hook.shouldOpenQuestionsTab) {
+    if (shouldOpenQuestionsTab) {
       setActiveTab('questions');
-      hook.setShouldOpenQuestionsTab(false);
+      setShouldOpenQuestionsTab(false);
     }
-  }, [hook.shouldOpenQuestionsTab, hook.setShouldOpenQuestionsTab]);
+  }, [shouldOpenQuestionsTab, setShouldOpenQuestionsTab]);
 
   if (!hook.campaign) {
     return <LoadingSkeleton />;
@@ -38,11 +37,12 @@ export function CampaignDetailPage() {
         <CampaignHeader
           campaign={hook.campaign}
           canEditCampaign={hook.canEditCampaign}
+          canGenerateOrdersSummary={hook.canGenerateOrdersSummary}
           ordersCount={hook.orders?.length || 0}
           onEditDeadline={hook.handleOpenEditDeadline}
           onEditPix={hook.handleOpenPixModal}
           onCloseCampaign={() => hook.setIsCloseConfirmOpen(true)}
-          onReopenCampaign={() => hook.setIsReopenConfirmOpen(true)}
+          onReopenCampaign={hook.handleOpenReopenModal}
           onMarkAsSent={() => hook.setIsSentConfirmOpen(true)}
           onUpdateCampaign={hook.handleUpdateCampaign}
           onCloneCampaign={hook.handleOpenCloneModal}
@@ -69,11 +69,9 @@ export function CampaignDetailPage() {
           orders={hook.orders || []}
           isActive={hook.isActive}
           canEditCampaign={hook.canEditCampaign}
-          onViewOrder={(order) => {
-            hook.setViewingOrder(order);
-            hook.setIsViewOrderModalOpen(true);
-          }}
+          onViewOrder={hook.handleViewOrder}
           onTogglePayment={hook.handleTogglePayment}
+          onEditOrder={hook.handleOpenEditOrder}
           onAddToOrder={hook.handleAddToOrder}
           onEditAddress={hook.handleOpenAddressModal}
         />
@@ -99,18 +97,16 @@ export function CampaignDetailPage() {
           orders={hook.orders || []}
           filteredOrders={hook.filteredOrders || []}
           isActive={hook.isActive}
-          canEditCampaign={hook.canEditCampaign}
-          currentUserId={user?.id}
+          currentUserId={hook.currentUserId}
+          isAdmin={hook.isAdmin}
+          isCreator={hook.isCreator}
           orderSearch={hook.orderSearch}
           sortField={hook.orderSortField}
           sortDirection={hook.orderSortDirection}
           onAddOrder={hook.handleAddOrder}
-          onViewOrder={(order) => {
-            hook.setViewingOrder(order);
-            hook.setIsViewOrderModalOpen(true);
-          }}
+          onViewOrder={hook.handleViewOrder}
           onTogglePayment={hook.handleTogglePayment}
-          onEditOrder={hook.openEditOrderModal}
+          onEditOrder={hook.handleOpenEditOrder}
           onDeleteOrder={hook.handleDeleteOrder}
           onSearchChange={hook.setOrderSearch}
           onSort={hook.handleSort}
@@ -120,7 +116,6 @@ export function CampaignDetailPage() {
       {activeTab === 'shipping' && hook.campaign && (
         <ShippingTab
           campaign={hook.campaign}
-          isActive={hook.isActive}
           canEditCampaign={hook.canEditCampaign}
           onEditShipping={() => {
             hook.setShippingCost(String(hook.campaign!.shippingCost));

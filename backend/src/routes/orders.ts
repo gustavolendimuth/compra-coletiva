@@ -1,7 +1,8 @@
 import { Router } from 'express';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../index';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
-import { requireAuth, requireOrderOwnership, requireOrderOrCampaignOwnership, optionalAuth } from '../middleware/authMiddleware';
+import { requireAuth, optionalAuth, requireOrderOwnership, requireOrderOrCampaignOwnership } from '../middleware/authMiddleware';
 import { z } from 'zod';
 import { ShippingCalculator } from '../services/shippingCalculator';
 import { emitOrderCreated, emitOrderUpdated, emitOrderDeleted, emitOrderStatusChanged } from '../services/socketService';
@@ -9,11 +10,22 @@ import { Money } from '../utils/money';
 import { CampaignStatusService } from '../services/campaignStatusService';
 import { uploadPaymentProof, handleUploadError } from '../middleware/uploadMiddleware';
 import { ImageUploadService } from '../services/imageUploadService';
+import { capitalizeName } from '../utils/nameFormatter';
+import { queueOrderCreatedEmail } from '../services/email/emailQueue';
+import { getCampaignParticipantDisplayName } from '../utils/campaignParticipantName';
+import { LEGAL_SALES_DISCLAIMER_VERSION } from '../config/legal';
+import { LegalAcceptanceService } from '../services/legalAcceptanceService';
 
 const router = Router();
 
 const createOrderSchema = z.object({
   campaignId: z.string(),
+  userId: z.string().optional(),
+  customer: z.object({
+    name: z.string().trim().min(2).max(100),
+    email: z.string().trim().toLowerCase().email(),
+    phone: z.string().trim().optional()
+  }).optional(),
   items: z.array(z.object({
     productId: z.string(),
     quantity: z.number().int().min(1)
@@ -37,9 +49,149 @@ const addItemSchema = z.object({
   quantity: z.number().int().min(1)
 });
 
-// GET /api/orders?campaignId=xxx - Lista pedidos de um grupo
-// Opcional auth: Se autenticado e não for admin/criador, mostra apenas seus pedidos
-router.get('/', optionalAuth, asyncHandler(async (req, res) => {
+// GET /api/orders/public?campaignId=xxx - Transparência pública com nome reduzido ou apelido + agregados
+router.get('/public', optionalAuth, asyncHandler(async (req, res) => {
+  const { campaignId } = req.query;
+
+  if (!campaignId || typeof campaignId !== 'string') {
+    throw new AppError(400, 'campaignId is required');
+  }
+
+  const isAuthenticated = !!req.user;
+
+  const orders = await prisma.order.findMany({
+    where: { campaignId },
+    select: {
+      id: true,
+      userId: true,
+      isPaid: true,
+      subtotal: true,
+      shippingFee: true,
+      total: true,
+      createdAt: true,
+      items: {
+        select: {
+          quantity: true,
+          unitPrice: true,
+          subtotal: true,
+          product: {
+            select: { name: true },
+          },
+        },
+      },
+      customer: {
+        select: {
+          name: true,
+          hideNameInCampaigns: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  const publicOrders = orders.map((order) => {
+    const quantityTotal = order.items.reduce((sum, item) => sum + item.quantity, 0);
+    const base = {
+      alias: getCampaignParticipantDisplayName({
+        fullName: order.customer?.name,
+        hideNameInCampaigns: order.customer?.hideNameInCampaigns ?? true,
+        userId: order.userId,
+        campaignId,
+      }),
+      isPaid: order.isPaid,
+      subtotal: order.subtotal,
+      shippingFee: order.shippingFee,
+      total: order.total,
+      itemsCount: order.items.length,
+      quantityTotal,
+      createdAt: order.createdAt,
+    };
+
+    if (isAuthenticated) {
+      return {
+        ...base,
+        id: order.id,
+        userId: order.userId,
+        items: order.items.map((item) => ({
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          subtotal: item.subtotal,
+          product: item.product,
+        })),
+      };
+    }
+
+    return base;
+  });
+
+  const totals = publicOrders.reduce(
+    (acc, order) => {
+      acc.orders += 1;
+      acc.totalWithShipping += order.total;
+      acc.totalWithoutShipping += order.subtotal;
+      acc.totalShipping += order.shippingFee;
+      acc.totalItems += order.itemsCount;
+      acc.totalQuantity += order.quantityTotal;
+      if (order.isPaid) {
+        acc.paidTotal += order.total;
+      } else {
+        acc.unpaidTotal += order.total;
+      }
+      return acc;
+    },
+    {
+      orders: 0,
+      totalWithShipping: 0,
+      totalWithoutShipping: 0,
+      totalShipping: 0,
+      totalItems: 0,
+      totalQuantity: 0,
+      paidTotal: 0,
+      unpaidTotal: 0,
+    }
+  );
+
+  res.json({
+    campaignId,
+    totals,
+    orders: publicOrders,
+  });
+}));
+
+// GET /api/orders/my?campaignId=xxx - Pedido do usuário autenticado na campanha
+router.get('/my', requireAuth, asyncHandler(async (req, res) => {
+  const { campaignId } = req.query;
+
+  if (!campaignId || typeof campaignId !== 'string') {
+    throw new AppError(400, 'campaignId is required');
+  }
+
+  const order = await prisma.order.findFirst({
+    where: {
+      campaignId,
+      userId: req.user!.id,
+    },
+    include: {
+      items: {
+        include: {
+          product: true,
+        },
+      },
+      customer: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+  });
+
+  res.json(order);
+}));
+
+// GET /api/orders?campaignId=xxx - Lista completa para gestão (criador/admin)
+router.get('/', requireAuth, asyncHandler(async (req, res) => {
   const { campaignId } = req.query;
   const requestId = Math.random().toString(36).slice(2, 8);
   const totalStart = Date.now();
@@ -48,56 +200,54 @@ router.get('/', optionalAuth, asyncHandler(async (req, res) => {
     throw new AppError(400, 'campaignId is required');
   }
 
-  // Se usuário autenticado, verifica permissões
-  let whereClause: any = { campaignId };
+  const campaign = await prisma.campaign.findUnique({
+    where: { id: campaignId },
+    select: { creatorId: true },
+  });
 
-  if (req.user) {
-    // Admin e criador da campanha veem todos os pedidos
-    if (req.user.role !== 'ADMIN') {
-      const campaign = await prisma.campaign.findUnique({
-        where: { id: campaignId },
-        select: { creatorId: true },
-      });
+  if (!campaign) {
+    throw new AppError(404, 'Campaign not found');
+  }
 
-      // Se não for criador da campanha, mostra apenas seus próprios pedidos
-      if (campaign?.creatorId !== req.user.id) {
-        whereClause.userId = req.user.id;
-      }
-    }
+  const isAdmin = req.user!.role === 'ADMIN';
+  const isCreator = campaign.creatorId === req.user!.id;
+
+  if (!isAdmin && !isCreator) {
+    throw new AppError(403, 'Você não tem permissão para visualizar os pedidos desta campanha');
   }
 
   const fetchStart = Date.now();
   const orders = await prisma.order.findMany({
-    where: whereClause,
+    where: { campaignId },
     include: {
       items: {
         include: {
-          product: true
-        }
+          product: true,
+        },
       },
       customer: {
         select: {
           id: true,
           name: true,
-          email: true
-        }
-      }
+          email: true,
+        },
+      },
     },
-    orderBy: { createdAt: 'asc' }
+    orderBy: { createdAt: 'asc' },
   });
   const fetchMs = Date.now() - fetchStart;
 
   const itemsCount = orders.reduce((sum, order) => sum + (order.items?.length || 0), 0);
   const totalMs = Date.now() - totalStart;
   console.log(
-    `[Perf] GET /api/orders campaignId=${campaignId} user=${req.user?.id || 'anon'} role=${req.user?.role || 'anon'} orders=${orders.length} items=${itemsCount} fetchMs=${fetchMs} totalMs=${totalMs} req=${requestId}`
+    `[Perf] GET /api/orders campaignId=${campaignId} user=${req.user!.id} role=${req.user!.role} orders=${orders.length} items=${itemsCount} fetchMs=${fetchMs} totalMs=${totalMs} req=${requestId}`
   );
 
   res.json(orders);
 }));
 
 // GET /api/orders/:id - Busca um pedido específico
-router.get('/:id', asyncHandler(async (req, res) => {
+router.get('/:id', requireAuth, requireOrderOrCampaignOwnership, asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   const order = await prisma.order.findUnique({
@@ -128,6 +278,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
 // POST /api/orders - Cria um novo pedido ou adiciona itens a um existente
 router.post('/', requireAuth, asyncHandler(async (req, res) => {
   const data = createOrderSchema.parse(req.body);
+  const isAdmin = req.user!.role === 'ADMIN';
 
   // Verifica se o grupo está ativo
   const campaign = await prisma.campaign.findUnique({
@@ -138,12 +289,109 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
     throw new AppError(404, 'Campaign not found');
   }
 
+  const canCreateForAnotherUser = isAdmin || campaign.creatorId === req.user!.id;
+
+  if (!canCreateForAnotherUser && (data.userId || data.customer)) {
+    throw new AppError(403, 'Only admins or campaign creator can create orders for another user');
+  }
+
+  if (canCreateForAnotherUser && data.userId && data.customer) {
+    throw new AppError(400, 'Provide either userId or customer, not both');
+  }
+
+  if (
+    req.user!.role !== 'ADMIN' &&
+    !LegalAcceptanceService.hasAcceptedCurrentSalesDisclaimer(
+      req.user!,
+      LEGAL_SALES_DISCLAIMER_VERSION
+    )
+  ) {
+    res.status(403).json({
+      error: 'SALES_DISCLAIMER_REQUIRED',
+      message:
+        'Você precisa confirmar ciência da isenção de responsabilidade sobre vendas antes de criar pedidos.',
+      requiredVersion: LEGAL_SALES_DISCLAIMER_VERSION,
+    });
+    return;
+  }
+
+  const normalizePhone = (value?: string): string | undefined => {
+    if (!value) return undefined;
+    const digits = value.replace(/\D/g, '');
+    if (!digits) return undefined;
+    if (digits.length === 13 && digits.startsWith('55')) {
+      return digits.slice(2);
+    }
+    return digits;
+  };
+
+  const resolveTargetUserId = async (): Promise<string> => {
+    if (!canCreateForAnotherUser) return req.user!.id;
+
+    if (data.userId) {
+      const existingUser = await prisma.user.findUnique({
+        where: { id: data.userId },
+        select: { id: true, deletedAt: true }
+      });
+
+      if (!existingUser || existingUser.deletedAt) {
+        throw new AppError(404, 'User not found');
+      }
+
+      return existingUser.id;
+    }
+
+    if (!data.customer) return req.user!.id;
+
+    const existingByEmail = await prisma.user.findUnique({
+      where: { email: data.customer.email },
+      select: { id: true, deletedAt: true }
+    });
+
+    if (existingByEmail) {
+      if (existingByEmail.deletedAt) {
+        throw new AppError(400, 'Cannot create order for a deleted user');
+      }
+      return existingByEmail.id;
+    }
+
+    try {
+      const createdLegacyUser = await prisma.user.create({
+        data: {
+          name: capitalizeName(data.customer.name),
+          email: data.customer.email,
+          phone: normalizePhone(data.customer.phone),
+          phoneCompleted: !!normalizePhone(data.customer.phone),
+          addressCompleted: false,
+          role: 'CUSTOMER',
+          isLegacyUser: true
+        },
+        select: { id: true }
+      });
+
+      return createdLegacyUser.id;
+    } catch (error: unknown) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        const user = await prisma.user.findUnique({
+          where: { email: data.customer.email },
+          select: { id: true, deletedAt: true }
+        });
+        if (user && !user.deletedAt) {
+          return user.id;
+        }
+      }
+      throw error;
+    }
+  };
+
+  const targetUserId = await resolveTargetUserId();
+
   if (campaign.status !== 'ACTIVE') {
     throw new AppError(400, 'Cannot create orders in a closed or sent group');
   }
 
   // Busca produtos para calcular preços (apenas se houver items)
-  let productMap = new Map<string, any>();
+  let productMap = new Map<string, { id: string; price: number }>();
   if (data.items && data.items.length > 0) {
     const productIds = data.items.map(item => item.productId);
     const products = await prisma.product.findMany({
@@ -158,7 +406,7 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
   const existingOrder = await prisma.order.findFirst({
     where: {
       campaignId: data.campaignId,
-      userId: req.user!.id
+      userId: targetUserId
     },
     include: {
       items: true
@@ -204,7 +452,7 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
     order = await prisma.order.create({
       data: {
         campaignId: data.campaignId,
-        userId: req.user!.id, // Vincula ao usuário autenticado
+        userId: targetUserId,
         items: data.items && data.items.length > 0 ? {
           create: data.items.map(item => {
             const product = productMap.get(item.productId);
@@ -255,6 +503,21 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
   // Emite evento apropriado
   if (isNewOrder) {
     emitOrderCreated(data.campaignId, updatedOrder);
+
+    if (updatedOrder?.customer?.email && campaign.slug) {
+      try {
+        await queueOrderCreatedEmail(
+          updatedOrder.customer.id,
+          updatedOrder.customer.name,
+          updatedOrder.customer.email,
+          campaign.name,
+          campaign.slug,
+          updatedOrder.id
+        );
+      } catch (emailError) {
+        console.error('[Orders] Failed to queue order created email:', emailError);
+      }
+    }
   } else {
     emitOrderUpdated(data.campaignId, updatedOrder);
   }
@@ -534,12 +797,14 @@ router.patch('/:id/payment',
       throw new AppError(404, 'Order not found');
     }
 
-    // Se está marcando como pago, exige comprovante
-    if (isPaid === 'true' && !req.file) {
+    // Admin e criador da campanha podem marcar como pago sem comprovante
+    const isCampaignCreator = order.campaign.creatorId === req.user!.id;
+    const isAdminUser = req.user!.role === 'ADMIN';
+    if (isPaid === 'true' && !req.file && !isAdminUser && !isCampaignCreator) {
       throw new AppError(400, 'Comprovante de pagamento é obrigatório');
     }
 
-    let updateData: any = {
+    let updateData: Prisma.OrderUpdateInput = {
       isPaid: isPaid === 'true'
     };
 
@@ -636,7 +901,7 @@ router.delete('/:id', requireAuth, requireOrderOwnership, asyncHandler(async (re
     throw new AppError(404, 'Order not found');
   }
 
-  if (order.campaign.status !== 'ACTIVE') {
+  if (order.campaign.status !== 'ACTIVE' && req.user!.role !== 'ADMIN') {
     throw new AppError(400, 'Cannot delete orders from a closed or sent group');
   }
 

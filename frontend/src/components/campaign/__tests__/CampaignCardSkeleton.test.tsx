@@ -15,7 +15,7 @@ describe('CampaignCardSkeleton', () => {
       const { container } = render(<CampaignCardSkeleton />);
 
       const skeleton = container.firstChild;
-      expect(skeleton).toHaveClass('bg-white', 'rounded-xl', 'border', 'border-gray-200', 'p-5', 'shadow-sm');
+      expect(skeleton).toHaveClass('bg-white', 'rounded-3xl', 'border', 'border-sky-100/50', 'p-5', 'shadow-sm');
     });
 
     it('should fill available height', () => {
@@ -30,21 +30,21 @@ describe('CampaignCardSkeleton', () => {
     it('should render status badge skeleton', () => {
       const { container } = render(<CampaignCardSkeleton />);
 
-      const badgeSkeleton = container.querySelector('.h-6.w-16.bg-gray-200.rounded-full');
+      const badgeSkeleton = container.querySelector('.h-6.w-16.bg-sky-100.rounded-full');
       expect(badgeSkeleton).toBeInTheDocument();
     });
 
     it('should render campaign name skeleton', () => {
       const { container } = render(<CampaignCardSkeleton />);
 
-      const nameSkeleton = container.querySelector('.h-6.w-3\\/4.bg-gray-200.rounded');
+      const nameSkeleton = container.querySelector('.h-6.w-3\\/4.bg-sky-100.rounded-xl');
       expect(nameSkeleton).toBeInTheDocument();
     });
 
     it('should render creator skeleton', () => {
       const { container } = render(<CampaignCardSkeleton />);
 
-      const creatorSkeleton = container.querySelector('.h-4.w-1\\/2.bg-gray-200.rounded');
+      const creatorSkeleton = container.querySelector('.h-4.w-1\\/2.bg-sky-50.rounded-lg');
       expect(creatorSkeleton).toBeInTheDocument();
     });
 
@@ -60,14 +60,14 @@ describe('CampaignCardSkeleton', () => {
     it('should render description skeleton lines', () => {
       const { container } = render(<CampaignCardSkeleton />);
 
-      const descLines = container.querySelectorAll('.h-4.bg-gray-200.rounded');
+      const descLines = container.querySelectorAll('.h-4.bg-sky-50.rounded-lg');
       expect(descLines.length).toBeGreaterThanOrEqual(2);
     });
 
     it('should render statistics skeleton', () => {
       const { container } = render(<CampaignCardSkeleton />);
 
-      const statsSkeletons = container.querySelectorAll('.h-4.w-24.bg-gray-200.rounded');
+      const statsSkeletons = container.querySelectorAll('.h-4.w-24.bg-sky-50.rounded-lg');
       expect(statsSkeletons.length).toBe(2);
     });
 
@@ -83,7 +83,7 @@ describe('CampaignCardSkeleton', () => {
     it('should render 4 product preview skeletons', () => {
       const { container } = render(<CampaignCardSkeleton />);
 
-      const productSkeletons = container.querySelectorAll('.w-20.h-16.bg-gray-200.rounded-lg');
+      const productSkeletons = container.querySelectorAll('.w-20.h-16.bg-sky-50.rounded-2xl');
       expect(productSkeletons.length).toBe(4);
     });
 
@@ -99,21 +99,21 @@ describe('CampaignCardSkeleton', () => {
     it('should render footer with border', () => {
       const { container } = render(<CampaignCardSkeleton />);
 
-      const footer = container.querySelector('.mt-4.pt-3.border-t.border-gray-100');
+      const footer = container.querySelector('.mt-4.pt-3.border-t.border-sky-100\\/60');
       expect(footer).toBeInTheDocument();
     });
 
     it('should render creation date skeleton', () => {
       const { container } = render(<CampaignCardSkeleton />);
 
-      const dateSkeleton = container.querySelector('.h-4.w-20.bg-gray-200.rounded');
+      const dateSkeleton = container.querySelector('.h-4.w-20.bg-sky-50.rounded-lg');
       expect(dateSkeleton).toBeInTheDocument();
     });
 
     it('should render deadline badge skeleton', () => {
       const { container } = render(<CampaignCardSkeleton />);
 
-      const deadlineSkeleton = container.querySelector('.h-6.w-28.bg-gray-200.rounded-full');
+      const deadlineSkeleton = container.querySelector('.h-6.w-28.bg-sky-100.rounded-full');
       expect(deadlineSkeleton).toBeInTheDocument();
     });
 
@@ -126,11 +126,11 @@ describe('CampaignCardSkeleton', () => {
   });
 
   describe('Skeleton Colors', () => {
-    it('should use gray-200 for all skeleton elements', () => {
+    it('should use sky palette for all skeleton elements', () => {
       const { container } = render(<CampaignCardSkeleton />);
 
-      const grayElements = container.querySelectorAll('.bg-gray-200');
-      expect(grayElements.length).toBeGreaterThan(0);
+      const skyElements = container.querySelectorAll('.bg-sky-50, .bg-sky-100');
+      expect(skyElements.length).toBeGreaterThan(0);
     });
   });
 });
@@ -220,7 +220,7 @@ describe('CampaignGridSkeleton', () => {
       const skeletons = container.querySelectorAll('.animate-pulse');
 
       skeletons.forEach(skeleton => {
-        expect(skeleton).toHaveClass('bg-white', 'rounded-xl', 'border');
+        expect(skeleton).toHaveClass('bg-white', 'rounded-3xl', 'border');
       });
     });
   });

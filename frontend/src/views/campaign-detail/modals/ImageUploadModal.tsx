@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { Modal, ImageUpload, Button, ConfirmModal } from '@/components/ui';
 import { campaignService } from '@/api';
 import { getImageUrlOrUndefined } from '@/lib/imageUrl';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 interface ImageUploadModalProps {
   isOpen: boolean;
@@ -32,8 +33,8 @@ export function ImageUploadModal({
       toast.success('Imagem enviada com sucesso!');
       handleClose();
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Erro ao enviar imagem');
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao enviar imagem'));
     },
   });
 
@@ -45,8 +46,8 @@ export function ImageUploadModal({
       toast.success('Imagem removida com sucesso!');
       handleClose();
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Erro ao remover imagem');
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao remover imagem'));
     },
   });
 
@@ -148,6 +149,7 @@ export function ImageUploadModal({
     </Modal>
   );
 }
+
 
 
 

@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma, LegalDocumentType } from "@prisma/client";
 import { z } from "zod";
 import crypto from "crypto";
 import passport from "passport";
@@ -14,9 +14,27 @@ import {
 import { capitalizeName } from "../utils/nameFormatter";
 import { queueWelcomeEmail, queuePasswordResetEmail } from "../services/email/emailQueue";
 import { geocodingService } from "../services/geocodingService";
+import {
+  LEGAL_ACCEPTANCE_CONTEXT,
+  LEGAL_PRIVACY_VERSION,
+  LEGAL_TERMS_VERSION,
+} from "../config/legal";
+import { LegalAcceptanceService } from "../services/legalAcceptanceService";
 
 const router = Router();
 const prisma = new PrismaClient();
+type OAuthUser = Prisma.UserGetPayload<{
+  select: {
+    id: true;
+    name: true;
+    email: true;
+    role: true;
+    phoneCompleted: true;
+    addressCompleted: true;
+    legalAcceptanceRequired: true;
+    hideNameInCampaigns: true;
+  };
+}>;
 
 // ========== HELPER FUNCTIONS ==========
 
@@ -48,38 +66,74 @@ function validateFullName(name: string): { isValid: boolean; error?: string } {
 
 // ========== SCHEMAS DE VALIDAÇÃO ==========
 
-// Regex para validar telefone brasileiro (XX XXXXX-XXXX ou XXXXXXXXXXX)
-const phoneRegex = /^(\d{2}\s?\d{4,5}-?\d{4}|\d{10,11})$/;
+// Regex para validar telefone brasileiro (somente dígitos: 10 ou 11)
+const phoneDigitsRegex = /^\d{10,11}$/;
 
-const registerSchema = z.object({
-  name: z
-    .string()
-    .min(2, "Nome deve ter pelo menos 2 caracteres")
-    .max(100, "Nome deve ter no máximo 100 caracteres")
-    .refine(
-      (name) => validateFullName(name).isValid,
-      (name) => ({ message: validateFullName(name).error || "Nome inválido" })
-    ),
-  email: z.string().email("Email inválido"),
-  password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
-  phone: z
+const normalizeTrimmedString = (value: unknown) => {
+  if (typeof value !== "string") return value;
+  return value.trim();
+};
+
+const normalizeEmail = (value: unknown) => {
+  if (typeof value !== "string") return value;
+  return value.trim().toLowerCase();
+};
+
+const normalizePhone = (value: unknown) => {
+  if (typeof value !== "string") return value;
+  const digits = value.replace(/\D/g, "");
+  if (digits.length === 13 && digits.startsWith("55")) {
+    return digits.slice(2);
+  }
+  return digits;
+};
+
+const phoneSchema = z.preprocess(
+  normalizePhone,
+  z
     .string()
     .min(10, "Celular deve ter pelo menos 10 dígitos")
-    .max(15, "Celular deve ter no máximo 15 caracteres")
-    .regex(phoneRegex, "Formato de celular inválido. Use: XX XXXXX-XXXX"),
+    .max(11, "Celular deve ter no máximo 11 dígitos")
+    .regex(phoneDigitsRegex, "Formato de celular inválido. Use: XX XXXXX-XXXX")
+);
+
+const registerSchema = z.object({
+  name: z.preprocess(
+    normalizeTrimmedString,
+    z
+      .string()
+      .min(2, "Nome deve ter pelo menos 2 caracteres")
+      .max(100, "Nome deve ter no máximo 100 caracteres")
+      .refine(
+        (name) => validateFullName(name).isValid,
+        (name) => ({ message: validateFullName(name).error || "Nome inválido" })
+      )
+  ),
+  email: z.preprocess(normalizeEmail, z.string().email("Email inválido")),
+  password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
+  phone: phoneSchema,
+  acceptTerms: z
+    .boolean()
+    .refine(
+      (value) => value === true,
+      "Você precisa aceitar os Termos de Serviço para criar uma conta"
+    ),
+  acceptPrivacy: z
+    .boolean()
+    .refine(
+      (value) => value === true,
+      "Você precisa aceitar a Política de Privacidade para criar uma conta"
+    ),
+  hideNameInCampaigns: z.boolean().optional().default(false),
 });
 
 const loginSchema = z.object({
-  email: z.string().email("Email inválido"),
+  email: z.preprocess(normalizeEmail, z.string().email("Email inválido")),
   password: z.string().min(1, "Senha é obrigatória"),
 });
 
-const refreshSchema = z.object({
-  refreshToken: z.string().min(1, "Refresh token é obrigatório"),
-});
-
 const requestPasswordResetSchema = z.object({
-  email: z.string().email("Email inválido"),
+  email: z.preprocess(normalizeEmail, z.string().email("Email inválido")),
 });
 
 const resetPasswordSchema = z.object({
@@ -89,33 +143,31 @@ const resetPasswordSchema = z.object({
 
 const updateProfileSchema = z.object({
   name: z
-    .string()
-    .min(2, "Nome deve ter pelo menos 2 caracteres")
-    .max(100, "Nome deve ter no máximo 100 caracteres")
-    .refine(
-      (name) => validateFullName(name).isValid,
-      (name) => ({ message: validateFullName(name).error || "Nome inválido" })
+    .preprocess(
+      normalizeTrimmedString,
+      z
+        .string()
+        .min(2, "Nome deve ter pelo menos 2 caracteres")
+        .max(100, "Nome deve ter no máximo 100 caracteres")
+        .refine(
+          (name) => validateFullName(name).isValid,
+          (name) => ({
+            message: validateFullName(name).error || "Nome inválido",
+          })
+        )
     )
     .optional(),
-  phone: z
-    .string()
-    .min(10, "Celular deve ter pelo menos 10 dígitos")
-    .max(15, "Celular deve ter no máximo 15 caracteres")
-    .regex(phoneRegex, "Formato de celular inválido. Use: XX XXXXX-XXXX")
-    .optional(),
+  phone: phoneSchema.optional(),
   currentPassword: z.string().optional(),
   newPassword: z
     .string()
     .min(6, "Nova senha deve ter pelo menos 6 caracteres")
     .optional(),
+  hideNameInCampaigns: z.boolean().optional(),
 });
 
 const completePhoneSchema = z.object({
-  phone: z
-    .string()
-    .min(10, "Celular deve ter pelo menos 10 dígitos")
-    .max(15, "Celular deve ter no máximo 15 caracteres")
-    .regex(phoneRegex, "Formato de celular inválido. Use: XX XXXXX-XXXX"),
+  phone: phoneSchema,
 });
 
 // ========== ROTAS ==========
@@ -178,7 +230,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const { name, email, password, phone } = validationResult.data;
+    const { name, email, password, phone, hideNameInCampaigns } = validationResult.data;
 
     // Valida email
     if (!AuthService.validateEmail(email)) {
@@ -216,17 +268,48 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
     // Hash da senha
     const hashedPassword = await AuthService.hashPassword(password);
 
-    // Cria usuário
-    const user = await prisma.user.create({
-      data: {
-        name: capitalizeName(name),
-        email,
-        password: hashedPassword,
-        phone,
-        phoneCompleted: true, // Email/password users provide phone during registration
-        addressCompleted: false, // Users need to complete address after first login
-        role: "CUSTOMER", // Default role
-      },
+    const acceptedAt = new Date();
+
+    // Cria usuário já com aceite legal registrado
+    const user = await prisma.$transaction(async (tx) => {
+      const createdUser = await tx.user.create({
+        data: {
+          name: capitalizeName(name),
+          email,
+          password: hashedPassword,
+          phone,
+          phoneCompleted: true, // Email/password users provide phone during registration
+          addressCompleted: false, // Users need to complete address after first login
+          role: "CUSTOMER", // Default role
+          hideNameInCampaigns,
+          legalAcceptanceRequired: false,
+          termsAcceptedAt: acceptedAt,
+          termsAcceptedVersion: LEGAL_TERMS_VERSION,
+          privacyAcceptedAt: acceptedAt,
+          privacyAcceptedVersion: LEGAL_PRIVACY_VERSION,
+        },
+      });
+
+      await Promise.all([
+        LegalAcceptanceService.recordAcceptance({
+          userId: createdUser.id,
+          documentType: LegalDocumentType.TERMS,
+          documentVersion: LEGAL_TERMS_VERSION,
+          context: LEGAL_ACCEPTANCE_CONTEXT.REGISTER,
+          req,
+          tx,
+        }),
+        LegalAcceptanceService.recordAcceptance({
+          userId: createdUser.id,
+          documentType: LegalDocumentType.PRIVACY,
+          documentVersion: LEGAL_PRIVACY_VERSION,
+          context: LEGAL_ACCEPTANCE_CONTEXT.REGISTER,
+          req,
+          tx,
+        }),
+      ]);
+
+      return createdUser;
     });
 
     // Gera tokens
@@ -263,11 +346,18 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
         email: user.email,
         phone: user.phone,
         phoneCompleted: user.phoneCompleted,
+        addressCompleted: user.addressCompleted,
+        legalAcceptanceRequired: user.legalAcceptanceRequired,
+        termsAcceptedAt: user.termsAcceptedAt,
+        termsAcceptedVersion: user.termsAcceptedVersion,
+        privacyAcceptedAt: user.privacyAcceptedAt,
+        privacyAcceptedVersion: user.privacyAcceptedVersion,
+        salesDisclaimerAcceptedAt: user.salesDisclaimerAcceptedAt,
+        salesDisclaimerAcceptedVersion: user.salesDisclaimerAcceptedVersion,
+        hideNameInCampaigns: user.hideNameInCampaigns,
         role: user.role,
       },
       accessToken: tokens.accessToken,
-      // refreshToken is now in HttpOnly cookie, but still send in body for backward compatibility
-      refreshToken: tokens.refreshToken,
     });
   } catch (error) {
     console.error("Erro ao registrar usuário:", error);
@@ -360,11 +450,18 @@ router.post("/login", async (req: Request, res: Response): Promise<void> => {
         email: user.email,
         phone: user.phone,
         phoneCompleted: user.phoneCompleted,
+        addressCompleted: user.addressCompleted,
+        legalAcceptanceRequired: user.legalAcceptanceRequired,
+        termsAcceptedAt: user.termsAcceptedAt,
+        termsAcceptedVersion: user.termsAcceptedVersion,
+        privacyAcceptedAt: user.privacyAcceptedAt,
+        privacyAcceptedVersion: user.privacyAcceptedVersion,
+        salesDisclaimerAcceptedAt: user.salesDisclaimerAcceptedAt,
+        salesDisclaimerAcceptedVersion: user.salesDisclaimerAcceptedVersion,
+        hideNameInCampaigns: user.hideNameInCampaigns,
         role: user.role,
       },
       accessToken: tokens.accessToken,
-      // refreshToken is now in HttpOnly cookie, but still send in body for backward compatibility
-      refreshToken: tokens.refreshToken,
     });
   } catch (error) {
     console.error("Erro ao fazer login:", error);
@@ -378,13 +475,11 @@ router.post("/login", async (req: Request, res: Response): Promise<void> => {
 /**
  * POST /api/auth/refresh
  * Renova o access token usando refresh token
- * Reads refresh token from HttpOnly cookie (preferred) or request body (fallback)
+ * Lê refresh token apenas de cookie HttpOnly
  */
 router.post("/refresh", async (req: Request, res: Response): Promise<void> => {
   try {
-    // Try to get refresh token from cookie first, then fallback to body
-    const refreshToken =
-      req.cookies?.[REFRESH_TOKEN_COOKIE_NAME] || req.body?.refreshToken;
+    const refreshToken = req.cookies?.[REFRESH_TOKEN_COOKIE_NAME];
 
     if (!refreshToken) {
       res.status(400).json({
@@ -409,7 +504,7 @@ router.post("/refresh", async (req: Request, res: Response): Promise<void> => {
     let payload;
     try {
       payload = TokenService.verifyRefreshToken(refreshToken);
-    } catch (error) {
+    } catch {
       res.status(401).json({
         error: "INVALID_REFRESH_TOKEN",
         message: "Refresh token inválido",
@@ -446,6 +541,15 @@ router.post("/refresh", async (req: Request, res: Response): Promise<void> => {
         email: user.email,
         phone: user.phone,
         phoneCompleted: user.phoneCompleted,
+        addressCompleted: user.addressCompleted,
+        legalAcceptanceRequired: user.legalAcceptanceRequired,
+        termsAcceptedAt: user.termsAcceptedAt,
+        termsAcceptedVersion: user.termsAcceptedVersion,
+        privacyAcceptedAt: user.privacyAcceptedAt,
+        privacyAcceptedVersion: user.privacyAcceptedVersion,
+        salesDisclaimerAcceptedAt: user.salesDisclaimerAcceptedAt,
+        salesDisclaimerAcceptedVersion: user.salesDisclaimerAcceptedVersion,
+        hideNameInCampaigns: user.hideNameInCampaigns,
         role: user.role,
       },
     });
@@ -461,16 +565,14 @@ router.post("/refresh", async (req: Request, res: Response): Promise<void> => {
 /**
  * POST /api/auth/logout
  * Faz logout revogando o refresh token
- * Reads refresh token from HttpOnly cookie (preferred) or request body (fallback)
+ * Lê refresh token apenas de cookie HttpOnly
  */
 router.post(
   "/logout",
   requireAuth,
   async (req: Request, res: Response): Promise<void> => {
     try {
-      // Try to get refresh token from cookie first, then fallback to body
-      const refreshToken =
-        req.cookies?.[REFRESH_TOKEN_COOKIE_NAME] || req.body?.refreshToken;
+      const refreshToken = req.cookies?.[REFRESH_TOKEN_COOKIE_NAME];
 
       if (refreshToken) {
         await TokenService.revokeRefreshToken(refreshToken);
@@ -517,6 +619,14 @@ router.get(
           phone: req.user.phone,
           phoneCompleted: req.user.phoneCompleted,
           addressCompleted: req.user.addressCompleted,
+          legalAcceptanceRequired: req.user.legalAcceptanceRequired,
+          termsAcceptedAt: req.user.termsAcceptedAt,
+          termsAcceptedVersion: req.user.termsAcceptedVersion,
+          privacyAcceptedAt: req.user.privacyAcceptedAt,
+          privacyAcceptedVersion: req.user.privacyAcceptedVersion,
+          salesDisclaimerAcceptedAt: req.user.salesDisclaimerAcceptedAt,
+          salesDisclaimerAcceptedVersion: req.user.salesDisclaimerAcceptedVersion,
+          hideNameInCampaigns: req.user.hideNameInCampaigns,
           role: req.user.role,
           createdAt: req.user.createdAt,
           defaultZipCode: req.user.defaultZipCode,
@@ -575,7 +685,7 @@ router.get(
         return;
       }
 
-      const user = req.user as any;
+      const user = req.user as OAuthUser;
 
       // Gera tokens
       const tokens = TokenService.generateTokenPair({
@@ -594,19 +704,19 @@ router.get(
         getRefreshTokenCookieOptions()
       );
 
-      // Redireciona para o frontend com access token only (refresh token is in cookie)
-      // Keep refreshToken in URL for backward compatibility during transition
+      // Redireciona para o frontend apenas com access token (refresh token fica no cookie HttpOnly)
       const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
       res.redirect(
         `${frontendUrl}/auth/callback?` +
           `accessToken=${tokens.accessToken}&` +
-          `refreshToken=${tokens.refreshToken}&` +
           `userId=${encodeURIComponent(user.id)}&` +
           `userName=${encodeURIComponent(user.name)}&` +
           `userEmail=${encodeURIComponent(user.email)}&` +
           `userRole=${user.role}&` +
           `phoneCompleted=${user.phoneCompleted || false}&` +
-          `addressCompleted=${user.addressCompleted || false}`
+          `addressCompleted=${user.addressCompleted || false}&` +
+          `legalAcceptanceRequired=${user.legalAcceptanceRequired || false}&` +
+          `hideNameInCampaigns=${user.hideNameInCampaigns || false}`
       );
     } catch (error) {
       console.error("Erro no callback do Google:", error);
@@ -685,8 +795,7 @@ router.post(
       res.json({
         message:
           "Se o email existir em nossa base, você receberá instruções para resetar sua senha",
-        // Em desenvolvimento, retornar o token (remover em produção)
-        ...(process.env.NODE_ENV === "development" && { token }),
+        ...(process.env.EXPOSE_RESET_TOKEN_IN_RESPONSE === "true" && { token }),
       });
     } catch (error) {
       console.error("Erro ao solicitar reset de senha:", error);
@@ -788,10 +897,10 @@ router.patch(
   requireAuth,
   async (req: Request, res: Response): Promise<void> => {
     try {
-      const { name, phone, currentPassword, newPassword } =
+      const { name, phone, currentPassword, newPassword, hideNameInCampaigns } =
         updateProfileSchema.parse(req.body);
 
-      const updates: any = {};
+      const updates: Prisma.UserUpdateInput = {};
 
       // Atualiza telefone se fornecido
       if (phone) {
@@ -801,6 +910,10 @@ router.patch(
       // Atualiza nome se fornecido
       if (name) {
         updates.name = capitalizeName(name);
+      }
+
+      if (typeof hideNameInCampaigns === "boolean") {
+        updates.hideNameInCampaigns = hideNameInCampaigns;
       }
 
       // Atualiza senha se fornecida
@@ -867,6 +980,7 @@ router.patch(
           name: updatedUser.name,
           email: updatedUser.email,
           phone: updatedUser.phone,
+          hideNameInCampaigns: updatedUser.hideNameInCampaigns,
           role: updatedUser.role,
         },
       });
@@ -915,6 +1029,15 @@ router.patch(
           phone: true,
           role: true,
           phoneCompleted: true,
+          addressCompleted: true,
+          legalAcceptanceRequired: true,
+          termsAcceptedAt: true,
+          termsAcceptedVersion: true,
+          privacyAcceptedAt: true,
+          privacyAcceptedVersion: true,
+          salesDisclaimerAcceptedAt: true,
+          salesDisclaimerAcceptedVersion: true,
+          hideNameInCampaigns: true,
         },
       });
 
@@ -1010,6 +1133,14 @@ router.patch(
           role: true,
           phoneCompleted: true,
           addressCompleted: true,
+          legalAcceptanceRequired: true,
+          termsAcceptedAt: true,
+          termsAcceptedVersion: true,
+          privacyAcceptedAt: true,
+          privacyAcceptedVersion: true,
+          salesDisclaimerAcceptedAt: true,
+          salesDisclaimerAcceptedVersion: true,
+          hideNameInCampaigns: true,
           defaultZipCode: true,
           defaultAddress: true,
           defaultAddressNumber: true,

@@ -114,8 +114,9 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
       {/* Mobile menu panel */}
       <div
         ref={menuRef}
-        className={`fixed top-16 left-0 bottom-0 w-[85%] max-w-md bg-white shadow-[8px_0_24px_-8px_rgba(0,0,0,0.2)] z-[70] transform transition-transform duration-300 ease-out ${shouldAnimate ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed top-16 left-0 bottom-0 w-[85%] max-w-md shadow-[8px_0_24px_-8px_rgba(14,165,233,0.15)] z-[70] transform transition-transform duration-300 ease-out ${shouldAnimate ? 'translate-x-0' : '-translate-x-full'
           }`}
+        style={{ background: '#fefdf8' }}
         role="dialog"
         aria-modal="true"
         aria-label="Menu de navegação"
@@ -131,9 +132,9 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`block px-4 py-3 rounded-lg font-semibold text-base transition-all ${pathname?.includes(item.href)
-                    ? 'bg-primary-100 text-primary-700'
-                    : 'text-gray-700 hover:bg-gray-100 hover:scale-[1.02]'
+                className={`block px-4 py-3 rounded-2xl font-semibold text-base transition-all ${pathname?.includes(item.href)
+                    ? 'bg-sky-100 text-sky-700'
+                    : 'text-sky-800/70 hover:bg-sky-50 hover:text-sky-900 hover:scale-[1.02]'
                   } ${shouldAnimate ? 'animate-slide-in opacity-100' : 'opacity-0'}`}
                 style={{
                   animationDelay: shouldAnimate ? `${50 + index * 50}ms` : '0ms',
@@ -157,13 +158,13 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
 
             {/* Notifications */}
             <div
-              className={`border-t pt-4 mt-4 ${shouldAnimate ? 'animate-slide-in opacity-100' : 'opacity-0'}`}
+              className={`border-t border-sky-100 pt-4 mt-4 ${shouldAnimate ? 'animate-slide-in opacity-100' : 'opacity-0'}`}
               style={{
                 animationDelay: shouldAnimate ? `${50 + (MENU_ITEMS.length + 1) * 50}ms` : '0ms',
                 animationFillMode: 'backwards'
               }}
             >
-              <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3 px-4">
+              <h3 className="text-xs font-semibold text-sky-500/60 uppercase tracking-wider mb-3 px-4">
                 Notificações
               </h3>
               <div className="flex items-center gap-3 px-4 py-3">
@@ -174,7 +175,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
 
           {/* User menu at bottom */}
           <div
-            className={`border-t p-6 bg-gray-50 ${shouldAnimate ? 'animate-slide-in opacity-100' : 'opacity-0'}`}
+            className={`border-t border-sky-100 p-6 bg-sky-50/50 ${shouldAnimate ? 'animate-slide-in opacity-100' : 'opacity-0'}`}
             style={{
               animationDelay: shouldAnimate ? `${50 + (MENU_ITEMS.length + 2) * 50}ms` : '0ms',
               animationFillMode: 'backwards'

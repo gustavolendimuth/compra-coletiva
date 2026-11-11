@@ -64,11 +64,11 @@ export const LoginForm = ({ onSubmit, onGoogleLogin, isLoading }: LoginFormProps
       <div className="space-y-3">
         <GoogleButton onClick={onGoogleLogin} isLoading={isLoading} />
         
-        <p className="text-xs text-gray-600 text-center">
+        <p className="text-xs text-sky-600 text-center">
           Ao usar o Google, você concorda com nossos{' '}
           <Link
             href="/termos"
-            className="text-blue-600 hover:text-blue-700 font-medium"
+            className="text-sky-600 hover:text-sky-800 font-medium underline underline-offset-2"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -77,7 +77,7 @@ export const LoginForm = ({ onSubmit, onGoogleLogin, isLoading }: LoginFormProps
           {' '}e{' '}
           <Link
             href="/privacidade"
-            className="text-blue-600 hover:text-blue-700 font-medium"
+            className="text-sky-600 hover:text-sky-800 font-medium underline underline-offset-2"
             target="_blank"
             rel="noopener noreferrer"
           >
