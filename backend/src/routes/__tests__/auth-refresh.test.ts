@@ -101,7 +101,7 @@ beforeEach(() => {
 });
 
 describe("POST /api/auth/refresh", () => {
-  it("rotates the refresh token: new cookie differs and the old one gets 401", async () => {
+  it("rotates the refresh token: the new one keeps working, its cookie lasts 30 days (Max-Age=2592000), the old one gets 401", async () => {
     const app = createApp();
     const oldToken = await loginSession();
 
@@ -111,31 +111,21 @@ describe("POST /api/auth/refresh", () => {
 
     expect(first.status).toBe(200);
     expect(first.body.accessToken).toEqual(expect.any(String));
-    const cookie = refreshCookieFrom(first);
-    expect(cookie).toBeDefined();
-    const newToken = tokenFromCookie(cookie!);
-    expect(newToken).not.toBe(oldToken);
+    const cookie = refreshCookieFrom(first)!;
+    expect(cookie).toContain("Max-Age=2592000");
+    const newToken = tokenFromCookie(cookie);
     expect(mockSessions.has(sha256Hex(newToken))).toBe(true);
     expect(mockSessions.has(sha256Hex(oldToken))).toBe(false);
-
-    const replay = await request(app)
-      .post("/api/auth/refresh")
-      .set("Cookie", `refreshToken=${oldToken}`);
-    expect(replay.status).toBe(401);
-  });
-
-  it("rotates the refresh token: the new one keeps working", async () => {
-    const app = createApp();
-    const oldToken = await loginSession();
-    const first = await request(app)
-      .post("/api/auth/refresh")
-      .set("Cookie", `refreshToken=${oldToken}`);
-    const newToken = tokenFromCookie(refreshCookieFrom(first)!);
 
     const second = await request(app)
       .post("/api/auth/refresh")
       .set("Cookie", `refreshToken=${newToken}`);
     expect(second.status).toBe(200);
+
+    const replay = await request(app)
+      .post("/api/auth/refresh")
+      .set("Cookie", `refreshToken=${oldToken}`);
+    expect(replay.status).toBe(401);
   });
 
   it("reuse revokes all sessions of the user", async () => {
@@ -165,17 +155,7 @@ describe("POST /api/auth/refresh", () => {
     expect([...mockSessions.values()].filter((s) => s.userId === "user-2")).toHaveLength(1);
   });
 
-  it("rejects a token with invalid signature with 401 and revokes nothing", async () => {
-    const app = createApp();
-    await loginSession();
-    const res = await request(app)
-      .post("/api/auth/refresh")
-      .set("Cookie", "refreshToken=not-a-jwt");
-    expect(res.status).toBe(401);
-    expect(mockSessions.size).toBe(1);
-  });
-
-  it("deleted user gets 401", async () => {
+  it("deleted user gets 401, the cookie is cleared and no session is left", async () => {
     const app = createApp();
     const token = await loginSession();
     mockPrisma.user.findUnique.mockResolvedValue({
@@ -188,16 +168,7 @@ describe("POST /api/auth/refresh", () => {
       .set("Cookie", `refreshToken=${token}`);
 
     expect(res.status).toBe(401);
-    expect(refreshCookieFrom(res)?.includes("Max-Age=2592000")).not.toBe(true);
-  });
-
-  it("cookie lasts 30 days (Max-Age=2592000)", async () => {
-    const app = createApp();
-    const token = await loginSession();
-    const res = await request(app)
-      .post("/api/auth/refresh")
-      .set("Cookie", `refreshToken=${token}`);
-    expect(res.status).toBe(200);
-    expect(refreshCookieFrom(res)).toContain("Max-Age=2592000");
+    expect(refreshCookieFrom(res)).toContain("Expires=Thu, 01 Jan 1970");
+    expect(mockSessions.size).toBe(0);
   });
 });

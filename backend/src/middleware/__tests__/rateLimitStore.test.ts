@@ -26,23 +26,31 @@ describe("rate limit store resilience", () => {
       res.json({ ok: true });
     });
 
+    const nowSpy = jest.spyOn(Date, "now");
+    const send = () => request(app).post("/login").set("X-Forwarded-For", "203.0.113.50");
+    const rateLimitLogs = [expect.stringContaining("[RateLimit]")];
     try {
+      const start = Date.now();
       const statuses: number[] = [];
       for (let i = 0; i < 15; i += 1) {
-        const res = await request(app).post("/login").set("X-Forwarded-For", "203.0.113.50");
-        statuses.push(res.status);
+        statuses.push((await send()).status);
       }
       // aguarda eventos de erro de reconexão do client
       await new Promise((resolve) => setTimeout(resolve, 300));
 
       expect(statuses).toEqual(Array(15).fill(200));
-      const rateLimitLogs = errorSpy.mock.calls.filter((args) =>
-        args.some((arg) => typeof arg === "string" && arg.includes("[RateLimit]"))
-      );
-      expect(rateLimitLogs).toHaveLength(1);
-      expect(errorSpy).toHaveBeenCalledTimes(1);
+      expect(errorSpy.mock.calls).toEqual([rateLimitLogs]);
+
+      nowSpy.mockReturnValue(start + 30 * 1000);
+      await send();
+      expect(errorSpy.mock.calls).toEqual([rateLimitLogs]);
+
+      nowSpy.mockReturnValue(start + 62 * 1000);
+      await send();
+      expect(errorSpy.mock.calls).toEqual([rateLimitLogs, rateLimitLogs]);
     } finally {
       await closeRateLimitRedisClient();
+      nowSpy.mockRestore();
       errorSpy.mockRestore();
     }
   });

@@ -1,5 +1,3 @@
-import { GEOCODING_CACHE_MAX_ENTRIES, GEOCODING_CACHE_TTL_MS } from "../geocodingService";
-
 type Service = typeof import("../geocodingService").geocodingService;
 let geocodingService: Service;
 
@@ -19,10 +17,6 @@ function nominatimResponse() {
 }
 
 const cepFor = (i: number) => String(10000000 + i);
-const viaCepCalls = (cep: string) =>
-  fetchMock.mock.calls.filter(([url]) => String(url).includes(`/ws/${cep}/json`)).length;
-const nominatimCalls = () =>
-  fetchMock.mock.calls.filter(([url]) => String(url).includes("nominatim")).length;
 
 describe("geocodingService caches", () => {
   beforeEach(() => {
@@ -43,54 +37,26 @@ describe("geocodingService caches", () => {
     jest.useRealTimers();
   });
 
-  it("limits are 5000 entries and 24h", () => {
-    expect(GEOCODING_CACHE_MAX_ENTRIES).toBe(5000);
-    expect(GEOCODING_CACHE_TTL_MS).toBe(DAY);
-  });
+  it.each([
+    ["cepCache", (i: number) => geocodingService.getAddressFromCEP(cepFor(i))],
+    ["coordsCache", (i: number) => geocodingService.getCoordinates(`Rua ${i}`, "", "Cidade", "SP")],
+  ])("%s keeps at most 5000 entries, each for 24h", async (_cache, lookup) => {
+    for (let i = 0; i <= 5000; i += 1) await lookup(i);
+    expect(fetchMock).toHaveBeenCalledTimes(5001);
 
-  it("cepCache keeps at most 5000: after 5001 CEPs the first is fetched again", async () => {
-    for (let i = 0; i <= 5000; i += 1) {
-      await geocodingService.getAddressFromCEP(cepFor(i));
-    }
-    await geocodingService.getAddressFromCEP(cepFor(5000));
-    expect(viaCepCalls(cepFor(5000))).toBe(1);
+    // 5001 entradas: só a mais antiga (0) saiu
+    await lookup(1);
+    await lookup(5000);
+    expect(fetchMock).toHaveBeenCalledTimes(5001);
+    await lookup(0);
+    expect(fetchMock).toHaveBeenCalledTimes(5002);
 
-    await geocodingService.getAddressFromCEP(cepFor(0));
-    expect(viaCepCalls(cepFor(0))).toBe(2);
-  });
+    jest.setSystemTime(Date.now() + DAY);
+    await lookup(5000);
+    expect(fetchMock).toHaveBeenCalledTimes(5002);
 
-  it("coordsCache keeps at most 5000: after 5001 addresses the first is fetched again", async () => {
-    for (let i = 0; i <= 5000; i += 1) {
-      await geocodingService.getCoordinates(`Rua ${i}`, "", "Cidade", "SP");
-    }
-    expect(nominatimCalls()).toBe(5001);
-
-    await geocodingService.getCoordinates("Rua 5000", "", "Cidade", "SP");
-    expect(nominatimCalls()).toBe(5001);
-
-    await geocodingService.getCoordinates("Rua 0", "", "Cidade", "SP");
-    expect(nominatimCalls()).toBe(5002);
-  });
-
-  it("cepCache 24h: cached until 24h, fetched again after", async () => {
-    await geocodingService.getAddressFromCEP("01001000");
-    jest.setSystemTime(Date.now() + DAY - 1);
-    await geocodingService.getAddressFromCEP("01001000");
-    expect(viaCepCalls("01001000")).toBe(1);
-
-    jest.setSystemTime(Date.now() + 2);
-    await geocodingService.getAddressFromCEP("01001000");
-    expect(viaCepCalls("01001000")).toBe(2);
-  });
-
-  it("coordsCache 24h: cached until 24h, fetched again after", async () => {
-    await geocodingService.getCoordinates("Rua X", "10", "Cidade", "SP");
-    jest.setSystemTime(Date.now() + DAY - 1);
-    await geocodingService.getCoordinates("Rua X", "10", "Cidade", "SP");
-    expect(nominatimCalls()).toBe(1);
-
-    jest.setSystemTime(Date.now() + 2);
-    await geocodingService.getCoordinates("Rua X", "10", "Cidade", "SP");
-    expect(nominatimCalls()).toBe(2);
+    jest.setSystemTime(Date.now() + 1);
+    await lookup(5000);
+    expect(fetchMock).toHaveBeenCalledTimes(5003);
   });
 });

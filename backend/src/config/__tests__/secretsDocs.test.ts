@@ -10,7 +10,7 @@ describe("secret documentation", () => {
       const content = fs.readFileSync(path.join(repoRoot, file), "utf8");
       const listed = [...content.matchAll(/^\s*([A-Z_]*SECRET[A-Z_]*)=/gm)]
         .map((m) => m[1])
-        .filter((name) => ["JWT_ACCESS_SECRET", "JWT_REFRESH_SECRET", "PUBLIC_ALIAS_SECRET"].includes(name) || name.startsWith("JWT"));
+        .filter((name) => name.startsWith("JWT") || name === "PUBLIC_ALIAS_SECRET");
 
       expect([...new Set(listed)].sort()).toEqual(
         ["JWT_ACCESS_SECRET", "JWT_REFRESH_SECRET", "PUBLIC_ALIAS_SECRET"].sort()

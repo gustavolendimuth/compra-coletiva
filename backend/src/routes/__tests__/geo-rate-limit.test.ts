@@ -85,6 +85,9 @@ describe("geo rate limit", () => {
     expect(blockedGeo.status).toBe(429);
     expect(blockedDistance.status).toBe(429);
     expect(blockedGeo.body).toEqual({ status: "error", message: expect.any(String) });
+    // janela de 1 minuto
+    expect(Number(blockedGeo.headers["retry-after"])).toBeGreaterThan(0);
+    expect(Number(blockedGeo.headers["retry-after"])).toBeLessThanOrEqual(60);
     expect(mockGeocodeCEP).toHaveBeenCalledTimes(geocodeCalls);
     expect(mockGetRoute).toHaveBeenCalledTimes(routeCalls);
   });

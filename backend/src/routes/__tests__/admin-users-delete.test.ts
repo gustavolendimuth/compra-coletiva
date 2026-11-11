@@ -1,18 +1,12 @@
 import express from "express";
 import request from "supertest";
 
-const mockTx = {
-  user: { update: jest.fn() },
-  session: { deleteMany: jest.fn() },
-  passwordResetToken: { deleteMany: jest.fn() },
-};
+// cada operação devolve um marcador para provar que entrou na transação
 const mockPrisma = {
-  user: { findUnique: jest.fn(), update: jest.fn() },
-  session: { deleteMany: jest.fn() },
-  passwordResetToken: { deleteMany: jest.fn() },
-  $transaction: jest.fn(async (arg: unknown) =>
-    typeof arg === "function" ? (arg as (tx: typeof mockTx) => unknown)(mockTx) : Promise.all(arg as unknown[])
-  ),
+  user: { findUnique: jest.fn(), update: jest.fn(() => "user-update") },
+  session: { deleteMany: jest.fn(() => "session-delete") },
+  passwordResetToken: { deleteMany: jest.fn(() => "reset-token-delete") },
+  $transaction: jest.fn(async (ops: unknown[]) => Promise.all(ops)),
 };
 jest.mock("../../index", () => ({ prisma: mockPrisma }));
 
@@ -44,13 +38,13 @@ describe("DELETE /api/admin/users/:id", () => {
     mockPrisma.user.findUnique.mockResolvedValue({ id: "user-9", role: "CUSTOMER" });
   });
 
-  it("revokes sessions and credentials: deletes all sessions and nulls googleId and password", async () => {
+  it("revokes sessions and credentials: deletes all sessions and reset tokens and nulls googleId and password", async () => {
     const res = await request(createApp()).delete("/api/admin/users/user-9");
 
     expect(res.status).toBe(200);
-    const userUpdates = [...mockTx.user.update.mock.calls, ...mockPrisma.user.update.mock.calls];
-    expect(userUpdates).toHaveLength(1);
-    expect(userUpdates[0][0]).toMatchObject({
+    expect(mockPrisma.$transaction).toHaveBeenCalledWith(["user-update", "session-delete", "reset-token-delete"]);
+    expect(mockPrisma.user.update).toHaveBeenCalledTimes(1);
+    expect(mockPrisma.user.update).toHaveBeenCalledWith({
       where: { id: "user-9" },
       data: expect.objectContaining({
         googleId: null,
@@ -58,7 +52,7 @@ describe("DELETE /api/admin/users/:id", () => {
         deletedAt: expect.any(Date),
       }),
     });
-    const sessionDeletes = [...mockTx.session.deleteMany.mock.calls, ...mockPrisma.session.deleteMany.mock.calls];
-    expect(sessionDeletes).toEqual([[{ where: { userId: "user-9" } }]]);
+    expect(mockPrisma.session.deleteMany.mock.calls).toEqual([[{ where: { userId: "user-9" } }]]);
+    expect(mockPrisma.passwordResetToken.deleteMany.mock.calls).toEqual([[{ where: { userId: "user-9" } }]]);
   });
 });

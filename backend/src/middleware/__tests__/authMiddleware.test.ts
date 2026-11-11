@@ -47,6 +47,7 @@ describe("authMiddleware and deleted accounts", () => {
       .get("/private")
       .set("Authorization", `Bearer ${accessToken}`);
     expect(res.status).toBe(401);
+    expect(res.body.error).toBe("USER_NOT_FOUND");
   });
 
   it("deleted user is anonymous in optionalAuth", async () => {
@@ -69,5 +70,6 @@ describe("authMiddleware and deleted accounts", () => {
       .get("/private")
       .set("Authorization", `Bearer ${hs512}`);
     expect(res.status).toBe(401);
+    expect(res.body.error).toBe("INVALID_TOKEN");
   });
 });

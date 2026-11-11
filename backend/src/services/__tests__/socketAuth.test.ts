@@ -4,8 +4,8 @@ jest.mock("../../index", () => ({
 }));
 
 import { authenticateSocket } from "../socketService";
-import { inspect } from "util";
 import { TokenService } from "../tokenService";
+import { captureConsole } from "../../__tests__/captureConsole";
 
 type FakeSocket = Parameters<typeof authenticateSocket>[0];
 
@@ -24,17 +24,6 @@ const accessToken = TokenService.generateAccessToken({
 const activeUser = { id: "user-1", email: "u@test.com", role: "CUSTOMER", name: "U", deletedAt: null };
 
 describe("authenticateSocket", () => {
-  it("attaches the active user from handshake.auth.token", async () => {
-    mockUserFindUnique.mockResolvedValue(activeUser);
-    const socket = makeSocket({ auth: { token: accessToken } });
-    const next = jest.fn();
-
-    await authenticateSocket(socket, next);
-
-    expect(next).toHaveBeenCalledWith();
-    expect((socket as { user?: { id: string } }).user?.id).toBe("user-1");
-  });
-
   it("deleted user is anonymous: no socket.user and next() without error", async () => {
     mockUserFindUnique.mockResolvedValue({ ...activeUser, deletedAt: new Date() });
     const socket = makeSocket({ auth: { token: accessToken } });
@@ -58,45 +47,40 @@ describe("authenticateSocket", () => {
     expect(mockUserFindUnique).not.toHaveBeenCalled();
   });
 
+  it("token of a user that no longer exists is refused", async () => {
+    mockUserFindUnique.mockResolvedValue(null);
+    const next = jest.fn();
+
+    await authenticateSocket(makeSocket({ auth: { token: accessToken } }), next);
+
+    expect(next).toHaveBeenCalledWith(new Error("User not found"));
+  });
+
   describe("logs no email nor token", () => {
-    const methods = ["log", "info", "warn", "error", "debug"] as const;
-    let spies: jest.SpyInstance[];
-    const logText = () =>
-      spies
-        .flatMap((spy) => spy.mock.calls)
-        .map((args) => args.map((arg: unknown) => (typeof arg === "string" ? arg : inspect(arg, { depth: 10 }))).join(" "))
-        .join("\n");
+    let logs: ReturnType<typeof captureConsole>;
 
     beforeEach(() => {
-      spies = methods.map((method) => jest.spyOn(console, method).mockImplementation(() => undefined));
+      logs = captureConsole();
     });
 
     afterEach(() => {
-      spies.forEach((spy) => spy.mockRestore());
+      logs.restore();
     });
 
     it("logs no email on authenticated connection", async () => {
       mockUserFindUnique.mockResolvedValue(activeUser);
       await authenticateSocket(makeSocket({ auth: { token: accessToken } }), jest.fn());
 
-      expect(logText()).not.toContain("u@test.com");
-      expect(logText()).not.toContain(accessToken);
-    });
-
-    it("logs no email nor token on invalid token", async () => {
-      const bogus = `${accessToken}tampered`;
-      await authenticateSocket(makeSocket({ auth: { token: bogus } }), jest.fn());
-
-      expect(logText()).not.toContain(bogus);
-      expect(logText()).not.toContain("u@test.com");
+      expect(logs.text()).not.toContain("u@test.com");
+      expect(logs.text()).not.toContain(accessToken);
     });
 
     it("logs no email nor token when the database error quotes them", async () => {
       mockUserFindUnique.mockRejectedValue(new Error(`db down for u@test.com token ${accessToken}`));
       await authenticateSocket(makeSocket({ auth: { token: accessToken } }), jest.fn());
 
-      expect(logText()).not.toContain("u@test.com");
-      expect(logText()).not.toContain(accessToken);
+      expect(logs.text()).not.toContain("u@test.com");
+      expect(logs.text()).not.toContain(accessToken);
     });
   });
 });

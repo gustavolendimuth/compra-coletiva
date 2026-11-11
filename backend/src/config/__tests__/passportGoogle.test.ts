@@ -18,10 +18,10 @@ jest.mock("passport", () => ({
   deserializeUser: jest.fn(),
 }));
 
-const mockTx = { user: { update: jest.fn(), create: jest.fn() } };
 const mockPrisma = {
   user: { findUnique: jest.fn(), update: jest.fn(), create: jest.fn() },
-  $transaction: jest.fn(async (fn: (tx: typeof mockTx) => unknown) => fn(mockTx)),
+  // o próprio client faz o papel de `tx`
+  $transaction: jest.fn(async (fn: (tx: unknown) => unknown) => fn(mockPrisma)),
 };
 jest.mock("../../index", () => ({ prisma: mockPrisma }));
 jest.mock("../../services/email/emailQueue", () => ({ queueWelcomeEmail: jest.fn() }));
@@ -44,13 +44,8 @@ const googleProfile = (verified: boolean | string) => ({
   emails: [{ value: "maria@test.com", verified }],
 });
 
-const allUserUpdates = () => [
-  ...mockPrisma.user.update.mock.calls,
-  ...mockTx.user.update.mock.calls,
-];
-
 describe("Google strategy verify", () => {
-  it("deleted user is not reactivated: stays deleted and a new account is created", async () => {
+  it("deleted user is not reactivated: googleId is released and a new account is created", async () => {
     const deletedUser = {
       id: "old-user",
       email: "deleted_1@deleted.local",
@@ -65,56 +60,44 @@ describe("Google strategy verify", () => {
       return null;
     });
     mockPrisma.user.create.mockResolvedValue(newUser);
-    mockTx.user.create.mockResolvedValue(newUser);
     mockPrisma.user.update.mockResolvedValue({ ...deletedUser, googleId: null });
-    mockTx.user.update.mockResolvedValue({ ...deletedUser, googleId: null });
 
     const { err, user } = await runVerify(googleProfile(true));
 
     expect(err).toBeNull();
     expect((user as { id: string }).id).toBe("new-user");
-    for (const [args] of allUserUpdates()) {
-      expect(args.data).not.toHaveProperty("deletedAt", null);
-      expect(args.data).not.toHaveProperty("deletedReason", null);
-    }
-    const creates = [...mockPrisma.user.create.mock.calls, ...mockTx.user.create.mock.calls];
-    expect(creates).toHaveLength(1);
-    expect(creates[0][0].data).toMatchObject({ email: "maria@test.com", googleId: "google-123" });
+    expect(mockPrisma.user.update.mock.calls).toEqual([[{ where: { id: "old-user" }, data: { googleId: null } }]]);
+    expect(mockPrisma.user.create).toHaveBeenCalledTimes(1);
+    expect(mockPrisma.user.create.mock.calls[0][0].data).toMatchObject({ email: "maria@test.com", googleId: "google-123" });
   });
 
-  it("unverified email is not linked to an existing local account", async () => {
-    const localUser = {
-      id: "local-user",
-      email: "maria@test.com",
-      googleId: null,
-      deletedAt: null,
-      password: "hash",
-      name: "Maria Silva",
-    };
-    mockPrisma.user.findUnique.mockImplementation(async ({ where }: { where: Record<string, string> }) => {
-      if (where.email === "maria@test.com") return localUser;
-      return null;
-    });
+  const localUser = { id: "local-user", email: "maria@test.com", googleId: null, deletedAt: null, name: "Maria Silva" };
+  // conta já ligada a este googleId, mas com outro e-mail: o e-mail do Google pertence a localUser
+  const linkedUser = { id: "linked-user", email: "old@test.com", googleId: "google-123", deletedAt: null, name: "Maria Silva" };
 
-    const { err, user, info } = await runVerify(googleProfile(false));
+  it.each([
+    { name: "verified email still links to an existing local account", verified: true, byGoogleId: null, updatedIds: ["local-user"] },
+    { name: 'verified email as the string "true" still links to an existing local account', verified: "true", byGoogleId: null, updatedIds: ["local-user"] },
+    { name: "unverified email is not linked to an existing local account", verified: false, byGoogleId: null, updatedIds: [] },
+    { name: "verified email moves the googleId to the account owning the email", verified: true, byGoogleId: linkedUser, updatedIds: ["linked-user", "local-user"] },
+    { name: "unverified email does not move the googleId to the account owning the email", verified: false, byGoogleId: linkedUser, updatedIds: [] },
+  ])("$name", async ({ verified, byGoogleId, updatedIds }) => {
+    mockPrisma.user.findUnique.mockImplementation(async ({ where }: { where: Record<string, string> }) =>
+      where.googleId ? byGoogleId : where.email === "maria@test.com" ? localUser : null
+    );
+    mockPrisma.user.update.mockImplementation(async ({ where, data }: { where: { id: string }; data: object }) => ({
+      ...localUser,
+      id: where.id,
+      ...data,
+    }));
+    const linked = updatedIds.length > 0;
+
+    const { err, user, info } = await runVerify(googleProfile(verified));
 
     expect(err).toBeNull();
-    expect(user).toBe(false);
-    expect(info).toEqual({ message: "email_not_verified" });
-    expect(allUserUpdates()).toHaveLength(0);
+    expect(user).toEqual(linked ? expect.objectContaining({ id: "local-user", googleId: "google-123" }) : false);
+    expect(info).toEqual(linked ? undefined : { message: "email_not_verified" });
+    expect(mockPrisma.user.update.mock.calls.map(([args]) => args.where.id)).toEqual(updatedIds);
     expect(mockPrisma.user.create).not.toHaveBeenCalled();
-  });
-
-  it("verified email still links to an existing local account", async () => {
-    const localUser = { id: "local-user", email: "maria@test.com", googleId: null, deletedAt: null };
-    mockPrisma.user.findUnique.mockImplementation(async ({ where }: { where: Record<string, string> }) =>
-      where.email === "maria@test.com" ? localUser : null
-    );
-    mockPrisma.user.update.mockResolvedValue({ ...localUser, googleId: "google-123" });
-
-    const { user } = await runVerify(googleProfile(true));
-
-    expect((user as { id: string }).id).toBe("local-user");
-    expect(mockPrisma.user.update.mock.calls[0][0].data).toMatchObject({ googleId: "google-123" });
   });
 });

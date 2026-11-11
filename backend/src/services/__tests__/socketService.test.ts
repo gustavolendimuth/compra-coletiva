@@ -25,7 +25,6 @@ import {
   emitCampaignUpdated,
   emitCampaignMessagePublished,
   emitCampaignMessageDeleted,
-  emitUserTyping,
 } from "../socketService";
 import { TokenService } from "../tokenService";
 
@@ -42,7 +41,6 @@ const users: Record<string, TestUser> = {
 
 const ORDER_ID = "order-1";
 const CAMPAIGN_ID = "campaign-1";
-const SENSITIVE_KEYS = ["email", "pixKey", "pixName", "pixType", "paymentProofUrl", "paymentProofKey"];
 
 const tokenFor = (user: TestUser) =>
   TokenService.generateAccessToken({ userId: user.id, email: user.email, role: user.role } as never);
@@ -56,18 +54,6 @@ async function waitUntil(condition: () => boolean | Promise<boolean>, timeoutMs 
     await sleep(10);
   }
   throw new Error("waitUntil timed out");
-}
-
-function collectKeys(value: unknown, keys: Set<string> = new Set()): Set<string> {
-  if (Array.isArray(value)) {
-    value.forEach((item) => collectKeys(item, keys));
-  } else if (value && typeof value === "object") {
-    for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
-      keys.add(key);
-      collectKeys(nested, keys);
-    }
-  }
-  return keys;
 }
 
 // ── Server setup ────────────────────────────────────────────────────────────
@@ -150,13 +136,11 @@ async function joinOrderDenied(socket: ClientSocket) {
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 describe("socket join-order", () => {
-  it("anonymous join-order does not join the order room nor receive message-sent", async () => {
-    const socket = await connect();
-    await joinOrderDenied(socket);
-  });
-
-  it("stranger join-order does not join the order room nor receive message-sent", async () => {
-    const socket = await connect(users.stranger);
+  it.each([
+    ["anonymous", undefined],
+    ["stranger", users.stranger],
+  ])("%s join-order does not join the order room nor receive message-sent", async (_label, user) => {
+    const socket = await connect(user);
     await joinOrderDenied(socket);
   });
 
@@ -195,28 +179,33 @@ describe("campaign room events", () => {
     expect(received[0]).toEqual({ orderId: ORDER_ID, campaignId: CAMPAIGN_ID });
   });
 
-  const emitters: Array<[string, () => void]> = [
-    ["order-created", () => emitOrderCreated(CAMPAIGN_ID, ORDER_ID)],
-    ["order-updated", () => emitOrderUpdated(CAMPAIGN_ID, ORDER_ID)],
-    ["order-deleted", () => emitOrderDeleted(CAMPAIGN_ID, ORDER_ID)],
-    ["order-status-changed", () => emitOrderStatusChanged(CAMPAIGN_ID, ORDER_ID)],
-    ["campaign-updated", () => emitCampaignUpdated(CAMPAIGN_ID, { status: "ARCHIVED", campaign: fullOrder.campaign, order: fullOrder })],
-    ["campaign-message-published", () => emitCampaignMessagePublished(CAMPAIGN_ID, { messageId: "m", sender: { id: "u", name: "N", email: "x@y.z" }, list: [fullOrder] })],
-    ["campaign-message-deleted", () => emitCampaignMessageDeleted(CAMPAIGN_ID, { messageId: "m", extra: { paymentProofKey: "k" } })],
-    ["user-typing", () => emitUserTyping(CAMPAIGN_ID, { userId: "u", userName: "N", email: "x@y.z" })],
-  ];
+  const updatedAt = new Date("2026-01-01T00:00:00.000Z");
+  const strippedOrder = { id: ORDER_ID, campaignId: CAMPAIGN_ID, customer: { name: "Fulano" }, campaign: {} };
 
-  it.each(emitters)("campaign room never carries sensitive keys: %s", async (event, emit) => {
+  it.each([
+    [
+      "campaign-updated",
+      () => emitCampaignUpdated(CAMPAIGN_ID, { status: "ARCHIVED", updatedAt, campaign: fullOrder.campaign, order: fullOrder }),
+      { status: "ARCHIVED", updatedAt: updatedAt.toISOString(), campaign: {}, order: strippedOrder },
+    ],
+    [
+      "campaign-message-published",
+      () => emitCampaignMessagePublished(CAMPAIGN_ID, { messageId: "m", sender: { id: "u", name: "N", email: "x@y.z" }, list: [fullOrder] }),
+      { messageId: "m", sender: { id: "u", name: "N" }, list: [strippedOrder] },
+    ],
+    [
+      "campaign-message-deleted",
+      () => emitCampaignMessageDeleted(CAMPAIGN_ID, { messageId: "m", extra: { paymentProofKey: "k" } }),
+      { messageId: "m", extra: {} },
+    ],
+  ])("campaign room never carries sensitive keys: %s", async (event, emit, expected) => {
     const socket = await connect();
     const received = captureEvent(socket, event);
     socket.emit("join-campaign", CAMPAIGN_ID);
     await waitUntil(async () => (await roomSize(`campaign-${CAMPAIGN_ID}`)) === 1);
     emit();
     await waitUntil(() => received.length === 1);
-    const keys = collectKeys(received[0]);
-    for (const key of SENSITIVE_KEYS) {
-      expect(keys.has(key)).toBe(false);
-    }
+    expect(received[0]).toEqual(expected);
   });
 });
 

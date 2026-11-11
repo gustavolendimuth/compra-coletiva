@@ -21,34 +21,28 @@ function createApp() {
 }
 
 describe("configureHttpSecurity", () => {
-  it("security headers: nosniff, HSTS 1 year with subdomains, X-Frame-Options DENY", async () => {
+  it("security headers: nosniff, HSTS 1 year with subdomains, X-Frame-Options DENY, CORP cross-origin for uploads", async () => {
     const res = await request(createApp()).get("/health");
 
     expect(res.status).toBe(200);
     expect(res.headers["x-content-type-options"]).toBe("nosniff");
     expect(res.headers["strict-transport-security"]).toBe("max-age=31536000; includeSubDomains");
     expect(res.headers["x-frame-options"]).toBe("DENY");
+    expect(res.headers["cross-origin-resource-policy"]).toBe("cross-origin");
   });
 
-  it("security headers also on 404 responses", async () => {
-    const res = await request(createApp()).get("/missing");
-    expect(res.headers["x-frame-options"]).toBe("DENY");
-  });
-
-  it("cors with credentials still works for the frontend origin", async () => {
+  it.each([
+    { name: "cors with credentials still works for the frontend origin", origin: FRONTEND_ORIGIN, allowed: FRONTEND_ORIGIN },
+    { name: "cors with credentials is not granted to a foreign origin", origin: "https://evil.example", allowed: undefined },
+  ])("$name", async ({ origin, allowed }) => {
     const res = await request(createApp())
       .options("/health")
-      .set("Origin", FRONTEND_ORIGIN)
+      .set("Origin", origin)
       .set("Access-Control-Request-Method", "POST");
 
     expect(res.status).toBeLessThan(300);
-    expect(res.headers["access-control-allow-origin"]).toBe(FRONTEND_ORIGIN);
+    expect(res.headers["access-control-allow-origin"]).toBe(allowed);
     expect(res.headers["access-control-allow-credentials"]).toBe("true");
-  });
-
-  it("cors with credentials: uploads stay embeddable cross-origin (CORP cross-origin)", async () => {
-    const res = await request(createApp()).get("/health").set("Origin", FRONTEND_ORIGIN);
-    expect(res.headers["cross-origin-resource-policy"]).toBe("cross-origin");
   });
 
   it("parseCorsOrigins keeps the current protocol rules", () => {

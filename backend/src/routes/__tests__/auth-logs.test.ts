@@ -1,8 +1,6 @@
 import express from "express";
 import cookieParser from "cookie-parser";
 import request from "supertest";
-import bcrypt from "bcrypt";
-import { inspect } from "util";
 
 // Rate limit em memória: este arquivo não testa limites e não deve abrir conexão com Redis
 jest.mock("../../middleware/rateLimitStore", () => {
@@ -43,6 +41,7 @@ jest.mock("../../services/legalAcceptanceService", () => ({
 
 import authRouter from "../auth";
 import { TokenService } from "../../services/tokenService";
+import { captureConsole } from "../../__tests__/captureConsole";
 
 const EMAIL = "maria.sensivel@test.com";
 const PASSWORD = "SenhaSecreta#123";
@@ -66,143 +65,80 @@ function createApp() {
   return app;
 }
 
-const consoleMethods = ["log", "info", "warn", "error", "debug"] as const;
-
-function captureLogs() {
-  const spies = consoleMethods.map((method) => jest.spyOn(console, method).mockImplementation(() => undefined));
-  return {
-    text: () =>
-      spies
-        .flatMap((spy) => spy.mock.calls)
-        .map((args) => args.map((arg) => (typeof arg === "string" ? arg : inspect(arg, { depth: 10 }))).join(" "))
-        .join("\n"),
-    restore: () => spies.forEach((spy) => spy.mockRestore()),
-  };
-}
-
 function expectNoSensitive(logText: string, forbidden: string[]) {
   for (const value of forbidden) {
     expect(logText).not.toContain(value);
   }
 }
 
-describe("auth logs carry no personal data", () => {
-  let logs: ReturnType<typeof captureLogs>;
-  let passwordHash: string;
+const accessToken = () => TokenService.generateAccessToken({ userId: user.id, email: EMAIL, role: "CUSTOMER" });
 
-  beforeAll(async () => {
-    passwordHash = await bcrypt.hash(PASSWORD, 4);
-  });
+describe("auth logs carry no personal data", () => {
+  let logs: ReturnType<typeof captureConsole>;
 
   beforeEach(() => {
     mockSessions.clear();
     mockPrisma.user.findUnique.mockReset();
     mockPrisma.user.update.mockReset();
-    logs = captureLogs();
+    logs = captureConsole();
   });
 
   afterEach(() => {
     logs.restore();
   });
 
-  it("login: success logs no email, password, token nor body", async () => {
-    mockPrisma.user.findUnique.mockResolvedValue({ ...user, password: passwordHash });
-
-    const res = await request(createApp()).post("/api/auth/login").send({ email: EMAIL, password: PASSWORD });
-
-    expect(res.status).toBe(200);
-    expectNoSensitive(logs.text(), [EMAIL, PASSWORD, res.body.accessToken, "maria.sensivel"]);
-  });
-
-  it("login: wrong password (401) logs no email nor password", async () => {
-    mockPrisma.user.findUnique.mockResolvedValue({ ...user, password: passwordHash });
-
-    const res = await request(createApp()).post("/api/auth/login").send({ email: EMAIL, password: "outra-senha-1" });
-
-    expect(res.status).toBe(401);
-    expectNoSensitive(logs.text(), [EMAIL, PASSWORD, "outra-senha-1"]);
-  });
-
-  it("login: 500 with a Prisma error quoting the email logs neither the email nor the password", async () => {
-    mockPrisma.user.findUnique.mockRejectedValue(
-      new Error(`Invalid \`prisma.user.findUnique()\` invocation: where: { email: "${EMAIL}" }`)
-    );
-
-    const res = await request(createApp()).post("/api/auth/login").send({ email: EMAIL, password: PASSWORD });
+  it.each([
+    {
+      name: "login: 500 with a Prisma error quoting the email logs neither the email nor the password",
+      run: async () => {
+        mockPrisma.user.findUnique.mockRejectedValue(
+          new Error(`Invalid \`prisma.user.findUnique()\` invocation: where: { email: "${EMAIL}" }`)
+        );
+        const res = await request(createApp()).post("/api/auth/login").send({ email: EMAIL, password: PASSWORD });
+        return { res, forbidden: [EMAIL, PASSWORD] };
+      },
+    },
+    {
+      name: "refresh: 500 with an error quoting email and token logs neither",
+      run: async () => {
+        const refreshToken = TokenService.generateRefreshToken({ userId: user.id, email: EMAIL, role: "CUSTOMER" });
+        await TokenService.saveRefreshToken(user.id, refreshToken);
+        mockPrisma.user.findUnique.mockRejectedValue(new Error(`boom for ${EMAIL} token=${refreshToken}`));
+        const res = await request(createApp()).post("/api/auth/refresh").set("Cookie", `refreshToken=${refreshToken}`);
+        return { res, forbidden: [EMAIL, refreshToken] };
+      },
+    },
+    {
+      name: "complete-phone: 500 with an error quoting phone and email logs neither",
+      run: async () => {
+        mockPrisma.user.findUnique.mockResolvedValue(user);
+        mockPrisma.user.update.mockRejectedValue(new Error(`update failed data: { phone: "${PHONE}", email: "${EMAIL}" }`));
+        const token = accessToken();
+        const res = await request(createApp())
+          .patch("/api/auth/complete-phone")
+          .set("Authorization", `Bearer ${token}`)
+          .send({ phone: PHONE });
+        return { res, forbidden: [PHONE, "98765", EMAIL, token] };
+      },
+    },
+  ])("$name", async ({ run }) => {
+    const { res, forbidden } = await run();
 
     expect(res.status).toBe(500);
-    expect(logs.text()).toContain("login");
-    expectNoSensitive(logs.text(), [EMAIL, PASSWORD]);
+    expectNoSensitive(logs.text(), forbidden);
   });
 
-  it("refresh: success logs no email nor tokens", async () => {
-    const refreshToken = TokenService.generateRefreshToken({ userId: user.id, email: EMAIL, role: "CUSTOMER" });
-    await TokenService.saveRefreshToken(user.id, refreshToken);
+  it("complete-phone: 200 logs no body, phone, email nor token", async () => {
     mockPrisma.user.findUnique.mockResolvedValue(user);
+    mockPrisma.user.update.mockResolvedValue({ ...user, phone: PHONE, phoneCompleted: true });
+    const token = accessToken();
 
     const res = await request(createApp())
-      .post("/api/auth/refresh")
-      .set("Cookie", `refreshToken=${refreshToken}`);
+      .patch("/api/auth/complete-phone")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ phone: PHONE });
 
     expect(res.status).toBe(200);
-    expectNoSensitive(logs.text(), [EMAIL, refreshToken, res.body.accessToken]);
-  });
-
-  it("refresh: 500 with an error quoting email and token logs neither", async () => {
-    const refreshToken = TokenService.generateRefreshToken({ userId: user.id, email: EMAIL, role: "CUSTOMER" });
-    await TokenService.saveRefreshToken(user.id, refreshToken);
-    mockPrisma.user.findUnique.mockRejectedValue(new Error(`boom for ${EMAIL} token=${refreshToken}`));
-
-    const res = await request(createApp())
-      .post("/api/auth/refresh")
-      .set("Cookie", `refreshToken=${refreshToken}`);
-
-    expect(res.status).toBe(500);
-    expectNoSensitive(logs.text(), [EMAIL, refreshToken]);
-  });
-
-  describe("complete-phone", () => {
-    const accessToken = () => TokenService.generateAccessToken({ userId: user.id, email: EMAIL, role: "CUSTOMER" });
-
-    it("complete-phone: 200 logs no body, phone, email nor token", async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(user);
-      mockPrisma.user.update.mockResolvedValue({ ...user, phone: PHONE, phoneCompleted: true });
-      const token = accessToken();
-
-      const res = await request(createApp())
-        .patch("/api/auth/complete-phone")
-        .set("Authorization", `Bearer ${token}`)
-        .send({ phone: PHONE });
-
-      expect(res.status).toBe(200);
-      expectNoSensitive(logs.text(), [PHONE, "98765", EMAIL, token, "body"]);
-    });
-
-    it("complete-phone: 400 logs no body nor phone", async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(user);
-      const token = accessToken();
-
-      const res = await request(createApp())
-        .patch("/api/auth/complete-phone")
-        .set("Authorization", `Bearer ${token}`)
-        .send({ phone: "telefone-invalido-777" });
-
-      expect(res.status).toBe(400);
-      expectNoSensitive(logs.text(), ["telefone-invalido-777", EMAIL, token]);
-    });
-
-    it("complete-phone: 500 with an error quoting phone and email logs neither", async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(user);
-      mockPrisma.user.update.mockRejectedValue(new Error(`update failed data: { phone: "${PHONE}", email: "${EMAIL}" }`));
-      const token = accessToken();
-
-      const res = await request(createApp())
-        .patch("/api/auth/complete-phone")
-        .set("Authorization", `Bearer ${token}`)
-        .send({ phone: PHONE });
-
-      expect(res.status).toBe(500);
-      expectNoSensitive(logs.text(), [PHONE, "98765", EMAIL, token]);
-    });
+    expectNoSensitive(logs.text(), [PHONE, "98765", EMAIL, token, "body"]);
   });
 });

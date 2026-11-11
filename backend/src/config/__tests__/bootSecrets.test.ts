@@ -26,23 +26,14 @@ function boot(env: Record<string, string>) {
 describe("boot with production secrets", () => {
   jest.setTimeout(90000);
 
-  it("exits 1 naming JWT_ACCESS_SECRET when it is missing", () => {
-    const result = boot({ JWT_REFRESH_SECRET: STRONG, PUBLIC_ALIAS_SECRET: STRONG });
-
-    expect(result.status).toBe(1);
-    expect(result.stderr).toContain("JWT_ACCESS_SECRET");
-  });
-
-  it("never prints the value of a weak JWT_REFRESH_SECRET and exits 1", () => {
+  it("exits 1 naming the missing JWT_ACCESS_SECRET and the weak JWT_REFRESH_SECRET, and never prints the value", () => {
     const weak = "weak-refresh-value-123";
-    const result = boot({
-      JWT_ACCESS_SECRET: STRONG,
-      JWT_REFRESH_SECRET: weak,
-      PUBLIC_ALIAS_SECRET: STRONG,
-    });
+    const result = boot({ JWT_REFRESH_SECRET: weak, PUBLIC_ALIAS_SECRET: STRONG });
+    const output = `${result.stdout}${result.stderr}`;
 
     expect(result.status).toBe(1);
-    expect(`${result.stdout}${result.stderr}`).toContain("JWT_REFRESH_SECRET");
-    expect(`${result.stdout}${result.stderr}`).not.toContain(weak);
+    expect(output).toContain("JWT_ACCESS_SECRET");
+    expect(output).toContain("JWT_REFRESH_SECRET");
+    expect(output).not.toContain(weak);
   });
 });

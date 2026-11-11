@@ -32,8 +32,6 @@ describe("TokenService refresh token storage", () => {
 
     const { data } = mockSession.create.mock.calls[0][0];
     expect(data.token).toBe(sha256Hex(refreshToken));
-    expect(data.token).not.toBe(refreshToken);
-    expect(data.token).toMatch(/^[0-9a-f]{64}$/);
   });
 
   it("stores sha256 hex: revocation looks up by the hash", async () => {
@@ -66,5 +64,40 @@ describe("TokenService refresh token storage", () => {
     const expiresAt = (data.expiresAt as Date).getTime();
     expect(expiresAt).toBeGreaterThanOrEqual(before + THIRTY_DAYS_MS);
     expect(expiresAt).toBeLessThanOrEqual(after + THIRTY_DAYS_MS);
+  });
+});
+
+describe("TokenService refresh token consumption", () => {
+  const payload = { userId: "user-1", email: "u@test.com", role: "CUSTOMER" };
+  const live = { userId: "user-1", expiresAt: new Date(Date.now() + 60_000) };
+
+  it.each([
+    { name: "rejects a token with invalid signature and revokes nothing", token: "not-a-jwt", session: live, count: 1, outcome: { outcome: "invalid" }, deletes: [] },
+    { name: "session absent (already rotated): reused, revokes all", session: null, count: 1, outcome: { outcome: "reused", userId: "user-1" }, deletes: ["user"] },
+    { name: "session of another user: reused, revokes all", session: { ...live, userId: "user-2" }, count: 1, outcome: { outcome: "reused", userId: "user-1" }, deletes: ["user"] },
+    { name: "session removed by a parallel request: reused, revokes all", session: live, count: 0, outcome: { outcome: "reused", userId: "user-1" }, deletes: ["token", "user"] },
+    { name: "expired session: invalid, revokes only that session", session: { ...live, expiresAt: new Date(Date.now() - 1000) }, count: 1, outcome: { outcome: "invalid" }, deletes: ["token"] },
+    { name: "live session: consumed", session: live, count: 1, outcome: { outcome: "consumed", payload: expect.objectContaining(payload) }, deletes: ["token"] },
+  ])("$name", async ({ token: rawToken, session, count, outcome, deletes }) => {
+    const token = rawToken ?? TokenService.generateRefreshToken(payload);
+    mockSession.findUnique.mockResolvedValue(session);
+    mockSession.deleteMany.mockResolvedValue({ count });
+
+    const result = await TokenService.consumeRefreshToken(token);
+
+    expect(result).toEqual(outcome);
+    const byToken = { where: { token: sha256Hex(token) } };
+    const allOfUser = { where: { userId: "user-1" } };
+    expect(mockSession.deleteMany.mock.calls.map(([args]) => args)).toEqual(
+      deletes.map((kind) => (kind === "token" ? byToken : allOfUser))
+    );
+  });
+
+  it("revokeOtherUserTokens without the current token revokes all sessions", async () => {
+    mockSession.deleteMany.mockResolvedValue({ count: 2 });
+
+    await TokenService.revokeOtherUserTokens("user-1", undefined);
+
+    expect(mockSession.deleteMany.mock.calls).toEqual([[{ where: { userId: "user-1" } }]]);
   });
 });

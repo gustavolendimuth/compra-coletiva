@@ -43,10 +43,13 @@ function createApp() {
 }
 
 describe("PATCH /api/profile", () => {
+  beforeEach(() => {
+    mockPrisma.user.update.mockResolvedValue({ id: "user-1", name: "Maria Silva", email: "m@test.com" });
+  });
+
   it("profile password change keeps current session and revokes the others", async () => {
     const hash = await AuthService.hashPassword("SenhaAtual123!");
     mockPrisma.user.findUnique.mockResolvedValue({ id: "user-1", password: hash });
-    mockPrisma.user.update.mockResolvedValue({ id: "user-1", name: "Maria Silva", email: "m@test.com" });
 
     const res = await request(createApp())
       .patch("/api/profile")
@@ -57,5 +60,15 @@ describe("PATCH /api/profile", () => {
     expect(mockPrisma.session.deleteMany).toHaveBeenCalledWith({
       where: { userId: "user-1", token: { not: sha256Hex("current-refresh") } },
     });
+  });
+
+  it("profile update without password change revokes nothing", async () => {
+    const res = await request(createApp())
+      .patch("/api/profile")
+      .set("Cookie", "refreshToken=current-refresh")
+      .send({ hideNameInCampaigns: true });
+
+    expect(res.status).toBe(200);
+    expect(mockPrisma.session.deleteMany).not.toHaveBeenCalled();
   });
 });

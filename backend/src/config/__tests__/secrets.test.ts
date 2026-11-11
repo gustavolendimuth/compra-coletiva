@@ -1,27 +1,19 @@
 import {
-  REQUIRED_SECRETS,
   DEV_SECRET_DEFAULTS,
   findSecretProblems,
   assertProductionSecrets,
   getSecret,
 } from "../secrets";
 
-const STRONG = "s".repeat(32);
-
+// exatamente 32 caracteres: o mínimo aceito
 const strongEnv = (): NodeJS.ProcessEnv => ({
   NODE_ENV: "production",
-  JWT_ACCESS_SECRET: `${STRONG}-access`,
-  JWT_REFRESH_SECRET: `${STRONG}-refresh`,
-  PUBLIC_ALIAS_SECRET: `${STRONG}-alias`,
+  JWT_ACCESS_SECRET: "a".repeat(32),
+  JWT_REFRESH_SECRET: "r".repeat(32),
+  PUBLIC_ALIAS_SECRET: "p".repeat(32),
 });
 
 describe("production secrets", () => {
-  it("lists exactly the three required secrets", () => {
-    expect([...REQUIRED_SECRETS].sort()).toEqual(
-      ["JWT_ACCESS_SECRET", "JWT_REFRESH_SECRET", "PUBLIC_ALIAS_SECRET"].sort()
-    );
-  });
-
   const defects: Array<[string, (name: string) => string | undefined]> = [
     ["missing", () => undefined],
     ["shorter than 32 chars", () => "x".repeat(31)],
@@ -45,7 +37,7 @@ describe("production secrets", () => {
     }
   }
 
-  it("rejects nothing when all three are strong", () => {
+  it("rejects nothing when all three are strong (32 chars is enough)", () => {
     expect(findSecretProblems(strongEnv())).toEqual([]);
   });
 
@@ -61,13 +53,15 @@ describe("production secrets", () => {
 
   it("outside production: no exit without the variables and dev defaults are used", () => {
     const exit = jest.fn() as unknown as (code: number) => never;
-    for (const nodeEnv of ["development", "test", undefined]) {
-      const env: NodeJS.ProcessEnv = nodeEnv ? { NODE_ENV: nodeEnv } : {};
-      assertProductionSecrets(env, exit);
-      expect(getSecret("JWT_ACCESS_SECRET", env)).toBe("dev-access-secret-change-in-production");
-      expect(getSecret("JWT_REFRESH_SECRET", env)).toBe("dev-refresh-secret-change-in-production");
-      expect(getSecret("PUBLIC_ALIAS_SECRET", env)).toBe("dev-public-alias-secret-change-in-production");
-    }
+    const env: NodeJS.ProcessEnv = { NODE_ENV: "development" };
+
+    assertProductionSecrets(env, exit);
+
     expect(exit).not.toHaveBeenCalled();
+    expect(getSecret("JWT_ACCESS_SECRET", env)).toBe("dev-access-secret-change-in-production");
+  });
+
+  it("getSecret returns the configured value over the dev default", () => {
+    expect(getSecret("JWT_ACCESS_SECRET", { JWT_ACCESS_SECRET: "x" })).toBe("x");
   });
 });

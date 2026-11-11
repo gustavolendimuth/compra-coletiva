@@ -1,5 +1,3 @@
-import { inspect } from "util";
-
 jest.mock("../../../index", () => ({
   prisma: {
     emailLog: {
@@ -33,59 +31,33 @@ jest.mock("../../../config/email", () => ({
 import { EmailService } from "../emailService";
 import { GmailProvider } from "../providers/gmailProvider";
 import { ResendProvider } from "../providers/resendProvider";
+import { captureConsole } from "../../../__tests__/captureConsole";
 
 const RECIPIENT = "comprador.sigiloso@example.com";
 
-const methods = ["log", "info", "warn", "error", "debug"] as const;
-
 describe("email sending logs", () => {
-  let spies: jest.SpyInstance[];
-  const logText = () =>
-    spies
-      .flatMap((spy) => spy.mock.calls)
-      .map((args) => args.map((arg: unknown) => (typeof arg === "string" ? arg : inspect(arg, { depth: 10 }))).join(" "))
-      .join("\n");
+  let logs: ReturnType<typeof captureConsole>;
 
   beforeEach(() => {
-    spies = methods.map((method) => jest.spyOn(console, method).mockImplementation(() => undefined));
+    logs = captureConsole();
   });
 
   afterEach(() => {
-    spies.forEach((spy) => spy.mockRestore());
     jest.restoreAllMocks();
   });
 
   const params = { to: RECIPIENT, subject: "Pedido criado", html: "<p>ok</p>", templateName: "order-created" };
 
-  it("no recipient in logs: EmailService.send success", async () => {
-    jest.spyOn(EmailService as any, "getProvider").mockReturnValue({
-      send: jest.fn().mockResolvedValue({ success: true, provider: "resend", messageId: "m-1" }),
-    });
-
-    const result = await EmailService.send(params);
-
-    expect(result.success).toBe(true);
-    expect(logText()).not.toContain(RECIPIENT);
-  });
-
-  it("no recipient in logs: EmailService.send provider failure quoting the address", async () => {
-    jest.spyOn(EmailService as any, "getProvider").mockReturnValue({
-      send: jest.fn().mockResolvedValue({ success: false, provider: "resend", error: `rejected ${RECIPIENT}` }),
-    });
+  it.each([
+    ["success", () => Promise.resolve({ success: true, provider: "resend", messageId: "m-1" })],
+    ["provider failure quoting the address", () => Promise.resolve({ success: false, provider: "resend", error: `rejected ${RECIPIENT}` })],
+    ["exception quoting the address", () => Promise.reject(new Error(`SMTP 550 mailbox ${RECIPIENT} unavailable`))],
+  ])("no recipient in logs: EmailService.send %s", async (_outcome, send) => {
+    jest.spyOn(EmailService as unknown as { getProvider: () => unknown }, "getProvider").mockReturnValue({ send });
 
     await EmailService.send(params);
 
-    expect(logText()).not.toContain(RECIPIENT);
-  });
-
-  it("no recipient in logs: EmailService.send exception quoting the address", async () => {
-    jest.spyOn(EmailService as any, "getProvider").mockReturnValue({
-      send: jest.fn().mockRejectedValue(new Error(`SMTP 550 mailbox ${RECIPIENT} unavailable`)),
-    });
-
-    await EmailService.send(params);
-
-    expect(logText()).not.toContain(RECIPIENT);
+    expect(logs.text()).not.toContain(RECIPIENT);
   });
 
   it("no recipient in logs: Gmail provider error quoting the address", async () => {
@@ -99,7 +71,7 @@ describe("email sending logs", () => {
     const result = await provider.send(params);
 
     expect(result.success).toBe(false);
-    expect(logText()).not.toContain(RECIPIENT);
+    expect(logs.text()).not.toContain(RECIPIENT);
   });
 
   it("no recipient in logs: Resend provider API error and exception quoting the address", async () => {
@@ -112,6 +84,6 @@ describe("email sending logs", () => {
     await provider.send(params);
 
     expect(mockResendSend).toHaveBeenCalledTimes(2);
-    expect(logText()).not.toContain(RECIPIENT);
+    expect(logs.text()).not.toContain(RECIPIENT);
   });
 });

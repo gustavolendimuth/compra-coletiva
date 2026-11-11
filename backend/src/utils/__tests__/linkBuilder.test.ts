@@ -31,6 +31,8 @@ describe("unsubscribe token", () => {
 
     process.env.JWT_ACCESS_SECRET = "b".repeat(40);
     expect(LinkBuilder.verifyUnsubscribeToken(token, "user-1")).toBe(false);
+    // chave derivada: HMAC com o JWT_ACCESS_SECRET cru não vale
+    expect(LinkBuilder.verifyUnsubscribeToken(legacyToken("b".repeat(40), "user-1", Date.now()), "user-1")).toBe(false);
   });
 
   it("rejects a token for another user", () => {
@@ -47,8 +49,10 @@ describe("unsubscribe token", () => {
   });
 
   it("timingSafeEqual path: signature of different length returns false without throwing", () => {
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => undefined);
     const [, timestamp] = LinkBuilder.generateUnsubscribeToken("user-1").split(".");
     expect(LinkBuilder.verifyUnsubscribeToken(`abc.${timestamp}`, "user-1")).toBe(false);
     expect(LinkBuilder.verifyUnsubscribeToken("garbage", "user-1")).toBe(false);
+    expect(errorSpy).not.toHaveBeenCalled();
   });
 });

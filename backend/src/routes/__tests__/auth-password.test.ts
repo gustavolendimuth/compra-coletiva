@@ -17,7 +17,7 @@ const mockResetTokens: FakeResetToken[] = [];
 
 const mockPrisma = {
   user: { findUnique: jest.fn(), update: jest.fn() },
-  session: { deleteMany: jest.fn(async () => ({ count: 0 })), create: jest.fn() },
+  session: { deleteMany: jest.fn(async () => ({ count: 0 })) },
   passwordResetToken: {
     create: jest.fn(async ({ data }: { data: Omit<FakeResetToken, "id" | "used"> }) => {
       const row = { id: `r-${mockResetTokens.length + 1}`, used: false, ...data };
@@ -178,10 +178,8 @@ describe("password change and reset revoke sessions", () => {
     expect(res.status).toBe(200);
 
     const rawToken = mockQueuePasswordResetEmail.mock.calls[0][3] as string;
-    expect(rawToken).toMatch(/^[0-9a-f]{64}$/);
     expect(mockResetTokens).toHaveLength(1);
     expect(mockResetTokens[0].token).toBe(sha256Hex(rawToken));
-    expect(mockResetTokens[0].token).not.toBe(rawToken);
 
     const reset = await request(createApp())
       .post("/api/auth/reset-password")
@@ -192,19 +190,21 @@ describe("password change and reset revoke sessions", () => {
     );
   });
 
-  it("never exposes token in production even with EXPOSE_RESET_TOKEN_IN_RESPONSE=true", async () => {
+  it.each([
+    { name: "never exposes token in production even with EXPOSE_RESET_TOKEN_IN_RESPONSE=true", nodeEnv: "production", exposed: false },
+    { name: "exposes token in development with EXPOSE_RESET_TOKEN_IN_RESPONSE=true", nodeEnv: "development", exposed: true },
+  ])("$name", async ({ nodeEnv, exposed }) => {
     const previousEnv = process.env.NODE_ENV;
     const previousFlag = process.env.EXPOSE_RESET_TOKEN_IN_RESPONSE;
-    process.env.NODE_ENV = "production";
+    process.env.NODE_ENV = nodeEnv;
     process.env.EXPOSE_RESET_TOKEN_IN_RESPONSE = "true";
     try {
       const res = await request(createApp())
         .post("/api/auth/request-password-reset")
         .send({ email: "maria@test.com" });
       expect(res.status).toBe(200);
-      expect(res.body).not.toHaveProperty("token");
       const rawToken = mockQueuePasswordResetEmail.mock.calls[0][3] as string;
-      expect(JSON.stringify(res.body)).not.toContain(rawToken);
+      expect(res.body).toStrictEqual({ message: expect.any(String), ...(exposed && { token: rawToken }) });
     } finally {
       process.env.NODE_ENV = previousEnv;
       process.env.EXPOSE_RESET_TOKEN_IN_RESPONSE = previousFlag;

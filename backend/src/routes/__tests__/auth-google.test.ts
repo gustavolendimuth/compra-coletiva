@@ -83,52 +83,42 @@ beforeEach(() => {
   strategyCalls = 0;
 });
 
+const stateCookieValue = (cookie: string) => decodeURIComponent(cookie.split(";")[0].slice("oauthState=".length));
+
 describe("Google OAuth", () => {
-  it("issues state: HttpOnly oauthState cookie with the same value sent to Google", async () => {
+  it("issues state: HttpOnly oauthState cookie scoped to /api/auth/google for 10 min, same value sent to Google", async () => {
     const { res, stateCookie, state } = await startFlow(createApp());
 
     expect(res.status).toBe(302);
-    expect(stateCookie).toBeDefined();
     expect(stateCookie).toMatch(/HttpOnly/i);
-    const cookieValue = decodeURIComponent(stateCookie!.split(";")[0].slice("oauthState=".length));
+    expect(stateCookie).toContain("Path=/api/auth/google");
+    expect(stateCookie).toContain("Max-Age=600");
     expect(state).toMatch(/^[0-9a-f]{64}$/);
-    expect(cookieValue).toBe(state);
+    expect(stateCookieValue(stateCookie!)).toBe(state);
   });
 
-  it("missing state: redirects with error=oauth_state and creates no session", async () => {
+  it.each([
+    { name: "missing state", cookie: "issued", query: "" },
+    { name: "missing state cookie", cookie: "", query: "&state=abc" },
+    { name: "empty state and empty cookie", cookie: "oauthState=", query: "&state=" },
+    { name: "mismatched state", cookie: "issued", query: `&state=${"0".repeat(64)}` },
+    { name: "mismatched state of different length", cookie: "issued", query: "&state=abc" },
+  ])("$name: redirects with error=oauth_state and creates no session", async ({ cookie, query }) => {
     const app = createApp();
     const { stateCookie } = await startFlow(app);
 
     const res = await request(app)
-      .get("/api/auth/google/callback?code=abc")
-      .set("Cookie", stateCookie!.split(";")[0]);
+      .get(`/api/auth/google/callback?code=abc${query}`)
+      .set("Cookie", cookie === "issued" ? stateCookie!.split(";")[0] : cookie);
 
     expect(res.status).toBe(302);
     expect(res.headers.location).toBe(`${FRONTEND_URL}/auth/callback?error=oauth_state`);
     expect(mockPrisma.session.create).not.toHaveBeenCalled();
     expect(cookies(res).some((c) => c.startsWith("refreshToken="))).toBe(false);
-  });
-
-  it("missing state cookie: redirects with error=oauth_state and creates no session", async () => {
-    const res = await request(createApp()).get("/api/auth/google/callback?code=abc&state=abc");
-    expect(res.headers.location).toBe(`${FRONTEND_URL}/auth/callback?error=oauth_state`);
-    expect(mockPrisma.session.create).not.toHaveBeenCalled();
-  });
-
-  it("mismatched state: redirects with error=oauth_state and creates no session", async () => {
-    const app = createApp();
-    const { stateCookie } = await startFlow(app);
-
-    const res = await request(app)
-      .get(`/api/auth/google/callback?code=abc&state=${"0".repeat(64)}`)
-      .set("Cookie", stateCookie!.split(";")[0]);
-
-    expect(res.headers.location).toBe(`${FRONTEND_URL}/auth/callback?error=oauth_state`);
-    expect(mockPrisma.session.create).not.toHaveBeenCalled();
     expect(strategyCalls).toBe(1); // only the initial redirect; callback never reached the strategy
   });
 
-  it("no user data in redirect: success goes to exactly /auth/callback and sets the refresh cookie", async () => {
+  it("no user data in redirect: success goes to exactly /auth/callback, sets the refresh cookie and clears the state", async () => {
     const app = createApp();
     const { stateCookie, state } = await startFlow(app);
 
@@ -138,13 +128,16 @@ describe("Google OAuth", () => {
 
     expect(res.status).toBe(302);
     expect(res.headers.location).toBe(`${FRONTEND_URL}/auth/callback`);
-    expect(res.headers.location).not.toMatch(/accessToken|userEmail|userId|userName|maria/);
     expect(mockPrisma.session.create).toHaveBeenCalledTimes(1);
     expect(cookies(res).some((c) => c.startsWith("refreshToken="))).toBe(true);
+    expect(cookies(res).find((c) => c.startsWith("oauthState="))).toContain("Expires=Thu, 01 Jan 1970");
   });
 
-  it("email not verified redirect: error=email_not_verified and no session", async () => {
-    mockOutcome = { info: { message: "email_not_verified" } };
+  it.each([
+    { name: "email not verified redirect: error=email_not_verified", info: { message: "email_not_verified" }, location: "/auth/callback?error=email_not_verified" },
+    { name: "strategy without user: login with error=auth_failed", info: undefined, location: "/login?error=auth_failed" },
+  ])("$name and no session", async ({ info, location }) => {
+    mockOutcome = { info };
     const app = createApp();
     const { stateCookie, state } = await startFlow(app);
 
@@ -152,7 +145,7 @@ describe("Google OAuth", () => {
       .get(`/api/auth/google/callback?code=abc&state=${state}`)
       .set("Cookie", stateCookie!.split(";")[0]);
 
-    expect(res.headers.location).toBe(`${FRONTEND_URL}/auth/callback?error=email_not_verified`);
+    expect(res.headers.location).toBe(`${FRONTEND_URL}${location}`);
     expect(mockPrisma.session.create).not.toHaveBeenCalled();
   });
 });
