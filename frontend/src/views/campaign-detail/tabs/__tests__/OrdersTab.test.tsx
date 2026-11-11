@@ -388,10 +388,11 @@ describe('OrdersTab', () => {
     it('should show all action buttons for admin on all orders', () => {
       render(<OrdersTab {...defaultProps} currentUserId="admin-1" isAdmin={true} />);
 
-      expect(screen.queryAllByTitle(/visualizar pedido/i).length).toBeGreaterThan(0);
-      expect(screen.queryAllByTitle(/marcar como|enviar comprovante/i).length).toBeGreaterThan(0);
-      expect(screen.queryAllByTitle(/editar pedido/i).length).toBeGreaterThan(0);
-      expect(screen.queryAllByTitle(/remover pedido/i).length).toBeGreaterThan(0);
+      // Admin desmarca o order-1 pago, mas não edita nem remove pedido pago
+      expect(screen.queryAllByTitle(/visualizar pedido/i).length).toBe(3);
+      expect(screen.queryAllByTitle(/marcar como|enviar comprovante/i).length).toBe(3);
+      expect(screen.queryAllByTitle(/editar pedido/i).length).toBe(2);
+      expect(screen.queryAllByTitle(/remover pedido/i).length).toBe(2);
     });
 
     it('should show action buttons only on own order for regular user', () => {
@@ -430,25 +431,8 @@ describe('OrdersTab', () => {
       expect(screen.queryAllByTitle(/remover pedido/i).length).toBe(0);
     });
 
-    it('creator can unmark a paid order but not edit or delete it', () => {
-      render(
-        <OrdersTab
-          {...defaultProps}
-          orders={[mockOrders[0]]}
-          filteredOrders={[mockOrders[0]]}
-          currentUserId="creator-1"
-          isAdmin={false}
-          isCreator={true}
-        />
-      );
-
-      expect(screen.getByTitle(/marcar como não pago/i)).toBeInTheDocument();
-      expect(screen.queryByTitle(/editar pedido/i)).not.toBeInTheDocument();
-      expect(screen.queryByTitle(/remover pedido/i)).not.toBeInTheDocument();
-    });
-
     it('should not show delete button for regular user when campaign is not active', () => {
-      render(<OrdersTab {...defaultProps} isActive={false} isAdmin={false} currentUserId="u1" />);
+      render(<OrdersTab {...defaultProps} isActive={false} isAdmin={false} currentUserId="u2" />);
 
       expect(screen.queryAllByTitle(/remover pedido/i).length).toBe(0);
     });

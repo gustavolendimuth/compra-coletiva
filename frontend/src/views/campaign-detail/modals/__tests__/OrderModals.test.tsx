@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AddOrderModal, AdminCreateOrderModal, EditOrderModal, ViewOrderModal } from '../OrderModals';
 import { createMockOrder, createMockFullProduct } from '@/__tests__/mock-data';
@@ -450,27 +450,6 @@ describe('OrderModals', () => {
       });
     });
 
-    describe('Botão Editar Pedido', () => {
-      it('aparece em pedido pendente de campanha ativa para quem pode editar', () => {
-        render(<ViewOrderModal {...defaultProps} />);
-
-        expect(screen.getByRole('button', { name: /editar pedido/i })).toBeInTheDocument();
-      });
-
-      // Pedido pago fica travado no backend: o botão levava a um modal que não salvava
-      it('não aparece em pedido pago', () => {
-        render(<ViewOrderModal {...defaultProps} order={{ ...mockOrder, isPaid: true }} />);
-
-        expect(screen.queryByRole('button', { name: /editar pedido/i })).not.toBeInTheDocument();
-      });
-
-      it('não aparece com a campanha fechada', () => {
-        render(<ViewOrderModal {...defaultProps} isActive={false} />);
-
-        expect(screen.queryByRole('button', { name: /editar pedido/i })).not.toBeInTheDocument();
-      });
-    });
-
     describe('Order Items', () => {
       it('should display all order items', () => {
         render(<ViewOrderModal {...defaultProps} />);
@@ -539,6 +518,13 @@ describe('OrderModals', () => {
         expect(screen.queryByRole('button', { name: /editar pedido/i })).not.toBeInTheDocument();
       });
 
+      // Pedido pago fica travado no backend: o botão levava a um modal que não salvava
+      it('não mostra Editar Pedido em pedido pago', () => {
+        render(<ViewOrderModal {...defaultProps} order={{ ...mockOrder, isPaid: true }} />);
+
+        expect(screen.queryByRole('button', { name: /editar pedido/i })).not.toBeInTheDocument();
+      });
+
       it('should show close button', () => {
         render(<ViewOrderModal {...defaultProps} />);
 
@@ -596,14 +582,17 @@ describe('OrderModals', () => {
       URL.revokeObjectURL = vi.fn();
     });
 
-    it('payment proof from endpoint: renders an image from the fetched blob', async () => {
+    it('payment proof from endpoint: renders an image from the fetched blob and revokes it on close', async () => {
       mockGetPaymentProof.mockResolvedValue(new Blob(['x'], { type: 'image/png' }));
 
-      render(<ViewOrderModal {...props} />);
+      const { unmount } = render(<ViewOrderModal {...props} />);
 
+      expect(screen.getByText('Carregando comprovante...')).toBeInTheDocument();
       const img = await screen.findByAltText('Comprovante PIX');
       expect(img).toHaveAttribute('src', 'blob:proof-1');
       expect(mockGetPaymentProof).toHaveBeenCalledWith('order-proof');
+      unmount();
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:proof-1');
     });
 
     it('payment proof from endpoint: renders a PDF viewer when blob type is application/pdf', async () => {
@@ -616,12 +605,15 @@ describe('OrderModals', () => {
       expect(frame).toHaveAttribute('src', 'blob:proof-1');
     });
 
-    it('payment proof from endpoint: never renders a blob of another type', async () => {
-      mockGetPaymentProof.mockResolvedValue(new Blob(['<html>'], { type: 'text/html' }));
+    // SVG é image/* mas pode carregar script: só JPEG/PNG/WebP passam
+    it.each([
+      ['never renders a blob of another type', () => Promise.resolve(new Blob(['<svg/>'], { type: 'image/svg+xml' }))],
+      ['shows it as unavailable when the request fails', () => Promise.reject(new Error('403'))],
+    ])('payment proof from endpoint: %s', async (_label, getPaymentProof) => {
+      mockGetPaymentProof.mockImplementation(getPaymentProof);
 
       render(<ViewOrderModal {...props} />);
 
-      await waitFor(() => expect(mockGetPaymentProof).toHaveBeenCalled());
       expect(await screen.findByText(/não foi possível exibir o comprovante/i)).toBeInTheDocument();
       expect(screen.queryByAltText('Comprovante PIX')).not.toBeInTheDocument();
       expect(screen.queryByTitle('Comprovante PIX')).not.toBeInTheDocument();

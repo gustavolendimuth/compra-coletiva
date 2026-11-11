@@ -37,6 +37,13 @@ const user = {
   legalAcceptanceRequired: false,
 };
 
+const renderProvider = () =>
+  render(
+    <AuthProvider>
+      <Probe />
+    </AuthProvider>
+  );
+
 describe("AuthProvider", () => {
   beforeEach(() => {
     mockPost.mockReset();
@@ -45,15 +52,12 @@ describe("AuthProvider", () => {
   });
 
   it("reload obtains access token via refresh (no token persisted before)", async () => {
-    // Recarga: há usuário salvo, mas nenhum access token em memória
+    // Recarga: há usuário salvo, mas nenhum access token em memória (só o de versões antigas)
     window.localStorage.setItem("user", JSON.stringify(user));
+    window.localStorage.setItem("accessToken", "legacy-token");
     mockPost.mockResolvedValue({ data: { accessToken: "fresh-token", user } });
 
-    render(
-      <AuthProvider>
-        <Probe />
-      </AuthProvider>
-    );
+    renderProvider();
 
     await waitFor(() => expect(screen.getByText("logado:Maria")).toBeInTheDocument());
     expect(mockPost).toHaveBeenCalledWith("/auth/refresh");
@@ -66,13 +70,16 @@ describe("AuthProvider", () => {
     window.localStorage.setItem("user", JSON.stringify(user));
     mockPost.mockRejectedValue(new Error("401"));
 
-    render(
-      <AuthProvider>
-        <Probe />
-      </AuthProvider>
-    );
+    renderProvider();
 
     await waitFor(() => expect(screen.getByText("anonimo")).toBeInTheDocument());
     expect(authStorage.getUser()).toBeNull();
+  });
+
+  it("without a stored user does not call refresh", async () => {
+    renderProvider();
+
+    await waitFor(() => expect(screen.getByText("anonimo")).toBeInTheDocument());
+    expect(mockPost).not.toHaveBeenCalled();
   });
 });

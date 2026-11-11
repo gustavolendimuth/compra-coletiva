@@ -25,7 +25,8 @@ describe("MobileMenu", () => {
 
   it("menu fechado não reage ao modal de login", () => {
     const onClose = vi.fn();
-    render(<MobileMenu isOpen={false} onClose={onClose} />);
+    const { rerender } = render(<MobileMenu isOpen onClose={onClose} />);
+    rerender(<MobileMenu isOpen={false} onClose={onClose} />);
 
     openAuthModal();
 

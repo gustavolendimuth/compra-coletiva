@@ -31,14 +31,20 @@ describe("refreshSession", () => {
     expect(a.accessToken).toBe("fresh-token");
     expect(b.accessToken).toBe("fresh-token");
     expect(authStorage.getAccessToken()).toBe("fresh-token");
+    expect(authStorage.getUser()).toEqual(user);
   });
 
-  it("single refresh in flight: a later call after completion makes a new POST", async () => {
-    mockPost.mockResolvedValue({ data: { accessToken: "t1", user } });
+  it("single refresh in flight: a later call after completion (failed or not) makes a new POST", async () => {
+    mockPost
+      .mockRejectedValueOnce(new Error("401"))
+      .mockResolvedValueOnce({ data: { accessToken: "t1", user } })
+      .mockResolvedValueOnce({ data: { accessToken: "t2", user } });
+
+    await expect(refreshSession()).rejects.toThrow("401");
     await refreshSession();
-    mockPost.mockResolvedValue({ data: { accessToken: "t2", user } });
     await refreshSession();
-    expect(mockPost).toHaveBeenCalledTimes(2);
+
+    expect(mockPost).toHaveBeenCalledTimes(3);
     expect(authStorage.getAccessToken()).toBe("t2");
   });
 });

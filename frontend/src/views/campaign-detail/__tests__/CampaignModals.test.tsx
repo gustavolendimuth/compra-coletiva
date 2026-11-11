@@ -38,23 +38,23 @@ vi.mock("../modals/PaymentProofModal", () => ({
   },
 }));
 
-describe("CampaignModals - Remove Payment Proof Confirmation", () => {
-  const buildHook = (overrides: Record<string, unknown> = {}) => {
-    return {
-      isSalesDisclaimerModalOpen: false,
-      isSalesDisclaimerLoading: false,
-      handleCancelSalesDisclaimer: vi.fn(),
-      handleConfirmSalesDisclaimer: vi.fn(),
-      editProductForm: { imageUrl: "" },
-      isRemovePaymentProofConfirmOpen: false,
-      closeRemovePaymentProofConfirm: vi.fn(),
-      handleConfirmRemovePaymentProof: vi.fn(),
-      orderForPaymentRemoval: null,
-      updatePaymentMutation: { isPending: false },
-      ...overrides,
-    } as any;
-  };
+const buildHook = (overrides: Record<string, unknown> = {}) => {
+  return {
+    isSalesDisclaimerModalOpen: false,
+    isSalesDisclaimerLoading: false,
+    handleCancelSalesDisclaimer: vi.fn(),
+    handleConfirmSalesDisclaimer: vi.fn(),
+    editProductForm: { imageUrl: "" },
+    isRemovePaymentProofConfirmOpen: false,
+    closeRemovePaymentProofConfirm: vi.fn(),
+    handleConfirmRemovePaymentProof: vi.fn(),
+    orderForPaymentRemoval: null,
+    updatePaymentMutation: { isPending: false },
+    ...overrides,
+  } as any;
+};
 
+describe("CampaignModals - Remove Payment Proof Confirmation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -122,21 +122,6 @@ describe("CampaignModals - Remove Payment Proof Confirmation", () => {
 });
 
 describe("CampaignModals - PaymentProofModal", () => {
-  const buildHook = (canMarkPaidWithoutProof: boolean) =>
-    ({
-      isSalesDisclaimerModalOpen: false,
-      isSalesDisclaimerLoading: false,
-      editProductForm: { imageUrl: "" },
-      isRemovePaymentProofConfirmOpen: false,
-      orderForPaymentRemoval: null,
-      updatePaymentMutation: { isPending: false },
-      isPaymentProofModalOpen: true,
-      orderForPayment: createMockOrder({ id: "order-1" }),
-      handlePaymentProofSubmit: vi.fn(),
-      handleMarkPaidWithoutProof: vi.fn(),
-      canMarkPaidWithoutProof,
-    }) as any;
-
   beforeEach(() => {
     paymentProofModalProps.length = 0;
   });
@@ -145,11 +130,10 @@ describe("CampaignModals - PaymentProofModal", () => {
     [false, "undefined"],
     [true, "the handler"],
   ])("mark paid without proof wiring: canMarkPaidWithoutProof=%s passes %s", (flag) => {
-    const hook = buildHook(flag);
+    const hook = buildHook({ canMarkPaidWithoutProof: flag, handleMarkPaidWithoutProof: vi.fn() });
 
     render(<CampaignModals hook={hook} />);
 
-    const props = paymentProofModalProps[paymentProofModalProps.length - 1];
-    expect(props.onMarkPaidWithoutProof).toBe(flag ? hook.handleMarkPaidWithoutProof : undefined);
+    expect(paymentProofModalProps.at(-1)?.onMarkPaidWithoutProof).toBe(flag ? hook.handleMarkPaidWithoutProof : undefined);
   });
 });

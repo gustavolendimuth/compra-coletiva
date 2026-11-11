@@ -7,18 +7,10 @@ import { describe, expect, it } from "vitest";
 describe("proxy file location", () => {
   const frontendRoot = resolve(__dirname, "../..");
 
-  it("app router lives in src/app", () => {
+  // O proxy.test importa ../proxy, então a existência de src/proxy.ts já está coberta
+  it("app router lives in src/app and there is no stray middleware.ts / proxy.ts that Next would ignore or that would shadow the proxy", () => {
     expect(existsSync(resolve(frontendRoot, "src/app"))).toBe(true);
+    const stray = ["middleware.ts", "proxy.ts", "src/middleware.ts"].filter((file) => existsSync(resolve(frontendRoot, file)));
+    expect(stray).toEqual([]);
   });
-
-  it("proxy is in src/, next to the app router", () => {
-    expect(existsSync(resolve(frontendRoot, "src/proxy.ts"))).toBe(true);
-  });
-
-  it.each(["middleware.ts", "proxy.ts", "src/middleware.ts"])(
-    "no stray %s that Next would ignore or that would shadow the proxy",
-    (file) => {
-      expect(existsSync(resolve(frontendRoot, file))).toBe(false);
-    }
-  );
 });

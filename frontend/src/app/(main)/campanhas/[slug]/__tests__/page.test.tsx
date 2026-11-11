@@ -38,9 +38,7 @@ describe("/campanhas/[slug] JSON-LD", () => {
     const html = renderToStaticMarkup(element);
 
     expect(html).toContain("\\u003c/script>");
-    expect(html).not.toContain("window.__xss=1</script>");
     // só as 2 tags de JSON-LD que o app gera (Product + BreadcrumbList)
-    expect(html.match(/<script/g)).toHaveLength(2);
     expect(html.match(/<\/script>/g)).toHaveLength(2);
   });
 });

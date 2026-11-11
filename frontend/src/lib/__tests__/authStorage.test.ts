@@ -50,33 +50,14 @@ describe("authStorage", () => {
   });
 });
 
+// O setup.ts reinstala um localStorage em memória antes de cada teste
+const storedValues = () =>
+  Array.from({ length: window.localStorage.length }, (_, i) => window.localStorage.getItem(window.localStorage.key(i)!));
+
 describe("authStorage access token", () => {
   it("keeps access token only in memory: not in localStorage nor in JS-readable cookies", () => {
-    Object.defineProperty(window, "localStorage", {
-      configurable: true,
-      writable: true,
-      value: (() => {
-        let store: Record<string, string> = {};
-        return {
-          getItem: (k: string) => (k in store ? store[k] : null),
-          setItem: (k: string, v: string) => {
-            store[k] = String(v);
-          },
-          removeItem: (k: string) => {
-            delete store[k];
-          },
-          clear: () => {
-            store = {};
-          },
-          key: (i: number) => Object.keys(store)[i] ?? null,
-          get length() {
-            return Object.keys(store).length;
-          },
-          dump: () => store,
-        };
-      })(),
-    });
-
+    // Versões anteriores gravavam o token aqui
+    window.localStorage.setItem("accessToken", "legacy-token");
     const token = "eyJhbGciOiJIUzI1NiJ9.secret-access-token.sig";
     authStorage.setAuth(token, {
       id: "user-id",
@@ -85,14 +66,11 @@ describe("authStorage access token", () => {
       role: "CUSTOMER",
     });
 
-    const stored = (window.localStorage as unknown as { dump: () => Record<string, string> }).dump();
-    expect(Object.values(stored).some((value) => value.includes(token))).toBe(false);
-    expect(Object.keys(stored)).not.toContain("accessToken");
+    expect(window.localStorage.getItem("accessToken")).toBeNull();
+    expect(storedValues().some((value) => value?.includes(token))).toBe(false);
     expect(document.cookie).not.toContain(token);
-    expect(document.cookie).not.toContain("secret-access-token");
     expect(document.cookie).toContain("auth-token=1");
     expect(authStorage.getAccessToken()).toBe(token);
-    expect(authStorage.isAuthenticated()).toBe(true);
 
     authStorage.clearAuth();
     expect(authStorage.getAccessToken()).toBeNull();

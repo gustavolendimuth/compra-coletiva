@@ -80,14 +80,14 @@ describe('CampaignCardFooter', () => {
   });
 
   describe('Deadline Display - Same Day', () => {
-    it('should show hours remaining when ending today', () => {
+    it('should show hours remaining with red styling when ending today', () => {
       const inThreeHours = new Date(mockNow.getTime() + 3 * 60 * 60 * 1000);
       const campaign = createMockCampaign({
         deadline: inThreeHours.toISOString(),
       });
       render(<CampaignCardFooter campaign={campaign} />);
 
-      expect(screen.getByText('Encerra em 3h')).toBeInTheDocument();
+      expect(screen.getByText('Encerra em 3h').parentElement).toHaveClass('text-red-600', 'bg-red-50');
     });
 
     it('should round partial hours up when ending today', () => {
@@ -98,17 +98,6 @@ describe('CampaignCardFooter', () => {
       render(<CampaignCardFooter campaign={campaign} />);
 
       expect(screen.getByText('Encerra em 1h')).toBeInTheDocument();
-    });
-
-    it('should use red styling for same day deadline', () => {
-      const inThreeHours = new Date(mockNow.getTime() + 3 * 60 * 60 * 1000);
-      const campaign = createMockCampaign({
-        deadline: inThreeHours.toISOString(),
-      });
-      render(<CampaignCardFooter campaign={campaign} />);
-
-      const badge = screen.getByText('Encerra em 3h').parentElement;
-      expect(badge).toHaveClass('text-red-600', 'bg-red-50');
     });
   });
 

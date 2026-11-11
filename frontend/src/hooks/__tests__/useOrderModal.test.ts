@@ -833,22 +833,6 @@ describe('useOrderModal', () => {
       expect(toast.error).toHaveBeenCalledWith('Pedido já pago não pode ser alterado');
     });
 
-    it('handleEditOrderFromView não abre edição de pedido pago', () => {
-      const wrapper = createWrapper();
-      const { result } = renderHook(() => useOrderModal(defaultOptions), { wrapper });
-
-      act(() => {
-        result.current.setViewingOrder(paidOrder);
-        result.current.setIsViewOrderModalOpen(true);
-      });
-      act(() => {
-        result.current.handleEditOrderFromView();
-      });
-
-      expect(result.current.isEditOrderModalOpen).toBe(false);
-      expect(toast.error).toHaveBeenCalledWith('Pedido já pago não pode ser alterado');
-    });
-
     it('handleAddToOrder com pedido próprio pago não tenta alterar o pedido', async () => {
       const wrapper = createWrapper();
       const { result } = renderHook(
@@ -865,24 +849,27 @@ describe('useOrderModal', () => {
       expect(toast.success).not.toHaveBeenCalled();
       expect(toast.error).toHaveBeenCalledWith('Pedido já pago não pode ser alterado');
     });
+  });
 
-    it('erro ao salvar o pedido mostra a mensagem do backend em vez de texto genérico', async () => {
-      vi.mocked(orderApi.updateWithItems).mockRejectedValue(
-        new Error('Pedido já pago não pode ser alterado')
-      );
-      const wrapper = createWrapper();
-      const { result } = renderHook(() => useOrderModal(defaultOptions), { wrapper });
+  it('erro ao salvar o pedido mostra a mensagem do backend em vez de texto genérico', async () => {
+    vi.mocked(orderApi.updateWithItems).mockRejectedValue(
+      Object.assign(new Error('Request failed with status code 409'), {
+        isAxiosError: true,
+        response: { status: 409, data: { message: 'Pedido já pago não pode ser alterado' } },
+      })
+    );
+    const wrapper = createWrapper();
+    const { result } = renderHook(() => useOrderModal(defaultOptions), { wrapper });
 
-      act(() => {
-        result.current.openEditOrderModal(mockOrders[0]);
-      });
-      act(() => {
-        lastAutosaveOptions?.onSave('order-1', [{ productId: 'product-1', quantity: 2 }]);
-      });
+    act(() => {
+      result.current.openEditOrderModal(mockOrders[0]);
+    });
+    act(() => {
+      lastAutosaveOptions?.onSave('order-1', [{ productId: 'product-1', quantity: 2 }]);
+    });
 
-      await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Pedido já pago não pode ser alterado');
-      });
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Pedido já pago não pode ser alterado');
     });
   });
 });

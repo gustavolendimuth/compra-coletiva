@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { OverviewTab } from "../OverviewTab";
@@ -35,7 +35,7 @@ vi.mock("../../CampaignLocationSection", () => ({
   ),
 }));
 
-// Mock useAuth to return an admin user so all action buttons are visible
+// Mock useAuth to return an admin user by default
 vi.mock("@/contexts/AuthContext", () => ({
   useAuth: vi.fn(() => ({
     user: { id: "admin-user", role: "ADMIN", name: "Admin", email: "admin@test.com" },
@@ -572,18 +572,17 @@ describe("OverviewTab", () => {
       expect(editButtons).toHaveLength(1);
     });
 
-    it("participant sees only view on own paid order", async () => {
+    it("creator unmarks own paid order but does not edit it", async () => {
       const { useAuth } = await import("@/contexts/AuthContext");
       vi.mocked(useAuth).mockReturnValue({
         user: { id: "u1", role: "CUSTOMER", name: "Alice", email: "alice@test.com" },
       } as ReturnType<typeof useAuth>);
 
-      render(<OverviewTab {...permissionProps} />);
+      render(<OverviewTab {...permissionProps} campaign={{ ...mockCampaign, creatorId: "u1" }} />);
 
-      expect(screen.getAllByTitle(/visualizar pedido/i)).toHaveLength(1);
       expect(
-        screen.queryByTitle(/marcar como não pago|enviar comprovante de pagamento/i)
-      ).not.toBeInTheDocument();
+        screen.getAllByTitle(/marcar como não pago|enviar comprovante de pagamento/i)
+      ).toEqual([screen.getByTitle("Marcar como não pago")]);
       expect(screen.queryByTitle(/editar pedido/i)).not.toBeInTheDocument();
     });
 
@@ -601,6 +600,11 @@ describe("OverviewTab", () => {
 
       // Verify Bob's name is rendered but has no associated buttons
       expect(screen.getByText("Bob")).toBeInTheDocument();
+      // O próprio pedido (Alice) está pago: participante só visualiza
+      expect(
+        screen.queryByTitle(/marcar como não pago|enviar comprovante de pagamento/i)
+      ).not.toBeInTheDocument();
+      expect(screen.queryByTitle(/editar pedido/i)).not.toBeInTheDocument();
     });
 
     it("deve exibir todos os botoes de acao para todos os pedidos quando usuario nao esta autenticado", async () => {
@@ -718,54 +722,28 @@ describe("OverviewTab", () => {
   });
 
   describe("PIX login notice", () => {
-    afterEach(async () => {
-      const { useAuth } = await import("@/contexts/AuthContext");
-      vi.mocked(useAuth).mockReturnValue({
-        user: { id: "admin-user", role: "ADMIN", name: "Admin", email: "admin@test.com" },
-        requireAuth: vi.fn(),
-      } as unknown as ReturnType<typeof useAuth>);
-    });
+    const visitor = null;
+    const alice = { id: "u1", role: "CUSTOMER", name: "Alice", email: "alice@test.com" };
 
-    it("login notice from hasPixConfigured: shows the notice to visitors when the API hides pixKey", async () => {
+    // A API esconde pixKey/pixType de visitante e manda só hasPixConfigured
+    it.each([
+      ["shows the notice to visitors when the API hides pixKey", visitor, true, "ACTIVE", true],
+      ["hidden when the campaign has no PIX", visitor, false, "ACTIVE", false],
+      ["hidden for logged-in users", alice, true, "ACTIVE", false],
+      ["hidden on archived campaigns", visitor, true, "ARCHIVED", false],
+    ] as const)("login notice from hasPixConfigured: %s", async (_label, user, pixConfigured, status, shown) => {
       const { useAuth } = await import("@/contexts/AuthContext");
-      vi.mocked(useAuth).mockReturnValue({ user: null, requireAuth: vi.fn() } as unknown as ReturnType<typeof useAuth>);
+      vi.mocked(useAuth).mockReturnValue({ user, requireAuth: vi.fn() } as unknown as ReturnType<typeof useAuth>);
 
       render(
         <OverviewTab
           {...defaultProps}
           canEditCampaign={false}
-          campaign={createMockCampaignFull({
-            ...mockCampaign,
-            pixKey: undefined,
-            pixType: undefined,
-            pixName: undefined,
-            hasPixConfigured: true,
-            status: "ACTIVE",
-          })}
+          campaign={{ ...mockCampaign, hasPixConfigured: pixConfigured, status }}
         />
       );
 
-      expect(screen.getByText("Esta campanha possui pagamento via PIX")).toBeInTheDocument();
-    });
-
-    it("login notice from hasPixConfigured: hidden when the campaign has no PIX", async () => {
-      const { useAuth } = await import("@/contexts/AuthContext");
-      vi.mocked(useAuth).mockReturnValue({ user: null, requireAuth: vi.fn() } as unknown as ReturnType<typeof useAuth>);
-
-      render(
-        <OverviewTab
-          {...defaultProps}
-          canEditCampaign={false}
-          campaign={createMockCampaignFull({
-            ...mockCampaign,
-            pixKey: undefined,
-            pixType: undefined,
-            hasPixConfigured: false,
-          })}
-        />
-      );
-
-      expect(screen.queryByText("Esta campanha possui pagamento via PIX")).not.toBeInTheDocument();
+      expect(screen.queryAllByText("Esta campanha possui pagamento via PIX")).toHaveLength(shown ? 1 : 0);
     });
   });
 });

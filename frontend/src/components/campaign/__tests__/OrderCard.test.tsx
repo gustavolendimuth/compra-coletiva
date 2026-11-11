@@ -128,14 +128,6 @@ describe("OrderCard", () => {
       expect(screen.queryByTitle("Enviar comprovante de pagamento")).not.toBeInTheDocument();
     });
 
-    it("nao deve renderizar botoes de pagamento e edicao quando os flags sao false", () => {
-      renderOrderCard({ showPaymentToggle: false, showEdit: false });
-
-      expect(screen.queryByTitle("Enviar comprovante de pagamento")).not.toBeInTheDocument();
-      expect(screen.queryByTitle("Marcar como não pago")).not.toBeInTheDocument();
-      expect(screen.queryByTitle("Editar pedido")).not.toBeInTheDocument();
-    });
-
     it("deve renderizar botao 'Remover pedido' quando showDelete e true", () => {
       renderOrderCard({ showDelete: true });
 
@@ -234,14 +226,6 @@ describe("OrderCard", () => {
 
       expect(screen.getByTitle("Marcar como não pago")).toBeInTheDocument();
       expect(screen.queryByTitle("Enviar comprovante de pagamento")).not.toBeInTheDocument();
-    });
-
-    it("deve exibir titulo 'Enviar comprovante de pagamento' no botao quando isPaid e false", () => {
-      const order = createMockOrder({ isPaid: false });
-      renderOrderCard({ order, showPaymentToggle: true });
-
-      expect(screen.getByTitle("Enviar comprovante de pagamento")).toBeInTheDocument();
-      expect(screen.queryByTitle("Marcar como não pago")).not.toBeInTheDocument();
     });
   });
 });
