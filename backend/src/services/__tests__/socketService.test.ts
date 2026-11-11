@@ -25,8 +25,12 @@ import {
   emitCampaignUpdated,
   emitCampaignMessagePublished,
   emitCampaignMessageDeleted,
+  emitCampaignQuestionReceived,
+  emitCampaignMessageEdited,
+  emitNotificationCreated,
 } from "../socketService";
 import { TokenService } from "../tokenService";
+import { captureConsole } from "../../__tests__/captureConsole";
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -234,5 +238,52 @@ describe("creator-typing", () => {
     emitter.emit("creator-typing", { userId: users.owner.id, isTyping: true });
     await waitUntil(() => received.length === 1);
     expect(received[0]).toEqual({ creatorId: users.creator.id, creatorName: users.creator.name, isTyping: true });
+  });
+});
+
+describe("socket logs carry no personal data", () => {
+  const SECRET_TEXT = "meu endereço é Rua Secreta 42";
+  const NAME = "Maria Sensível";
+  const EMAIL = "maria.sensivel@test.com";
+  let logs: ReturnType<typeof captureConsole>;
+
+  beforeEach(() => {
+    logs = captureConsole();
+  });
+
+  afterEach(() => {
+    logs.restore();
+  });
+
+  it("emitters that carry messages and notifications log no content, name nor email", () => {
+    const payload = { id: "msg-1", message: SECRET_TEXT, senderName: NAME, email: EMAIL };
+
+    emitMessageSent(ORDER_ID, payload);
+    emitCampaignQuestionReceived(users.creator.id, CAMPAIGN_ID, payload);
+    emitCampaignMessageEdited(users.creator.id, CAMPAIGN_ID, payload);
+    emitNotificationCreated(users.owner.id, { title: NAME, message: SECRET_TEXT, email: EMAIL });
+
+    const text = logs.text();
+    for (const value of [SECRET_TEXT, NAME, EMAIL]) {
+      expect(text).not.toContain(value);
+    }
+    expect(text).toContain(`order-${ORDER_ID}`);
+  });
+
+  it.each([
+    ["join-order", () => mockOrderFindUnique, (socket: ClientSocket) => socket.emit("join-order", ORDER_ID)],
+    [
+      "creator-typing",
+      () => mockOrderFindFirst,
+      (socket: ClientSocket) => socket.emit("creator-typing", { userId: users.owner.id, isTyping: true }),
+    ],
+  ])("%s failing with a Prisma error quoting the email logs no email", async (_event, query, send) => {
+    const socket = await connect(users.creator);
+    query().mockRejectedValueOnce(new Error(`where: { email: "${EMAIL}" }`));
+
+    send(socket);
+    await waitUntil(() => /failed for socket/.test(logs.text()));
+
+    expect(logs.text()).not.toContain(EMAIL);
   });
 });

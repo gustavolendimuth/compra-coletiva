@@ -176,7 +176,7 @@ export const initializeSocket = (httpServer: HttpServer): Server => {
         socket.join(`order-${orderId}`);
         console.log(`📌 Socket ${socket.id} joined order-${orderId}`);
       } catch (error) {
-        console.error(`❌ join-order failed for socket ${socket.id}`, error);
+        console.error(`❌ join-order failed for socket ${socket.id}`, safeError(error));
       }
     });
 
@@ -217,7 +217,7 @@ export const initializeSocket = (httpServer: HttpServer): Server => {
           isTyping: data.isTyping
         });
       } catch (error) {
-        console.error(`❌ creator-typing failed for socket ${socket.id}`, error);
+        console.error(`❌ creator-typing failed for socket ${socket.id}`, safeError(error));
       }
     });
 
@@ -269,7 +269,7 @@ export const emitCampaignUpdated = (campaignId: string, data: unknown) => {
 export const emitMessageSent = (orderId: string, data: unknown) => {
   const io = getIO();
   io.to(`order-${orderId}`).emit('message-sent', data);
-  console.log(`📡 Emitted message-sent to order-${orderId}`, data);
+  console.log(`📡 Emitted message-sent to order-${orderId}`);
 };
 
 // Campaign Messages Events
@@ -277,7 +277,7 @@ export const emitCampaignQuestionReceived = (creatorId: string, campaignId: stri
   const io = getIO();
   // Emite apenas para o criador (via room específica)
   io.to(`user-${creatorId}`).emit('campaign-question-received', data);
-  console.log(`📡 Emitted campaign-question-received to user-${creatorId} (campaign ${campaignId})`, data);
+  console.log(`📡 Emitted campaign-question-received to user-${creatorId} (campaign ${campaignId})`);
 };
 
 export const emitCampaignMessagePublished = (campaignId: string, data: unknown) => {
@@ -290,7 +290,7 @@ export const emitCampaignMessageEdited = (creatorId: string, campaignId: string,
   const io = getIO();
   // Emite para o criador (se a pergunta ainda não foi respondida)
   io.to(`user-${creatorId}`).emit('campaign-message-edited', data);
-  console.log(`📡 Emitted campaign-message-edited to user-${creatorId} (campaign ${campaignId})`, data);
+  console.log(`📡 Emitted campaign-message-edited to user-${creatorId} (campaign ${campaignId})`);
 };
 
 export const emitCampaignMessageDeleted = (campaignId: string, data: unknown) => {
@@ -311,5 +311,5 @@ export const emitCreatorTyping = (userId: string, data: unknown) => {
 export const emitNotificationCreated = (userId: string, data: unknown) => {
   const io = getIO();
   io.to(`user-${userId}`).emit('notification-created', data);
-  console.log(`📡 Emitted notification-created to user-${userId}`, data);
+  console.log(`📡 Emitted notification-created to user-${userId}`);
 };
