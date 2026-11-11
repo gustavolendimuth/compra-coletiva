@@ -77,7 +77,7 @@ describe("campaign status transitions", () => {
     if (expected === 200) {
       expect(statusWrites()).toEqual([to]);
     } else {
-      expect(res.body).toEqual({ status: "error", message: expect.any(String) });
+      expect(res.body).toEqual({ status: "error", message: `Transição de status não permitida: ${from} → ${to}` });
       expect(statusWrites()).toEqual([]);
     }
   });

@@ -51,26 +51,12 @@ jest.mock("../../services/legalAcceptanceService", () => ({
 }));
 
 // authMiddleware: requireAuth injects req.user from the test-controlled variable;
-// requireOrderOwnership allows admins and skips ownership check for simplicity here
+// the ownership guard lets every request through (the route itself checks owner/admin)
 let currentUser: Express.User | undefined;
 jest.mock("../../middleware/authMiddleware", () => ({
   optionalAuth: (_req: express.Request, _res: express.Response, next: express.NextFunction) => next(),
   requireAuth: (req: express.Request, _res: express.Response, next: express.NextFunction) => {
     req.user = currentUser;
-    next();
-  },
-  requireOrderOwnership: (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    if (!req.user) {
-      res.status(401).json({ error: "UNAUTHORIZED" });
-      return;
-    }
-    // Admins bypass ownership check
-    if (req.user.role === "ADMIN") {
-      next();
-      return;
-    }
-    // For non-admins, simulate ownership check inline using the mocked findUnique
-    // (the real middleware does a DB call; we keep it simple here)
     next();
   },
   requireOrderOrCampaignOwnership: (_req: express.Request, _res: express.Response, next: express.NextFunction) => next(),

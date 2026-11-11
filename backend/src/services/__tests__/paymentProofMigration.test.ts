@@ -21,8 +21,8 @@ const prisma = {
   },
 };
 
-function run() {
-  return migratePaymentProofs({ prisma, sendS3, bucket: "bucket", publicDir, privateDir });
+function run(logger?: Pick<Console, "log" | "warn" | "error">) {
+  return migratePaymentProofs({ prisma, sendS3, bucket: "bucket", publicDir, privateDir, logger });
 }
 
 beforeEach(() => {
@@ -55,9 +55,9 @@ afterEach(() => {
   fs.rmSync(privateDir, { recursive: true, force: true });
 });
 
-function expectMigratedState() {
+function expectMigratedState(s3Calls: number) {
   const s3Commands = sendS3.mock.calls.map(([command]) => command);
-  expect(s3Commands.length).toBeGreaterThan(0);
+  expect(s3Commands).toHaveLength(s3Calls);
   for (const command of s3Commands) {
     expect(command).toBeInstanceOf(PutObjectAclCommand);
     expect(command.input).toEqual({ Bucket: "bucket", Key: "payment-proofs/s3.png", ACL: "private" });
@@ -72,26 +72,36 @@ describe("migratePaymentProofs", () => {
   it("migrates S3 proofs to private ACL and LOCAL proofs out of the served dir", async () => {
     const summary = await run();
 
-    expectMigratedState();
-    expect(summary).toMatchObject({ s3: 1, local: 1, missing: 0, failed: 0 });
+    expectMigratedState(1);
+    expect(summary).toEqual({ total: 2, s3: 1, local: 1, missing: 0, failed: 0, urlsUpdated: 2 });
   });
 
   it("is idempotent: a second run keeps the same state without errors", async () => {
     await run();
     const second = await run();
 
-    expectMigratedState();
-    expect(second).toMatchObject({ failed: 0, missing: 0 });
+    expectMigratedState(2);
+    expect(second).toEqual({ total: 2, s3: 1, local: 1, missing: 0, failed: 0, urlsUpdated: 0 });
   });
 
-  it("is idempotent when the local proof was already moved by a previous partial run", async () => {
+  it("is idempotent when a previous partial run copied the local proof but did not remove it", async () => {
     fs.mkdirSync(path.join(privateDir, "payment-proofs"));
-    fs.renameSync(path.join(publicDir, "payment-proofs", "local.png"), path.join(privateDir, "payment-proofs", "local.png"));
+    fs.copyFileSync(path.join(publicDir, "payment-proofs", "local.png"), path.join(privateDir, "payment-proofs", "local.png"));
 
     const summary = await run();
 
-    expectMigratedState();
-    expect(summary).toMatchObject({ failed: 0, missing: 0 });
+    expectMigratedState(1);
+    expect(summary).toMatchObject({ local: 1, failed: 0, missing: 0 });
+  });
+
+  it("an S3 failure is counted and the LOCAL proof is still migrated", async () => {
+    sendS3.mockRejectedValue(new Error("s3 down"));
+
+    const summary = await run({ log: jest.fn(), warn: jest.fn(), error: jest.fn() });
+
+    expect(summary).toEqual({ total: 2, s3: 0, local: 1, missing: 0, failed: 1, urlsUpdated: 1 });
+    expect(fs.readFileSync(path.join(privateDir, "payment-proofs", "local.png"))).toEqual(PNG_BYTES);
+    expect(orders.find((o) => o.id === "o-s3")!.paymentProofUrl).toBe("https://bucket.s3.us-east-1.amazonaws.com/payment-proofs/s3.png");
   });
 
   it("counts a missing local file without aborting the rest", async () => {
@@ -99,7 +109,7 @@ describe("migratePaymentProofs", () => {
 
     const summary = await run();
 
-    expect(summary).toMatchObject({ s3: 1, missing: 1 });
+    expect(summary).toEqual({ total: 2, s3: 1, local: 0, missing: 1, failed: 0, urlsUpdated: 2 });
     expect(orders.find((o) => o.id === "o-s3")!.paymentProofUrl).toBe("/api/orders/o-s3/payment-proof");
   });
 });

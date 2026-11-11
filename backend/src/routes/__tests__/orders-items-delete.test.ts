@@ -23,7 +23,7 @@ jest.mock("../../index", () => {
 });
 
 jest.mock("../../services/shippingCalculator", () => ({
-  ShippingCalculator: { recalculateOrderSubtotal: jest.fn(), distributeShipping: jest.fn(), recalculateCampaignTotals: jest.fn() },
+  ShippingCalculator: { recalculateCampaignTotals: jest.fn() },
 }));
 
 jest.mock("../../services/socketService", () => ({
@@ -37,14 +37,13 @@ jest.mock("../../services/email/emailQueue", () => ({ queueOrderCreatedEmail: je
 jest.mock("../../services/campaignStatusService", () => ({ CampaignStatusService: {} }));
 jest.mock("../../services/legalAcceptanceService", () => ({ LegalAcceptanceService: {} }));
 
-// B é dono do pedido X: os guards de ownership deixam passar
+// B é dono do pedido X: o guard de ownership deixa passar
 jest.mock("../../middleware/authMiddleware", () => ({
   optionalAuth: (_req: express.Request, _res: express.Response, next: express.NextFunction) => next(),
   requireAuth: (req: express.Request, _res: express.Response, next: express.NextFunction) => {
     req.user = { id: "user-b", role: "CUSTOMER" } as Express.User;
     next();
   },
-  requireOrderOwnership: (_req: express.Request, _res: express.Response, next: express.NextFunction) => next(),
   requireOrderOrCampaignOwnership: (_req: express.Request, _res: express.Response, next: express.NextFunction) => next(),
 }));
 

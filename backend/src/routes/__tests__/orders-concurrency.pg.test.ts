@@ -60,8 +60,8 @@ describe("POST /api/orders concurrency (Postgres)", () => {
 
     const responses = await Promise.all([send(1), send(2), send(3), send(4)]);
 
-    responses.forEach((res) => expect([200, 201, 409]).toContain(res.status));
-    expect(responses.some((res) => res.status === 201)).toBe(true);
+    // O lock da campanha serializa: um cria, os outros substituem os itens (sem 409)
+    expect(responses.map((res) => res.status).sort()).toEqual([200, 200, 200, 201]);
     expect(await db.order.count({ where: { campaignId: campaign.id, userId: buyer.id } })).toBe(1);
   });
 

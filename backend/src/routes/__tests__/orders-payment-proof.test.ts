@@ -3,7 +3,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import request from "supertest";
-import { PNG_BYTES } from "../../__tests__/fileFixtures";
+import { HTML_BYTES, PNG_BYTES } from "../../__tests__/fileFixtures";
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -117,29 +117,55 @@ describe("GET /api/orders/:id/payment-proof", () => {
     );
   });
 
-  it.each(["owner", "creator", "admin"])("allowed roles: %s gets 200 with the LOCAL file", async (role) => {
-    currentUser = users[role];
-    mockOrderFindUnique.mockResolvedValue(orderWith("LOCAL", "payment-proofs/p.png"));
-
-    const res = await request(app).get("/api/orders/o-1/payment-proof").buffer(true).parse((response, callback) => {
+  const getLocalProof = (key: string) => {
+    mockOrderFindUnique.mockResolvedValue(orderWith("LOCAL", key));
+    return request(app).get("/api/orders/o-1/payment-proof").buffer(true).parse((response, callback) => {
       const chunks: Buffer[] = [];
       response.on("data", (chunk: Buffer) => chunks.push(chunk));
       response.on("end", () => callback(null, Buffer.concat(chunks)));
     });
+  };
+
+  it.each(["owner", "creator", "admin"])("allowed roles: %s gets 200 with the LOCAL file", async (role) => {
+    currentUser = users[role];
+
+    const res = await getLocalProof("payment-proofs/p.png");
 
     expect(res.status).toBe(200);
     expect(Buffer.compare(res.body as Buffer, PNG_BYTES)).toBe(0);
     expect(res.headers["content-type"]).toContain("image/png");
     expect(res.headers["x-content-type-options"]).toBe("nosniff");
+    expect(res.headers["cache-control"]).toBe("private, no-store");
   });
 
-  it("returns 404 when the order has no payment proof", async () => {
+  it.each([
+    ["a legacy file still in the public dir is served from there", "UPLOAD_DIR", PNG_BYTES, "image/png", undefined],
+    ["unknown bytes go out as an attachment, never as HTML", "PRIVATE_UPLOAD_DIR", HTML_BYTES, "application/octet-stream", "attachment"],
+  ] as const)("LOCAL proof: %s", async (_name, dirEnv, bytes, contentType, disposition) => {
     currentUser = users.owner;
-    mockOrderFindUnique.mockResolvedValue(orderWith(null, null));
+    fs.mkdirSync(path.join(process.env[dirEnv]!, "payment-proofs"), { recursive: true });
+    fs.writeFileSync(path.join(process.env[dirEnv]!, "payment-proofs", "f.png"), bytes);
+
+    const res = await getLocalProof("payment-proofs/f.png");
+
+    expect(res.status).toBe(200);
+    expect(Buffer.compare(res.body as Buffer, bytes)).toBe(0);
+    expect(res.headers["content-type"]).toContain(contentType);
+    expect(res.headers["content-disposition"]).toBe(disposition);
+  });
+
+  it.each([
+    ["the order has no payment proof", null, null],
+    ["the key escapes the upload dirs", "LOCAL", "../outside.png"],
+  ] as const)("returns 404 when %s", async (_name, storageType, key) => {
+    currentUser = users.owner;
+    fs.writeFileSync(path.join(privateDir, "..", "outside.png"), PNG_BYTES);
+    mockOrderFindUnique.mockResolvedValue(orderWith(storageType, key));
 
     const res = await request(app).get("/api/orders/o-1/payment-proof");
 
+    fs.rmSync(path.join(privateDir, "..", "outside.png"));
     expect(res.status).toBe(404);
-    expect(res.body).toEqual({ status: "error", message: expect.any(String) });
+    expect(res.body).toEqual({ status: "error", message: "Payment proof not found" });
   });
 });

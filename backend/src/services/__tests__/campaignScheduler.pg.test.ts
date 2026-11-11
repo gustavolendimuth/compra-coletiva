@@ -17,8 +17,8 @@ beforeEach(() => resetOrderTables(db));
 describe("closeExpiredCampaigns (Postgres)", () => {
   it("does not overwrite status changed after read", async () => {
     const past = new Date(Date.now() - 60_000);
-    const { campaign: stillActive } = await seedCampaign(db, { deadline: past, tag: "a" });
-    const { campaign: becameSent } = await seedCampaign(db, { deadline: past, tag: "b" });
+    const { campaign: stillActive } = await seedCampaign(db, { deadline: past });
+    const { campaign: becameSent } = await seedCampaign(db, { deadline: past });
 
     // Entre a leitura e a escrita do scheduler, o criador marca a campanha B como enviada
     const realFindMany = db.campaign.findMany.bind(db.campaign);

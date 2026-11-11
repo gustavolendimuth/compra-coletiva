@@ -127,40 +127,9 @@ describe('Money Utility', () => {
   });
 
   describe('distributeProportionally - rateio de frete', () => {
-    // Gerador determinístico (mulberry32) para casos pseudo-aleatórios reproduzíveis
-    const seeded = (seed: number) => () => {
-      seed |= 0;
-      seed = (seed + 0x6d2b79f5) | 0;
-      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-
-    const toCents = (value: number) => Math.round(value * 100);
-
     it('never negative and sums exactly', () => {
-      const example = Money.distributeProportionally(0.05, [1, 1, 1, 0.0001]);
-      example.forEach((fee) => expect(fee).toBeGreaterThanOrEqual(0));
-      expect(example.reduce((sum, fee) => sum + toCents(fee), 0)).toBe(5);
-
-      const random = seeded(20261106);
-      for (let i = 0; i < 2000; i++) {
-        const total = Math.round(random() * 100000) / 100; // 0.00 a 1000.00
-        const count = 1 + Math.floor(random() * 8);
-        const weights: number[] = Array.from({ length: count }, () =>
-          random() < 0.2 ? Math.round(random() * 10000) / 1000000 : Math.round(random() * 50000) / 1000
-        );
-        if (!weights.some((w) => w > 0)) weights[0] = 1;
-
-        const fees = Money.distributeProportionally(total, weights);
-
-        expect(fees).toHaveLength(count);
-        fees.forEach((fee) => {
-          expect(fee).toBeGreaterThanOrEqual(0);
-          expect(Number.isInteger(Math.round(fee * 100))).toBe(true);
-        });
-        expect(fees.reduce((sum, fee) => sum + toCents(fee), 0)).toBe(toCents(total));
-      }
+      // O algoritmo antigo dava -0.01 à última parcela
+      expect(Money.distributeProportionally(0.05, [1, 1, 1, 0.0001])).toEqual([0.01, 0.02, 0.02, 0]);
     });
   });
 

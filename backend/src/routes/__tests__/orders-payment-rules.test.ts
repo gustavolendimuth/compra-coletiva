@@ -3,7 +3,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import request from "supertest";
-import { PNG_BYTES } from "../../__tests__/fileFixtures";
+import { HTML_BYTES, PNG_BYTES } from "../../__tests__/fileFixtures";
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -106,6 +106,11 @@ afterEach(() => {
 
 describe("quem marca pago", () => {
   const app = createApp();
+  const payWithProof = (bytes: Buffer) =>
+    request(app)
+      .patch("/api/orders/o-1/payment")
+      .field("isPaid", "true")
+      .attach("paymentProof", bytes, { filename: "proof.png", contentType: "image/png" });
 
   it.each([["isPaid"], ["isSeparated"]])("owner cannot patch status fields: %s → 403", async (field) => {
     currentUser = OWNER;
@@ -125,23 +130,31 @@ describe("quem marca pago", () => {
     expect(mockPrisma.order.update).not.toHaveBeenCalled();
   });
 
-  it("owner with proof: isPaid=true + valid PNG → 200, isPaid and paymentProofKey set", async () => {
+  it("owner with proof: isPaid=true + valid PNG → 200, new proof set and old one deleted", async () => {
     currentUser = OWNER;
+    setOrder({ paymentProofKey: "payment-proofs/old.png", paymentProofStorageType: "LOCAL" });
 
-    const res = await request(app)
-      .patch("/api/orders/o-1/payment")
-      .field("isPaid", "true")
-      .attach("paymentProof", PNG_BYTES, { filename: "proof.png", contentType: "image/png" });
+    const res = await payWithProof(PNG_BYTES);
 
     expect(res.status).toBe(200);
-    expect(res.body.isPaid).toBe(true);
-    expect(res.body.paymentProofKey).toEqual(expect.any(String));
-    expect(res.body.paymentProofKey.length).toBeGreaterThan(0);
-    expect(mockPrisma.order.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ isPaid: true, paymentProofKey: expect.any(String) }),
-      })
-    );
+    expect(mockProofDelete).toHaveBeenCalledWith("payment-proofs/old.png", "LOCAL");
+    expect(mockPrisma.order.update.mock.calls[0][0].data).toEqual({
+      isPaid: true,
+      paymentProofUrl: "/api/orders/o-1/payment-proof",
+      paymentProofKey: expect.stringMatching(/^payment-proofs\/[^/]+\.png$/),
+      paymentProofStorageType: "LOCAL",
+    });
+  });
+
+  it("replacing a proof with invalid bytes → 400 and the old proof is kept", async () => {
+    currentUser = OWNER;
+    setOrder({ paymentProofKey: "payment-proofs/old.png", paymentProofStorageType: "LOCAL" });
+
+    const res = await payWithProof(HTML_BYTES);
+
+    expect(res.status).toBe(400);
+    expect(mockProofDelete).not.toHaveBeenCalled();
+    expect(mockPrisma.order.update).not.toHaveBeenCalled();
   });
 
   const markPaidCases: Array<[string, string, Express.User]> = [
@@ -160,7 +173,6 @@ describe("quem marca pago", () => {
         : await request(app).patch("/api/orders/o-1").send({ isPaid: true });
 
     expect(res.status).toBe(200);
-    expect(res.body.isPaid).toBe(true);
     expect(mockPrisma.order.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ isPaid: true }) })
     );
@@ -177,19 +189,34 @@ describe("quem marca pago", () => {
     expect(mockProofDelete).not.toHaveBeenCalled();
   });
 
-  it.each([["owner", OWNER], ["creator", CREATOR], ["admin", ADMIN]])(
-    "missing isPaid: %s → 400 and nothing changes",
+  it.each([["creator", CREATOR], ["admin", ADMIN]])(
+    "creator and admin unmark paid: %s → 200, proof deleted and cleared",
     async (_name, user) => {
       currentUser = user;
+      setOrder({ isPaid: true, paymentProofKey: "payment-proofs/p.png", paymentProofStorageType: "LOCAL" });
 
-      const res = await request(app)
-        .patch("/api/orders/o-1/payment")
-        .attach("paymentProof", PNG_BYTES, { filename: "proof.png", contentType: "image/png" });
+      const res = await request(app).patch("/api/orders/o-1/payment").field("isPaid", "false");
 
-      expect(res.status).toBe(400);
-      expect(mockPrisma.order.update).not.toHaveBeenCalled();
-      expect(mockProofDelete).not.toHaveBeenCalled();
-      expect(fs.readdirSync(privateDir)).toEqual([]);
+      expect(res.status).toBe(200);
+      expect(mockProofDelete).toHaveBeenCalledWith("payment-proofs/p.png", "LOCAL");
+      expect(mockPrisma.order.update.mock.calls[0][0].data).toEqual({
+        isPaid: false,
+        paymentProofUrl: null,
+        paymentProofKey: null,
+        paymentProofStorageType: null,
+      });
     }
   );
+
+  it("missing isPaid → 400 and nothing changes", async () => {
+    currentUser = ADMIN;
+
+    const res = await request(app)
+      .patch("/api/orders/o-1/payment")
+      .attach("paymentProof", PNG_BYTES, { filename: "proof.png", contentType: "image/png" });
+
+    expect(res.status).toBe(400);
+    expect(mockPrisma.order.update).not.toHaveBeenCalled();
+    expect(fs.readdirSync(privateDir)).toEqual([]);
+  });
 });

@@ -12,8 +12,7 @@ jest.mock("@aws-sdk/lib-storage", () => ({
 
 import { ImageUploadService } from "../imageUploadService";
 import { PaymentProofStorage } from "../paymentProofStorage";
-import { AppError } from "../../middleware/errorHandler";
-import { HTML_BYTES, JPEG_BYTES, PDF_BYTES, PNG_BYTES, WEBP_BYTES, makeMulterFile } from "../../__tests__/fileFixtures";
+import { JPEG_BYTES, PDF_BYTES, PNG_BYTES, WEBP_BYTES, makeMulterFile } from "../../__tests__/fileFixtures";
 
 const S3_ENV = ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_S3_BUCKET"];
 let publicDir: string;
@@ -43,7 +42,6 @@ describe("extension from detected type", () => {
     const result = await ImageUploadService.uploadImage(makeMulterFile(bytes, "evil.html", "text/html"), "campaigns");
 
     expect(result.imageKey).toMatch(new RegExp(`^campaigns/[^/]+\\.${extension}$`));
-    expect(result.imageKey).not.toContain("html");
     expect(fs.existsSync(path.join(publicDir, result.imageKey))).toBe(true);
   });
 
@@ -52,15 +50,6 @@ describe("extension from detected type", () => {
 
     expect(result.key).toMatch(/^payment-proofs\/[^/]+\.pdf$/);
     expect(fs.existsSync(path.join(privateDir, result.key))).toBe(true);
-  });
-
-  it("rejects HTML bytes even when named .png", async () => {
-    await expect(
-      ImageUploadService.uploadImage(makeMulterFile(HTML_BYTES, "photo.png"), "avatars")
-    ).rejects.toMatchObject({ statusCode: 400 });
-    await expect(
-      PaymentProofStorage.upload(makeMulterFile(HTML_BYTES, "proof.png"))
-    ).rejects.toBeInstanceOf(AppError);
   });
 
   it("rejects PDF for public images", async () => {
@@ -76,7 +65,7 @@ describe("payment proof S3 without ACL", () => {
     process.env.AWS_SECRET_ACCESS_KEY = "secret";
     process.env.AWS_S3_BUCKET = "bucket";
 
-    const result = await PaymentProofStorage.upload(makeMulterFile(PNG_BYTES, "proof.png"));
+    const result = await PaymentProofStorage.upload(makeMulterFile(PNG_BYTES, "proof.html", "text/html"));
 
     expect(result.storageType).toBe("S3");
     expect(uploadParams).toHaveLength(1);

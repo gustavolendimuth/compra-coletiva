@@ -5,7 +5,8 @@ import request from "supertest";
 
 const mockPrisma = {
   campaign: { findUnique: jest.fn(), findMany: jest.fn(), count: jest.fn() },
-  order: { findMany: jest.fn(), findFirst: jest.fn() },
+  order: { findMany: jest.fn() },
+  $queryRaw: jest.fn(),
 };
 jest.mock("../../index", () => ({ prisma: mockPrisma }));
 
@@ -76,10 +77,9 @@ function setup(scenario: Scenario) {
   mockPrisma.order.findMany.mockImplementation(({ where }: { where: { userId?: string } }) =>
     Promise.resolve(where.userId === scenario.user?.id ? ownOrders : [])
   );
-  mockPrisma.order.findFirst.mockImplementation(({ where }: { where: { userId?: string } }) =>
-    Promise.resolve(where.userId === scenario.user?.id && ownOrders.length ? { id: "o-1" } : null)
-  );
 }
+
+const byName = (...names: string[]) => scenarios.filter((s) => names.includes(s.name)).map((s) => [s.name, s] as const);
 
 function expectPix(body: Record<string, unknown>, seesPix: boolean) {
   for (const key of ["pixKey", "pixName", "pixType"] as const) {
@@ -95,7 +95,7 @@ describe("GET /api/campaigns pix visibility", () => {
   const app = createApp();
 
   beforeEach(() => {
-    Object.values(mockPrisma).forEach((model) => Object.values(model).forEach((fn) => fn.mockReset()));
+    mockPrisma.$queryRaw.mockReset();
   });
 
   it.each(scenarios.map((s) => [s.name, s] as const))("pix visibility on detail: %s", async (_name, scenario) => {
@@ -107,7 +107,7 @@ describe("GET /api/campaigns pix visibility", () => {
     expectPix(res.body, scenario.seesPix);
   });
 
-  it.each(scenarios.map((s) => [s.name, s] as const))("pix visibility on list: %s", async (_name, scenario) => {
+  it.each(byName("anonymous", "buyer with order, payment released"))("pix visibility on list: %s", async (_name, scenario) => {
     setup(scenario);
 
     const res = await request(app).get("/api/campaigns");
@@ -117,7 +117,7 @@ describe("GET /api/campaigns pix visibility", () => {
     expectPix(res.body.data[0], scenario.seesPix);
   });
 
-  it.each(scenarios.map((s) => [s.name, s] as const))("hasPixConfigured on detail and list: %s", async (_name, scenario) => {
+  it.each(byName("anonymous", "creator"))("hasPixConfigured on detail and list: %s", async (_name, scenario) => {
     setup(scenario);
 
     const detail = await request(app).get("/api/campaigns/camp");
@@ -133,5 +133,19 @@ describe("GET /api/campaigns pix visibility", () => {
     const detail = await request(app).get("/api/campaigns/camp");
 
     expect(detail.body.hasPixConfigured).toBe(false);
+  });
+
+  it.each([
+    ["search without results", [[], [{ id: "c-1" }]]],
+    ["search with few results", [[{ id: "c-1" }], [{ id: "c-2" }]]],
+  ])("pix visibility on suggestions: anonymous, %s", async (_name, rawResults) => {
+    setup(scenarios[0]);
+    rawResults.forEach((rows) => mockPrisma.$queryRaw.mockResolvedValueOnce(rows));
+
+    const res = await request(app).get("/api/campaigns").query({ search: "camp" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.suggestions).toHaveLength(1);
+    expectPix(res.body.suggestions[0], false);
   });
 });

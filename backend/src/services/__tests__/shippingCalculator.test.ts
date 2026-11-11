@@ -37,13 +37,15 @@ describe("ShippingCalculator.recalculateCampaignTotals", () => {
   it("zero weight order: shippingFee 0 and total equals subtotal", async () => {
     const { tx, updates } = fakeTx(30, [
       { id: "o-zero", items: [{ quantity: 2, subtotal: 50, weight: 0 }] },
-      { id: "o-heavy", items: [{ quantity: 1, subtotal: 10, weight: 2 }] },
+      { id: "o-heavy", items: [{ quantity: 2, subtotal: 20, weight: 1 }] },
+      { id: "o-light", items: [{ quantity: 1, subtotal: 10, weight: 1 }] },
     ]);
 
     await ShippingCalculator.recalculateCampaignTotals(tx, "c-1");
 
     expect(updates.get("o-zero")).toEqual({ subtotal: 50, shippingFee: 0, total: 50 });
-    expect(updates.get("o-heavy")).toEqual({ subtotal: 10, shippingFee: 30, total: 40 });
+    expect(updates.get("o-heavy")).toEqual({ subtotal: 20, shippingFee: 20, total: 40 });
+    expect(updates.get("o-light")).toEqual({ subtotal: 10, shippingFee: 10, total: 20 });
   });
 
   it("emptied order: subtotal, shippingFee and total are 0", async () => {

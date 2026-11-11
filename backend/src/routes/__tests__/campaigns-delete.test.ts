@@ -4,15 +4,15 @@ import request from "supertest";
 // ── Mocks ───────────────────────────────────────────────────────────────────
 
 let orderCount = 0;
-const mockPrisma: Record<string, any> = {
-  campaign: {
-    findUnique: jest.fn(() => Promise.resolve({ id: "c-1", slug: "camp", status: "ACTIVE", _count: { orders: orderCount } })),
-    delete: jest.fn(() => Promise.resolve({})),
-    deleteMany: jest.fn(() => Promise.resolve({ count: 1 })),
-  },
+// Contagem, lock e delete só existem no tx: escrita fora da transação quebra
+const mockTx = {
+  campaign: { delete: jest.fn(() => Promise.resolve({})) },
   order: { count: jest.fn(() => Promise.resolve(orderCount)) },
-  $queryRaw: jest.fn(() => Promise.resolve([{ status: "ACTIVE" }])),
-  $transaction: jest.fn((fn: (tx: unknown) => Promise<unknown>) => fn(mockPrisma)),
+  $queryRaw: jest.fn((_sql: TemplateStringsArray, ..._values: unknown[]) => Promise.resolve([{ status: "ACTIVE" }])),
+};
+const mockPrisma = {
+  campaign: { findUnique: jest.fn(() => Promise.resolve({ id: "c-1" })) },
+  $transaction: jest.fn((fn: (tx: unknown) => Promise<unknown>) => fn(mockTx)),
 };
 jest.mock("../../index", () => ({ prisma: mockPrisma }));
 
@@ -50,15 +50,18 @@ describe("DELETE /api/campaigns/:idOrSlug", () => {
       status: "error",
       message: "Não é possível deletar uma campanha com pedidos. Arquive-a em vez disso.",
     });
-    expect(mockPrisma.campaign.delete).not.toHaveBeenCalled();
-    expect(mockPrisma.campaign.deleteMany).not.toHaveBeenCalled();
+    expect(mockTx.campaign.delete).not.toHaveBeenCalled();
   });
 
-  it("campaign without orders is deleted (control)", async () => {
+  it("campaign without orders is deleted, counted under the campaign lock", async () => {
     orderCount = 0;
 
     const res = await request(app).delete("/api/campaigns/c-1");
 
     expect(res.status).toBe(204);
+    expect(mockTx.campaign.delete).toHaveBeenCalledWith({ where: { id: "c-1" } });
+    const [[sql, campaignId]] = mockTx.$queryRaw.mock.calls;
+    expect([sql.join("?"), campaignId]).toEqual([expect.stringMatching(/FROM campaigns .* FOR NO KEY UPDATE/), "c-1"]);
+    expect(mockTx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(mockTx.order.count.mock.invocationCallOrder[0]);
   });
 });
