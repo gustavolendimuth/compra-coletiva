@@ -12,4 +12,12 @@ describe("getSafeRedirectPath", () => {
       expect(getSafeRedirectPath(value)).toBeNull();
     }
   );
+
+  // O navegador remove tab/quebra de linha e trata "\" como "/": "/\t/evil.com" vira "//evil.com"
+  it.each(["/\t/evil.com", "/\n/evil.com", "/\r/evil.com", "/\t\\evil.com"])(
+    "recusa %j, que o navegador resolve para outro domínio",
+    (value) => {
+      expect(getSafeRedirectPath(value)).toBeNull();
+    }
+  );
 });
