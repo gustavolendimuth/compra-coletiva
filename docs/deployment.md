@@ -69,11 +69,13 @@ AWS_S3_REGION=us-east-1
 
 Opção 2: Railway Volume
 - Crie um volume no serviço backend e monte em `/app/data`.
-- Defina `UPLOAD_DIR=/app/data`.
+- Defina `UPLOAD_DIR=/app/data` e `PRIVATE_UPLOAD_DIR=/app/data/private` (comprovantes PIX). O serviço só tem um volume, então o diretório privado fica dentro dele; o `/uploads` nunca serve esse diretório.
+- O container roda como o usuário `node` (UID 1000) e o volume é montado como root: na primeira vez, rode `chown -R 1000:1000 /app/data` no volume (via `railway ssh`), senão os uploads falham.
 
 ## Google OAuth (resumo)
 - Crie credenciais OAuth no Google Cloud Console.
 - Autorize o redirect: `https://<backend-domain>/api/auth/google/callback`.
+- Use no callback o mesmo domínio que o frontend chama para iniciar o login (`NEXT_PUBLIC_API_URL`): o cookie de `state` (anti-CSRF) é gravado nesse domínio e precisa voltar no callback.
 - Configure `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` e `GOOGLE_CALLBACK_URL` no backend.
 - Garanta `CORS_ORIGIN` com a URL exata do frontend.
 
