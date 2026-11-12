@@ -3,7 +3,10 @@ import { PrismaClient, Prisma, LegalDocumentType } from "@prisma/client";
 import { z } from "zod";
 import crypto from "crypto";
 import { requireAuth } from "../middleware/authMiddleware";
+import { AppError } from "../middleware/errorHandler";
 import { AuthService } from "../services/authService";
+import { TokenService } from "../services/tokenService";
+import { REFRESH_TOKEN_COOKIE_NAME } from "../utils/cookieConfig";
 import { ImageUploadService } from "../services/imageUploadService";
 import { uploadAvatar, handleUploadError } from "../middleware/uploadMiddleware";
 import { capitalizeName } from "../utils/nameFormatter";
@@ -159,6 +162,14 @@ router.patch(
         data: updates,
       });
 
+      // Troca de senha derruba as outras sessões; a atual continua válida
+      if (updates.password) {
+        await TokenService.revokeOtherUserTokens(
+          req.user!.id,
+          req.cookies?.[REFRESH_TOKEN_COOKIE_NAME]
+        );
+      }
+
       res.json({
         message: "Perfil atualizado com sucesso",
         user: {
@@ -243,6 +254,13 @@ router.post(
         avatarUrl: updatedUser.avatarUrl,
       });
     } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({
+          error: "UPLOAD_ERROR",
+          message: error.message,
+        });
+        return;
+      }
       console.error("Erro ao atualizar avatar:", error);
       res.status(500).json({
         error: "INTERNAL_ERROR",

@@ -19,7 +19,7 @@ export const useCampaignChat = (campaignId: string, userId?: string) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   const socket = getSocket();
-  const typingTimeoutRef = useRef<NodeJS.Timeout>();
+  const typingTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const previousMessagesLength = useRef<number | null>(null);
   const hasScrolledToHash = useRef(false);
   const isInitialLoad = useRef(true);

@@ -8,7 +8,7 @@ import { Card } from '@/components/ui';
 interface Stat {
   label: string;
   value: number | string;
-  icon: JSX.Element;
+  icon: React.JSX.Element;
   color: string;
 }
 

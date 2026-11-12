@@ -4,6 +4,12 @@ import userEvent from '@testing-library/user-event';
 import { AddOrderModal, AdminCreateOrderModal, EditOrderModal, ViewOrderModal } from '../OrderModals';
 import { createMockOrder, createMockFullProduct } from '@/__tests__/mock-data';
 
+const { mockGetPaymentProof } = vi.hoisted(() => ({ mockGetPaymentProof: vi.fn() }));
+vi.mock('@/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/api')>()),
+  orderApi: { getPaymentProof: mockGetPaymentProof },
+}));
+
 // Mock OrderChat component
 vi.mock('@/components/campaign', () => ({
   OrderChat: ({ orderId }: { orderId: string }) => (
@@ -512,6 +518,13 @@ describe('OrderModals', () => {
         expect(screen.queryByRole('button', { name: /editar pedido/i })).not.toBeInTheDocument();
       });
 
+      // Pedido pago fica travado no backend: o botão levava a um modal que não salvava
+      it('não mostra Editar Pedido em pedido pago', () => {
+        render(<ViewOrderModal {...defaultProps} order={{ ...mockOrder, isPaid: true }} />);
+
+        expect(screen.queryByRole('button', { name: /editar pedido/i })).not.toBeInTheDocument();
+      });
+
       it('should show close button', () => {
         render(<ViewOrderModal {...defaultProps} />);
 
@@ -545,6 +558,65 @@ describe('OrderModals', () => {
 
         expect(screen.queryByText('John Doe')).not.toBeInTheDocument();
       });
+    });
+  });
+
+  describe('ViewOrderModal payment proof from endpoint', () => {
+    const proofOrder = createMockOrder({
+      id: 'order-proof',
+      isPaid: true,
+      paymentProofUrl: '/api/orders/order-proof/payment-proof',
+    });
+    const props = {
+      isOpen: true,
+      order: proofOrder,
+      isActive: true,
+      canEdit: false,
+      onClose: vi.fn(),
+      onEdit: vi.fn(),
+    };
+
+    beforeEach(() => {
+      mockGetPaymentProof.mockReset();
+      URL.createObjectURL = vi.fn(() => 'blob:proof-1');
+      URL.revokeObjectURL = vi.fn();
+    });
+
+    it('payment proof from endpoint: renders an image from the fetched blob and revokes it on close', async () => {
+      mockGetPaymentProof.mockResolvedValue(new Blob(['x'], { type: 'image/png' }));
+
+      const { unmount } = render(<ViewOrderModal {...props} />);
+
+      expect(screen.getByText('Carregando comprovante...')).toBeInTheDocument();
+      const img = await screen.findByAltText('Comprovante PIX');
+      expect(img).toHaveAttribute('src', 'blob:proof-1');
+      expect(mockGetPaymentProof).toHaveBeenCalledWith('order-proof');
+      unmount();
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:proof-1');
+    });
+
+    it('payment proof from endpoint: renders a PDF viewer when blob type is application/pdf', async () => {
+      mockGetPaymentProof.mockResolvedValue(new Blob(['%PDF-'], { type: 'application/pdf' }));
+
+      render(<ViewOrderModal {...props} />);
+
+      const frame = await screen.findByTitle('Comprovante PIX');
+      expect(frame.tagName).toBe('IFRAME');
+      expect(frame).toHaveAttribute('src', 'blob:proof-1');
+    });
+
+    // SVG é image/* mas pode carregar script: só JPEG/PNG/WebP passam
+    it.each([
+      ['never renders a blob of another type', () => Promise.resolve(new Blob(['<svg/>'], { type: 'image/svg+xml' }))],
+      ['shows it as unavailable when the request fails', () => Promise.reject(new Error('403'))],
+    ])('payment proof from endpoint: %s', async (_label, getPaymentProof) => {
+      mockGetPaymentProof.mockImplementation(getPaymentProof);
+
+      render(<ViewOrderModal {...props} />);
+
+      expect(await screen.findByText(/não foi possível exibir o comprovante/i)).toBeInTheDocument();
+      expect(screen.queryByAltText('Comprovante PIX')).not.toBeInTheDocument();
+      expect(screen.queryByTitle('Comprovante PIX')).not.toBeInTheDocument();
     });
   });
 });

@@ -64,3 +64,12 @@ tmpclaude-*
 # Playwright test results
 playwright-report/
 output/
+
+# Plans
+.tasks
+
+# Preview de worktree
+.preview-worktree.state
+
+# Comprovantes PIX gravados em dev/preview
+backend/private-uploads/

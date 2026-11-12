@@ -14,11 +14,8 @@ interface RecordLegalAcceptanceInput {
 export class LegalAcceptanceService {
   static getClientIp(req?: Request): string | undefined {
     if (!req) return undefined;
-    const forwarded = req.headers["x-forwarded-for"];
-    if (typeof forwarded === "string" && forwarded.trim()) {
-      return forwarded.split(",")[0].trim();
-    }
-    return req.socket.remoteAddress || undefined;
+    // `req.ip` respeita `trust proxy` (não confia no X-Forwarded-For do cliente)
+    return req.ip || req.socket?.remoteAddress || undefined;
   }
 
   static async recordAcceptance({

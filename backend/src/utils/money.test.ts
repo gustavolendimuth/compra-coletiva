@@ -126,6 +126,13 @@ describe('Money Utility', () => {
     });
   });
 
+  describe('distributeProportionally - rateio de frete', () => {
+    it('never negative and sums exactly', () => {
+      // O algoritmo antigo dava -0.01 à última parcela
+      expect(Money.distributeProportionally(0.05, [1, 1, 1, 0.0001])).toEqual([0.01, 0.02, 0.02, 0]);
+    });
+  });
+
   describe('sum', () => {
     it('should sum array of values with proper rounding', () => {
       expect(Money.sum([10.10, 20.20, 30.30])).toBe(60.60);

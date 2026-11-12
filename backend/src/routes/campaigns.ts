@@ -11,6 +11,7 @@ import { z } from "zod";
 import { InvoiceGenerator } from "../services/invoiceGenerator";
 import { OrderSummaryGenerator } from "../services/orderSummaryGenerator";
 import { ShippingCalculator } from "../services/shippingCalculator";
+import { lockCampaignRow } from "../services/orderLocks";
 import { generateUniqueSlug } from "../utils/slugify";
 import { uploadCampaignImage } from "../middleware/uploadMiddleware";
 import { ImageUploadService } from "../services/imageUploadService";
@@ -18,6 +19,12 @@ import { geocodingService } from "../services/geocodingService";
 import { routingService } from "../services/routingService";
 import { haversineDistance, getBoundingBox } from "../utils/distance";
 import { PaymentReleaseService } from "../services/paymentReleaseService";
+import { geoRateLimiter } from "../middleware/rateLimiter";
+import { applyPixVisibility, canViewerSeePix } from "../utils/campaignPixVisibility";
+import {
+  isManualStatusTransitionAllowed,
+  manualStatusTransitionError,
+} from "../utils/campaignStatusTransitions";
 
 const router = Router();
 
@@ -292,6 +299,35 @@ async function getSuggestions(
   return results.map((r) => r.id);
 }
 
+// IDs das campanhas (entre as informadas) em que o usuário tem pedido
+async function findViewerOrderCampaignIds(
+  userId: string | undefined,
+  campaignIds: string[]
+): Promise<Set<string>> {
+  if (!userId || campaignIds.length === 0) return new Set();
+  const orders = await prisma.order.findMany({
+    where: { userId, campaignId: { in: campaignIds } },
+    select: { campaignId: true },
+  });
+  return new Set(orders.map((order) => order.campaignId));
+}
+
+// Aplica a regra de visibilidade do PIX a uma lista de campanhas
+async function withPixVisibilityForViewer<
+  T extends { id: string; creatorId: string | null; status: string; paymentReleased: boolean; pixKey: string | null; pixType: string | null; pixName: string | null }
+>(campaigns: T[], viewer: Express.User | undefined) {
+  const viewerOrderCampaignIds = await findViewerOrderCampaignIds(
+    viewer?.id,
+    campaigns.map((campaign) => campaign.id)
+  );
+  return campaigns.map((campaign) =>
+    applyPixVisibility(
+      campaign,
+      canViewerSeePix(campaign, viewer, viewerOrderCampaignIds.has(campaign.id))
+    )
+  );
+}
+
 // GET /api/campaigns - Lista campanhas com pagination e filtros
 router.get(
   "/",
@@ -351,7 +387,7 @@ router.get(
 
           return res.json({
             data: [],
-            suggestions,
+            suggestions: await withPixVisibilityForViewer(suggestions, req.user),
             nextCursor: null,
             hasMore: false,
             total: 0,
@@ -524,13 +560,20 @@ router.get(
       }
     }
 
-    res.json({ data, suggestions, nextCursor, hasMore, total });
+    res.json({
+      data: await withPixVisibilityForViewer(data, req.user),
+      suggestions: await withPixVisibilityForViewer(suggestions, req.user),
+      nextCursor,
+      hasMore,
+      total,
+    });
   })
 );
 
 // GET /api/campaigns/:idOrSlug/distance - Calcula distância do CEP informado até a campanha
 router.get(
   "/:idOrSlug/distance",
+  geoRateLimiter,
   asyncHandler(async (req, res) => {
     const { idOrSlug } = req.params;
     const { fromZipCode, fromLat, fromLng } = distanceQuerySchema.parse(req.query);
@@ -661,6 +704,7 @@ async function findCampaignByIdOrSlug(idOrSlug: string) {
 // GET /api/campaigns/:idOrSlug - Busca um grupo específico por ID ou slug
 router.get(
   "/:idOrSlug",
+  optionalAuth,
   asyncHandler(async (req, res) => {
     const { idOrSlug } = req.params;
     const requestId = Math.random().toString(36).slice(2, 8);
@@ -687,7 +731,8 @@ router.get(
       `[Perf] GET /api/campaigns/${idOrSlug} auth=${hasAuthHeader} orders=${ordersCount} items=${itemsCount} products=${productsCount} fetchMs=${fetchMs} totalMs=${totalMs} req=${requestId}`
     );
 
-    res.json(campaign);
+    const [visibleCampaign] = await withPixVisibilityForViewer([campaign], req.user);
+    res.json(visibleCampaign);
   })
 );
 
@@ -877,6 +922,7 @@ router.patch(
       where: { slug: idOrSlug },
       select: {
         id: true,
+        status: true,
         pickupZipCode: true,
         pickupAddress: true,
         pickupAddressNumber: true,
@@ -891,6 +937,7 @@ router.patch(
         where: { id: idOrSlug },
         select: {
           id: true,
+          status: true,
           pickupZipCode: true,
           pickupAddress: true,
           pickupAddressNumber: true,
@@ -906,6 +953,10 @@ router.patch(
     }
 
     const campaignId = campaign.id;
+
+    if (data.status !== undefined && !isManualStatusTransitionAllowed(campaign.status, data.status)) {
+      throw new AppError(400, manualStatusTransitionError(campaign.status, data.status));
+    }
 
     // Convert deadline string to Date object for Prisma
     const prismaData: Prisma.CampaignUncheckedUpdateInput = { ...data };
@@ -1004,18 +1055,22 @@ router.patch(
     // Find campaign by slug or ID to get the actual ID
     let campaign = await prisma.campaign.findUnique({
       where: { slug: idOrSlug },
-      select: { id: true },
+      select: { id: true, status: true },
     });
 
     if (!campaign) {
       campaign = await prisma.campaign.findUnique({
         where: { id: idOrSlug },
-        select: { id: true },
+        select: { id: true, status: true },
       });
     }
 
     if (!campaign) {
       throw new AppError(404, "Campaign not found");
+    }
+
+    if (!isManualStatusTransitionAllowed(campaign.status, status)) {
+      throw new AppError(400, manualStatusTransitionError(campaign.status, status));
     }
 
     const updatedCampaign = await prisma.campaign.update({
@@ -1061,8 +1116,22 @@ router.delete(
       throw new AppError(404, "Campaign not found");
     }
 
-    await prisma.campaign.delete({
-      where: { id: campaign.id },
+    // Pedidos são registros financeiros: campanha com pedido não é apagada (o cascade levaria
+    // pedidos e comprovantes). O lock da campanha impede um pedido novo entre a contagem e o delete.
+    await prisma.$transaction(async (tx) => {
+      await lockCampaignRow(tx, campaign.id);
+
+      const orderCount = await tx.order.count({ where: { campaignId: campaign.id } });
+      if (orderCount > 0) {
+        throw new AppError(
+          400,
+          "Não é possível deletar uma campanha com pedidos. Arquive-a em vez disso."
+        );
+      }
+
+      await tx.campaign.delete({
+        where: { id: campaign.id },
+      });
     });
 
     res.status(204).send();
@@ -1213,57 +1282,63 @@ router.post(
   requireAuth,
   requireCampaignOwnership,
   asyncHandler(async (req, res) => {
-    uploadCampaignImage(req, res, async (err) => {
-      if (err) {
-        throw new AppError(400, err.message || "Erro ao fazer upload da imagem");
-      }
+    // multer em Promise: erros lançados abaixo chegam ao errorHandler (antes ficavam sem resposta)
+    await new Promise<void>((resolve, reject) => {
+      uploadCampaignImage(req, res, (err: unknown) => {
+        if (err) {
+          const message = err instanceof Error ? err.message : "";
+          reject(new AppError(400, message || "Erro ao fazer upload da imagem"));
+          return;
+        }
+        resolve();
+      });
+    });
 
-      if (!req.file) {
-        throw new AppError(400, "Nenhuma imagem foi enviada");
-      }
+    if (!req.file) {
+      throw new AppError(400, "Nenhuma imagem foi enviada");
+    }
 
-      const { idOrSlug } = req.params;
+    const { idOrSlug } = req.params;
 
-      // Find campaign by slug or ID
-      let campaign = await prisma.campaign.findUnique({
-        where: { slug: idOrSlug },
+    // Find campaign by slug or ID
+    let campaign = await prisma.campaign.findUnique({
+      where: { slug: idOrSlug },
+      select: { id: true, imageKey: true, imageStorageType: true },
+    });
+
+    if (!campaign) {
+      campaign = await prisma.campaign.findUnique({
+        where: { id: idOrSlug },
         select: { id: true, imageKey: true, imageStorageType: true },
       });
+    }
 
-      if (!campaign) {
-        campaign = await prisma.campaign.findUnique({
-          where: { id: idOrSlug },
-          select: { id: true, imageKey: true, imageStorageType: true },
-        });
-      }
+    if (!campaign) {
+      throw new AppError(404, "Campaign not found");
+    }
 
-      if (!campaign) {
-        throw new AppError(404, "Campaign not found");
-      }
+    // Upload new image
+    const uploadResult = await ImageUploadService.uploadImage(req.file, "campaigns");
 
-      // Upload new image
-      const uploadResult = await ImageUploadService.uploadImage(req.file, "campaigns");
+    // Delete old image if exists
+    if (campaign.imageKey && campaign.imageStorageType) {
+      await ImageUploadService.deleteImage(campaign.imageKey, campaign.imageStorageType);
+    }
 
-      // Delete old image if exists
-      if (campaign.imageKey && campaign.imageStorageType) {
-        await ImageUploadService.deleteImage(campaign.imageKey, campaign.imageStorageType);
-      }
+    // Update campaign with new image
+    const updatedCampaign = await prisma.campaign.update({
+      where: { id: campaign.id },
+      data: {
+        imageUrl: uploadResult.imageUrl,
+        imageKey: uploadResult.imageKey,
+        imageStorageType: uploadResult.storageType,
+      },
+    });
 
-      // Update campaign with new image
-      const updatedCampaign = await prisma.campaign.update({
-        where: { id: campaign.id },
-        data: {
-          imageUrl: uploadResult.imageUrl,
-          imageKey: uploadResult.imageKey,
-          imageStorageType: uploadResult.storageType,
-        },
-      });
-
-      res.json({
-        message: "Imagem enviada com sucesso",
-        imageUrl: updatedCampaign.imageUrl,
-        storageType: uploadResult.storageType,
-      });
+    res.json({
+      message: "Imagem enviada com sucesso",
+      imageUrl: updatedCampaign.imageUrl,
+      storageType: uploadResult.storageType,
     });
   })
 );

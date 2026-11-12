@@ -5,7 +5,13 @@ import crypto from "crypto";
 import passport from "passport";
 import { AuthService } from "../services/authService";
 import { TokenService } from "../services/tokenService";
+import { safeError } from "../utils/safeLog";
 import { requireAuth } from "../middleware/authMiddleware";
+import {
+  loginRateLimiter,
+  registerRateLimiter,
+  passwordResetRateLimiter,
+} from "../middleware/rateLimiter";
 import {
   REFRESH_TOKEN_COOKIE_NAME,
   getRefreshTokenCookieOptions,
@@ -204,7 +210,7 @@ router.get("/check-name", async (req: Request, res: Response): Promise<void> => 
         : null,
     });
   } catch (error) {
-    console.error("Erro ao verificar nome:", error);
+    console.error("Erro ao verificar nome:", safeError(error));
     res.status(500).json({
       error: "INTERNAL_ERROR",
       message: "Erro ao verificar nome",
@@ -216,7 +222,7 @@ router.get("/check-name", async (req: Request, res: Response): Promise<void> => 
  * POST /api/auth/register
  * Registra um novo usuário
  */
-router.post("/register", async (req: Request, res: Response): Promise<void> => {
+router.post("/register", registerRateLimiter, async (req: Request, res: Response): Promise<void> => {
   try {
     // Valida dados
     const validationResult = registerSchema.safeParse(req.body);
@@ -327,7 +333,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
       await queueWelcomeEmail(user.id, user.name, user.email);
       console.log(`[Auth] Welcome email queued for user ${user.id}`);
     } catch (emailError) {
-      console.error('[Auth] Failed to queue welcome email:', emailError);
+      console.error('[Auth] Failed to queue welcome email:', safeError(emailError));
       // Não falha o registro se o email falhar
     }
 
@@ -360,7 +366,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
       accessToken: tokens.accessToken,
     });
   } catch (error) {
-    console.error("Erro ao registrar usuário:", error);
+    console.error("Erro ao registrar usuário:", safeError(error));
     res.status(500).json({
       error: "INTERNAL_ERROR",
       message: "Erro ao criar usuário",
@@ -372,7 +378,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
  * POST /api/auth/login
  * Faz login de um usuário
  */
-router.post("/login", async (req: Request, res: Response): Promise<void> => {
+router.post("/login", loginRateLimiter, async (req: Request, res: Response): Promise<void> => {
   try {
     // Valida dados
     const validationResult = loginSchema.safeParse(req.body);
@@ -464,7 +470,7 @@ router.post("/login", async (req: Request, res: Response): Promise<void> => {
       accessToken: tokens.accessToken,
     });
   } catch (error) {
-    console.error("Erro ao fazer login:", error);
+    console.error("Erro ao fazer login:", safeError(error));
     res.status(500).json({
       error: "INTERNAL_ERROR",
       message: "Erro ao processar login",
@@ -489,10 +495,11 @@ router.post("/refresh", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Verifica se refresh token existe no banco
-    const isValid = await TokenService.validateRefreshToken(refreshToken);
+    // Rotação: consome o refresh atual (reuso revoga todas as sessões)
+    const consumption = await TokenService.consumeRefreshToken(refreshToken);
 
-    if (!isValid) {
+    if (consumption.outcome !== "consumed") {
+      res.clearCookie(REFRESH_TOKEN_COOKIE_NAME, getClearCookieOptions());
       res.status(401).json({
         error: "INVALID_REFRESH_TOKEN",
         message: "Refresh token inválido ou expirado",
@@ -500,24 +507,13 @@ router.post("/refresh", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Decodifica refresh token
-    let payload;
-    try {
-      payload = TokenService.verifyRefreshToken(refreshToken);
-    } catch {
-      res.status(401).json({
-        error: "INVALID_REFRESH_TOKEN",
-        message: "Refresh token inválido",
-      });
-      return;
-    }
-
     // Busca usuário atualizado
     const user = await prisma.user.findUnique({
-      where: { id: payload.userId },
+      where: { id: consumption.payload.userId },
     });
 
-    if (!user) {
+    if (!user || user.deletedAt) {
+      res.clearCookie(REFRESH_TOKEN_COOKIE_NAME, getClearCookieOptions());
       res.status(401).json({
         error: "USER_NOT_FOUND",
         message: "Usuário não encontrado",
@@ -525,12 +521,19 @@ router.post("/refresh", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Gera novo access token
-    const newAccessToken = TokenService.generateAccessToken({
+    // Gera novo par e grava o novo refresh (rotação)
+    const tokens = TokenService.generateTokenPair({
       userId: user.id,
       email: user.email,
       role: user.role,
     });
+    await TokenService.saveRefreshToken(user.id, tokens.refreshToken);
+    res.cookie(
+      REFRESH_TOKEN_COOKIE_NAME,
+      tokens.refreshToken,
+      getRefreshTokenCookieOptions()
+    );
+    const newAccessToken = tokens.accessToken;
 
     res.status(200).json({
       message: "Token renovado com sucesso",
@@ -554,7 +557,7 @@ router.post("/refresh", async (req: Request, res: Response): Promise<void> => {
       },
     });
   } catch (error) {
-    console.error("Erro ao renovar token:", error);
+    console.error("Erro ao renovar token:", safeError(error));
     res.status(500).json({
       error: "INTERNAL_ERROR",
       message: "Erro ao renovar token",
@@ -585,7 +588,7 @@ router.post(
         message: "Logout realizado com sucesso",
       });
     } catch (error) {
-      console.error("Erro ao fazer logout:", error);
+      console.error("Erro ao fazer logout:", safeError(error));
       res.status(500).json({
         error: "INTERNAL_ERROR",
         message: "Erro ao processar logout",
@@ -640,7 +643,7 @@ router.get(
         },
       });
     } catch (error) {
-      console.error("Erro ao buscar dados do usuário:", error);
+      console.error("Erro ao buscar dados do usuário:", safeError(error));
       res.status(500).json({
         error: "INTERNAL_ERROR",
         message: "Erro ao buscar dados do usuário",
@@ -651,80 +654,99 @@ router.get(
 
 // ========== GOOGLE OAUTH ==========
 
+const OAUTH_STATE_COOKIE_NAME = "oauthState";
+const OAUTH_STATE_MAX_AGE_MS = 10 * 60 * 1000;
+
+const getOAuthStateCookieOptions = () => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  path: "/api/auth/google",
+});
+
+const getFrontendUrl = () => process.env.FRONTEND_URL || "http://localhost:5173";
+
+const isSameState = (expected: unknown, received: unknown): boolean => {
+  if (typeof expected !== "string" || typeof received !== "string") return false;
+  if (!expected || expected.length !== received.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(received));
+};
+
 /**
  * GET /api/auth/google
- * Inicia o fluxo de autenticação do Google OAuth
+ * Inicia o fluxo de autenticação do Google OAuth com `state` anti-CSRF
  */
-router.get(
-  "/google",
+router.get("/google", (req: Request, res: Response, next) => {
+  const state = crypto.randomBytes(32).toString("hex");
+  res.cookie(OAUTH_STATE_COOKIE_NAME, state, {
+    ...getOAuthStateCookieOptions(),
+    maxAge: OAUTH_STATE_MAX_AGE_MS,
+  });
   passport.authenticate("google", {
     scope: ["profile", "email"],
     session: false,
-  })
-);
+    state,
+  })(req, res, next);
+});
 
 /**
  * GET /api/auth/google/callback
  * Callback do Google OAuth
- * Sets refresh token as HttpOnly cookie and passes only access token in URL
+ * Valida `state`, grava o refresh token em cookie HttpOnly e redireciona
+ * para /auth/callback sem nenhum dado na URL (a página chama /refresh)
  */
-router.get(
-  "/google/callback",
-  passport.authenticate("google", {
-    session: false,
-    failureRedirect: "/login",
-  }),
-  async (req: Request, res: Response): Promise<void> => {
-    try {
-      if (!req.user) {
-        res.redirect(
-          `${
-            process.env.FRONTEND_URL || "http://localhost:5173"
-          }/login?error=auth_failed`
-        );
-        return;
-      }
+router.get("/google/callback", (req: Request, res: Response, next) => {
+  const frontendUrl = getFrontendUrl();
+  const expectedState = req.cookies?.[OAUTH_STATE_COOKIE_NAME];
+  res.clearCookie(OAUTH_STATE_COOKIE_NAME, getOAuthStateCookieOptions());
 
-      const user = req.user as OAuthUser;
-
-      // Gera tokens
-      const tokens = TokenService.generateTokenPair({
-        userId: user.id,
-        email: user.email,
-        role: user.role,
-      });
-
-      // Salva refresh token
-      await TokenService.saveRefreshToken(user.id, tokens.refreshToken);
-
-      // Set refresh token as HttpOnly cookie
-      res.cookie(
-        REFRESH_TOKEN_COOKIE_NAME,
-        tokens.refreshToken,
-        getRefreshTokenCookieOptions()
-      );
-
-      // Redireciona para o frontend apenas com access token (refresh token fica no cookie HttpOnly)
-      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-      res.redirect(
-        `${frontendUrl}/auth/callback?` +
-          `accessToken=${tokens.accessToken}&` +
-          `userId=${encodeURIComponent(user.id)}&` +
-          `userName=${encodeURIComponent(user.name)}&` +
-          `userEmail=${encodeURIComponent(user.email)}&` +
-          `userRole=${user.role}&` +
-          `phoneCompleted=${user.phoneCompleted || false}&` +
-          `addressCompleted=${user.addressCompleted || false}&` +
-          `legalAcceptanceRequired=${user.legalAcceptanceRequired || false}&` +
-          `hideNameInCampaigns=${user.hideNameInCampaigns || false}`
-      );
-    } catch (error) {
-      console.error("Erro no callback do Google:", error);
-      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-      res.redirect(`${frontendUrl}/login?error=auth_failed`);
-    }
+  if (!isSameState(expectedState, req.query.state)) {
+    res.redirect(`${frontendUrl}/auth/callback?error=oauth_state`);
+    return;
   }
-);
+
+  passport.authenticate(
+    "google",
+    { session: false },
+    async (err: unknown, user: OAuthUser | false, info?: { message?: string }) => {
+      try {
+        if (!err && !user && info?.message === "email_not_verified") {
+          res.redirect(`${frontendUrl}/auth/callback?error=email_not_verified`);
+          return;
+        }
+
+        if (err || !user) {
+          if (err) console.error("Erro no callback do Google:", safeError(err));
+          res.redirect(`${frontendUrl}/login?error=auth_failed`);
+          return;
+        }
+
+        // Gera tokens
+        const tokens = TokenService.generateTokenPair({
+          userId: user.id,
+          email: user.email,
+          role: user.role,
+        });
+
+        // Salva refresh token
+        await TokenService.saveRefreshToken(user.id, tokens.refreshToken);
+
+        // Set refresh token as HttpOnly cookie
+        res.cookie(
+          REFRESH_TOKEN_COOKIE_NAME,
+          tokens.refreshToken,
+          getRefreshTokenCookieOptions()
+        );
+
+        // Sem token nem dados do usuário na URL
+        res.redirect(`${frontendUrl}/auth/callback`);
+      } catch (error) {
+        console.error("Erro no callback do Google:", safeError(error));
+        res.redirect(`${frontendUrl}/login?error=auth_failed`);
+      }
+    }
+  )(req, res, next);
+});
 
 // ========== PASSWORD RESET ==========
 
@@ -734,6 +756,7 @@ router.get(
  */
 router.post(
   "/request-password-reset",
+  passwordResetRateLimiter,
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { email } = requestPasswordResetSchema.parse(req.body);
@@ -764,11 +787,11 @@ router.post(
       const token = crypto.randomBytes(32).toString("hex");
       const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hora
 
-      // Salva token no banco
+      // Salva só o hash do token no banco; o token cru vai apenas no e-mail
       await prisma.passwordResetToken.create({
         data: {
           userId: user.id,
-          token,
+          token: TokenService.hashToken(token),
           expiresAt,
         },
       });
@@ -778,13 +801,13 @@ router.post(
         await queuePasswordResetEmail(user.id, user.name, user.email, token);
         console.log(`[Auth] Password reset email queued for user ${user.id}`);
       } catch (emailError) {
-        console.error('[Auth] Failed to queue password reset email:', emailError);
+        console.error('[Auth] Failed to queue password reset email:', safeError(emailError));
         // Não falha a requisição se o email falhar
       }
 
       // Log para desenvolvimento
       if (process.env.NODE_ENV === "development") {
-        console.log(`🔑 Password reset token para ${email}: ${token}`);
+        console.log(`🔑 Password reset token para o usuário ${user.id}: ${token}`);
         console.log(
           `Link: ${
             process.env.FRONTEND_URL || "http://localhost:5173"
@@ -795,10 +818,11 @@ router.post(
       res.json({
         message:
           "Se o email existir em nossa base, você receberá instruções para resetar sua senha",
-        ...(process.env.EXPOSE_RESET_TOKEN_IN_RESPONSE === "true" && { token }),
+        ...(process.env.EXPOSE_RESET_TOKEN_IN_RESPONSE === "true" &&
+          process.env.NODE_ENV !== "production" && { token }),
       });
     } catch (error) {
-      console.error("Erro ao solicitar reset de senha:", error);
+      console.error("Erro ao solicitar reset de senha:", safeError(error));
       res.status(500).json({
         error: "INTERNAL_ERROR",
         message: "Erro ao processar solicitação",
@@ -819,7 +843,7 @@ router.post(
 
       // Busca token
       const resetToken = await prisma.passwordResetToken.findUnique({
-        where: { token },
+        where: { token: TokenService.hashToken(token) },
         include: { user: true },
       });
 
@@ -863,21 +887,39 @@ router.post(
       // Hash da nova senha
       const hashedPassword = await AuthService.hashPassword(newPassword);
 
-      // Atualiza senha do usuário e marca token como usado
-      await prisma.$transaction([
-        prisma.user.update({
+      // Consome o token de forma atômica: só uma requisição concorrente vence
+      const consumed = await prisma.$transaction(async (tx) => {
+        const { count } = await tx.passwordResetToken.updateMany({
+          where: { id: resetToken.id, used: false, expiresAt: { gt: new Date() } },
+          data: { used: true },
+        });
+        if (count !== 1) {
+          return false;
+        }
+
+        await tx.user.update({
           where: { id: resetToken.userId },
           data: { password: hashedPassword },
-        }),
-        prisma.passwordResetToken.update({
-          where: { id: resetToken.id },
-          data: { used: true },
-        }),
-      ]);
+        });
+        // Derruba todas as sessões e invalida outros tokens de reset pendentes
+        await tx.session.deleteMany({ where: { userId: resetToken.userId } });
+        await tx.passwordResetToken.deleteMany({
+          where: { userId: resetToken.userId, id: { not: resetToken.id } },
+        });
+        return true;
+      });
+
+      if (!consumed) {
+        res.status(400).json({
+          error: "TOKEN_ALREADY_USED",
+          message: "Este token já foi utilizado",
+        });
+        return;
+      }
 
       res.json({ message: "Senha alterada com sucesso" });
     } catch (error) {
-      console.error("Erro ao resetar senha:", error);
+      console.error("Erro ao resetar senha:", safeError(error));
       res.status(500).json({
         error: "INTERNAL_ERROR",
         message: "Erro ao resetar senha",
@@ -973,6 +1015,14 @@ router.patch(
         data: updates,
       });
 
+      // Troca de senha derruba as outras sessões; a atual continua válida
+      if (updates.password) {
+        await TokenService.revokeOtherUserTokens(
+          req.user!.id,
+          req.cookies?.[REFRESH_TOKEN_COOKIE_NAME]
+        );
+      }
+
       res.json({
         message: "Perfil atualizado com sucesso",
         user: {
@@ -985,7 +1035,7 @@ router.patch(
         },
       });
     } catch (error) {
-      console.error("Erro ao atualizar perfil:", error);
+      console.error("Erro ao atualizar perfil:", safeError(error));
       res.status(500).json({
         error: "INTERNAL_ERROR",
         message: "Erro ao atualizar perfil",
@@ -1003,16 +1053,10 @@ router.patch(
   requireAuth,
   async (req: Request, res: Response): Promise<void> => {
     try {
-      console.log("[CompletePhone] Requisição recebida:", {
-        userId: req.user!.id,
-        body: req.body,
-      });
-
       const { phone } = completePhoneSchema.parse(req.body);
 
       console.log("[CompletePhone] Validação OK, atualizando usuário:", {
         userId: req.user!.id,
-        phone,
       });
 
       // Atualiza usuário com telefone e marca como completo
@@ -1051,10 +1095,10 @@ router.patch(
         user: updatedUser,
       });
     } catch (error) {
-      console.error("[CompletePhone] Erro ao completar telefone:", error);
+      console.error("[CompletePhone] Erro ao completar telefone:", safeError(error));
 
       if (error instanceof z.ZodError) {
-        console.error("[CompletePhone] Erro de validação:", error.errors);
+        console.error("[CompletePhone] Erro de validação:", error.errors.map((issue) => issue.message));
         res.status(400).json({
           error: "VALIDATION_ERROR",
           message: "Formato de telefone inválido",
@@ -1109,7 +1153,7 @@ router.patch(
         city = city || geoResult.city;
         state = state || geoResult.state;
       } catch (geoError) {
-        console.warn("[CompleteAddress] Falha na geocodificação:", geoError);
+        console.warn("[CompleteAddress] Falha na geocodificação:", safeError(geoError));
       }
 
       const updatedUser = await prisma.user.update({
@@ -1157,7 +1201,7 @@ router.patch(
         user: updatedUser,
       });
     } catch (error) {
-      console.error("[CompleteAddress] Erro ao completar endereço:", error);
+      console.error("[CompleteAddress] Erro ao completar endereço:", safeError(error));
 
       if (error instanceof z.ZodError) {
         res.status(400).json({

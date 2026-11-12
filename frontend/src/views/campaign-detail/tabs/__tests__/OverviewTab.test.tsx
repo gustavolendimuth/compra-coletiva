@@ -35,7 +35,7 @@ vi.mock("../../CampaignLocationSection", () => ({
   ),
 }));
 
-// Mock useAuth to return an admin user so all action buttons are visible
+// Mock useAuth to return an admin user by default
 vi.mock("@/contexts/AuthContext", () => ({
   useAuth: vi.fn(() => ({
     user: { id: "admin-user", role: "ADMIN", name: "Admin", email: "admin@test.com" },
@@ -324,11 +324,12 @@ describe("OverviewTab", () => {
       expect(mockCallbacks.onTogglePayment).toHaveBeenCalledWith(mockOrders[0]);
     });
 
-    it("should render edit button for each customer", () => {
+    it("should render edit button only for unpaid orders", () => {
       render(<OverviewTab {...defaultProps} />);
 
+      // Alice está paga: pedido pago fica travado para edição
       const editButtons = screen.getAllByTitle(/editar pedido/i);
-      expect(editButtons).toHaveLength(mockAnalytics.byCustomer.length);
+      expect(editButtons).toHaveLength(1);
     });
 
     it("should call onEditOrder when edit button is clicked", async () => {
@@ -338,7 +339,7 @@ describe("OverviewTab", () => {
       const editButtons = screen.getAllByTitle(/editar pedido/i);
       await user.click(editButtons[0]);
 
-      expect(mockCallbacks.onEditOrder).toHaveBeenCalledWith(mockOrders[0]);
+      expect(mockCallbacks.onEditOrder).toHaveBeenCalledWith(mockOrders[1]);
     });
   });
 
@@ -516,9 +517,10 @@ describe("OverviewTab", () => {
       );
       const editButtons = screen.getAllByTitle(/editar pedido/i);
 
+      // Admin desmarca o pago, mas não edita pedido pago
       expect(viewButtons).toHaveLength(2);
       expect(paymentButtons).toHaveLength(2);
-      expect(editButtons).toHaveLength(2);
+      expect(editButtons).toHaveLength(1);
     });
 
     it("should show view button on all orders for campaign creator", async () => {
@@ -553,12 +555,12 @@ describe("OverviewTab", () => {
     it("should show all buttons only on own order for regular user", async () => {
       const { useAuth } = await import("@/contexts/AuthContext");
       vi.mocked(useAuth).mockReturnValue({
-        user: { id: "u1", role: "CUSTOMER", name: "Alice", email: "alice@test.com" },
+        user: { id: "u2", role: "CUSTOMER", name: "Bob", email: "bob@test.com" },
       } as ReturnType<typeof useAuth>);
 
       render(<OverviewTab {...permissionProps} />);
 
-      // u1 (Alice) should see view, payment, and edit on their own order
+      // u2 (Bob, pendente) should see view, payment, and edit on their own order
       const viewButtons = screen.getAllByTitle(/visualizar pedido/i);
       const paymentButtons = screen.getAllByTitle(
         /marcar como não pago|enviar comprovante de pagamento/i
@@ -568,6 +570,20 @@ describe("OverviewTab", () => {
       expect(viewButtons).toHaveLength(1);
       expect(paymentButtons).toHaveLength(1);
       expect(editButtons).toHaveLength(1);
+    });
+
+    it("creator unmarks own paid order but does not edit it", async () => {
+      const { useAuth } = await import("@/contexts/AuthContext");
+      vi.mocked(useAuth).mockReturnValue({
+        user: { id: "u1", role: "CUSTOMER", name: "Alice", email: "alice@test.com" },
+      } as ReturnType<typeof useAuth>);
+
+      render(<OverviewTab {...permissionProps} campaign={{ ...mockCampaign, creatorId: "u1" }} />);
+
+      expect(
+        screen.getAllByTitle(/marcar como não pago|enviar comprovante de pagamento/i)
+      ).toEqual([screen.getByTitle("Marcar como não pago")]);
+      expect(screen.queryByTitle(/editar pedido/i)).not.toBeInTheDocument();
     });
 
     it("should show no buttons on other users' orders for regular user", async () => {
@@ -584,6 +600,11 @@ describe("OverviewTab", () => {
 
       // Verify Bob's name is rendered but has no associated buttons
       expect(screen.getByText("Bob")).toBeInTheDocument();
+      // O próprio pedido (Alice) está pago: participante só visualiza
+      expect(
+        screen.queryByTitle(/marcar como não pago|enviar comprovante de pagamento/i)
+      ).not.toBeInTheDocument();
+      expect(screen.queryByTitle(/editar pedido/i)).not.toBeInTheDocument();
     });
 
     it("deve exibir todos os botoes de acao para todos os pedidos quando usuario nao esta autenticado", async () => {
@@ -601,9 +622,10 @@ describe("OverviewTab", () => {
       );
       const editButtons = screen.getAllByTitle(/editar pedido/i);
 
+      // Pedido pago (Alice) só tem visualizar
       expect(viewButtons).toHaveLength(2);
-      expect(paymentButtons).toHaveLength(2);
-      expect(editButtons).toHaveLength(2);
+      expect(paymentButtons).toHaveLength(1);
+      expect(editButtons).toHaveLength(1);
     });
 
     it("deve chamar requireAuth ao clicar em visualizar sem estar autenticado", async () => {
@@ -696,6 +718,32 @@ describe("OverviewTab", () => {
       await user.click(pedirButtons[0]);
 
       expect(mockCallbacks.onAddToOrder).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("PIX login notice", () => {
+    const visitor = null;
+    const alice = { id: "u1", role: "CUSTOMER", name: "Alice", email: "alice@test.com" };
+
+    // A API esconde pixKey/pixType de visitante e manda só hasPixConfigured
+    it.each([
+      ["shows the notice to visitors when the API hides pixKey", visitor, true, "ACTIVE", true],
+      ["hidden when the campaign has no PIX", visitor, false, "ACTIVE", false],
+      ["hidden for logged-in users", alice, true, "ACTIVE", false],
+      ["hidden on archived campaigns", visitor, true, "ARCHIVED", false],
+    ] as const)("login notice from hasPixConfigured: %s", async (_label, user, pixConfigured, status, shown) => {
+      const { useAuth } = await import("@/contexts/AuthContext");
+      vi.mocked(useAuth).mockReturnValue({ user, requireAuth: vi.fn() } as unknown as ReturnType<typeof useAuth>);
+
+      render(
+        <OverviewTab
+          {...defaultProps}
+          canEditCampaign={false}
+          campaign={{ ...mockCampaign, hasPixConfigured: pixConfigured, status }}
+        />
+      );
+
+      expect(screen.queryAllByText("Esta campanha possui pagamento via PIX")).toHaveLength(shown ? 1 : 0);
     });
   });
 });

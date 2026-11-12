@@ -1,10 +1,11 @@
 import express from "express";
 import { createServer } from "http";
-import cors from "cors";
 import cookieParser from "cookie-parser";
 import passport from "passport";
 import { PrismaClient } from "@prisma/client";
 import { configurePassport } from "./config/passport";
+import { configureTrustProxy } from "./config/trustProxy";
+import { configureHttpSecurity, parseCorsOrigins } from "./config/httpSecurity";
 import authRoutes from "./routes/auth";
 import profileRoutes from "./routes/profile";
 import adminRoutes from "./routes/admin";
@@ -24,8 +25,14 @@ import { startCampaignScheduler } from "./services/campaignScheduler";
 import { startLegalDataRetentionScheduler } from "./services/legalDataRetentionService";
 import { initializeSocket } from "./services/socketService";
 import { ImageUploadService } from "./services/imageUploadService";
+import { mountUploadsStatic } from "./utils/uploadsStatic";
 import { startEmailWorker, stopEmailWorker } from "./services/email/emailWorker";
 import { closeEmailQueue } from "./services/email/emailQueue";
+import { closeRateLimitRedisClient } from "./middleware/rateLimitStore";
+import { assertProductionSecrets } from "./config/secrets";
+
+// Antes de tudo: em produção, segredo ausente/fraco/padrão encerra com exit 1
+assertProductionSecrets();
 
 const app = express();
 const httpServer = createServer(app);
@@ -35,41 +42,14 @@ const PORT = process.env.PORT || 3000;
 // Configure Passport
 configurePassport();
 
-// Parse CORS origins - accepts comma-separated list or single origin
-// Automatically adds correct protocol based on environment and domain
-const corsOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(",").map((origin) => {
-      const trimmed = origin.trim();
+// Confia só no proxy do Railway: req.ip = IP real do cliente
+configureTrustProxy(app);
 
-      // If protocol is already specified, use as-is
-      if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-        return trimmed;
-      }
+// CORS_ORIGIN aceita lista separada por vírgula; protocolo adicionado conforme ambiente
+const corsOrigins = parseCorsOrigins();
 
-      // Determine if domain is local
-      const isLocal =
-        trimmed.includes("localhost") ||
-        trimmed.includes("127.0.0.1") ||
-        trimmed.includes("0.0.0.0");
-
-      // Local domains always use http, remote domains use https in production
-      if (isLocal) {
-        return `http://${trimmed}`;
-      }
-
-      // Remote domains: use https in production, http in development
-      const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
-      return `${protocol}://${trimmed}`;
-    })
-  : ["http://localhost:5173"];
-
-// Middleware
-app.use(
-  cors({
-    origin: corsOrigins,
-    credentials: true,
-  })
-);
+// Middleware: headers de segurança (helmet) + CORS com credentials
+configureHttpSecurity(app, corsOrigins);
 app.use(express.json());
 app.use(cookieParser());
 app.use(passport.initialize());
@@ -77,7 +57,7 @@ app.use(passport.initialize());
 // Serve static files (for local image storage fallback)
 // Uses UPLOAD_DIR env var if set (Railway volume), otherwise defaults to ./uploads
 const uploadBaseDir = ImageUploadService.getUploadBaseDir();
-app.use("/uploads", express.static(uploadBaseDir));
+mountUploadsStatic(app, uploadBaseDir);
 console.log(`📁 Serving uploads from: ${uploadBaseDir}`);
 
 // Health check
@@ -109,6 +89,7 @@ process.on("beforeExit", async () => {
   console.log('Shutting down gracefully...');
   await stopEmailWorker();
   await closeEmailQueue();
+  await closeRateLimitRedisClient();
   await prisma.$disconnect();
 });
 
@@ -116,6 +97,7 @@ process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down...');
   await stopEmailWorker();
   await closeEmailQueue();
+  await closeRateLimitRedisClient();
   await prisma.$disconnect();
   process.exit(0);
 });
@@ -138,6 +120,11 @@ httpServer.listen(PORT, () => {
       process.env.AWS_S3_BUCKET
     );
     const hasVolume = !!process.env.UPLOAD_DIR;
+
+    if (!hasS3 && !process.env.PRIVATE_UPLOAD_DIR) {
+      console.warn('⚠️  WARNING: PRIVATE_UPLOAD_DIR not set: payment proofs are stored in ./private-uploads');
+      console.warn('⚠️  Point PRIVATE_UPLOAD_DIR to a persistent volume outside UPLOAD_DIR.');
+    }
 
     if (hasS3) {
       console.log('✅ S3 storage configured and ready');

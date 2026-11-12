@@ -3,7 +3,8 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { createElement } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useOrderModal } from '../useOrderModal';
-import { createMockOrder } from '@/__tests__/mock-data';
+import { createMockOrder, createMockProduct } from '@/__tests__/mock-data';
+import toast from 'react-hot-toast';
 
 // Mock react-hot-toast
 vi.mock('react-hot-toast', () => ({
@@ -806,6 +807,69 @@ describe('useOrderModal', () => {
       expect(removeEventSpy).toHaveBeenCalledWith('keydown', expect.any(Function));
 
       removeEventSpy.mockRestore();
+    });
+  });
+
+  // Pedido pago fica travado no backend; antes a tela abria o modal, deixava mudar a
+  // quantidade e não salvava nada nem avisava
+  describe('Pedido pago', () => {
+    const paidOrder = createMockOrder({
+      id: 'order-paid',
+      userId: 'user-1',
+      isPaid: true,
+      customer: { id: 'user-1', name: 'Test User', email: 'test@example.com' },
+    });
+
+    it('openEditOrderModal não abre edição de pedido pago e avisa o motivo', () => {
+      const wrapper = createWrapper();
+      const { result } = renderHook(() => useOrderModal(defaultOptions), { wrapper });
+
+      act(() => {
+        result.current.openEditOrderModal(paidOrder);
+      });
+
+      expect(result.current.isEditOrderModalOpen).toBe(false);
+      expect(result.current.editingOrder).toBeNull();
+      expect(toast.error).toHaveBeenCalledWith('Pedido já pago não pode ser alterado');
+    });
+
+    it('handleAddToOrder com pedido próprio pago não tenta alterar o pedido', async () => {
+      const wrapper = createWrapper();
+      const { result } = renderHook(
+        () => useOrderModal({ ...defaultOptions, orders: [paidOrder] }),
+        { wrapper }
+      );
+
+      await act(async () => {
+        await result.current.handleAddToOrder(createMockProduct({ id: 'product-1' }));
+      });
+
+      expect(orderApi.updateWithItems).not.toHaveBeenCalled();
+      expect(orderApi.create).not.toHaveBeenCalled();
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalledWith('Pedido já pago não pode ser alterado');
+    });
+  });
+
+  it('erro ao salvar o pedido mostra a mensagem do backend em vez de texto genérico', async () => {
+    vi.mocked(orderApi.updateWithItems).mockRejectedValue(
+      Object.assign(new Error('Request failed with status code 409'), {
+        isAxiosError: true,
+        response: { status: 409, data: { message: 'Pedido já pago não pode ser alterado' } },
+      })
+    );
+    const wrapper = createWrapper();
+    const { result } = renderHook(() => useOrderModal(defaultOptions), { wrapper });
+
+    act(() => {
+      result.current.openEditOrderModal(mockOrders[0]);
+    });
+    act(() => {
+      lastAutosaveOptions?.onSave('order-1', [{ productId: 'product-1', quantity: 2 }]);
+    });
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Pedido já pago não pode ser alterado');
     });
   });
 });

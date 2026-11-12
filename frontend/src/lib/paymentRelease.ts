@@ -80,14 +80,20 @@ export function canShowPixToBuyer(campaign: Campaign, hasOrder: boolean): boolea
   );
 }
 
+/**
+ * PIX configurado: a API manda `hasPixConfigured` e só envia pixKey/pixType a quem pode vê-los
+ */
+export function hasPixConfigured(campaign: Campaign): boolean {
+  return campaign.hasPixConfigured ?? Boolean(campaign.pixKey && campaign.pixType);
+}
+
 export function canShowPaymentPendingNotice(
   campaign: Campaign,
   hasOrder: boolean
 ): boolean {
   return Boolean(
     hasOrder &&
-      campaign.pixKey &&
-      campaign.pixType &&
+      hasPixConfigured(campaign) &&
       campaign.status !== "ARCHIVED" &&
       !campaign.paymentReleased
   );

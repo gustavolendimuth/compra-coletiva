@@ -5,6 +5,7 @@
  */
 
 import { prisma } from '../../index';
+import { redactSensitive, safeError } from '../../utils/safeLog';
 import { getEmailConfig } from '../../config/email';
 import { EmailProvider, SendEmailParams, EmailResponse } from './providers/emailProvider.interface';
 import { ResendProvider } from './providers/resendProvider';
@@ -173,7 +174,7 @@ export class EmailService {
         });
       }
 
-      console.log(`[EmailService] Sending email to ${emailParams.to} (${emailParams.subject})`);
+      console.log(`[EmailService] Sending email (${resolvedTemplateName})${userId ? ` to user ${userId}` : ''}`);
 
       // Obter provider e enviar
       const provider = this.getProvider();
@@ -203,12 +204,12 @@ export class EmailService {
           },
         });
 
-        console.error(`[EmailService] Email failed:`, response.error);
+        console.error(`[EmailService] Email failed:`, redactSensitive(String(response.error ?? '')));
       }
 
       return response;
     } catch (error) {
-      console.error('[EmailService] Error sending email:', error);
+      console.error('[EmailService] Error sending email:', safeError(error));
 
       if (emailLog) {
         await this.markAsFailed(

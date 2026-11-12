@@ -1,9 +1,11 @@
 import crypto from "crypto";
+import { DEV_SECRET_DEFAULTS } from "../config/secrets";
 
+// Em produção PUBLIC_ALIAS_SECRET é obrigatório (config/secrets); a cadeia só vale fora dela
 const PUBLIC_ALIAS_SECRET =
   process.env.PUBLIC_ALIAS_SECRET ||
   process.env.JWT_ACCESS_SECRET ||
-  "dev-public-alias-secret-change-in-production";
+  DEV_SECRET_DEFAULTS.PUBLIC_ALIAS_SECRET;
 
 const FUN_ADJECTIVES = [
   "Agil",

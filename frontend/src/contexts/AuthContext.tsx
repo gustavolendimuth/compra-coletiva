@@ -68,27 +68,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const initAuth = async () => {
       const storedUser = authStorage.getUser();
-      const accessToken = authStorage.getAccessToken();
 
-      if (storedUser && accessToken) {
+      // Access token só existe em memória: após recarregar, obtém um novo via refresh
+      if (storedUser) {
         try {
-          // Verify token is still valid by fetching current user
-          const currentUser = await authApi.me(accessToken);
-          setUser(currentUser);
-          authStorage.setUser(currentUser);
-          redirectToCompleteProfileIfNeeded(currentUser);
-        } catch (error) {
-          // Token invalid, try to refresh
-          try {
-            const response = await authApi.refresh();
-            authStorage.setAccessToken(response.accessToken);
-            authStorage.setUser(response.user);
-            setUser(response.user);
-            redirectToCompleteProfileIfNeeded(response.user);
-          } catch {
-            authStorage.clearAuth();
-            setUser(null);
-          }
+          const response = await authApi.refresh();
+          setUser(response.user);
+          redirectToCompleteProfileIfNeeded(response.user);
+        } catch {
+          authStorage.clearAuth();
+          setUser(null);
         }
       }
 

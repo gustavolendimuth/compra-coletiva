@@ -4,6 +4,7 @@
  */
 
 import { authClient, apiClient } from "../client";
+import { refreshSession } from "../refreshSession";
 import type {
   RegisterRequest,
   LoginRequest,
@@ -38,10 +39,7 @@ export const authService = {
    * Refresh token is sent automatically via HttpOnly cookie (withCredentials: true)
    * @returns New access token
    */
-  refresh: () =>
-    authClient
-      .post<RefreshResponse>("/auth/refresh")
-      .then((res) => res.data),
+  refresh: (): Promise<RefreshResponse> => refreshSession(),
 
   /**
    * Logout and invalidate refresh token

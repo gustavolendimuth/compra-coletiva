@@ -31,16 +31,28 @@ export const configurePassport = () => {
               return done(new Error('No email found in Google profile'), undefined);
             }
 
+            const rawVerified = profile.emails?.[0]?.verified as unknown;
+            const emailVerified = rawVerified === true || rawVerified === 'true';
+
             const formattedName = capitalizeName(profile.displayName || email.split('@')[0]);
 
-            // First, try to find user by googleId (handles deleted users trying to login again)
+            // First, try to find user by googleId
             let user = await prisma.user.findUnique({
               where: { googleId },
             });
 
+            // Conta excluída não é reativada: libera o googleId e segue o fluxo de conta nova
+            if (user && user.deletedAt) {
+              await prisma.user.update({
+                where: { id: user.id },
+                data: { googleId: null },
+              });
+              console.log(`[Google OAuth] Released googleId from deleted user ${user.id}`);
+              user = null;
+            }
+
             if (user) {
               const emailChanged = user.email !== email;
-              const needsReactivation = !!user.deletedAt || !!user.deletedReason;
               const needsNameUpdate = user.name !== formattedName;
 
               if (emailChanged) {
@@ -56,6 +68,11 @@ export const configurePassport = () => {
                     );
                   }
 
+                  // E-mail não verificado pelo Google não vincula conta local existente
+                  if (!emailVerified) {
+                    return done(null, false, { message: 'email_not_verified' });
+                  }
+
                   // Email is already in use by another account; move googleId to that account
                   user = await prisma.$transaction(async (tx) => {
                     await tx.user.update({
@@ -68,8 +85,6 @@ export const configurePassport = () => {
                       data: {
                         googleId,
                         name: formattedName,
-                        deletedAt: null,
-                        deletedReason: null,
                       },
                     });
                   });
@@ -81,13 +96,12 @@ export const configurePassport = () => {
                 }
               }
 
-              if (emailChanged || needsReactivation || needsNameUpdate) {
+              if (emailChanged || needsNameUpdate) {
                 user = await prisma.user.update({
                   where: { id: user.id },
                   data: {
                     ...(emailChanged && { email }),
                     ...(needsNameUpdate && { name: formattedName }),
-                    ...(needsReactivation && { deletedAt: null, deletedReason: null }),
                   },
                 });
                 console.log(`[Google OAuth] Updated user ${user.id} after login`);
@@ -109,14 +123,18 @@ export const configurePassport = () => {
                 );
               }
 
+              // E-mail não verificado pelo Google não vincula conta local existente
+              if (!emailVerified) {
+                console.log(`[Google OAuth] Unverified email; not linking user ${user.id}`);
+                return done(null, false, { message: 'email_not_verified' });
+              }
+
               // User exists with this email but no googleId - link the accounts
               user = await prisma.user.update({
                 where: { id: user.id },
                 data: {
                   googleId,
                   name: formattedName,
-                  deletedAt: null,
-                  deletedReason: null,
                 },
               });
               console.log(`[Google OAuth] Linked Google account to existing user ${user.id}`);

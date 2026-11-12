@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { PrismaClient, UserRole } from '@prisma/client';
 import { TokenService } from '../services/tokenService';
+import { safeError } from '../utils/safeLog';
 
 const prisma = new PrismaClient();
 
@@ -58,7 +59,8 @@ export const requireAuth = async (
       where: { id: payload.userId },
     });
 
-    if (!user) {
+    // Conta excluída perde acesso na hora, mesmo com access token válido
+    if (!user || user.deletedAt) {
       res.status(401).json({
         error: 'USER_NOT_FOUND',
         message: 'Usuário não encontrado',
@@ -79,7 +81,7 @@ export const requireAuth = async (
     req.user = user;
     next();
   } catch (error) {
-    console.error('Erro no middleware de autenticação:', error);
+    console.error('Erro no middleware de autenticação:', safeError(error));
     res.status(500).json({
       error: 'INTERNAL_ERROR',
       message: 'Erro ao processar autenticação',
@@ -106,7 +108,7 @@ export const optionalAuth = async (
           where: { id: payload.userId },
         });
 
-        if (user) {
+        if (user && !user.deletedAt) {
           req.user = user;
         }
       } catch {
@@ -383,9 +385,13 @@ export const requireMessageAccess = async (
       return;
     }
 
-    const orderId = req.query.orderId as string || req.body.orderId;
+    // Confere todo orderId presente (query e body): o handler pode usar qualquer um dos dois
+    const candidateIds = [req.query.orderId, req.body?.orderId].filter(
+      (value): value is string => typeof value === 'string' && value.length > 0
+    );
+    const orderIds = [...new Set(candidateIds)];
 
-    if (!orderId) {
+    if (orderIds.length === 0) {
       res.status(400).json({
         error: 'BAD_REQUEST',
         message: 'ID do pedido não fornecido',
@@ -393,33 +399,35 @@ export const requireMessageAccess = async (
       return;
     }
 
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: {
-        campaign: {
-          select: { creatorId: true },
+    for (const orderId of orderIds) {
+      const order = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: {
+          campaign: {
+            select: { creatorId: true },
+          },
         },
-      },
-    });
-
-    if (!order) {
-      res.status(404).json({
-        error: 'NOT_FOUND',
-        message: 'Pedido não encontrado',
       });
-      return;
-    }
 
-    // Verifica se é o dono do pedido ou criador da campanha
-    const isOrderOwner = order.userId === req.user.id;
-    const isCampaignCreator = order.campaign.creatorId === req.user.id;
+      if (!order) {
+        res.status(404).json({
+          error: 'NOT_FOUND',
+          message: 'Pedido não encontrado',
+        });
+        return;
+      }
 
-    if (!isOrderOwner && !isCampaignCreator) {
-      res.status(403).json({
-        error: 'FORBIDDEN',
-        message: 'Você não tem acesso às mensagens deste pedido',
-      });
-      return;
+      // Verifica se é o dono do pedido ou criador da campanha
+      const isOrderOwner = order.userId === req.user.id;
+      const isCampaignCreator = order.campaign.creatorId === req.user.id;
+
+      if (!isOrderOwner && !isCampaignCreator) {
+        res.status(403).json({
+          error: 'FORBIDDEN',
+          message: 'Você não tem acesso às mensagens deste pedido',
+        });
+        return;
+      }
     }
 
     next();

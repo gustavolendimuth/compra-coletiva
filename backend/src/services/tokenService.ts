@@ -1,14 +1,14 @@
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
+import { REFRESH_TOKEN_TTL_DAYS, REFRESH_TOKEN_TTL_MS } from '../config/session';
+import { getSecret } from '../config/secrets';
 
 const prisma = new PrismaClient();
 
-// Environment variables (com defaults para desenvolvimento)
-const JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'dev-access-secret-change-in-production';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret-change-in-production';
+// Segredos validados no boot (config/secrets); só HS256 é aceito na verificação
+const JWT_ALGORITHM: jwt.Algorithm = 'HS256';
 const JWT_ACCESS_EXPIRES_IN = process.env.JWT_ACCESS_EXPIRES_IN || '15m';
-const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '365d';
 
 export interface TokenPayload {
   userId: string;
@@ -21,12 +21,25 @@ export interface TokenPair {
   refreshToken: string;
 }
 
+export type RefreshTokenConsumption =
+  | { outcome: 'consumed'; payload: TokenPayload }
+  | { outcome: 'invalid' }
+  | { outcome: 'reused'; userId: string };
+
 export class TokenService {
+  /**
+   * SHA-256 hex de um token (o que fica gravado no banco)
+   */
+  static hashToken(token: string): string {
+    return crypto.createHash('sha256').update(token).digest('hex');
+  }
+
   /**
    * Gera um access token (curta duração)
    */
   static generateAccessToken(payload: TokenPayload): string {
-    return jwt.sign(payload, JWT_ACCESS_SECRET, {
+    return jwt.sign(payload, getSecret('JWT_ACCESS_SECRET'), {
+      algorithm: JWT_ALGORITHM,
       expiresIn: JWT_ACCESS_EXPIRES_IN,
     } as jwt.SignOptions);
   }
@@ -35,8 +48,9 @@ export class TokenService {
    * Gera um refresh token (longa duração)
    */
   static generateRefreshToken(payload: TokenPayload): string {
-    return jwt.sign(payload, JWT_REFRESH_SECRET, {
-      expiresIn: JWT_REFRESH_EXPIRES_IN,
+    return jwt.sign(payload, getSecret('JWT_REFRESH_SECRET'), {
+      algorithm: JWT_ALGORITHM,
+      expiresIn: `${REFRESH_TOKEN_TTL_DAYS}d`,
       jwtid: crypto.randomBytes(16).toString('hex'),
     } as jwt.SignOptions);
   }
@@ -56,7 +70,9 @@ export class TokenService {
    */
   static verifyAccessToken(token: string): TokenPayload {
     try {
-      return jwt.verify(token, JWT_ACCESS_SECRET) as TokenPayload;
+      return jwt.verify(token, getSecret('JWT_ACCESS_SECRET'), {
+        algorithms: [JWT_ALGORITHM],
+      }) as TokenPayload;
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
         throw new Error('TOKEN_EXPIRED');
@@ -70,7 +86,9 @@ export class TokenService {
    */
   static verifyRefreshToken(token: string): TokenPayload {
     try {
-      return jwt.verify(token, JWT_REFRESH_SECRET) as TokenPayload;
+      return jwt.verify(token, getSecret('JWT_REFRESH_SECRET'), {
+        algorithms: [JWT_ALGORITHM],
+      }) as TokenPayload;
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
         throw new Error('REFRESH_TOKEN_EXPIRED');
@@ -80,42 +98,53 @@ export class TokenService {
   }
 
   /**
-   * Salva refresh token no banco de dados
+   * Salva o hash do refresh token no banco de dados
    */
   static async saveRefreshToken(userId: string, token: string): Promise<void> {
-    // Calcula data de expiração (1 ano)
-    const expiresAt = new Date();
-    expiresAt.setFullYear(expiresAt.getFullYear() + 1);
-
     await prisma.session.create({
       data: {
         userId,
-        token,
-        expiresAt,
+        token: this.hashToken(token),
+        expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
       },
     });
   }
 
   /**
-   * Verifica se refresh token existe e é válido no banco
+   * Consome um refresh token (rotação).
+   * - assinatura inválida/expirada -> invalid
+   * - assinatura válida mas ausente de `sessions` (já rotacionado) -> reused,
+   *   e todas as sessões do usuário são removidas
+   * - sessão expirada no banco -> invalid
    */
-  static async validateRefreshToken(token: string): Promise<boolean> {
-    const session = await prisma.session.findUnique({
-      where: { token },
-    });
-
-    if (!session) {
-      return false;
+  static async consumeRefreshToken(token: string): Promise<RefreshTokenConsumption> {
+    let payload: TokenPayload;
+    try {
+      payload = this.verifyRefreshToken(token);
+    } catch {
+      return { outcome: 'invalid' };
     }
 
-    // Verifica se não expirou
+    const tokenHash = this.hashToken(token);
+    const session = await prisma.session.findUnique({ where: { token: tokenHash } });
+
+    if (!session || session.userId !== payload.userId) {
+      await this.revokeAllUserTokens(payload.userId);
+      return { outcome: 'reused', userId: payload.userId };
+    }
+
+    // Remove a sessão; se outra requisição já a removeu, é reuso
+    const { count } = await prisma.session.deleteMany({ where: { token: tokenHash } });
+    if (count === 0) {
+      await this.revokeAllUserTokens(payload.userId);
+      return { outcome: 'reused', userId: payload.userId };
+    }
+
     if (session.expiresAt < new Date()) {
-      // Remove sessão expirada
-      await this.revokeRefreshToken(token);
-      return false;
+      return { outcome: 'invalid' };
     }
 
-    return true;
+    return { outcome: 'consumed', payload };
   }
 
   /**
@@ -123,7 +152,20 @@ export class TokenService {
    */
   static async revokeRefreshToken(token: string): Promise<void> {
     await prisma.session.deleteMany({
-      where: { token },
+      where: { token: this.hashToken(token) },
+    });
+  }
+
+  /**
+   * Revoga as sessões do usuário exceto a do refresh token informado
+   */
+  static async revokeOtherUserTokens(userId: string, currentToken?: string): Promise<void> {
+    if (!currentToken) {
+      await this.revokeAllUserTokens(userId);
+      return;
+    }
+    await prisma.session.deleteMany({
+      where: { userId, token: { not: this.hashToken(currentToken) } },
     });
   }
 

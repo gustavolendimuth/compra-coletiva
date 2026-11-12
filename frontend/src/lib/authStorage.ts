@@ -1,8 +1,8 @@
 /**
  * Authentication Storage Utilities
- * Manages access token in localStorage and middleware cookies
- * Cookies are used for middleware route protection (server-side)
- * localStorage is used for client-side access
+ * Access token fica só em memória (nunca em localStorage nem em cookie legível por JS).
+ * O cookie `auth-token` é apenas um indicador de sessão (`1`) para o middleware.
+ * Ao recarregar a página, o access token é obtido de novo via POST /auth/refresh.
  */
 
 const ACCESS_TOKEN_KEY = "accessToken";
@@ -14,6 +14,12 @@ const PENDING_ACTION_DATA_KEY = "pendingActionData";
 // Cookie names for middleware
 const AUTH_TOKEN_COOKIE = "auth-token";
 const USER_ROLE_COOKIE = "user-role";
+// Indicador de sessão (sem token); mesma duração do refresh token
+const SESSION_INDICATOR_VALUE = "1";
+const SESSION_COOKIE_DAYS = 30;
+
+// Access token em memória do módulo (uma aba)
+let accessTokenInMemory: string | null = null;
 
 function getLocalStorage(): Storage | null {
   if (typeof window === "undefined") {
@@ -115,12 +121,14 @@ export interface StoredUser {
 export const authStorage = {
   // Token management
   getAccessToken(): string | null {
-    return safeStorageGet(ACCESS_TOKEN_KEY);
+    return accessTokenInMemory;
   },
 
   setAccessToken(token: string): void {
-    safeStorageSet(ACCESS_TOKEN_KEY, token);
-    setCookie(AUTH_TOKEN_COOKIE, token);
+    accessTokenInMemory = token;
+    // Remove token persistido por versões anteriores
+    safeStorageRemove(ACCESS_TOKEN_KEY);
+    setCookie(AUTH_TOKEN_COOKIE, SESSION_INDICATOR_VALUE, SESSION_COOKIE_DAYS);
   },
 
   // User management
@@ -136,7 +144,7 @@ export const authStorage = {
 
   setUser(user: StoredUser): void {
     safeStorageSet(USER_KEY, JSON.stringify(user));
-    setCookie(USER_ROLE_COOKIE, user.role);
+    setCookie(USER_ROLE_COOKIE, user.role, SESSION_COOKIE_DAYS);
   },
 
   // Set access token and user (refresh token fica apenas no cookie HttpOnly)
@@ -147,6 +155,7 @@ export const authStorage = {
 
   // Clear all auth data (for logout)
   clearAuth(): void {
+    accessTokenInMemory = null;
     safeStorageRemove(ACCESS_TOKEN_KEY);
     safeStorageRemove("refreshToken");
     safeStorageRemove(USER_KEY);

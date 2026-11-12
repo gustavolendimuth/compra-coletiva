@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { SITE_URL, API_URL } from '@/api/config';
 import type { CampaignWithProducts } from '@/api/types';
 import { CampaignDetailPage } from './CampaignDetailPage';
+import { serializeJsonLd } from '@/lib/jsonLd';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -153,7 +154,7 @@ export default async function CampanhaDetailPage({ params }: PageProps) {
             <script
               key={`structured-data-${index}`}
               type="application/ld+json"
-              dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+              dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }}
             />
           ))}
         </>

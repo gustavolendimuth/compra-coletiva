@@ -148,7 +148,9 @@ router.get(
       throw new AppError(404, 'Usuário não encontrado');
     }
 
-    res.json(user);
+    // Nunca devolve hash de senha, token de troca de e-mail nem vínculo do Google
+    const { password: _password, pendingEmailToken: _pendingEmailToken, googleId: _googleId, ...safeUser } = user;
+    res.json(safeUser);
   })
 );
 
@@ -317,16 +319,23 @@ router.delete(
     // Soft delete with anonymization
     const randomEmail = `deleted_${Date.now()}_${Math.random().toString(36).substring(7)}@deleted.local`;
 
-    await prisma.user.update({
-      where: { id },
-      data: {
-        name: 'Usuário Excluído',
-        email: randomEmail,
-        deletedAt: new Date(),
-        deletedReason: 'Deletado por administrador',
-        isBanned: true,
-      },
-    });
+    // Anonimiza, remove credenciais e derruba as sessões (como a auto-exclusão)
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id },
+        data: {
+          name: 'Usuário Excluído',
+          email: randomEmail,
+          password: null,
+          googleId: null,
+          deletedAt: new Date(),
+          deletedReason: 'Deletado por administrador',
+          isBanned: true,
+        },
+      }),
+      prisma.session.deleteMany({ where: { userId: id } }),
+      prisma.passwordResetToken.deleteMany({ where: { userId: id } }),
+    ]);
 
     res.json({
       message: 'Usuário deletado com sucesso',

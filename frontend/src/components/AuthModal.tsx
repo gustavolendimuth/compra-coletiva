@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../contexts/AuthContext";
 import { authStorage } from "../lib/authStorage";
+import { getSafeRedirectPath } from "../lib/safeRedirectPath";
 import { API_URL } from "../lib/env";
 import { Modal } from "./ui";
 import { LoginForm, RegisterForm, AuthTabs } from "./auth";
@@ -11,12 +13,14 @@ interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultTab?: "login" | "register";
+  onAuthenticated?: () => void;
 }
 
 export const AuthModal = ({
   isOpen,
   onClose,
   defaultTab = "login",
+  onAuthenticated,
 }: AuthModalProps) => {
   const { login, register, hasPendingAction } = useAuth();
   const [activeTab, setActiveTab] = useState<"login" | "register">(defaultTab);
@@ -34,6 +38,7 @@ export const AuthModal = ({
     try {
       await login({ email, password });
       onClose();
+      onAuthenticated?.();
     } catch (error) {
       // Error is handled by AuthContext with toast
     } finally {
@@ -62,6 +67,7 @@ export const AuthModal = ({
         hideNameInCampaigns,
       });
       onClose();
+      onAuthenticated?.();
     } catch (error) {
       // Error is handled by AuthContext with toast
     } finally {
@@ -122,8 +128,11 @@ export const AuthModal = ({
 
 // Component to listen for openAuthModal events
 export const AuthModalManager = () => {
+  const router = useRouter();
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [defaultTab, setDefaultTab] = useState<"login" | "register">("login");
+  const redirectToRef = useRef<string | null>(null);
 
   useEffect(() => {
     const handleOpenModal = (event: Event) => {
@@ -142,11 +151,37 @@ export const AuthModalManager = () => {
     };
   }, []);
 
+  // Rota protegida manda para ?requireLogin=true&redirectTo=/x: abre o login e volta para /x
+  // depois. Lê window.location em vez de useSearchParams para não exigir Suspense no layout.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("requireLogin") !== "true") return;
+
+    const target = getSafeRedirectPath(params.get("redirectTo"));
+    redirectToRef.current = target;
+    // Login com Google e cadastro (via completar perfil) voltam pelo returnUrl
+    if (target) authStorage.setReturnUrl(target);
+
+    params.delete("requireLogin");
+    params.delete("redirectTo");
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname);
+
+    window.dispatchEvent(new CustomEvent("openAuthModal", { detail: { tab: "login" } }));
+  }, [pathname, router]);
+
   return (
     <AuthModal
       isOpen={isOpen}
       onClose={() => setIsOpen(false)}
       defaultTab={defaultTab}
+      onAuthenticated={() => {
+        const target = redirectToRef.current;
+        if (!target) return;
+        redirectToRef.current = null;
+        authStorage.clearReturnUrl();
+        router.push(target);
+      }}
     />
   );
 };

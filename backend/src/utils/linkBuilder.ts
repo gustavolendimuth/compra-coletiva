@@ -6,6 +6,25 @@
 import crypto from 'crypto';
 import { NotificationType, Prisma } from '@prisma/client';
 import { getEmailConfig } from '../config/email';
+import { getSecret } from '../config/secrets';
+
+/**
+ * Chave do unsubscribe derivada do JWT_ACCESS_SECRET (validado no boot),
+ * com separação de domínio para não reutilizar a chave do JWT crua.
+ */
+function getUnsubscribeKey(): Buffer {
+  return crypto
+    .createHmac('sha256', getSecret('JWT_ACCESS_SECRET'))
+    .update('unsubscribe-token-v1')
+    .digest();
+}
+
+function signUnsubscribePayload(userId: string, timestamp: number): string {
+  return crypto
+    .createHmac('sha256', getUnsubscribeKey())
+    .update(`${userId}:${timestamp}`)
+    .digest('hex');
+}
 
 export interface NotificationMetadata {
   campaignSlug?: string;
@@ -70,14 +89,8 @@ export class LinkBuilder {
    * Formato: HMAC-SHA256 do userId com secret
    */
   static generateUnsubscribeToken(userId: string): string {
-    const secret = process.env.JWT_SECRET || 'default-secret-change-me';
     const timestamp = Date.now();
-    const payload = `${userId}:${timestamp}`;
-
-    const token = crypto
-      .createHmac('sha256', secret)
-      .update(payload)
-      .digest('hex');
+    const token = signUnsubscribePayload(userId, timestamp);
 
     return `${token}.${timestamp}`;
   }
@@ -114,6 +127,9 @@ export class LinkBuilder {
     try {
       const [hash, timestampStr] = token.split('.');
       const timestamp = parseInt(timestampStr, 10);
+      if (!hash || !Number.isFinite(timestamp)) {
+        return false;
+      }
 
       // Verificar idade do token
       const age = Date.now() - timestamp;
@@ -123,14 +139,13 @@ export class LinkBuilder {
       }
 
       // Verificar hash
-      const secret = process.env.JWT_SECRET || 'default-secret-change-me';
-      const payload = `${userId}:${timestamp}`;
-      const expectedHash = crypto
-        .createHmac('sha256', secret)
-        .update(payload)
-        .digest('hex');
+      const expected = Buffer.from(signUnsubscribePayload(userId, timestamp), 'utf8');
+      const received = Buffer.from(hash, 'utf8');
+      if (received.length !== expected.length) {
+        return false;
+      }
 
-      return hash === expectedHash;
+      return crypto.timingSafeEqual(received, expected);
     } catch (error) {
       console.error('[LinkBuilder] Token verification error:', error);
       return false;

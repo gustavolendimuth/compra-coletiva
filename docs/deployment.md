@@ -15,8 +15,15 @@ NODE_ENV=production
 PORT=3000
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 CORS_ORIGIN=https://<frontend-domain>
-JWT_SECRET=<gerar>
+JWT_ACCESS_SECRET=<gerar>
+JWT_REFRESH_SECRET=<gerar>
+PUBLIC_ALIAS_SECRET=<gerar>
 ```
+
+Segredos: em `NODE_ENV=production` o backend não sobe (exit 1) se `JWT_ACCESS_SECRET`,
+`JWT_REFRESH_SECRET` ou `PUBLIC_ALIAS_SECRET` estiver ausente, tiver menos de 32 caracteres ou for
+o valor padrão de desenvolvimento. Gere cada um com `openssl rand -hex 32`. Trocar
+`JWT_ACCESS_SECRET` invalida as sessões e os links de unsubscribe já enviados.
 
 Backend (opcionais comuns):
 ```env
@@ -62,11 +69,13 @@ AWS_S3_REGION=us-east-1
 
 Opção 2: Railway Volume
 - Crie um volume no serviço backend e monte em `/app/data`.
-- Defina `UPLOAD_DIR=/app/data`.
+- Defina `UPLOAD_DIR=/app/data` e `PRIVATE_UPLOAD_DIR=/app/data/private` (comprovantes PIX). O serviço só tem um volume, então o diretório privado fica dentro dele; o `/uploads` nunca serve esse diretório.
+- O container roda como o usuário `node` (UID 1000) e o volume é montado como root: na primeira vez, rode `chown -R 1000:1000 /app/data` no volume (via `railway ssh`), senão os uploads falham.
 
 ## Google OAuth (resumo)
 - Crie credenciais OAuth no Google Cloud Console.
 - Autorize o redirect: `https://<backend-domain>/api/auth/google/callback`.
+- Use no callback o mesmo domínio que o frontend chama para iniciar o login (`NEXT_PUBLIC_API_URL`): o cookie de `state` (anti-CSRF) é gravado nesse domínio e precisa voltar no callback.
 - Configure `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` e `GOOGLE_CALLBACK_URL` no backend.
 - Garanta `CORS_ORIGIN` com a URL exata do frontend.
 

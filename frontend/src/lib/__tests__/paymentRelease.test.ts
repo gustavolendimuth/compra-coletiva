@@ -5,6 +5,7 @@ import {
   canShowPixToBuyer,
   getPaymentReleaseTrigger,
   getPixVisibleAtStatusForTrigger,
+  hasPixConfigured,
 } from "../paymentRelease";
 
 describe("paymentRelease helpers", () => {
@@ -44,6 +45,24 @@ describe("paymentRelease helpers", () => {
     });
 
     expect(canShowPixToBuyer(campaign, true)).toBe(false);
+    expect(canShowPaymentPendingNotice(campaign, true)).toBe(true);
+  });
+
+  // A API manda hasPixConfigured e só envia pixKey/pixType a quem pode vê-los
+  it.each([
+    [true, undefined, true],
+    [false, "buyer@example.com", false],
+    [undefined, "buyer@example.com", true],
+    [undefined, undefined, false],
+  ])("hasPixConfigured: flag %s, pixKey %s → %s", (flag, pixKey, expected) => {
+    const campaign = createMockCampaignFull({ hasPixConfigured: flag, pixKey, pixType: pixKey && "EMAIL" });
+
+    expect(hasPixConfigured(campaign)).toBe(expected);
+  });
+
+  it("should show pending notice from hasPixConfigured when the API hides pixKey", () => {
+    const campaign = createMockCampaignFull({ hasPixConfigured: true, paymentReleased: false });
+
     expect(canShowPaymentPendingNotice(campaign, true)).toBe(true);
   });
 });

@@ -6,6 +6,7 @@
 import { Resend } from 'resend';
 import { EmailProvider, SendEmailParams, EmailResponse } from './emailProvider.interface';
 import { getEmailConfig } from '../../../config/email';
+import { safeError } from '../../../utils/safeLog';
 
 export class ResendProvider implements EmailProvider {
   name = 'resend';
@@ -68,7 +69,7 @@ export class ResendProvider implements EmailProvider {
       });
 
       if (error) {
-        console.error('[ResendProvider] API error:', error);
+        console.error('[ResendProvider] API error:', safeError(Object.assign(new Error(error.message), { name: error.name })));
         return {
           success: false,
           provider: this.name,
@@ -84,7 +85,7 @@ export class ResendProvider implements EmailProvider {
         provider: this.name,
       };
     } catch (error) {
-      console.error('[ResendProvider] Failed to send email:', error);
+      console.error('[ResendProvider] Failed to send email:', safeError(error));
 
       return {
         success: false,

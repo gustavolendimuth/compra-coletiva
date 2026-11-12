@@ -25,11 +25,11 @@ function toQueryString(searchParams?: SearchParams) {
   return params.toString();
 }
 
-export default function CampaignsRedirectPage({
+export default async function CampaignsRedirectPage({
   searchParams,
 }: {
-  searchParams?: SearchParams;
+  searchParams?: Promise<SearchParams>;
 }) {
-  const query = toQueryString(searchParams);
+  const query = toQueryString(await searchParams);
   redirect(`/campanhas${query ? `?${query}` : ""}`);
 }

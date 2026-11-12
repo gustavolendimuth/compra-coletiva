@@ -183,8 +183,8 @@ describe("GET /api/orders/public", () => {
     }
   });
 
-  // 3. Authenticated response includes id, userId, items
-  it("authenticated response includes id, userId, and items", async () => {
+  // 3. Authenticated response includes items
+  it("authenticated response includes items", async () => {
     authenticatedUser = fakeUser;
     mockFindMany.mockResolvedValue(sampleOrders);
 
@@ -196,9 +196,6 @@ describe("GET /api/orders/public", () => {
     expect(res.body.orders).toHaveLength(2);
 
     const firstOrder = res.body.orders[0];
-    expect(firstOrder).toHaveProperty("id", "order-1");
-    expect(firstOrder).toHaveProperty("userId", "user-1");
-    expect(firstOrder).toHaveProperty("items");
     expect(firstOrder.items).toHaveLength(2);
     expect(firstOrder.items[0]).toEqual({
       quantity: 2,
@@ -207,10 +204,23 @@ describe("GET /api/orders/public", () => {
       product: { name: "Product A" },
     });
 
-    const secondOrder = res.body.orders[1];
-    expect(secondOrder).toHaveProperty("id", "order-2");
-    expect(secondOrder).toHaveProperty("userId", "user-2");
-    expect(secondOrder.items).toHaveLength(1);
+    expect(res.body.orders[1].items).toHaveLength(1);
+  });
+
+  it("only own order keeps id and userId", async () => {
+    authenticatedUser = { ...fakeUser, id: "user-2" };
+    mockFindMany.mockResolvedValue(sampleOrders);
+
+    const res = await request(app)
+      .get("/api/orders/public")
+      .query({ campaignId: CAMPAIGN_ID });
+
+    expect(res.status).toBe(200);
+    const [otherOrder, ownOrder] = res.body.orders;
+    expect(otherOrder).not.toHaveProperty("id");
+    expect(otherOrder).not.toHaveProperty("userId");
+    expect(ownOrder).toHaveProperty("id", "order-2");
+    expect(ownOrder).toHaveProperty("userId", "user-2");
   });
 
   // 4. Name masking: shows first+last name when hideNameInCampaigns is false
