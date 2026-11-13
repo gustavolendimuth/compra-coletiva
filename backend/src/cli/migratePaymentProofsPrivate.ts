@@ -2,7 +2,8 @@
  * Torna privados os comprovantes PIX enviados antes do armazenamento privado.
  *
  * Uso (no diretório backend/, com as mesmas variáveis de ambiente da API):
- *   npx tsx scripts/migrate-payment-proofs-private.ts
+ *   produção (a imagem só tem dist/): node dist/cli/migratePaymentProofsPrivate.js
+ *   local:                            npx tsx src/cli/migratePaymentProofsPrivate.ts
  *
  * - S3: aplica ACL private em cada objeto (requer AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET)
  * - LOCAL: move de UPLOAD_DIR/payment-proofs para PRIVATE_UPLOAD_DIR/payment-proofs
@@ -11,9 +12,9 @@
  */
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
-import { migratePaymentProofs } from "../src/services/paymentProofMigration";
-import { getPrivateUploadBaseDir, getPublicUploadBaseDir } from "../src/services/paymentProofStorage";
-import { getS3Client, getS3Config } from "../src/services/s3Storage";
+import { migratePaymentProofs } from "../services/paymentProofMigration";
+import { getPrivateUploadBaseDir, getPublicUploadBaseDir } from "../services/paymentProofStorage";
+import { getS3Client, getS3Config } from "../services/s3Storage";
 
 async function main() {
   const prisma = new PrismaClient();

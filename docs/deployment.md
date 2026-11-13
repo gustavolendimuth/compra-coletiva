@@ -71,6 +71,7 @@ Opção 2: Railway Volume
 - Crie um volume no serviço backend e monte em `/app/data`.
 - Defina `UPLOAD_DIR=/app/data` e `PRIVATE_UPLOAD_DIR=/app/data/private` (comprovantes PIX). O serviço só tem um volume, então o diretório privado fica dentro dele; o `/uploads` nunca serve esse diretório.
 - O container roda como o usuário `node` (UID 1000) e o volume é montado como root: na primeira vez, rode `chown -R 1000:1000 /app/data` no volume (via `railway ssh`), senão os uploads falham.
+- Comprovantes enviados antes do armazenamento privado: rode uma vez no container `node dist/cli/migratePaymentProofsPrivate.js` como `node` (`runuser -u node -- ...` via `railway ssh`). É idempotente.
 
 ## Google OAuth (resumo)
 - Crie credenciais OAuth no Google Cloud Console.
@@ -82,5 +83,6 @@ Opção 2: Railway Volume
 ## Troubleshooting rápido
 - 502/CORS: confirme `CORS_ORIGIN` e `NEXT_PUBLIC_API_URL`, depois redeploy.
 - Redis `NOAUTH`: use `REDIS_URL=${{Redis.REDIS_URL}}` no backend.
+- Redis `DENIED ... protected mode` (ou `ECONNRESET`/`EPIPE` no `[EmailWorker]` a cada poucos segundos): o Redis subiu sem senha. Start command customizado no serviço Redis precisa de `--requirepass $REDIS_PASSWORD` (ex.: `/bin/sh -c "exec redis-server --requirepass $REDIS_PASSWORD --maxmemory 32mb --maxmemory-policy noeviction --save ''"`); a fila (BullMQ) exige `noeviction`.
 - Imagens quebradas: configure S3 ou volume persistente.
 - Healthcheck frontend: `/api/health` deve responder 200.
