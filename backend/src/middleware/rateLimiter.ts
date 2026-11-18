@@ -19,6 +19,15 @@ const buildLimiter = (name: string, windowMs: number, limit: number, message: st
 
 const clientIpKey = (req: Request) => ipKeyGenerator(req.ip || req.socket.remoteAddress || "unknown");
 
+// Conta por e-mail do body; sem e-mail válido, por IP
+const emailOrIpKey = (req: Request) => {
+  const email = req.body?.email;
+  if (typeof email === "string" && email.trim()) {
+    return `email:${email.trim().toLowerCase()}`;
+  }
+  return `ip:${clientIpKey(req)}`;
+};
+
 // Login: 10 tentativas por IP a cada 15 min
 export const loginRateLimiter = buildLimiter(
   "login",
@@ -41,13 +50,16 @@ export const passwordResetRateLimiter = buildLimiter(
   HOUR,
   3,
   "Muitas solicitações de redefinição de senha. Tente novamente mais tarde.",
-  (req) => {
-    const email = req.body?.email;
-    if (typeof email === "string" && email.trim()) {
-      return `email:${email.trim().toLowerCase()}`;
-    }
-    return `ip:${clientIpKey(req)}`;
-  }
+  emailOrIpKey
+);
+
+// Reenvio do link de confirmação do cadastro: 3 por e-mail por hora (sem e-mail válido, conta por IP)
+export const verificationResendRateLimiter = buildLimiter(
+  "verification-resend",
+  HOUR,
+  3,
+  "Muitos pedidos de reenvio. Tente novamente mais tarde.",
+  emailOrIpKey
 );
 
 // Geocoding + distância (APIs de terceiros): 30 por IP por minuto, contador único

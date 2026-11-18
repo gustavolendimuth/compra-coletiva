@@ -101,3 +101,27 @@ describe("TokenService refresh token consumption", () => {
     expect(mockSession.deleteMany.mock.calls).toEqual([[{ where: { userId: "user-1" } }]]);
   });
 });
+
+describe("TokenService.findActiveSessionUserId", () => {
+  const payload = { userId: "user-1", email: "u@test.com", role: "CUSTOMER" };
+  const live = { userId: "user-1", expiresAt: new Date(Date.now() + 60_000) };
+
+  it.each([
+    { name: "sessão válida devolve o dono", session: live, expected: "user-1" },
+    { name: "assinatura inválida devolve null", token: "not-a-jwt", session: live, expected: null },
+    { name: "sessão inexistente devolve null", session: null, expected: null },
+    { name: "sessão de outro usuário devolve null", session: { ...live, userId: "user-2" }, expected: null },
+    { name: "sessão expirada devolve null", session: { ...live, expiresAt: new Date(Date.now() - 1000) }, expected: null },
+  ])("$name, sem consumir a sessão", async ({ token: rawToken, session, expected }) => {
+    const token = rawToken ?? TokenService.generateRefreshToken(payload);
+    mockSession.findUnique.mockResolvedValue(session);
+
+    const result = await TokenService.findActiveSessionUserId(token);
+
+    expect(result).toBe(expected);
+    if (!rawToken) {
+      expect(mockSession.findUnique).toHaveBeenCalledWith({ where: { token: sha256Hex(token) } });
+    }
+    expect(mockSession.deleteMany).not.toHaveBeenCalled();
+  });
+});

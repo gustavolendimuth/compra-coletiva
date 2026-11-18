@@ -1,9 +1,11 @@
 import express from "express";
 import request from "supertest";
 
-// Requer Redis real: RATE_LIMIT_TEST_REDIS_URL=redis://127.0.0.1:56381
+// Requer Redis real (npm run test:redis): RATE_LIMIT_TEST_REDIS_URL=redis://127.0.0.1:56381
 const redisUrl = process.env.RATE_LIMIT_TEST_REDIS_URL;
-const describeWithRedis = redisUrl ? describe : describe.skip;
+if (!redisUrl) {
+  throw new Error("RATE_LIMIT_TEST_REDIS_URL is required for *.redis.test.ts (see jest.redis.config.js)");
+}
 
 type Instance = { app: express.Express; close: () => Promise<void> };
 
@@ -22,7 +24,7 @@ function bootInstance(): Instance {
   return { app, close: closeRateLimitRedisClient };
 }
 
-describeWithRedis("rate limit store on real Redis", () => {
+describe("rate limit store on real Redis", () => {
   const previousRedisUrl = process.env.REDIS_URL;
   afterAll(() => {
     process.env.REDIS_URL = previousRedisUrl;

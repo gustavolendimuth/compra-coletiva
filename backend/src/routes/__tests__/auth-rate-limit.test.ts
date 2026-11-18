@@ -7,7 +7,7 @@ jest.mock("../../middleware/rateLimitStore", () => {
 });
 
 const mockPrisma = {
-  user: { findUnique: jest.fn() },
+  user: { findUnique: jest.fn(), update: jest.fn() },
   passwordResetToken: { create: jest.fn() },
 };
 jest.mock("@prisma/client", () => ({
@@ -16,9 +16,11 @@ jest.mock("@prisma/client", () => ({
 }));
 jest.mock("../../index", () => ({ prisma: mockPrisma }));
 const mockQueuePasswordResetEmail = jest.fn();
+const mockQueueSignupVerificationEmail = jest.fn();
 jest.mock("../../services/email/emailQueue", () => ({
   queueWelcomeEmail: jest.fn(),
   queuePasswordResetEmail: (...args: unknown[]) => mockQueuePasswordResetEmail(...args),
+  queueSignupVerificationEmail: (...args: unknown[]) => mockQueueSignupVerificationEmail(...args),
 }));
 jest.mock("../../services/geocodingService", () => ({ geocodingService: {} }));
 jest.mock("../../services/legalAcceptanceService", () => ({
@@ -117,5 +119,46 @@ describe("auth rate limits", () => {
     expect((await reset("203.0.113.60")).status).toBe(429);
     expect((await reset("203.0.113.61")).status).not.toBe(429);
     errorSpy.mockRestore();
+  });
+
+  it("reenvio da confirmação: 4ª chamada para o mesmo e-mail em 1 h recebe 429 e não enfileira e-mail", async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: "user-1",
+      name: "Maria",
+      email: "maria@test.com",
+      password: "hash",
+      emailVerifiedAt: null,
+      deletedAt: null,
+    });
+    mockPrisma.user.update.mockResolvedValue({});
+    const app = createApp();
+
+    for (let i = 1; i <= 3; i += 1) {
+      const res = await request(app)
+        .post("/api/auth/resend-verification")
+        // IPs diferentes e variações de caixa: a conta é por e-mail normalizado
+        .set("X-Forwarded-For", fromClient(`198.51.100.${i}`))
+        .send({ email: i === 2 ? "  MARIA@test.com " : "maria@test.com" });
+      expect(res.status).toBe(200);
+    }
+    expect(mockQueueSignupVerificationEmail).toHaveBeenCalledTimes(3);
+
+    const blocked = await request(app)
+      .post("/api/auth/resend-verification")
+      .set("X-Forwarded-For", fromClient("198.51.100.9"))
+      .send({ email: "maria@test.com" });
+
+    expectBlocked(blocked, 60 * MINUTE_S);
+    expect(mockQueueSignupVerificationEmail).toHaveBeenCalledTimes(3);
+  });
+
+  it("reenvio da confirmação sem e-mail: contado por ip do cliente", async () => {
+    const app = createApp();
+    const resend = (ip: string) =>
+      request(app).post("/api/auth/resend-verification").set("X-Forwarded-For", fromClient(ip)).send({});
+    for (let i = 1; i <= 3; i += 1) await resend("203.0.113.70");
+
+    expect((await resend("203.0.113.70")).status).toBe(429);
+    expect((await resend("203.0.113.71")).status).not.toBe(429);
   });
 });

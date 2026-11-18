@@ -107,7 +107,7 @@ export interface StoredUser {
   salesDisclaimerAcceptedVersion?: string | null;
   hideNameInCampaigns?: boolean;
   role: "ADMIN" | "CAMPAIGN_CREATOR" | "CUSTOMER";
-  googleId?: string;
+  hasGoogle?: boolean;
   defaultZipCode?: string | null;
   defaultAddress?: string | null;
   defaultAddressNumber?: string | null;

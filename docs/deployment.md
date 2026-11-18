@@ -4,8 +4,11 @@ Guia curto para deploy no Railway.
 
 ## Railway (recomendado)
 1. Crie um projeto no Railway e conecte o repositório.
-2. Crie os serviços: backend (usa `railway.json` na raiz e `backend/Dockerfile`), frontend (root `frontend`, usa `frontend/railway.json` e `frontend/Dockerfile`), PostgreSQL e Redis (opcional, para fila de emails).
-3. Configure as variáveis de ambiente e faça deploy.
+2. Crie os serviços: backend (root directory `/backend`), frontend (root directory `/frontend`), PostgreSQL e Redis (opcional, para fila de emails).
+3. Configure build e deploy nas settings de cada serviço (o repositório não tem `railway.json`; o Railway deixou de ler config as code):
+   - backend: Dockerfile path `Dockerfile`, watch paths `/backend/**`, restart `ON_FAILURE` com 10 tentativas.
+   - frontend: Dockerfile path `Dockerfile`, watch paths `/frontend/**`, healthcheck `/api/health` com timeout 100 s, restart `ON_FAILURE` com 10 tentativas.
+4. Configure as variáveis de ambiente e faça deploy.
 
 ## Variáveis de ambiente
 

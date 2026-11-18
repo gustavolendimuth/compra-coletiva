@@ -8,14 +8,17 @@ import { useMutation } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { Card, Input, Button } from '@/components/ui';
 import { profileService } from '@/api';
+import { authApi } from '@/lib/authApi';
 import { getApiErrorMessage } from '@/lib/apiError';
 
 interface PasswordSectionProps {
+  email: string;
   hasPassword: boolean;
 }
 
-export function PasswordSection({ hasPassword }: PasswordSectionProps) {
+export function PasswordSection({ email, hasPassword }: PasswordSectionProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const [createLinkSent, setCreateLinkSent] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -29,6 +32,15 @@ export function PasswordSection({ hasPassword }: PasswordSectionProps) {
     onError: (error: unknown) => {
       const message = getApiErrorMessage(error, 'Erro ao alterar senha');
       toast.error(message);
+    },
+  });
+
+  // Conta só com Google cria a senha pelo mesmo link do "Esqueci minha senha"
+  const createPasswordMutation = useMutation({
+    mutationFn: () => authApi.requestPasswordReset(email),
+    onSuccess: () => setCreateLinkSent(true),
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao enviar o link'));
     },
   });
 
@@ -62,9 +74,27 @@ export function PasswordSection({ hasPassword }: PasswordSectionProps) {
     return (
       <Card className="p-4 md:p-6">
         <h2 className="text-lg font-semibold text-sky-900 mb-2">Senha</h2>
-        <p className="text-sm text-sky-600">
-          Sua conta foi criada via Google. Você não possui uma senha local.
-        </p>
+        {createLinkSent ? (
+          <p className="text-sm text-sky-600" data-testid="create-password-sent">
+            Enviamos um link para <strong className="break-all">{email}</strong>. Abra o email
+            para criar sua senha; depois, entre de novo com ela ou com o Google.
+          </p>
+        ) : (
+          <>
+            <p className="text-sm text-sky-600 mb-4">
+              Você entra com o Google e ainda não tem senha. Se quiser entrar também com email e
+              senha, enviamos um link para <strong className="break-all">{email}</strong> para você
+              criar uma.
+            </p>
+            <Button
+              variant="secondary"
+              onClick={() => createPasswordMutation.mutate()}
+              disabled={createPasswordMutation.isPending}
+            >
+              {createPasswordMutation.isPending ? 'Enviando...' : 'Criar senha'}
+            </Button>
+          </>
+        )}
       </Card>
     );
   }

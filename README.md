@@ -21,8 +21,7 @@ Sistema web para organizar compras coletivas com campanhas, pedidos, pagamentos 
 compra-coletiva/
 ├── backend/
 ├── frontend/
-├── docker-compose.yml
-└── railway.json
+└── docker-compose.yml
 ```
 
 ## Quickstart local (Docker)

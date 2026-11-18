@@ -62,6 +62,8 @@ declare global {
 
     interface Request {
       user?: User;
+      // Conta logada que pediu para vincular o Google (fluxo google-link)
+      oauthLinkUserId?: string;
     }
   }
 }

@@ -12,6 +12,7 @@ export type {
   RegisterRequest,
   LoginRequest,
   AuthResponse,
+  RegisterResponse,
   RefreshResponse,
   StoredUser
 } from '../api';

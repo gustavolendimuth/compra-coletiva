@@ -9,6 +9,7 @@ import { Card } from '@/components/ui';
 import { ProfileHeader } from './profile/ProfileHeader';
 import { ProfileForm } from './profile/ProfileForm';
 import { PasswordSection } from './profile/PasswordSection';
+import { GoogleAccountSection } from './profile/GoogleAccountSection';
 import { EmailSection } from './profile/EmailSection';
 import { EmailPreferencesSection } from './profile/EmailPreferencesSection';
 import { DeleteAccountSection } from './profile/DeleteAccountSection';
@@ -45,6 +46,7 @@ export function Profile() {
 
   // Check if user has password (users created via Google OAuth don't have one)
   const hasPassword = localUser.hasPassword ?? true;
+  const hasGoogle = localUser.hasGoogle ?? false;
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 md:py-8 space-y-6">
@@ -56,7 +58,9 @@ export function Profile() {
 
       <EmailSection currentEmail={localUser.email} hasPassword={hasPassword} />
 
-      <PasswordSection hasPassword={hasPassword} />
+      <PasswordSection email={localUser.email} hasPassword={hasPassword} />
+
+      <GoogleAccountSection email={localUser.email} hasGoogle={hasGoogle} onLinked={refreshUser} />
 
       <EmailPreferencesSection />
 
