@@ -52,12 +52,13 @@ Observações:
 - Prefira `${{Postgres.DATABASE_URL}}` para evitar problemas de conexão.
 - Para Redis, use `${{Redis.REDIS_URL}}` (evita erro `NOAUTH`).
 
-## Migrations e slugs
-O `backend/start.sh` executa `prisma migrate deploy` e gera slugs automaticamente. Para rodar manualmente:
+## Migrations
+O `backend/start.sh` executa `prisma migrate deploy` antes de subir o servidor. Para rodar manualmente:
 ```bash
 railway run --service backend npx prisma migrate deploy
-railway run --service backend npx tsx scripts/generate-slugs-standalone.ts
 ```
+
+O slug da campanha é gerado pelo backend ao criar e ao renomear a campanha.
 
 ## Imagens de campanhas (produção)
 O backend usa S3 se configurado, senão salva localmente.
