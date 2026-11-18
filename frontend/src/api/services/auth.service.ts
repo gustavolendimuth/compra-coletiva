@@ -9,6 +9,7 @@ import type {
   RegisterRequest,
   LoginRequest,
   AuthResponse,
+  RegisterResponse,
   RefreshResponse,
   StoredUser,
   CompletePhoneRequest,
@@ -17,13 +18,46 @@ import type {
 
 export const authService = {
   /**
-   * Register a new user
+   * Register a new user (account stays pending until the emailed link is opened)
    * @param data - User registration data (name, email, password, role)
-   * @returns Authentication response with tokens and user data
+   * @returns Message and the email the confirmation link was sent to
    */
   register: (data: RegisterRequest) =>
     authClient
-      .post<AuthResponse>("/auth/register", data)
+      .post<RegisterResponse>("/auth/register", data)
+      .then((res) => res.data),
+
+  /**
+   * Confirm the signup email with the token from the emailed link
+   * @returns Authentication response with tokens and user data
+   */
+  verifyEmail: (token: string) =>
+    authClient
+      .post<AuthResponse>("/auth/verify-email", { token })
+      .then((res) => res.data),
+
+  /**
+   * Send a new confirmation link to a pending signup
+   */
+  resendVerification: (email: string) =>
+    authClient
+      .post<{ message: string }>("/auth/resend-verification", { email })
+      .then((res) => res.data),
+
+  /**
+   * Ask for a password reset link (the answer is the same whether the account exists or not)
+   */
+  requestPasswordReset: (email: string) =>
+    authClient
+      .post<{ message: string }>("/auth/request-password-reset", { email })
+      .then((res) => res.data),
+
+  /**
+   * Set a new password with the token from the emailed link
+   */
+  resetPassword: (token: string, newPassword: string) =>
+    authClient
+      .post<{ message: string }>("/auth/reset-password", { token, newPassword })
       .then((res) => res.data),
 
   /**

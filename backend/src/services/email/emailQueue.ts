@@ -8,7 +8,7 @@ import { NotificationType } from '@prisma/client';
 import { NotificationMetadata } from '../../utils/linkBuilder';
 
 export interface EmailJobData {
-  type: 'notification' | 'welcome' | 'password-reset' | 'email-verification' | 'order-created';
+  type: 'notification' | 'welcome' | 'password-reset' | 'email-verification' | 'signup-verification' | 'order-created';
 
   // Para notificações
   notificationId?: string;
@@ -210,6 +210,39 @@ export async function queueEmailVerificationEmail(
     console.log(`[EmailQueue] Queued email verification for user ${userId}`);
   } catch (error) {
     console.error('[EmailQueue] Failed to queue email verification:', error);
+    throw error;
+  }
+}
+
+/**
+ * Adiciona job de confirmação do email do cadastro à fila
+ */
+export async function queueSignupVerificationEmail(
+  userId: string,
+  userName: string,
+  userEmail: string,
+  verificationToken: string
+): Promise<void> {
+  const queue = getEmailQueue();
+
+  try {
+    await queue.add(
+      'send-signup-verification',
+      {
+        type: 'signup-verification',
+        userId,
+        userName,
+        userEmail,
+        verificationToken,
+      },
+      {
+        priority: 1, // Alta prioridade
+      }
+    );
+
+    console.log(`[EmailQueue] Queued signup verification for user ${userId}`);
+  } catch (error) {
+    console.error('[EmailQueue] Failed to queue signup verification:', error);
     throw error;
   }
 }

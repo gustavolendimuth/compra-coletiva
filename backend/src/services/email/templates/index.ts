@@ -18,6 +18,7 @@ import { PaymentReleased, PaymentReleasedProps } from './notifications/PaymentRe
 import { Welcome, WelcomeProps } from './system/Welcome';
 import { PasswordReset, PasswordResetProps } from './system/PasswordReset';
 import { OrderCreated, OrderCreatedProps } from './system/OrderCreated';
+import { VerifyEmail, VerifyEmailProps } from './system/VerifyEmail';
 
 export interface EmailTemplateData {
   userName: string;
@@ -186,6 +187,52 @@ export async function renderPasswordResetEmail(
   const templateName = 'password-reset';
 
   return { html, subject, templateName };
+}
+
+/**
+ * Renderiza template de confirmação do email do cadastro
+ */
+export async function renderSignupVerificationEmail(
+  userName: string,
+  userId: string,
+  verificationToken: string
+): Promise<RenderedEmail> {
+  const props: VerifyEmailProps = {
+    userName,
+    verifyUrl: `${LinkBuilder.buildHomeLink()}/verify-email?token=${verificationToken}`,
+    heading: 'Confirme seu email',
+    intro: 'Falta pouco para usar sua conta no Compra Coletiva. Confirme que este email e seu:',
+    buttonLabel: 'Confirmar email',
+    expiresIn: '24 horas',
+    unsubscribeUrl: LinkBuilder.buildUnsubscribeLink(userId),
+    preferencesUrl: LinkBuilder.buildPreferencesLink(),
+  };
+
+  const html = await render(VerifyEmail(props));
+  return { html, subject: '✉️ Confirme seu email', templateName: 'signup-verification' };
+}
+
+/**
+ * Renderiza template de confirmação da troca de email
+ */
+export async function renderEmailChangeVerificationEmail(
+  userName: string,
+  userId: string,
+  verificationToken: string
+): Promise<RenderedEmail> {
+  const props: VerifyEmailProps = {
+    userName,
+    verifyUrl: `${LinkBuilder.buildHomeLink()}/perfil/verificar-email?token=${verificationToken}`,
+    heading: 'Confirme seu novo email',
+    intro: 'Voce pediu para trocar o email da sua conta no Compra Coletiva. Confirme o novo endereco:',
+    buttonLabel: 'Confirmar novo email',
+    expiresIn: '24 horas',
+    unsubscribeUrl: LinkBuilder.buildUnsubscribeLink(userId),
+    preferencesUrl: LinkBuilder.buildPreferencesLink(),
+  };
+
+  const html = await render(VerifyEmail(props));
+  return { html, subject: '✉️ Confirme seu novo email', templateName: 'email-change-verification' };
 }
 
 /**

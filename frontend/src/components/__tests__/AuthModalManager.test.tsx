@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { AxiosError, AxiosHeaders } from "axios";
 import { AuthModalManager } from "../AuthModal";
 import { authStorage } from "@/lib/authStorage";
 
@@ -22,8 +23,13 @@ vi.mock("../../contexts/AuthContext", () => ({
 }));
 
 vi.mock("../ui", () => ({
-  Modal: ({ isOpen, children }: { isOpen: boolean; children: React.ReactNode }) =>
-    isOpen ? <div role="dialog">{children}</div> : null,
+  Modal: ({ isOpen, onClose, children }: { isOpen: boolean; onClose: () => void; children: React.ReactNode }) =>
+    isOpen ? (
+      <div role="dialog">
+        <button onClick={onClose}>Fechar</button>
+        {children}
+      </div>
+    ) : null,
 }));
 
 vi.mock("../auth", () => ({
@@ -35,10 +41,36 @@ vi.mock("../auth", () => ({
       Cadastrar
     </button>
   ),
-  LoginForm: ({ onSubmit }: { onSubmit: (email: string, password: string) => Promise<void> }) => (
-    <button onClick={() => onSubmit("b@example.com", "secret")}>Entrar</button>
+  LoginForm: ({
+    onSubmit,
+    onForgotPassword,
+  }: {
+    onSubmit: (email: string, password: string) => Promise<void>;
+    onForgotPassword?: (email: string) => void;
+  }) => (
+    <>
+      <button onClick={() => onSubmit("b@example.com", "secret")}>Entrar</button>
+      <button onClick={() => onForgotPassword?.("b@example.com")}>Esqueci minha senha</button>
+    </>
+  ),
+  EmailVerificationPending: ({ email }: { email: string }) => <p>confirme {email}</p>,
+  ForgotPasswordForm: ({ initialEmail, onBackToLogin }: { initialEmail?: string; onBackToLogin: () => void }) => (
+    <div>
+      <p>recuperar senha de {initialEmail}</p>
+      <button onClick={onBackToLogin}>Voltar para o login</button>
+    </div>
   ),
 }));
+
+// Erro do axios como o backend devolve (código no campo `error`)
+const apiError = (status: number, error: string) =>
+  new AxiosError("Request failed", String(status), undefined, undefined, {
+    status,
+    statusText: "",
+    headers: {},
+    config: { headers: new AxiosHeaders() },
+    data: { error, message: "msg" },
+  });
 
 const visit = (url: string) => window.history.replaceState({}, "", url);
 
@@ -73,14 +105,42 @@ describe("AuthModalManager", () => {
     expect(authStorage.getReturnUrl()).toBeNull();
   });
 
-  it("depois do cadastro pelo modal leva para o redirectTo", async () => {
+  // Cadastro não abre sessão: o modal pede a confirmação do email, e o redirectTo
+  // fica guardado para depois da confirmação (página /verify-email)
+  it("depois do cadastro mostra a confirmação de email e guarda o redirectTo", async () => {
+    mockRegister.mockResolvedValue({ message: "ok", email: "b@example.com" });
     visit("/campanhas?requireLogin=true&redirectTo=%2Fperfil");
     render(<AuthModalManager />);
 
     await userEvent.click(await screen.findByRole("button", { name: "Criar Conta" }));
     await userEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
 
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/perfil"));
+    expect(await screen.findByText("confirme b@example.com")).toBeInTheDocument();
+    expect(mockPush).not.toHaveBeenCalled();
+    expect(authStorage.getReturnUrl()).toBe("/perfil");
+  });
+
+  it("login com email não confirmado mostra a confirmação de email no lugar do formulário", async () => {
+    mockLogin.mockRejectedValue(apiError(403, "EMAIL_NOT_VERIFIED"));
+    visit("/campanhas?requireLogin=true");
+    render(<AuthModalManager />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Entrar" }));
+
+    expect(await screen.findByText("confirme b@example.com")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Entrar" })).not.toBeInTheDocument();
+  });
+
+  it("login com senha errada continua no formulário", async () => {
+    mockLogin.mockRejectedValue(apiError(401, "INVALID_CREDENTIALS"));
+    visit("/campanhas?requireLogin=true");
+    render(<AuthModalManager />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Entrar" }));
+
+    await waitFor(() => expect(mockLogin).toHaveBeenCalled());
+    expect(screen.getByRole("button", { name: "Entrar" })).toBeInTheDocument();
+    expect(screen.queryByText(/confirme/)).not.toBeInTheDocument();
   });
 
   it("login que falha não redireciona", async () => {
@@ -114,6 +174,43 @@ describe("AuthModalManager", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(mockPush).not.toHaveBeenCalled();
     expect(authStorage.getReturnUrl()).toBeNull();
+  });
+
+  it("'Esqueci minha senha' troca o login pela recuperação com o email digitado", async () => {
+    visit("/campanhas?requireLogin=true");
+    render(<AuthModalManager />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Esqueci minha senha" }));
+
+    expect(screen.getByText("recuperar senha de b@example.com")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Entrar" })).not.toBeInTheDocument();
+  });
+
+  it("'Voltar para o login' sai da recuperação e mostra o login", async () => {
+    visit("/campanhas?requireLogin=true");
+    render(<AuthModalManager />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Esqueci minha senha" }));
+    await userEvent.click(screen.getByRole("button", { name: "Voltar para o login" }));
+
+    expect(screen.getByRole("button", { name: "Entrar" })).toBeInTheDocument();
+    expect(screen.queryByText(/recuperar senha/)).not.toBeInTheDocument();
+  });
+
+  it("fechar e abrir o modal de novo volta para o login, não para a recuperação", async () => {
+    visit("/campanhas?requireLogin=true");
+    render(<AuthModalManager />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Esqueci minha senha" }));
+    await userEvent.click(screen.getByRole("button", { name: "Fechar" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent("openAuthModal", { detail: { tab: "login" } }));
+    });
+
+    expect(await screen.findByRole("button", { name: "Entrar" })).toBeInTheDocument();
+    expect(screen.queryByText(/recuperar senha/)).not.toBeInTheDocument();
   });
 
   it("sem requireLogin o modal fica fechado", () => {

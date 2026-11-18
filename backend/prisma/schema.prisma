@@ -27,9 +27,14 @@ model User {
   avatarKey         String?           // Chave do arquivo no storage
   avatarStorageType ImageStorageType? // Tipo de armazenamento (S3/LOCAL)
 
+  // Verificação do email do cadastro (null = ainda não comprovou posse do email)
+  emailVerifiedAt          DateTime?
+  emailVerificationToken   String?   @unique // SHA-256 hex do token enviado por email
+  emailVerificationExpires DateTime?
+
   // Troca de Email (verificação pendente)
   pendingEmail        String?   // Novo email aguardando verificação
-  pendingEmailToken   String?   @unique // Token de verificação
+  pendingEmailToken   String?   @unique // SHA-256 hex do token enviado ao novo email
   pendingEmailExpires DateTime? // Expiração do token
 
   // Endereço padrão do usuário (para cálculo de distância)

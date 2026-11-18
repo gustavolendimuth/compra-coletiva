@@ -12,6 +12,8 @@ import {
   renderWelcomeEmail,
   renderPasswordResetEmail,
   renderOrderCreatedEmail,
+  renderSignupVerificationEmail,
+  renderEmailChangeVerificationEmail,
   EmailTemplateData,
 } from './templates';
 import { prisma } from '../../index';
@@ -55,6 +57,23 @@ async function processEmailJob(job: Job<EmailJobData>): Promise<void> {
         data.userId,
         data.resetToken
       );
+    } else if (data.type === 'signup-verification' && data.verificationToken) {
+      emailContent = await renderSignupVerificationEmail(
+        data.userName,
+        data.userId,
+        data.verificationToken
+      );
+    } else if (data.type === 'email-verification' && data.verificationToken) {
+      // O job da troca de email não traz o nome: busca no banco
+      const user = await prisma.user.findUnique({
+        where: { id: data.userId },
+        select: { name: true },
+      });
+      emailContent = await renderEmailChangeVerificationEmail(
+        user?.name || data.userName,
+        data.userId,
+        data.verificationToken
+      );
     } else if (data.type === 'order-created' && data.campaignName && data.campaignSlug) {
       emailContent = await renderOrderCreatedEmail(
         data.userName,
@@ -90,7 +109,18 @@ async function processEmailJob(job: Job<EmailJobData>): Promise<void> {
 /**
  * Verifica se usuário permite receber este tipo de email
  */
+// Emails transacionais (senha, confirmação de email) saem mesmo com o usuário fora da lista
+const TRANSACTIONAL_TYPES: ReadonlyArray<EmailJobData['type']> = [
+  'password-reset',
+  'email-verification',
+  'signup-verification',
+];
+
 async function checkEmailPreferences(data: EmailJobData): Promise<boolean> {
+  if (TRANSACTIONAL_TYPES.includes(data.type)) {
+    return true;
+  }
+
   try {
     const prefs = await prisma.emailPreference.findUnique({
       where: { userId: data.userId },

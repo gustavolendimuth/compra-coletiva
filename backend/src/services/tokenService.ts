@@ -111,6 +111,25 @@ export class TokenService {
   }
 
   /**
+   * Dono da sessão de um refresh token válido, sem consumi-lo (sem rotação).
+   * Devolve null se a assinatura é inválida ou a sessão não existe/expirou.
+   */
+  static async findActiveSessionUserId(token: string): Promise<string | null> {
+    let payload: TokenPayload;
+    try {
+      payload = this.verifyRefreshToken(token);
+    } catch {
+      return null;
+    }
+
+    const session = await prisma.session.findUnique({ where: { token: this.hashToken(token) } });
+    if (!session || session.userId !== payload.userId || session.expiresAt <= new Date()) {
+      return null;
+    }
+    return session.userId;
+  }
+
+  /**
    * Consome um refresh token (rotação).
    * - assinatura inválida/expirada -> invalid
    * - assinatura válida mas ausente de `sessions` (já rotacionado) -> reused,

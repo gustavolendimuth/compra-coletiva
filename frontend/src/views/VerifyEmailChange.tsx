@@ -5,13 +5,13 @@
  * Página de verificação de troca de email
  */
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Card, Button } from '@/components/ui';
 import { profileService } from '@/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { getApiErrorMessage } from '@/lib/apiError';
+import { getApiErrorCode, getApiErrorMessage } from '@/lib/apiError';
 
 type VerificationStatus = 'loading' | 'success' | 'error' | 'expired';
 
@@ -20,16 +20,22 @@ interface VerifyEmailChangeProps {
 }
 
 export function VerifyEmailChange({ token: propToken }: VerifyEmailChangeProps) {
-  const params = useParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const { refreshUser } = useAuth();
   const [status, setStatus] = useState<VerificationStatus>('loading');
   const [message, setMessage] = useState('');
   const [newEmail, setNewEmail] = useState('');
+  // O link é de uso único: confirma uma vez só, mesmo que o efeito rode de novo
+  const hasVerified = useRef(false);
 
-  const token = propToken || (params?.token as string);
+  // O link do email traz o token na query (?token=...)
+  const token = propToken || searchParams?.get('token') || undefined;
 
   useEffect(() => {
+    if (hasVerified.current) return;
+    hasVerified.current = true;
+
     const verifyEmail = async () => {
       if (!token) {
         setStatus('error');
@@ -40,20 +46,17 @@ export function VerifyEmailChange({ token: propToken }: VerifyEmailChangeProps) 
       try {
         const response = await profileService.verifyEmailChange(token);
         setStatus('success');
-        setNewEmail(response.data.email);
+        setNewEmail(response.newEmail);
         setMessage('Seu email foi alterado com sucesso!');
         // Refresh user data to get updated email
         await refreshUser();
       } catch (error: unknown) {
-        const errorMessage = getApiErrorMessage(error, 'Erro ao verificar email');
-
-        if (errorMessage.toLowerCase().includes('expirado') ||
-            errorMessage.toLowerCase().includes('expired')) {
+        if (getApiErrorCode(error) === 'INVALID_TOKEN') {
           setStatus('expired');
-          setMessage('O link de verificação expirou. Solicite uma nova troca de email.');
+          setMessage('O link de confirmação é inválido ou expirou. Solicite uma nova troca de email.');
         } else {
           setStatus('error');
-          setMessage(errorMessage);
+          setMessage(getApiErrorMessage(error, 'Erro ao verificar email'));
         }
       }
     };
@@ -100,7 +103,7 @@ export function VerifyEmailChange({ token: propToken }: VerifyEmailChangeProps) 
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Link Expirado</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Link Inválido ou Expirado</h2>
             <p className="text-gray-600 mb-6">{message}</p>
             <Button onClick={() => router.push('/perfil')}>
               Solicitar Novamente

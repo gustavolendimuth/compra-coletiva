@@ -2,9 +2,9 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { authStorage, StoredUser, PendingActionData } from '../lib/authStorage';
-import { authApi, RegisterRequest, LoginRequest } from '../lib/authApi';
+import { authApi, RegisterRequest, RegisterResponse, LoginRequest, AuthResponse } from '../lib/authApi';
 import { reconnectSocket } from '../lib/socket';
-import { getApiErrorDetails, getApiErrorMessage } from '../lib/apiError';
+import { getApiErrorCode, getApiErrorDetails, getApiErrorMessage } from '../lib/apiError';
 import toast from 'react-hot-toast';
 
 interface AuthContextType {
@@ -12,7 +12,9 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (data: LoginRequest) => Promise<void>;
-  register: (data: RegisterRequest) => Promise<void>;
+  register: (data: RegisterRequest) => Promise<RegisterResponse>;
+  /** Confirma o email e abre a sessão; true quando já redirecionou para completar o perfil */
+  verifyEmail: (token: string) => Promise<boolean>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   setUser: (user: StoredUser | null) => void;
@@ -104,53 +106,46 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, [pendingAction, user]);
 
+  // Abre a sessão no app depois de login ou confirmação de email
+  // Devolve true quando redirecionou para completar o perfil
+  const startSession = (response: AuthResponse, welcomeMessage: string): boolean => {
+    authStorage.setAuth(response.accessToken, response.user);
+    setUser(response.user);
+    // Reconnect socket with new auth token
+    reconnectSocket();
+    toast.success(welcomeMessage);
+
+    if (redirectToCompleteProfileIfNeeded(response.user)) {
+      return true;
+    }
+
+    // Execute pending action if exists
+    if (pendingAction) {
+      setTimeout(() => {
+        pendingAction();
+        setPendingAction(null);
+      }, 100);
+    }
+    return false;
+  };
+
   const login = async (data: LoginRequest) => {
     try {
       const response = await authApi.login(data);
-      authStorage.setAuth(response.accessToken, response.user);
-      setUser(response.user);
-      // Reconnect socket with new auth token
-      reconnectSocket();
-      toast.success(`Bem-vindo, ${response.user.name}!`);
-
-      if (redirectToCompleteProfileIfNeeded(response.user)) {
-        return;
-      }
-
-      // Execute pending action if exists
-      if (pendingAction) {
-        setTimeout(() => {
-          pendingAction();
-          setPendingAction(null);
-        }, 100);
-      }
+      startSession(response, `Bem-vindo, ${response.user.name}!`);
     } catch (error: unknown) {
-      const message = getApiErrorMessage(error, 'Erro ao fazer login');
-      toast.error(message);
+      // Email não confirmado: o modal mostra a tela de confirmação no lugar do toast
+      if (getApiErrorCode(error) !== 'EMAIL_NOT_VERIFIED') {
+        toast.error(getApiErrorMessage(error, 'Erro ao fazer login'));
+      }
       throw error;
     }
   };
 
+  // Cadastro não abre sessão: a conta só ativa pelo link enviado ao email
   const register = async (data: RegisterRequest) => {
     try {
-      const response = await authApi.register(data);
-      authStorage.setAuth(response.accessToken, response.user);
-      setUser(response.user);
-      // Reconnect socket with new auth token
-      reconnectSocket();
-      toast.success(`Conta criada com sucesso! Bem-vindo, ${response.user.name}!`);
-
-      if (redirectToCompleteProfileIfNeeded(response.user)) {
-        return;
-      }
-
-      // Execute pending action if exists
-      if (pendingAction) {
-        setTimeout(() => {
-          pendingAction();
-          setPendingAction(null);
-        }, 100);
-      }
+      return await authApi.register(data);
     } catch (error: unknown) {
       const details = getApiErrorDetails<Array<{ message?: string }>>(error);
       const detailMessage =
@@ -161,6 +156,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       toast.error(message);
       throw error;
     }
+  };
+
+  const verifyEmail = async (token: string) => {
+    const response = await authApi.verifyEmail(token);
+    return startSession(response, `Email confirmado! Bem-vindo, ${response.user.name}!`);
   };
 
   const logout = async () => {
@@ -234,6 +234,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
     login,
     register,
+    verifyEmail,
     logout,
     refreshUser,
     setUser,

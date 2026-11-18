@@ -47,8 +47,12 @@ const updateProfileSchema = z.object({
 });
 
 const changeEmailSchema = z.object({
-  newEmail: z.string().email("Email inválido"),
-  password: z.string().min(1, "Senha é obrigatória para confirmar"),
+  newEmail: z.preprocess(
+    (value) => (typeof value === "string" ? value.trim().toLowerCase() : value),
+    z.string().email("Email inválido")
+  ),
+  // Só conta com senha precisa confirmar com ela; conta só Google não tem senha
+  password: z.string().optional(),
 });
 
 const verifyEmailSchema = z.object({
@@ -370,7 +374,7 @@ router.post(
 
       // Verifica senha (obrigatório para usuários com senha)
       if (user.password) {
-        const isValid = await AuthService.verifyPassword(password, user.password);
+        const isValid = Boolean(password) && (await AuthService.verifyPassword(password!, user.password));
         if (!isValid) {
           res.status(401).json({
             error: "INVALID_PASSWORD",
@@ -384,12 +388,12 @@ router.post(
       const token = crypto.randomBytes(32).toString("hex");
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 horas
 
-      // Salva token no banco
+      // Salva só o hash do token no banco; o token cru vai apenas no email
       await prisma.user.update({
         where: { id: user.id },
         data: {
           pendingEmail: newEmail,
-          pendingEmailToken: token,
+          pendingEmailToken: TokenService.hashToken(token),
           pendingEmailExpires: expiresAt,
         },
       });
@@ -433,48 +437,57 @@ router.post(
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { token } = verifyEmailSchema.parse(req.body);
+      const tokenHash = TokenService.hashToken(token);
 
-      // Busca usuário pelo token
-      const user = await prisma.user.findFirst({
-        where: {
-          pendingEmailToken: token,
-          pendingEmailExpires: {
-            gt: new Date(),
-          },
-        },
+      const user = await prisma.user.findUnique({
+        where: { pendingEmailToken: tokenHash },
       });
 
-      if (!user || !user.pendingEmail) {
+      if (!user || !user.pendingEmail || !user.pendingEmailExpires || user.pendingEmailExpires <= new Date()) {
         res.status(400).json({
           error: "INVALID_TOKEN",
-          message: "Token inválido ou expirado",
+          message: "Link de confirmação inválido ou expirado. Peça a troca de email de novo.",
         });
         return;
       }
 
-      // Verifica novamente se o email não foi usado
-      const existingUser = await prisma.user.findUnique({
-        where: { email: user.pendingEmail },
-      });
+      // Consome o link de forma atômica: só uma requisição concorrente troca o email
+      let count: number;
+      try {
+        ({ count } = await prisma.user.updateMany({
+          where: {
+            id: user.id,
+            pendingEmailToken: tokenHash,
+            pendingEmailExpires: { gt: new Date() },
+            deletedAt: null,
+          },
+          data: {
+            email: user.pendingEmail,
+            emailVerifiedAt: new Date(), // o link chegou ao novo email
+            pendingEmail: null,
+            pendingEmailToken: null,
+            pendingEmailExpires: null,
+          },
+        }));
+      } catch (error) {
+        // Outra conta pegou o email depois do pedido (índice único em users.email)
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+          res.status(400).json({
+            error: "EMAIL_IN_USE",
+            message: "Este email já está em uso",
+          });
+          return;
+        }
+        throw error;
+      }
 
-      if (existingUser) {
+      if (count !== 1) {
         res.status(400).json({
-          error: "EMAIL_IN_USE",
-          message: "Este email já está em uso",
+          error: "INVALID_TOKEN",
+          message: "Link de confirmação inválido ou expirado. Peça a troca de email de novo.",
         });
         return;
       }
-
-      // Atualiza email
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          email: user.pendingEmail,
-          pendingEmail: null,
-          pendingEmailToken: null,
-          pendingEmailExpires: null,
-        },
-      });
 
       res.json({
         message: "Email atualizado com sucesso",

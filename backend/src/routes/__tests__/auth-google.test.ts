@@ -4,7 +4,7 @@ import request from "supertest";
 import passport from "passport";
 
 const mockPrisma = {
-  session: { create: jest.fn() },
+  session: { create: jest.fn(), findUnique: jest.fn() },
   user: { findUnique: jest.fn() },
 };
 jest.mock("@prisma/client", () => ({
@@ -22,6 +22,7 @@ jest.mock("../../services/legalAcceptanceService", () => ({
 }));
 
 import authRouter from "../auth";
+import { TokenService } from "../../services/tokenService";
 
 // ── Fake "google" strategy (no network) ─────────────────────────────────────
 
@@ -44,6 +45,23 @@ fakeGoogle.authenticate = function (req: express.Request, options: { state?: str
   return this.fail(mockOutcome.info);
 };
 passport.use(fakeGoogle);
+
+// Fake "google-link": registra qual conta o callback entregou à strategy
+let linkOutcome: Outcome = {};
+let linkedUserIds: (string | undefined)[] = [];
+const fakeGoogleLink = Object.create(BaseStrategy.prototype);
+fakeGoogleLink.name = "google-link";
+fakeGoogleLink.authenticate = function (req: express.Request, options: { state?: string }) {
+  if (!req.query.code) {
+    return this.redirect(
+      `https://accounts.google.com/o/oauth2/v2/auth?state=${encodeURIComponent(options.state ?? "")}`
+    );
+  }
+  linkedUserIds.push(req.oauthLinkUserId);
+  if (linkOutcome.user) return this.success(linkOutcome.user);
+  return this.fail(linkOutcome.info);
+};
+passport.use(fakeGoogleLink);
 
 const FRONTEND_URL = "http://front.test";
 process.env.FRONTEND_URL = FRONTEND_URL;
@@ -81,6 +99,8 @@ async function startFlow(app: express.Express) {
 beforeEach(() => {
   mockOutcome = { user: googleUser };
   strategyCalls = 0;
+  linkOutcome = { user: googleUser };
+  linkedUserIds = [];
 });
 
 const stateCookieValue = (cookie: string) => decodeURIComponent(cookie.split(";")[0].slice("oauthState=".length));
@@ -147,5 +167,89 @@ describe("Google OAuth", () => {
 
     expect(res.headers.location).toBe(`${FRONTEND_URL}${location}`);
     expect(mockPrisma.session.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("Vincular Google à conta logada (?intent=link)", () => {
+  const refreshToken = TokenService.generateRefreshToken({ userId: "user-1", email: "maria@test.com", role: "CUSTOMER" });
+  const refreshCookie = `refreshToken=${refreshToken}`;
+
+  beforeEach(() => {
+    mockPrisma.session.findUnique.mockImplementation(async ({ where }: { where: { token: string } }) =>
+      where.token === TokenService.hashToken(refreshToken)
+        ? { userId: "user-1", expiresAt: new Date(Date.now() + 60_000) }
+        : null
+    );
+  });
+
+  const cookieValues = (res: request.Response) => cookies(res).map((c) => c.split(";")[0]);
+
+  async function startLink(app: express.Express) {
+    const res = await request(app).get("/api/auth/google?intent=link").set("Cookie", refreshCookie);
+    const state = new URL(res.headers.location).searchParams.get("state");
+    return { res, state, flowCookies: cookieValues(res) };
+  }
+
+  it("sem sessão no navegador volta ao perfil com google=auth_required, sem ir ao Google", async () => {
+    const res = await request(createApp()).get("/api/auth/google?intent=link");
+
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toBe(`${FRONTEND_URL}/perfil?google=auth_required`);
+  });
+
+  it("com sessão vai ao Google marcando o fluxo de vínculo em cookie HttpOnly", async () => {
+    const { res } = await startLink(createApp());
+
+    expect(res.headers.location).toMatch(/^https:\/\/accounts\.google\.com\//);
+    const linkCookie = cookies(res).find((c) => c.startsWith("oauthLink="));
+    expect(linkCookie).toMatch(/HttpOnly/i);
+    expect(linkCookie).toContain("Path=/api/auth/google");
+  });
+
+  it("callback vincula à conta da sessão e volta ao perfil sem abrir sessão nova", async () => {
+    const application = createApp();
+    const { state, flowCookies } = await startLink(application);
+
+    const res = await request(application)
+      .get(`/api/auth/google/callback?code=abc&state=${state}`)
+      .set("Cookie", [...flowCookies, refreshCookie].join("; "));
+
+    expect(res.headers.location).toBe(`${FRONTEND_URL}/perfil?google=linked`);
+    expect(linkedUserIds).toEqual(["user-1"]);
+    expect(strategyCalls).toBe(0);
+    expect(mockPrisma.session.create).not.toHaveBeenCalled();
+    expect(cookies(res).some((c) => c.startsWith("refreshToken="))).toBe(false);
+    expect(cookies(res).find((c) => c.startsWith("oauthLink="))).toContain("Expires=Thu, 01 Jan 1970");
+  });
+
+  it("recusa da strategy volta ao perfil com o motivo", async () => {
+    linkOutcome = { info: { message: "email_mismatch" } };
+    const application = createApp();
+    const { state, flowCookies } = await startLink(application);
+
+    const res = await request(application)
+      .get(`/api/auth/google/callback?code=abc&state=${state}`)
+      .set("Cookie", [...flowCookies, refreshCookie].join("; "));
+
+    expect(res.headers.location).toBe(`${FRONTEND_URL}/perfil?google=email_mismatch`);
+  });
+
+  it("sessão encerrada antes do callback: auth_required e a strategy nem roda", async () => {
+    const application = createApp();
+    const { state, flowCookies } = await startLink(application);
+
+    const res = await request(application)
+      .get(`/api/auth/google/callback?code=abc&state=${state}`)
+      .set("Cookie", flowCookies.join("; "));
+
+    expect(res.headers.location).toBe(`${FRONTEND_URL}/perfil?google=auth_required`);
+    expect(linkedUserIds).toEqual([]);
+  });
+
+  it("login comum depois de um vínculo abandonado limpa a marca e segue como login", async () => {
+    const application = createApp();
+    const res = await request(application).get("/api/auth/google").set("Cookie", "oauthLink=1");
+
+    expect(cookies(res).find((c) => c.startsWith("oauthLink="))).toContain("Expires=Thu, 01 Jan 1970");
   });
 });

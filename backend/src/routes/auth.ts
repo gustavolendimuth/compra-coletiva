@@ -1,5 +1,5 @@
-import { Router, Request, Response } from "express";
-import { PrismaClient, Prisma, LegalDocumentType } from "@prisma/client";
+import { Router, Request, Response, NextFunction } from "express";
+import { PrismaClient, Prisma, LegalDocumentType, User } from "@prisma/client";
 import { z } from "zod";
 import crypto from "crypto";
 import passport from "passport";
@@ -11,6 +11,7 @@ import {
   loginRateLimiter,
   registerRateLimiter,
   passwordResetRateLimiter,
+  verificationResendRateLimiter,
 } from "../middleware/rateLimiter";
 import {
   REFRESH_TOKEN_COOKIE_NAME,
@@ -18,7 +19,12 @@ import {
   getClearCookieOptions,
 } from "../utils/cookieConfig";
 import { capitalizeName } from "../utils/nameFormatter";
-import { queueWelcomeEmail, queuePasswordResetEmail } from "../services/email/emailQueue";
+import {
+  queueWelcomeEmail,
+  queuePasswordResetEmail,
+  queueSignupVerificationEmail,
+} from "../services/email/emailQueue";
+import { EmailVerificationService } from "../services/emailVerificationService";
 import { geocodingService } from "../services/geocodingService";
 import {
   LEGAL_ACCEPTANCE_CONTEXT,
@@ -43,6 +49,31 @@ type OAuthUser = Prisma.UserGetPayload<{
 }>;
 
 // ========== HELPER FUNCTIONS ==========
+
+/**
+ * Usuário devolvido no login e na confirmação de email
+ */
+function toAuthUser(user: User) {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    phoneCompleted: user.phoneCompleted,
+    addressCompleted: user.addressCompleted,
+    legalAcceptanceRequired: user.legalAcceptanceRequired,
+    termsAcceptedAt: user.termsAcceptedAt,
+    termsAcceptedVersion: user.termsAcceptedVersion,
+    privacyAcceptedAt: user.privacyAcceptedAt,
+    privacyAcceptedVersion: user.privacyAcceptedVersion,
+    salesDisclaimerAcceptedAt: user.salesDisclaimerAcceptedAt,
+    salesDisclaimerAcceptedVersion: user.salesDisclaimerAcceptedVersion,
+    hideNameInCampaigns: user.hideNameInCampaigns,
+    role: user.role,
+    hasPassword: Boolean(user.password),
+    hasGoogle: Boolean(user.googleId),
+  };
+}
 
 /**
  * Valida se o nome tem pelo menos 2 palavras (nome e sobrenome)
@@ -141,6 +172,19 @@ const loginSchema = z.object({
 const requestPasswordResetSchema = z.object({
   email: z.preprocess(normalizeEmail, z.string().email("Email inválido")),
 });
+
+const verifySignupEmailSchema = z.object({
+  token: z.string().min(1, "Token é obrigatório"),
+});
+
+const resendVerificationSchema = z.object({
+  email: z.preprocess(normalizeEmail, z.string().email("Email inválido")),
+});
+
+const PASSWORD_RESET_REQUESTED_MESSAGE =
+  "Se houver uma conta com este email, enviamos um link para criar uma nova senha.";
+const RESET_LINK_USED_MESSAGE =
+  "Este link de redefinição já foi usado. Peça um novo link se precisar trocar a senha de novo.";
 
 const resetPasswordSchema = z.object({
   token: z.string().min(1, "Token é obrigatório"),
@@ -258,16 +302,19 @@ router.post("/register", registerRateLimiter, async (req: Request, res: Response
       return;
     }
 
-    // Verifica se email já existe
+    // Resposta igual exista ou não a conta: o cadastro não revela emails cadastrados
+    const pendingResponse = {
+      message: "Enviamos um link de confirmação para o seu email. Abra-o para ativar sua conta.",
+      email,
+    };
+
     const existingUser = await prisma.user.findUnique({
       where: { email },
     });
 
-    if (existingUser) {
-      res.status(409).json({
-        error: "EMAIL_ALREADY_EXISTS",
-        message: "Este email já está cadastrado",
-      });
+    // Conta já verificada: não envia nada (o dono entra pelo login)
+    if (existingUser?.emailVerifiedAt) {
+      res.status(202).json(pendingResponse);
       return;
     }
 
@@ -275,30 +322,40 @@ router.post("/register", registerRateLimiter, async (req: Request, res: Response
     const hashedPassword = await AuthService.hashPassword(password);
 
     const acceptedAt = new Date();
+    const userData = {
+      name: capitalizeName(name),
+      password: hashedPassword,
+      phone,
+      phoneCompleted: true, // Email/password users provide phone during registration
+      hideNameInCampaigns,
+      legalAcceptanceRequired: false,
+      termsAcceptedAt: acceptedAt,
+      termsAcceptedVersion: LEGAL_TERMS_VERSION,
+      privacyAcceptedAt: acceptedAt,
+      privacyAcceptedVersion: LEGAL_PRIVACY_VERSION,
+    };
 
-    // Cria usuário já com aceite legal registrado
-    const user = await prisma.$transaction(async (tx) => {
-      const createdUser = await tx.user.create({
-        data: {
-          name: capitalizeName(name),
-          email,
-          password: hashedPassword,
-          phone,
-          phoneCompleted: true, // Email/password users provide phone during registration
-          addressCompleted: false, // Users need to complete address after first login
-          role: "CUSTOMER", // Default role
-          hideNameInCampaigns,
-          legalAcceptanceRequired: false,
-          termsAcceptedAt: acceptedAt,
-          termsAcceptedVersion: LEGAL_TERMS_VERSION,
-          privacyAcceptedAt: acceptedAt,
-          privacyAcceptedVersion: LEGAL_PRIVACY_VERSION,
-        },
-      });
+    // Conta pendente (cadastro não confirmado ou usuário legado criado por organizador):
+    // os dados do cadastro mais recente substituem os anteriores, e só quem abrir o link
+    // enviado ao email ativa a conta.
+    const { user, verificationToken } = await prisma.$transaction(async (tx) => {
+      const savedUser = existingUser
+        ? await tx.user.update({
+            where: { id: existingUser.id },
+            data: { ...userData, isLegacyUser: false },
+          })
+        : await tx.user.create({
+            data: {
+              ...userData,
+              email,
+              addressCompleted: false, // Users need to complete address after first login
+              role: "CUSTOMER", // Default role
+            },
+          });
 
       await Promise.all([
         LegalAcceptanceService.recordAcceptance({
-          userId: createdUser.id,
+          userId: savedUser.id,
           documentType: LegalDocumentType.TERMS,
           documentVersion: LEGAL_TERMS_VERSION,
           context: LEGAL_ACCEPTANCE_CONTEXT.REGISTER,
@@ -306,7 +363,7 @@ router.post("/register", registerRateLimiter, async (req: Request, res: Response
           tx,
         }),
         LegalAcceptanceService.recordAcceptance({
-          userId: createdUser.id,
+          userId: savedUser.id,
           documentType: LegalDocumentType.PRIVACY,
           documentVersion: LEGAL_PRIVACY_VERSION,
           context: LEGAL_ACCEPTANCE_CONTEXT.REGISTER,
@@ -315,56 +372,18 @@ router.post("/register", registerRateLimiter, async (req: Request, res: Response
         }),
       ]);
 
-      return createdUser;
+      const token = await EmailVerificationService.issueToken(savedUser.id, tx);
+      return { user: savedUser, verificationToken: token };
     });
 
-    // Gera tokens
-    const tokens = TokenService.generateTokenPair({
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-    });
-
-    // Salva refresh token
-    await TokenService.saveRefreshToken(user.id, tokens.refreshToken);
-
-    // Enfileirar email de boas-vindas (não bloqueia o fluxo)
     try {
-      await queueWelcomeEmail(user.id, user.name, user.email);
-      console.log(`[Auth] Welcome email queued for user ${user.id}`);
+      await queueSignupVerificationEmail(user.id, user.name, user.email, verificationToken);
     } catch (emailError) {
-      console.error('[Auth] Failed to queue welcome email:', safeError(emailError));
-      // Não falha o registro se o email falhar
+      console.error('[Auth] Failed to queue signup verification email:', safeError(emailError));
+      // O usuário pode pedir reenvio pela tela de login
     }
 
-    // Set refresh token as HttpOnly cookie
-    res.cookie(
-      REFRESH_TOKEN_COOKIE_NAME,
-      tokens.refreshToken,
-      getRefreshTokenCookieOptions()
-    );
-
-    res.status(201).json({
-      message: "Usuário criado com sucesso",
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        phoneCompleted: user.phoneCompleted,
-        addressCompleted: user.addressCompleted,
-        legalAcceptanceRequired: user.legalAcceptanceRequired,
-        termsAcceptedAt: user.termsAcceptedAt,
-        termsAcceptedVersion: user.termsAcceptedVersion,
-        privacyAcceptedAt: user.privacyAcceptedAt,
-        privacyAcceptedVersion: user.privacyAcceptedVersion,
-        salesDisclaimerAcceptedAt: user.salesDisclaimerAcceptedAt,
-        salesDisclaimerAcceptedVersion: user.salesDisclaimerAcceptedVersion,
-        hideNameInCampaigns: user.hideNameInCampaigns,
-        role: user.role,
-      },
-      accessToken: tokens.accessToken,
-    });
+    res.status(202).json(pendingResponse);
   } catch (error) {
     console.error("Erro ao registrar usuário:", safeError(error));
     res.status(500).json({
@@ -399,20 +418,11 @@ router.post("/login", loginRateLimiter, async (req: Request, res: Response): Pro
       where: { email },
     });
 
-    if (!user) {
+    // Conta só com Google responde igual a senha errada: não revela que o email existe
+    if (!user || !user.password) {
       res.status(401).json({
         error: "INVALID_CREDENTIALS",
         message: "Email ou senha incorretos",
-      });
-      return;
-    }
-
-    // Verifica se o usuário tem senha (pode ser OAuth user)
-    if (!user.password) {
-      res.status(401).json({
-        error: "NO_PASSWORD",
-        message:
-          'Este usuário foi criado via Google. Use "Continuar com Google"',
       });
       return;
     }
@@ -427,6 +437,15 @@ router.post("/login", loginRateLimiter, async (req: Request, res: Response): Pro
       res.status(401).json({
         error: "INVALID_CREDENTIALS",
         message: "Email ou senha incorretos",
+      });
+      return;
+    }
+
+    // Só depois da senha certa: quem não sabe a senha não descobre o estado da conta
+    if (!user.emailVerifiedAt) {
+      res.status(403).json({
+        error: "EMAIL_NOT_VERIFIED",
+        message: "Confirme seu email para entrar. Procure o link que enviamos no cadastro.",
       });
       return;
     }
@@ -450,23 +469,7 @@ router.post("/login", loginRateLimiter, async (req: Request, res: Response): Pro
 
     res.status(200).json({
       message: "Login realizado com sucesso",
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        phoneCompleted: user.phoneCompleted,
-        addressCompleted: user.addressCompleted,
-        legalAcceptanceRequired: user.legalAcceptanceRequired,
-        termsAcceptedAt: user.termsAcceptedAt,
-        termsAcceptedVersion: user.termsAcceptedVersion,
-        privacyAcceptedAt: user.privacyAcceptedAt,
-        privacyAcceptedVersion: user.privacyAcceptedVersion,
-        salesDisclaimerAcceptedAt: user.salesDisclaimerAcceptedAt,
-        salesDisclaimerAcceptedVersion: user.salesDisclaimerAcceptedVersion,
-        hideNameInCampaigns: user.hideNameInCampaigns,
-        role: user.role,
-      },
+      user: toAuthUser(user),
       accessToken: tokens.accessToken,
     });
   } catch (error) {
@@ -477,6 +480,101 @@ router.post("/login", loginRateLimiter, async (req: Request, res: Response): Pro
     });
   }
 });
+
+/**
+ * POST /api/auth/verify-email
+ * Confirma o email do cadastro e já abre a sessão
+ */
+router.post("/verify-email", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const parsed = verifySignupEmailSchema.safeParse(req.body);
+    const user = parsed.success
+      ? await EmailVerificationService.consumeToken(parsed.data.token)
+      : null;
+
+    if (!user) {
+      res.status(400).json({
+        error: "INVALID_TOKEN",
+        message: "Link de confirmação inválido ou expirado",
+      });
+      return;
+    }
+
+    try {
+      await queueWelcomeEmail(user.id, user.name, user.email);
+    } catch (emailError) {
+      console.error('[Auth] Failed to queue welcome email:', safeError(emailError));
+      // Não falha a confirmação se o email falhar
+    }
+
+    const tokens = TokenService.generateTokenPair({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+    });
+    await TokenService.saveRefreshToken(user.id, tokens.refreshToken);
+    res.cookie(
+      REFRESH_TOKEN_COOKIE_NAME,
+      tokens.refreshToken,
+      getRefreshTokenCookieOptions()
+    );
+
+    res.status(200).json({
+      message: "Email confirmado com sucesso",
+      user: toAuthUser(user),
+      accessToken: tokens.accessToken,
+    });
+  } catch (error) {
+    console.error("Erro ao confirmar email:", safeError(error));
+    res.status(500).json({
+      error: "INTERNAL_ERROR",
+      message: "Erro ao confirmar email",
+    });
+  }
+});
+
+/**
+ * POST /api/auth/resend-verification
+ * Reenvia o link de confirmação (resposta igual exista ou não a conta)
+ */
+router.post(
+  "/resend-verification",
+  verificationResendRateLimiter,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const parsed = resendVerificationSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({
+          error: "VALIDATION_ERROR",
+          message: "Email inválido",
+        });
+        return;
+      }
+
+      const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
+
+      // Só cadastro pendente com senha recebe link (legado sem senha se ativa pelo cadastro)
+      if (user && !user.emailVerifiedAt && user.password && !user.deletedAt) {
+        const token = await EmailVerificationService.issueToken(user.id);
+        try {
+          await queueSignupVerificationEmail(user.id, user.name, user.email, token);
+        } catch (emailError) {
+          console.error('[Auth] Failed to queue signup verification email:', safeError(emailError));
+        }
+      }
+
+      res.json({
+        message: "Se houver um cadastro pendente para este email, enviamos um novo link de confirmação.",
+      });
+    } catch (error) {
+      console.error("Erro ao reenviar confirmação de email:", safeError(error));
+      res.status(500).json({
+        error: "INTERNAL_ERROR",
+        message: "Erro ao processar solicitação",
+      });
+    }
+  }
+);
 
 /**
  * POST /api/auth/refresh
@@ -538,23 +636,7 @@ router.post("/refresh", async (req: Request, res: Response): Promise<void> => {
     res.status(200).json({
       message: "Token renovado com sucesso",
       accessToken: newAccessToken,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        phoneCompleted: user.phoneCompleted,
-        addressCompleted: user.addressCompleted,
-        legalAcceptanceRequired: user.legalAcceptanceRequired,
-        termsAcceptedAt: user.termsAcceptedAt,
-        termsAcceptedVersion: user.termsAcceptedVersion,
-        privacyAcceptedAt: user.privacyAcceptedAt,
-        privacyAcceptedVersion: user.privacyAcceptedVersion,
-        salesDisclaimerAcceptedAt: user.salesDisclaimerAcceptedAt,
-        salesDisclaimerAcceptedVersion: user.salesDisclaimerAcceptedVersion,
-        hideNameInCampaigns: user.hideNameInCampaigns,
-        role: user.role,
-      },
+      user: toAuthUser(user),
     });
   } catch (error) {
     console.error("Erro ao renovar token:", safeError(error));
@@ -640,6 +722,8 @@ router.get(
           defaultState: req.user.defaultState,
           defaultLatitude: req.user.defaultLatitude,
           defaultLongitude: req.user.defaultLongitude,
+          hasPassword: Boolean(req.user.password),
+          hasGoogle: Boolean(req.user.googleId),
         },
       });
     } catch (error) {
@@ -655,6 +739,8 @@ router.get(
 // ========== GOOGLE OAUTH ==========
 
 const OAUTH_STATE_COOKIE_NAME = "oauthState";
+// Marca que o fluxo em curso é "vincular Google" à conta logada
+const OAUTH_LINK_COOKIE_NAME = "oauthLink";
 const OAUTH_STATE_MAX_AGE_MS = 10 * 60 * 1000;
 
 const getOAuthStateCookieOptions = () => ({
@@ -672,22 +758,86 @@ const isSameState = (expected: unknown, received: unknown): boolean => {
   return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(received));
 };
 
+// Conta logada no navegador, pelo refresh token do cookie (sem rotacioná-lo)
+const findLoggedInUserId = async (req: Request): Promise<string | null> => {
+  const refreshToken = req.cookies?.[REFRESH_TOKEN_COOKIE_NAME];
+  return typeof refreshToken === "string" && refreshToken
+    ? TokenService.findActiveSessionUserId(refreshToken)
+    : null;
+};
+
+const linkResultUrl = (result: string) =>
+  `${getFrontendUrl()}/perfil?google=${encodeURIComponent(result)}`;
+
 /**
  * GET /api/auth/google
- * Inicia o fluxo de autenticação do Google OAuth com `state` anti-CSRF
+ * Inicia o fluxo de autenticação do Google OAuth com `state` anti-CSRF.
+ * `?intent=link` vincula o Google à conta logada em vez de fazer login.
  */
-router.get("/google", (req: Request, res: Response, next) => {
+router.get("/google", async (req: Request, res: Response, next) => {
+  const isLink = req.query.intent === "link";
+  if (isLink) {
+    try {
+      if (!(await findLoggedInUserId(req))) {
+        res.redirect(linkResultUrl("auth_required"));
+        return;
+      }
+    } catch (error) {
+      console.error("Erro ao iniciar vínculo com Google:", safeError(error));
+      res.redirect(linkResultUrl("failed"));
+      return;
+    }
+  }
+
   const state = crypto.randomBytes(32).toString("hex");
-  res.cookie(OAUTH_STATE_COOKIE_NAME, state, {
-    ...getOAuthStateCookieOptions(),
-    maxAge: OAUTH_STATE_MAX_AGE_MS,
-  });
-  passport.authenticate("google", {
+  const cookieOptions = { ...getOAuthStateCookieOptions(), maxAge: OAUTH_STATE_MAX_AGE_MS };
+  res.cookie(OAUTH_STATE_COOKIE_NAME, state, cookieOptions);
+  if (isLink) {
+    res.cookie(OAUTH_LINK_COOKIE_NAME, "1", cookieOptions);
+  } else {
+    res.clearCookie(OAUTH_LINK_COOKIE_NAME, getOAuthStateCookieOptions());
+  }
+
+  passport.authenticate(isLink ? "google-link" : "google", {
     scope: ["profile", "email"],
     session: false,
     state,
+    ...(isLink && { prompt: "select_account" }),
   })(req, res, next);
 });
+
+/**
+ * Callback do fluxo "vincular Google": não abre sessão nova, só volta ao perfil
+ * com o resultado em `?google=`.
+ */
+const handleGoogleLinkCallback = async (req: Request, res: Response, next: NextFunction) => {
+  let userId: string | null;
+  try {
+    userId = await findLoggedInUserId(req);
+  } catch (error) {
+    console.error("Erro ao vincular conta Google:", safeError(error));
+    res.redirect(linkResultUrl("failed"));
+    return;
+  }
+  if (!userId) {
+    res.redirect(linkResultUrl("auth_required"));
+    return;
+  }
+  req.oauthLinkUserId = userId;
+
+  passport.authenticate(
+    "google-link",
+    { session: false },
+    (err: unknown, user: OAuthUser | false, info?: { message?: string }) => {
+      if (err) {
+        console.error("Erro ao vincular conta Google:", safeError(err));
+        res.redirect(linkResultUrl("failed"));
+        return;
+      }
+      res.redirect(linkResultUrl(user ? "linked" : info?.message ?? "failed"));
+    }
+  )(req, res, next);
+};
 
 /**
  * GET /api/auth/google/callback
@@ -695,13 +845,22 @@ router.get("/google", (req: Request, res: Response, next) => {
  * Valida `state`, grava o refresh token em cookie HttpOnly e redireciona
  * para /auth/callback sem nenhum dado na URL (a página chama /refresh)
  */
-router.get("/google/callback", (req: Request, res: Response, next) => {
+router.get("/google/callback", async (req: Request, res: Response, next) => {
   const frontendUrl = getFrontendUrl();
   const expectedState = req.cookies?.[OAUTH_STATE_COOKIE_NAME];
+  const isLink = req.cookies?.[OAUTH_LINK_COOKIE_NAME] === "1";
   res.clearCookie(OAUTH_STATE_COOKIE_NAME, getOAuthStateCookieOptions());
+  res.clearCookie(OAUTH_LINK_COOKIE_NAME, getOAuthStateCookieOptions());
 
   if (!isSameState(expectedState, req.query.state)) {
-    res.redirect(`${frontendUrl}/auth/callback?error=oauth_state`);
+    res.redirect(
+      isLink ? linkResultUrl("oauth_state") : `${frontendUrl}/auth/callback?error=oauth_state`
+    );
+    return;
+  }
+
+  if (isLink) {
+    await handleGoogleLinkCallback(req, res, next);
     return;
   }
 
@@ -759,27 +918,22 @@ router.post(
   passwordResetRateLimiter,
   async (req: Request, res: Response): Promise<void> => {
     try {
-      const { email } = requestPasswordResetSchema.parse(req.body);
-
-      // Busca usuário
-      const user = await prisma.user.findUnique({ where: { email } });
-
-      // Por segurança, sempre retorna sucesso (não revela se email existe)
-      if (!user) {
-        res.json({
-          message:
-            "Se o email existir em nossa base, você receberá instruções para resetar sua senha",
+      const validationResult = requestPasswordResetSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        res.status(400).json({
+          error: "VALIDATION_ERROR",
+          message: "Email inválido",
         });
         return;
       }
+      const { email } = validationResult.data;
 
-      // Verifica se usuário tem senha (pode ser OAuth)
-      if (!user.password) {
-        res.status(400).json({
-          error: "NO_PASSWORD",
-          message:
-            'Este usuário foi criado via Google. Use "Continuar com Google" para fazer login',
-        });
+      const user = await prisma.user.findUnique({ where: { email } });
+
+      // Mesma resposta para qualquer email (não revela se existe). Conta só com
+      // Google também recebe o link: é assim que ela cria uma senha.
+      if (!user || user.deletedAt) {
+        res.json({ message: PASSWORD_RESET_REQUESTED_MESSAGE });
         return;
       }
 
@@ -816,8 +970,7 @@ router.post(
       }
 
       res.json({
-        message:
-          "Se o email existir em nossa base, você receberá instruções para resetar sua senha",
+        message: PASSWORD_RESET_REQUESTED_MESSAGE,
         ...(process.env.EXPOSE_RESET_TOKEN_IN_RESPONSE === "true" &&
           process.env.NODE_ENV !== "production" && { token }),
       });
@@ -839,7 +992,15 @@ router.post(
   "/reset-password",
   async (req: Request, res: Response): Promise<void> => {
     try {
-      const { token, newPassword } = resetPasswordSchema.parse(req.body);
+      const validationResult = resetPasswordSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        res.status(400).json({
+          error: "VALIDATION_ERROR",
+          message: validationResult.error.errors[0]?.message ?? "Dados inválidos",
+        });
+        return;
+      }
+      const { token, newPassword } = validationResult.data;
 
       // Busca token
       const resetToken = await prisma.passwordResetToken.findUnique({
@@ -847,28 +1008,26 @@ router.post(
         include: { user: true },
       });
 
-      if (!resetToken) {
+      if (!resetToken || resetToken.user.deletedAt) {
         res.status(400).json({
           error: "INVALID_TOKEN",
-          message: "Token inválido ou expirado",
+          message: "Este link de redefinição não é válido. Peça um novo link.",
         });
         return;
       }
 
-      // Verifica se token já foi usado
       if (resetToken.used) {
         res.status(400).json({
           error: "TOKEN_ALREADY_USED",
-          message: "Este token já foi utilizado",
+          message: RESET_LINK_USED_MESSAGE,
         });
         return;
       }
 
-      // Verifica se token expirou
       if (resetToken.expiresAt < new Date()) {
         res.status(400).json({
           error: "TOKEN_EXPIRED",
-          message: "Token expirado. Solicite um novo reset de senha",
+          message: "Este link de redefinição expirou. Peça um novo link.",
         });
         return;
       }
@@ -897,9 +1056,15 @@ router.post(
           return false;
         }
 
+        // O link do reset chegou ao email: isso também comprova a posse do email
         await tx.user.update({
           where: { id: resetToken.userId },
-          data: { password: hashedPassword },
+          data: {
+            password: hashedPassword,
+            emailVerifiedAt: resetToken.user.emailVerifiedAt ?? new Date(),
+            emailVerificationToken: null,
+            emailVerificationExpires: null,
+          },
         });
         // Derruba todas as sessões e invalida outros tokens de reset pendentes
         await tx.session.deleteMany({ where: { userId: resetToken.userId } });
@@ -912,7 +1077,7 @@ router.post(
       if (!consumed) {
         res.status(400).json({
           error: "TOKEN_ALREADY_USED",
-          message: "Este token já foi utilizado",
+          message: RESET_LINK_USED_MESSAGE,
         });
         return;
       }

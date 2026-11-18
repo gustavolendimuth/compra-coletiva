@@ -6,8 +6,9 @@ import { useAuth } from "../contexts/AuthContext";
 import { authStorage } from "../lib/authStorage";
 import { getSafeRedirectPath } from "../lib/safeRedirectPath";
 import { API_URL } from "../lib/env";
+import { getApiErrorCode } from "../lib/apiError";
 import { Modal } from "./ui";
-import { LoginForm, RegisterForm, AuthTabs } from "./auth";
+import { LoginForm, RegisterForm, AuthTabs, EmailVerificationPending, ForgotPasswordForm } from "./auth";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -25,11 +26,17 @@ export const AuthModal = ({
   const { login, register, hasPendingAction } = useAuth();
   const [activeTab, setActiveTab] = useState<"login" | "register">(defaultTab);
   const [isLoading, setIsLoading] = useState(false);
+  // Email aguardando confirmação (após cadastro ou login com email não confirmado)
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  // Recuperação de senha aberta a partir do login (guarda o email já digitado)
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState<string | null>(null);
 
   // Reset active tab when modal opens with new defaultTab
   useEffect(() => {
     if (isOpen) {
       setActiveTab(defaultTab);
+      setPendingEmail(null);
+      setForgotPasswordEmail(null);
     }
   }, [isOpen, defaultTab]);
 
@@ -40,7 +47,10 @@ export const AuthModal = ({
       onClose();
       onAuthenticated?.();
     } catch (error) {
-      // Error is handled by AuthContext with toast
+      // Demais erros já viram toast no AuthContext
+      if (getApiErrorCode(error) === "EMAIL_NOT_VERIFIED") {
+        setPendingEmail(email);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -57,7 +67,7 @@ export const AuthModal = ({
   ) => {
     setIsLoading(true);
     try {
-      await register({
+      const response = await register({
         name,
         email,
         password,
@@ -66,8 +76,7 @@ export const AuthModal = ({
         acceptPrivacy,
         hideNameInCampaigns,
       });
-      onClose();
-      onAuthenticated?.();
+      setPendingEmail(response.email);
     } catch (error) {
       // Error is handled by AuthContext with toast
     } finally {
@@ -103,25 +112,50 @@ export const AuthModal = ({
       size="sm"
       className="md:max-w-md"
     >
-      <div className="-mt-5 -mx-5 md:-mt-6 md:-mx-6">
-        <AuthTabs activeTab={activeTab} onTabChange={setActiveTab} />
-      </div>
-
-      <div className="pt-6">
-          {activeTab === "login" ? (
-            <LoginForm
-              onSubmit={handleLogin}
-              onGoogleLogin={handleGoogleLogin}
-              isLoading={isLoading}
-            />
-          ) : (
-            <RegisterForm
-              onSubmit={handleRegister}
-              onGoogleLogin={handleGoogleLogin}
-              isLoading={isLoading}
-            />
-          )}
+      {pendingEmail ? (
+        <div className="pt-2">
+          <EmailVerificationPending
+            email={pendingEmail}
+            onBackToLogin={() => {
+              setPendingEmail(null);
+              setActiveTab("login");
+            }}
+          />
         </div>
+      ) : forgotPasswordEmail !== null ? (
+        <div className="pt-2">
+          <ForgotPasswordForm
+            initialEmail={forgotPasswordEmail}
+            onBackToLogin={() => {
+              setForgotPasswordEmail(null);
+              setActiveTab("login");
+            }}
+          />
+        </div>
+      ) : (
+        <>
+          <div className="-mt-5 -mx-5 md:-mt-6 md:-mx-6">
+            <AuthTabs activeTab={activeTab} onTabChange={setActiveTab} />
+          </div>
+
+          <div className="pt-6">
+            {activeTab === "login" ? (
+              <LoginForm
+                onSubmit={handleLogin}
+                onGoogleLogin={handleGoogleLogin}
+                onForgotPassword={setForgotPasswordEmail}
+                isLoading={isLoading}
+              />
+            ) : (
+              <RegisterForm
+                onSubmit={handleRegister}
+                onGoogleLogin={handleGoogleLogin}
+                isLoading={isLoading}
+              />
+            )}
+          </div>
+        </>
+      )}
     </Modal>
   );
 };

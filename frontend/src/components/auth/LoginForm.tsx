@@ -7,6 +7,7 @@ import { Input, Button, Divider, GoogleButton } from '../ui';
 interface LoginFormProps {
   onSubmit: (email: string, password: string) => Promise<void>;
   onGoogleLogin: () => void;
+  onForgotPassword?: (email: string) => void;
   isLoading: boolean;
 }
 
@@ -17,7 +18,7 @@ interface LoginFormProps {
  * Uses design system ui/ components.
  * Mobile-first with proper touch targets.
  */
-export const LoginForm = ({ onSubmit, onGoogleLogin, isLoading }: LoginFormProps) => {
+export const LoginForm = ({ onSubmit, onGoogleLogin, onForgotPassword, isLoading }: LoginFormProps) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -49,6 +50,19 @@ export const LoginForm = ({ onSubmit, onGoogleLogin, isLoading }: LoginFormProps
         disabled={isLoading}
         autoComplete="current-password"
       />
+
+      {onForgotPassword && (
+        <div className="-mt-2 text-right">
+          <button
+            type="button"
+            onClick={() => onForgotPassword(email.trim())}
+            disabled={isLoading}
+            className="text-sm font-medium text-sky-600 hover:text-sky-800 underline underline-offset-2 disabled:opacity-50"
+          >
+            Esqueci minha senha
+          </button>
+        </div>
+      )}
 
       <Button
         type="submit"
