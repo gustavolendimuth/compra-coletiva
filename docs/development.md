@@ -64,6 +64,9 @@ Se existir conteúdo em `backend/prisma/migrations_pending`, mova as pastas para
 - Backend: `npm test --workspace=backend`
 - Frontend: `npm test --workspace=frontend`
 - Todos: `npm test --workspaces`
+- Backend com Postgres real (`*.pg.test.ts`): `TEST_DATABASE_URL=postgresql://... npm run test:pg --workspace=backend`. O banco precisa estar migrado (`DATABASE_URL=$TEST_DATABASE_URL npx prisma migrate deploy` em `backend/`) e é apagado pelos testes: use um banco descartável.
+- Backend com Redis real (`*.redis.test.ts`): `RATE_LIMIT_TEST_REDIS_URL=redis://... npm run test:redis --workspace=backend`.
+- As duas suítes ficam fora do `npm test` e falham se a variável faltar; o CI roda as duas no job `integration-tests`, com Postgres e Redis como services.
 
 ## Lint
 - Backend: `npm run lint --workspace=backend`
