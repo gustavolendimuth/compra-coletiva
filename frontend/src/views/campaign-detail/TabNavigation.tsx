@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
 import {
   LucideIcon,
   LayoutDashboard,
@@ -20,6 +23,9 @@ export function TabNavigation({
   onTabChange,
   canEditCampaign,
 }: TabNavigationProps) {
+  const [isSticky, setIsSticky] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
   const tabs: Array<{
     id: TabType;
     label: string;
@@ -56,18 +62,39 @@ export function TabNavigation({
     });
   }
 
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    // -97px: 96px navbar + 1px buffer so detection fires right as tabs reach navbar
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsSticky(!entry.isIntersecting),
+      { rootMargin: "-97px 0px 0px 0px", threshold: 0 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <>
+      {/* Sentinel: tracked by IntersectionObserver to detect when tabs become sticky */}
+      <div ref={sentinelRef} className="hidden md:block h-px" aria-hidden="true" />
+
       {/* Desktop Tabs */}
-      <div className="hidden md:flex gap-1 mb-6 border-b border-sky-100">
+      <div
+        className={`hidden md:flex gap-1 sticky top-24 z-40 py-3 mb-6 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 transition-all duration-200 ${
+          isSticky
+            ? "bg-[#fefdf8]/95 backdrop-blur-sm shadow-[0_2px_16px_-4px_rgba(14,165,233,0.15),0_1px_0_0_rgba(186,230,253,0.7)]"
+            : "border-b border-sky-100"
+        }`}
+      >
         {tabs.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => onTabChange(id)}
-            className={`flex items-center justify-center gap-2 px-3 py-2 font-medium transition-colors flex-1 md:flex-initial rounded-t-xl ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-150 ${
               activeTab === id
-                ? "text-sky-600 border-b-2 border-sky-500 bg-sky-50/70"
-                : "text-sky-700/50 hover:text-sky-900 hover:bg-sky-50/50 border-b-2 border-transparent"
+                ? "bg-sky-600 text-white shadow-sm shadow-sky-300/40"
+                : "text-sky-800 hover:bg-sky-100 hover:text-sky-900"
             }`}
           >
             <Icon className="w-4 h-4 flex-shrink-0" />
@@ -98,4 +125,3 @@ export function TabNavigation({
     </>
   );
 }
-
